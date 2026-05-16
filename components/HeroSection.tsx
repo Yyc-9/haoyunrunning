@@ -4,15 +4,18 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { ChevronDown, Play, Calendar, ChevronLeft, ChevronRight, Pause } from 'lucide-react'
 import Link from 'next/link'
+import { useLanguage } from '@/app/language-context'
 
 export default function HeroSection() {
+  const { t } = useLanguage()
+
   const scrollToContent = () => {
     window.scrollTo({ top: window.innerHeight, behavior: 'smooth' })
   }
 
   const images = [
-    { src: '/Instagram.png', title: '跑步的乐趣与成就', desc: '学员精彩瞬间' },
-    { src: '/LINE_ALBUM_四週年手機桌布_260515_1.jpg', title: '四周年纪念', desc: '社区活动瞬间' },
+    { src: '/Instagram.png', ...t.hero.images[0] },
+    { src: '/LINE_ALBUM_四週年手機桌布_260515_1.jpg', ...t.hero.images[1] },
   ]
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
@@ -102,7 +105,7 @@ export default function HeroSection() {
             className="text-6xl sm:text-7xl lg:text-8xl font-black mt-16 mb-4 tracking-tighter"
           >
             <span className="block bg-clip-text text-transparent bg-gradient-to-r from-black via-gray-900 to-gray-800 drop-shadow-lg">
-              好運跑班
+              {t.common.brand}
             </span>
           </motion.h1>
 
@@ -113,7 +116,7 @@ export default function HeroSection() {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="text-2xl sm:text-3xl lg:text-4xl font-bold text-apple-gray-900 mb-6 max-w-2xl mx-auto bg-gradient-to-r from-apple-gray-800 to-apple-gray-600 bg-clip-text text-transparent drop-shadow-sm"
           >
-            科学训练，跑出好运
+            {t.common.tagline}
           </motion.p>
 
           {/* Description */}
@@ -123,8 +126,7 @@ export default function HeroSection() {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="text-lg text-apple-gray-500 mb-8 max-w-3xl mx-auto"
           >
-            专业的跑步训练平台，为跑者提供科学、系统、个性化的训练指导。
-            我们相信每一次奔跑都是对自我的挑战与超越。
+            {t.hero.description}
           </motion.p>
 
           {/* Image Showcase Box */}
@@ -235,10 +237,10 @@ export default function HeroSection() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-sm text-apple-gray-500">
-                      图片轮播 {currentImageIndex + 1}/{images.length}
+                      {t.hero.carousel} {currentImageIndex + 1}/{images.length}
                     </div>
                     <div className="text-base text-apple-gray-800">
-                      {isAutoPlay ? '自动播放中...' : '点击播放按钮开始自动播放'}
+                      {isAutoPlay ? t.hero.autoplayOn : t.hero.autoplayOff}
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -248,7 +250,7 @@ export default function HeroSection() {
                       onClick={goToPrev}
                       className="text-sm text-apple-blue hover:text-apple-blue/80 font-medium"
                     >
-                      上一张
+                      {t.hero.previous}
                     </motion.button>
                     <motion.button
                       whileHover={{ scale: 1.05 }}
@@ -256,7 +258,7 @@ export default function HeroSection() {
                       onClick={goToNext}
                       className="text-sm text-apple-blue hover:text-apple-blue/80 font-medium"
                     >
-                      下一张
+                      {t.hero.next}
                     </motion.button>
                   </div>
                 </div>
@@ -277,7 +279,7 @@ export default function HeroSection() {
                 whileTap={{ scale: 0.95 }}
                 className="apple-button-primary text-lg px-10 py-4 cursor-pointer inline-block"
               >
-                立即加入
+                {t.common.joinNow}
               </motion.div>
             </Link>
             <a
@@ -296,7 +298,7 @@ export default function HeroSection() {
                 className="apple-button-secondary text-lg px-10 py-4 cursor-pointer inline-block"
               >
                 <Play className="h-5 w-5 inline-block mr-2" />
-                了解课程
+                {t.hero.learnCourses}
               </motion.div>
             </a>
           </motion.div>
@@ -309,26 +311,10 @@ export default function HeroSection() {
             className="mb-16"
           >
             <h3 className="text-center text-2xl md:text-3xl font-bold mb-8 text-apple-gray-900">
-              我们的核心优势
+              {t.hero.strengthsTitle}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-              {[
-                {
-                  icon: '🎯',
-                  title: '方案个性化',
-                  description: '基于您的目标、水平和进度，量身定制科学训练计划'
-                },
-                {
-                  icon: '📊',
-                  title: '数据驱动',
-                  description: '实时追踪训练数据，智能分析进步曲线，及时调整训练强度'
-                },
-                {
-                  icon: '👨‍🏫',
-                  title: '专业教练指导',
-                  description: '经验丰富的跑步教练提供一对一指导和技术纠正'
-                }
-              ].map((feature, index) => (
+              {t.hero.strengths.map((feature, index) => (
                 <motion.div
                   key={index}
                   whileHover={{ y: -5 }}
@@ -353,12 +339,7 @@ export default function HeroSection() {
             transition={{ duration: 0.8, delay: 1.2 }}
             className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-2xl mx-auto mb-20"
           >
-            {[
-              { value: '1,200+', label: '活跃学员' },
-              { value: '98%', label: '满意度' },
-              { value: '24/7', label: '在线支持' },
-              { value: '50+', label: '专业教练' },
-            ].map((stat, index) => (
+            {t.hero.stats.map((stat, index) => (
               <div
                 key={index}
                 className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-apple-gray-200"
@@ -369,19 +350,6 @@ export default function HeroSection() {
                 <div className="text-sm text-apple-gray-500">{stat.label}</div>
               </div>
             ))}
-          </motion.div>
-
-          {/* Appointment CTA */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 1.5 }}
-            className="inline-flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-full px-6 py-3 border border-apple-gray-200"
-          >
-            <Calendar className="h-5 w-5 text-apple-blue" />
-            <span className="text-apple-gray-700">
-              预约免费咨询 →
-            </span>
           </motion.div>
         </div>
       </div>

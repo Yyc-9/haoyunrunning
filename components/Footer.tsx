@@ -1,42 +1,21 @@
+'use client'
+
 import { Mail, MapPin, User } from 'lucide-react'
+import { useLanguage } from '@/app/language-context'
 
 export default function Footer() {
+  const { t } = useLanguage()
   const currentYear = new Date().getFullYear()
 
-  const footerLinks = [
-    {
-      title: '训练课程',
-      links: [
-        { name: '马拉松训练', href: '#' },
-        { name: '半程马拉松', href: '#' },
-        { name: '10公里训练', href: '#' },
-        { name: '新手入门', href: '#' },
-      ],
-    },
-    {
-      title: '资源中心',
-      links: [
-        { name: '训练计划', href: '#' },
-        { name: '营养指南', href: '#' },
-        { name: '装备推荐', href: '#' },
-        { name: '常见问题', href: '#' },
-      ],
-    },
-    {
-      title: '关于我们',
-      links: [
-        { name: '教练团队', href: '#' },
-        { name: '学员故事', href: '#' },
-        { name: '加入我们', href: '#' },
-        { name: '联系我们', href: '#' },
-      ],
-    },
-  ]
+  const footerLinks = t.footer.columns.map((column) => ({
+    title: column.title,
+    links: column.links.map((name) => ({ name, href: '#' })),
+  }))
 
   const contactInfo = [
     { icon: User, text: '+86 138 8888 8888' },
     { icon: Mail, text: 'contact@goodluckrunning.com' },
-    { icon: MapPin, text: '北京市朝阳区跑步大道123号' },
+    { icon: MapPin, text: t.footer.address },
   ]
 
   const socialMedia = [
@@ -56,17 +35,16 @@ export default function Footer() {
 
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">
-                  好運跑班
+                  {t.common.brand}
                 </h2>
                 <p className="text-sm text-gray-600">
-                  科学训练，跑出好运
+                  {t.common.tagline}
                 </p>
               </div>
             </div>
 
             <p className="mb-6 max-w-md text-gray-600">
-              专业的跑步训练平台，为跑者提供科学、系统、个性化的训练指导，
-              帮助每一位跑者安全、高效地提升跑步能力，实现个人目标。
+              {t.footer.description}
             </p>
 
             {/* Contact Info */}
@@ -118,7 +96,7 @@ export default function Footer() {
         {/* Bottom Section */}
         <div className="flex flex-col items-center justify-between md:flex-row">
           <p className="mb-4 text-sm text-gray-500 md:mb-0">
-            © {currentYear} 好運跑班. 保留所有权利.
+            © {currentYear} {t.common.brand}. {t.footer.copyright}
           </p>
 
           {/* Social Media */}

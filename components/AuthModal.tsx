@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, User, Mail, Phone, Lock, Calendar, Award, Eye, EyeOff, ChevronRight } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '@/app/providers'
+import { useLanguage } from '@/app/language-context'
 
 interface AuthModalProps {
   isOpen: boolean
@@ -26,6 +27,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
   })
   const router = useRouter()
   const { login, register } = useAuth()
+  const { t } = useLanguage()
 
   useEffect(() => {
     if (isOpen) {
@@ -69,10 +71,10 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
   }
 
   const genderOptions = [
-    { value: '', label: '请选择性别' },
-    { value: 'male', label: '男' },
-    { value: 'female', label: '女' },
-    { value: 'other', label: '其他' },
+    { value: '', label: t.auth.genderOptions[0] },
+    { value: 'male', label: t.auth.genderOptions[1] },
+    { value: 'female', label: t.auth.genderOptions[2] },
+    { value: 'other', label: t.auth.genderOptions[3] },
   ]
 
   return (
@@ -105,12 +107,12 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                     </div>
                     <div>
                       <h2 className="text-xl font-bold">
-                        {activeMode === 'login' ? '登录账户' : '创建账户'}
+                        {activeMode === 'login' ? t.auth.loginTitle : t.auth.registerTitle}
                       </h2>
                       <p className="text-sm text-apple-gray-500">
                         {activeMode === 'login'
-                          ? '使用您的手机号或邮箱登录'
-                          : '加入好運跑班，开始您的跑步之旅'}
+                          ? t.auth.loginSubtitle
+                          : t.auth.registerSubtitle}
                       </p>
                     </div>
                   </div>
@@ -138,7 +140,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                           : 'text-apple-gray-500 hover:text-apple-gray-700'
                       )}
                     >
-                      {mode === 'login' ? '登录' : '注册'}
+                      {mode === 'login' ? t.auth.loginTab : t.auth.registerTab}
                     </motion.button>
                   ))}
                 </div>
@@ -151,7 +153,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                     <>
                       <div>
                         <label className="block text-sm font-medium text-apple-gray-700 mb-2">
-                          姓名
+                          {t.auth.name}
                         </label>
                         <div className="relative">
                           <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-apple-gray-400" />
@@ -160,7 +162,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                             name="name"
                             value={formData.name}
                             onChange={handleChange}
-                            placeholder="请输入您的姓名"
+                            placeholder={t.auth.namePlaceholder}
                             className="apple-input pl-10"
                             required
                           />
@@ -169,7 +171,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
 
                       <div>
                         <label className="block text-sm font-medium text-apple-gray-700 mb-2">
-                          手机号
+                          {t.auth.phone}
                         </label>
                         <div className="relative">
                           <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-apple-gray-400" />
@@ -178,7 +180,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                             name="phone"
                             value={formData.phone}
                             onChange={handleChange}
-                            placeholder="请输入您的手机号"
+                            placeholder={t.auth.phonePlaceholder}
                             className="apple-input pl-10"
                             required
                           />
@@ -187,7 +189,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
 
                       <div>
                         <label className="block text-sm font-medium text-apple-gray-700 mb-2">
-                          性别
+                          {t.auth.gender}
                         </label>
                         <div className="relative">
                           <select
@@ -208,7 +210,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
 
                       <div>
                         <label className="block text-sm font-medium text-apple-gray-700 mb-2">
-                          当前PB成绩
+                          {t.auth.pb}
                         </label>
                         <div className="relative">
                           <Award className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-apple-gray-400" />
@@ -217,7 +219,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                             name="pb"
                             value={formData.pb}
                             onChange={handleChange}
-                            placeholder="例如：马拉松 3:30:00"
+                            placeholder={t.auth.pbPlaceholder}
                             className="apple-input pl-10"
                           />
                         </div>
@@ -228,7 +230,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                   {/* Email/Password fields (shown in both modes) */}
                   <div>
                     <label className="block text-sm font-medium text-apple-gray-700 mb-2">
-                      邮箱地址
+                      {t.auth.email}
                     </label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-apple-gray-400" />
@@ -246,7 +248,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
 
                   <div>
                     <label className="block text-sm font-medium text-apple-gray-700 mb-2">
-                      密码
+                      {t.auth.password}
                     </label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-apple-gray-400" />
@@ -255,7 +257,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                         name="password"
                         value={formData.password}
                         onChange={handleChange}
-                        placeholder="请输入密码"
+                        placeholder={t.auth.passwordPlaceholder}
                         className="apple-input pl-10 pr-10"
                         required
                       />
@@ -281,20 +283,20 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                   whileTap={{ scale: 0.98 }}
                   className="w-full apple-button-primary mt-8"
                 >
-                  {activeMode === 'login' ? '登录账户' : '创建账户'}
+                  {activeMode === 'login' ? t.auth.submitLogin : t.auth.submitRegister}
                   <ChevronRight className="h-5 w-5 inline-block ml-2" />
                 </motion.button>
 
                 {/* Terms */}
                 {activeMode === 'register' && (
                   <p className="text-xs text-apple-gray-500 text-center mt-4">
-                    点击"创建账户"即表示同意我们的
+                    {t.auth.termsPrefix}
                     <a href="#" className="text-apple-blue hover:underline ml-1">
-                      服务条款
+                      {t.auth.terms}
                     </a>
-                    和
+                    <span className="mx-1">{t.auth.and}</span>
                     <a href="#" className="text-apple-blue hover:underline ml-1">
-                      隐私政策
+                      {t.auth.privacy}
                     </a>
                   </p>
                 )}
@@ -309,8 +311,8 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                     className="text-apple-blue hover:underline text-sm font-medium"
                   >
                     {activeMode === 'login'
-                      ? '还没有账户？立即注册'
-                      : '已有账户？立即登录'}
+                      ? t.auth.switchToRegister
+                      : t.auth.switchToLogin}
                   </button>
                 </div>
               </form>
@@ -320,11 +322,11 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                 <div className="text-center">
                   <div className="inline-flex items-center space-x-2 text-apple-gray-500">
                     <div className="h-px w-12 bg-apple-gray-300" />
-                    <span className="text-xs">或使用其他方式</span>
+                    <span className="text-xs">{t.auth.otherMethods}</span>
                     <div className="h-px w-12 bg-apple-gray-300" />
                   </div>
                   <div className="flex justify-center space-x-3 mt-4">
-                    {['微信', 'Apple', 'Google'].map((provider) => (
+                    {t.auth.providers.map((provider) => (
                       <motion.button
                         key={provider}
                         whileHover={{ scale: 1.05 }}

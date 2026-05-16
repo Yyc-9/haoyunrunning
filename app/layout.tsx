@@ -6,6 +6,7 @@ import Footer from '@/components/Footer'
 import { AuthProvider } from './providers'
 import { ToastProvider } from './toast-provider'
 import { CartProvider } from './cart-provider'
+import { LanguageProvider } from './language-context'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -20,19 +21,21 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="zh-CN" className="scroll-smooth">
+    <html lang="zh-TW" className="scroll-smooth">
       <body className={`${inter.className} min-h-screen bg-white text-black`}>
-        <AuthProvider>
-          <CartProvider>
-            <ToastProvider>
-              <div className="relative flex min-h-screen flex-col">
-                <NavigationWrapper />
-                <main className="flex-1">{children}</main>
-                <Footer />
-              </div>
-            </ToastProvider>
-          </CartProvider>
-        </AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <CartProvider>
+              <ToastProvider>
+                <div className="relative flex min-h-screen flex-col">
+                  <NavigationWrapper />
+                  <main className="flex-1">{children}</main>
+                  <Footer />
+                </div>
+              </ToastProvider>
+            </CartProvider>
+          </AuthProvider>
+        </LanguageProvider>
       </body>
     </html>
   )

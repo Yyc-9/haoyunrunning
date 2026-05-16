@@ -1,19 +1,23 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Menu, X, User, LogOut, LogIn, ShoppingBag } from 'lucide-react'
+import { ChevronDown, Globe2, Menu, X, User, LogOut, LogIn, ShoppingBag } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/app/providers'
+import { useLanguage } from '@/app/language-context'
+import { languages } from '@/lib/dictionary'
 import AuthModal from '@/components/AuthModal'
 
 export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isLanguageOpen, setIsLanguageOpen] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
-  const { isLoggedIn, user, logout } = useAuth()
+  const { isLoggedIn, logout } = useAuth()
+  const { language, setLanguage, t } = useLanguage()
   const searchParams = useSearchParams()
 
   useEffect(() => {
@@ -31,11 +35,62 @@ export default function Navigation() {
   }, [searchParams])
 
   const navItems = [
-    { name: '首页', href: '/' },
-    { name: '训练课程', href: '/courses' },
-    { name: '关于我们', href: '/#about' },
-    { name: '商店', href: '/shop' },
+    { key: 'home', name: t.navigation.home, href: '/' },
+    { key: 'courses', name: t.navigation.courses, href: '/courses' },
+    { key: 'about', name: t.navigation.about, href: '/#about' },
+    { key: 'shop', name: t.navigation.shop, href: '/shop' },
   ]
+
+  const currentLanguage = languages.find((item) => item.code === language) ?? languages[0]
+
+  const languageSwitcher = (
+    <div className="relative">
+      <motion.button
+        type="button"
+        whileHover={{ scale: 1.04 }}
+        whileTap={{ scale: 0.96 }}
+        onClick={() => setIsLanguageOpen((open) => !open)}
+        className="inline-flex items-center gap-2 rounded-full border border-apple-gray-200 bg-white/80 px-3 py-2 text-sm font-semibold text-apple-gray-800 shadow-sm backdrop-blur-sm transition-all duration-200 hover:border-apple-blue/40 hover:text-apple-blue"
+        aria-label={t.common.language}
+      >
+        <Globe2 className="h-4 w-4" />
+        <span>{currentLanguage.label}</span>
+        <ChevronDown className={clsx('h-3.5 w-3.5 transition-transform duration-200', isLanguageOpen && 'rotate-180')} />
+      </motion.button>
+
+      <AnimatePresence>
+        {isLanguageOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.98 }}
+            transition={{ duration: 0.16 }}
+            className="absolute right-0 mt-2 w-36 overflow-hidden rounded-2xl border border-apple-gray-200 bg-white shadow-xl"
+          >
+            {languages.map((item) => (
+              <button
+                key={item.code}
+                type="button"
+                onClick={() => {
+                  setLanguage(item.code)
+                  setIsLanguageOpen(false)
+                }}
+                className={clsx(
+                  'flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium transition-colors duration-150',
+                  language === item.code
+                    ? 'bg-apple-blue/10 text-apple-blue'
+                    : 'text-apple-gray-700 hover:bg-apple-gray-100'
+                )}
+              >
+                <span>{item.name}</span>
+                <span className="text-xs font-bold">{item.label}</span>
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
 
   return (
     <>
@@ -59,7 +114,7 @@ export default function Navigation() {
               className="flex items-center space-x-2"
             >
               <div className="h-8 w-8 rounded-full bg-gradient-to-br from-apple-blue to-apple-orange" />
-              <span className="text-xl font-bold tracking-tight">好運跑班</span>
+              <span className="text-xl font-bold tracking-tight">{t.common.brand}</span>
             </motion.div>
 
             {/* Desktop Navigation */}
@@ -70,7 +125,7 @@ export default function Navigation() {
 
                 return (
                   <motion.div
-                    key={item.name}
+                    key={item.key}
                     whileHover={{ scale: 1.05, y: -2 }}
                     whileTap={{ scale: 0.95 }}
                     className="relative"
@@ -90,7 +145,7 @@ export default function Navigation() {
                         className="text-sm font-semibold text-apple-gray-800 hover:text-apple-blue transition-all duration-300 group"
                       >
                         {item.name}
-                        {item.name === '商店' && (
+                        {item.key === 'shop' && (
                           <ShoppingBag className="inline-block ml-1 h-3 w-3" />
                         )}
                         <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-apple-blue group-hover:w-full transition-all duration-300" />
@@ -101,7 +156,7 @@ export default function Navigation() {
                         className="text-sm font-semibold text-apple-gray-800 hover:text-apple-blue transition-all duration-300 group"
                       >
                         {item.name}
-                        {item.name === '商店' && (
+                        {item.key === 'shop' && (
                           <ShoppingBag className="inline-block ml-1 h-3 w-3" />
                         )}
                         <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-apple-blue group-hover:w-full transition-all duration-300" />
@@ -114,6 +169,7 @@ export default function Navigation() {
 
             {/* Auth Buttons */}
             <div className="hidden md:flex items-center space-x-4">
+              {languageSwitcher}
               {isLoggedIn ? (
                 <motion.div
                   whileHover={{ scale: 1.05 }}
@@ -127,14 +183,14 @@ export default function Navigation() {
                     href="/profile"
                     className="text-sm font-medium text-apple-gray-700 hover:text-apple-blue transition-colors duration-200"
                   >
-                    我的账户
+                    {t.common.myAccount}
                   </Link>
                    <button
                      onClick={() => logout()}
                      className="apple-button-outline text-sm px-4 py-2 hover:scale-105 active:scale-95 transition-transform duration-200"
                    >
                      <LogOut className="h-4 w-4 inline-block mr-1" />
-                     退出
+                     {t.common.logout}
                    </button>
                 </motion.div>
               ) : (
@@ -146,14 +202,14 @@ export default function Navigation() {
                     className="apple-button-outline text-sm px-4 py-2"
                   >
                     <LogIn className="h-4 w-4 inline-block mr-1" />
-                    登录
+                    {t.common.login}
                   </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     className="apple-button-primary text-sm px-6 py-2"
                   >
-                    立即加入
+                    {t.common.joinNow}
                   </motion.button>
                 </>
               )}
@@ -192,7 +248,7 @@ export default function Navigation() {
 
                   return (
                     <motion.div
-                      key={item.name}
+                      key={item.key}
                       whileTap={{ scale: 0.95 }}
                     >
                       <a
@@ -210,7 +266,7 @@ export default function Navigation() {
                         className="block py-3 text-lg font-semibold text-apple-gray-900 hover:text-apple-blue hover:bg-apple-gray-100 px-4 rounded-xl transition-all duration-200"
                       >
                         {item.name}
-                        {item.name === '商店' && (
+                        {item.key === 'shop' && (
                           <ShoppingBag className="inline-block ml-2 h-4 w-4" />
                         )}
                       </a>
@@ -218,6 +274,23 @@ export default function Navigation() {
                   )
                 })}
                 <div className="pt-6 border-t border-apple-gray-200 space-y-3">
+                  <div className="flex items-center justify-center gap-2 rounded-2xl bg-apple-gray-100 p-1">
+                    {languages.map((item) => (
+                      <button
+                        key={item.code}
+                        type="button"
+                        onClick={() => setLanguage(item.code)}
+                        className={clsx(
+                          'flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-200',
+                          language === item.code
+                            ? 'bg-white text-apple-blue shadow-sm'
+                            : 'text-apple-gray-600 hover:text-apple-gray-900'
+                        )}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
                   {isLoggedIn ? (
                     <>
                       <Link href="/profile" className="block">
@@ -225,7 +298,7 @@ export default function Navigation() {
                           whileTap={{ scale: 0.95 }}
                           className="w-full apple-button-outline"
                         >
-                          我的账户
+                          {t.common.myAccount}
                         </motion.button>
                       </Link>
                       <motion.button
@@ -233,7 +306,7 @@ export default function Navigation() {
                         onClick={() => logout()}
                         className="w-full apple-button-outline"
                       >
-                        退出登录
+                        {t.common.logoutFull}
                       </motion.button>
                     </>
                   ) : (
@@ -246,13 +319,13 @@ export default function Navigation() {
                         }}
                         className="w-full apple-button-outline"
                       >
-                        登录
+                        {t.common.login}
                       </motion.button>
                       <motion.button
                         whileTap={{ scale: 0.95 }}
                         className="w-full apple-button-primary"
                       >
-                        立即加入
+                        {t.common.joinNow}
                       </motion.button>
                     </>
                   )}
