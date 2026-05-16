@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, User, Mail, Phone, Lock, Calendar, Award, Eye, EyeOff, ChevronRight } from 'lucide-react'
 import clsx from 'clsx'
+import { useAuth } from '@/app/providers'
 
 interface AuthModalProps {
   isOpen: boolean
@@ -22,6 +24,8 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
     email: '',
     password: '',
   })
+  const router = useRouter()
+  const { login, register } = useAuth()
 
   useEffect(() => {
     if (isOpen) {
@@ -34,11 +38,27 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
     }
   }, [isOpen])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('Form submitted:', formData)
-    // TODO: 集成Supabase认证
+
+    if (activeMode === 'login') {
+      await login(formData.email, formData.password)
+    } else {
+      await register({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        gender: formData.gender as 'male' | 'female' | 'other',
+        pb: formData.pb,
+        password: formData.password,
+      })
+    }
+
     onClose()
+
+    if (activeMode === 'register') {
+      router.push('/profile')
+    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {

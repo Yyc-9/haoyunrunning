@@ -5,13 +5,16 @@ import { Menu, X, User, LogOut, LogIn, ShoppingBag } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/app/providers'
+import AuthModal from '@/components/AuthModal'
 
 export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const { isLoggedIn, user, logout } = useAuth()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -21,12 +24,16 @@ export default function Navigation() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  useEffect(() => {
+    if (searchParams.get('auth') === 'login') {
+      setIsAuthModalOpen(true)
+    }
+  }, [searchParams])
+
   const navItems = [
     { name: '首页', href: '/' },
-    { name: '训练课程', href: '#courses' },
-    { name: '训练日志', href: '#training-log' },
-    { name: '教练团队', href: '#coaches' },
-    { name: '关于我们', href: '#about' },
+    { name: '训练课程', href: '/courses' },
+    { name: '关于我们', href: '/#about' },
     { name: '商店', href: '/shop' },
   ]
 
@@ -116,9 +123,12 @@ export default function Navigation() {
                   <div className="h-8 w-8 rounded-full bg-apple-gray-200 flex items-center justify-center">
                     <User className="h-4 w-4 text-apple-gray-600" />
                   </div>
-                  <button className="text-sm font-medium text-apple-gray-700 hover:text-apple-blue transition-colors duration-200">
+                  <Link
+                    href="/profile"
+                    className="text-sm font-medium text-apple-gray-700 hover:text-apple-blue transition-colors duration-200"
+                  >
                     我的账户
-                  </button>
+                  </Link>
                    <button
                      onClick={() => logout()}
                      className="apple-button-outline text-sm px-4 py-2 hover:scale-105 active:scale-95 transition-transform duration-200"
@@ -210,12 +220,14 @@ export default function Navigation() {
                 <div className="pt-6 border-t border-apple-gray-200 space-y-3">
                   {isLoggedIn ? (
                     <>
-                      <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        className="w-full apple-button-outline"
-                      >
-                        我的账户
-                      </motion.button>
+                      <Link href="/profile" className="block">
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          className="w-full apple-button-outline"
+                        >
+                          我的账户
+                        </motion.button>
+                      </Link>
                       <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => logout()}
@@ -250,6 +262,9 @@ export default function Navigation() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Auth Modal */}
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </>
   )
 }

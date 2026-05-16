@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import Navigation from '@/components/Navigation'
+import NavigationWrapper from '@/components/NavigationWrapper'
 import Footer from '@/components/Footer'
 import { AuthProvider } from './providers'
 import { ToastProvider } from './toast-provider'
@@ -26,7 +26,7 @@ export default function RootLayout({
           <CartProvider>
             <ToastProvider>
               <div className="relative flex min-h-screen flex-col">
-                <Navigation />
+                <NavigationWrapper />
                 <main className="flex-1">{children}</main>
                 <Footer />
               </div>
