@@ -6,25 +6,70 @@ import { useState, useMemo } from 'react'
 import { CreditCard, ShoppingBag, Star, Package, Truck, Shield, ChevronRight, Search } from 'lucide-react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useCart } from '@/app/cart-provider'
 import { SearchEngine } from '@/lib/search'
 import { useToast } from '@/app/toast-provider'
 
-const products = [
+type ProductVariant = {
+  id: string
+  name: string
+  image: string
+}
+
+type Product = {
+  id: string
+  name: string
+  category: string
+  price: number
+  originalPrice: number
+  priceLabel: string
+  image: string
+  rating: number
+  reviews: number
+  tags: string[]
+  variants?: ProductVariant[]
+}
+
+const products: Product[] = [
   {
     id: '1',
-    name: '好運跑步背心',
+    name: '好運競速跑步背心',
     category: '跑者服飾',
     price: 0,
     originalPrice: 0,
     priceLabel: '私訊洽詢',
-    image: '',
+    image: '/goodluck-running-vest.jpg',
+    rating: 5,
+    reviews: 0,
+    tags: ['團隊裝備'],
+    variants: [
+      {
+        id: 'purple-white',
+        name: '紫電白',
+        image: '/goodluck-running-vest.jpg',
+      },
+      {
+        id: 'black-blue',
+        name: '曜黑藍',
+        image: '/goodluck-running-vest-black.jpg',
+      },
+    ],
+  },
+  {
+    id: '2',
+    name: '好運跑步 T 恤',
+    category: '跑者服飾',
+    price: 0,
+    originalPrice: 0,
+    priceLabel: '私訊洽詢',
+    image: '/goodluck-running-tee.jpg',
     rating: 5,
     reviews: 0,
     tags: ['團隊裝備'],
   },
   {
-    id: '2',
+    id: '3',
     name: '好運跑步帽',
     category: '跑者配件',
     price: 0,
@@ -36,7 +81,7 @@ const products = [
     tags: ['日常訓練'],
   },
   {
-    id: '3',
+    id: '4',
     name: '好運毛巾衣',
     category: '跑者服飾',
     price: 0,
@@ -48,7 +93,7 @@ const products = [
     tags: ['賽後恢復'],
   },
   {
-    id: '4',
+    id: '5',
     name: 'BOOM 能量膠',
     category: '運動補給',
     price: 0,
@@ -68,6 +113,7 @@ export default function ShopPage() {
   const [selectedCategory, setSelectedCategory] = useState('')
   const [sortBy, setSortBy] = useState<'relevance' | 'price-low' | 'price-high' | 'rating'>('relevance')
   const [currentPage, setCurrentPage] = useState(0)
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({})
 
   const engine = useMemo(() => new SearchEngine(products, ['name', 'category']), [])
 
@@ -89,14 +135,14 @@ export default function ShopPage() {
     return engine.getFilterOptions('category')
   }, [engine])
 
-  const handleAddToCart = (product: (typeof products)[0]) => {
+  const handleAddToCart = (product: Product, variant?: ProductVariant) => {
     addItem({
-      id: product.id,
-      name: product.name,
+      id: variant ? `${product.id}-${variant.id}` : product.id,
+      name: variant ? `${product.name} - ${variant.name}` : product.name,
       price: product.price,
-      image: product.image,
+      image: variant?.image ?? product.image,
     })
-    showToast(`${product.name} 已加入購物車`, 'success')
+    showToast(`${variant ? `${product.name} - ${variant.name}` : product.name} 已加入購物車`, 'success')
   }
 
   const handleSuggestion = (suggestion: string) => {
@@ -230,17 +276,34 @@ export default function ShopPage() {
               animate="visible"
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12"
             >
-              {results.items.map(product => (
-                <motion.div
-                  key={product.id}
-                  variants={itemVariants}
-                  className="apple-card group overflow-hidden"
-                >
+              {results.items.map(product => {
+                const selectedVariant =
+                  product.variants?.find(
+                    variant => variant.id === selectedVariants[product.id]
+                  ) ?? product.variants?.[0]
+                const productImage = selectedVariant?.image ?? product.image
+
+                return (
+                  <motion.div
+                    key={product.id}
+                    variants={itemVariants}
+                    className="apple-card group overflow-hidden"
+                  >
                   {/* 商品图片 */}
                   <div className="relative h-64 overflow-hidden bg-apple-gray-100">
-                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-white via-apple-gray-100 to-apple-gray-200">
-                      <Package className="w-16 h-16 text-apple-gray-400" />
-                    </div>
+                    {productImage ? (
+                      <Image
+                        src={productImage}
+                        alt={selectedVariant ? `${product.name} ${selectedVariant.name}` : product.name}
+                        fill
+                        sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                        className="object-cover transition duration-500 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-white via-apple-gray-100 to-apple-gray-200">
+                        <Package className="w-16 h-16 text-apple-gray-400" />
+                      </div>
+                    )}
 
                     {/* 标签 */}
                     <div className="absolute top-3 left-3 flex gap-2">
@@ -267,6 +330,34 @@ export default function ShopPage() {
                     <h3 className="font-bold text-gray-900 mb-2 group-hover:text-black transition">
                       {product.name}
                     </h3>
+
+                    {product.variants && (
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        {product.variants.map(variant => {
+                          const isSelected = variant.id === selectedVariant?.id
+
+                          return (
+                            <button
+                              key={variant.id}
+                              type="button"
+                              onClick={() =>
+                                setSelectedVariants(current => ({
+                                  ...current,
+                                  [product.id]: variant.id,
+                                }))
+                              }
+                              className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                                isSelected
+                                  ? 'border-black bg-black text-white'
+                                  : 'border-black/10 bg-white text-gray-700 hover:border-black/30'
+                              }`}
+                            >
+                              {variant.name}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
 
                     {/* 评分 */}
                     <div className="flex items-center gap-1 mb-3">
@@ -299,7 +390,7 @@ export default function ShopPage() {
 
                     <div className="grid gap-3 sm:grid-cols-2">
                       <button
-                        onClick={() => handleAddToCart(product)}
+                        onClick={() => handleAddToCart(product, selectedVariant)}
                         className="apple-button-secondary gap-2 px-4 py-2.5 text-sm"
                       >
                         <ShoppingBag className="w-4 h-4" />
@@ -307,7 +398,7 @@ export default function ShopPage() {
                       </button>
                       <Link
                         href="/checkout"
-                        onClick={() => handleAddToCart(product)}
+                        onClick={() => handleAddToCart(product, selectedVariant)}
                         className="apple-button-primary gap-2 px-4 py-2.5 text-sm"
                       >
                         <CreditCard className="w-4 h-4" />
@@ -316,7 +407,8 @@ export default function ShopPage() {
                     </div>
                   </div>
                 </motion.div>
-              ))}
+                )
+              })}
             </motion.div>
 
             {/* 分页 */}
