@@ -75,7 +75,7 @@ const products: Product[] = [
     price: 0,
     originalPrice: 0,
     priceLabel: '私訊洽詢',
-    image: '',
+    image: '/calbomb-energy-gel.png',
     rating: 5,
     reviews: 0,
     tags: ['日常訓練'],
@@ -94,7 +94,7 @@ const products: Product[] = [
   },
   {
     id: '5',
-    name: 'BOOM 能量膠',
+    name: 'CALBOMB 蜂蜜檸檬能量膠',
     category: '運動補給',
     price: 0,
     originalPrice: 0,
@@ -102,7 +102,7 @@ const products: Product[] = [
     image: '',
     rating: 5,
     reviews: 0,
-    tags: ['訓練補給'],
+    tags: ['訓練補給', '無添加認證'],
   },
 ]
 
