@@ -132,14 +132,14 @@ export const coachStudents = [
 
 export const plannerRows = [
   {
-    date: '2026/5/20（4）',
-    mon: '休息 + 滾筒',
-    tue: 'E 8km',
-    wed: '2km E + 5km T + 1km E',
-    thu: '肌力 30 分',
-    fri: 'E 8km',
+    date: '2026/6/3（6）',
+    mon: '恢復跑 6km',
+    tue: '1000m x 5',
+    wed: '休息',
+    thu: 'E 10km',
+    fri: '節奏跑 7km',
     sat: '休息',
-    sun: '18km progressive',
+    sun: '16km 輕鬆跑',
   },
   {
     date: '2026/5/27（5）',
@@ -152,13 +152,13 @@ export const plannerRows = [
     sun: '20km LSD',
   },
   {
-    date: '2026/6/3（6）',
-    mon: '恢復跑 6km',
-    tue: '1000m x 5',
-    wed: '休息',
-    thu: 'E 10km',
-    fri: '節奏跑 7km',
+    date: '2026/5/20（4）',
+    mon: '休息 + 滾筒',
+    tue: 'E 8km',
+    wed: '2km E + 5km T + 1km E',
+    thu: '肌力 30 分',
+    fri: 'E 8km',
     sat: '休息',
-    sun: '16km 輕鬆跑',
+    sun: '18km progressive',
   },
 ]
