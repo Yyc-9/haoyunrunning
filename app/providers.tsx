@@ -1,6 +1,7 @@
 'use client'
 
-import React, { createContext, useContext, useState, useCallback } from 'react'
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
 
 export interface User {
   id: string
@@ -10,6 +11,7 @@ export interface User {
   gender: 'male' | 'female' | 'other'
   pb: string
   avatar?: string
+  role?: 'student' | 'coach' | 'admin'
 }
 
 export interface AuthContextType {
@@ -26,25 +28,100 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+
+  const loadProfile = useCallback(async (userId: string, fallbackEmail = '') => {
+    if (!supabase) return null
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+
+    if (error) {
+      console.error('Load profile error:', error)
+      return null
+    }
+
+    const nextUser: User = {
+      id: data.id,
+      name: data.name || '好運學員',
+      email: data.email || fallbackEmail,
+      phone: data.phone || '',
+      gender: 'other',
+      pb: data.pb || '',
+      avatar: data.avatar_url || undefined,
+      role: data.role,
+    }
+
+    setUser(nextUser)
+    return nextUser
+  }, [])
+
+  useEffect(() => {
+    let mounted = true
+
+    const initAuth = async () => {
+      if (!supabase) {
+        if (mounted) setIsLoading(false)
+        return
+      }
+
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser()
+
+      if (authUser && mounted) {
+        await loadProfile(authUser.id, authUser.email ?? '')
+      }
+
+      if (mounted) setIsLoading(false)
+    }
+
+    initAuth()
+
+    if (!supabase) {
+      return () => {
+        mounted = false
+      }
+    }
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return
+
+      if (session?.user) {
+        loadProfile(session.user.id, session.user.email ?? '')
+      } else {
+        setUser(null)
+      }
+    })
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [loadProfile])
 
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true)
     try {
-      // TODO: 集成真实的 API
-      // 模拟延迟
-      await new Promise(resolve => setTimeout(resolve, 500))
+      if (!supabase) {
+        throw new Error('Supabase 尚未設定。')
+      }
 
-      // 模拟登录成功
-      setUser({
-        id: '1',
-        name: '跑步爱好者',
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        phone: '13800138000',
-        gender: 'male',
-        pb: '42:30',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'
+        password,
       })
+
+      if (error) throw error
+
+      if (data.user) {
+        await loadProfile(data.user.id, data.user.email ?? email)
+      }
     } catch (error) {
       console.error('Login error:', error)
       throw error
@@ -54,28 +131,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const logout = useCallback(() => {
+    if (supabase) {
+      supabase.auth.signOut()
+    }
     setUser(null)
   }, [])
 
   const register = useCallback(async (data: Omit<User, 'id'> & { password: string }) => {
     setIsLoading(true)
     try {
-      // TODO: 集成真实的 API
-      await new Promise(resolve => setTimeout(resolve, 500))
+      if (!supabase) {
+        throw new Error('Supabase 尚未設定。')
+      }
 
       const { password, ...userData } = data
-      setUser({
-        ...userData,
-        id: Math.random().toString(36).substr(2, 9),
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.name}`
+      const { data: signUpData, error } = await supabase.auth.signUp({
+        email: userData.email,
+        password,
+        options: {
+          data: {
+            name: userData.name,
+          },
+        },
       })
+
+      if (error) throw error
+
+      const authUser = signUpData.user
+      if (!authUser) {
+        throw new Error('註冊失敗，請稍後再試。')
+      }
+
+      await supabase
+        .from('profiles')
+        .update({
+          name: userData.name,
+          email: userData.email,
+          phone: userData.phone,
+          pb: userData.pb,
+          role: 'student',
+        })
+        .eq('id', authUser.id)
+
+      await loadProfile(authUser.id, userData.email)
     } catch (error) {
       console.error('Register error:', error)
       throw error
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [loadProfile])
 
   const updateUser = useCallback((data: Partial<User>) => {
     setUser(prev => prev ? { ...prev, ...data } : null)

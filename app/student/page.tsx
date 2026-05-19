@@ -13,10 +13,15 @@ import {
   Send,
   Timer,
 } from 'lucide-react'
+import { useAuth } from '@/app/providers'
+import { submitTrainingFeedback } from '@/lib/supabase'
 import { studentProfile, weeklyWorkouts } from '@/lib/training-workflow-data'
 
 export default function StudentPage() {
+  const { user, isLoggedIn, isLoading } = useAuth()
   const [submitted, setSubmitted] = useState(false)
+  const [submitError, setSubmitError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [feedback, setFeedback] = useState({
     distance: '',
     duration: '',
@@ -30,6 +35,48 @@ export default function StudentPage() {
 
   const updateField = (field: keyof typeof feedback, value: string | number) => {
     setFeedback((current) => ({ ...current, [field]: value }))
+  }
+
+  const parseDistance = (value: string) => {
+    const match = value.replace(',', '.').match(/\d+(\.\d+)?/)
+    return match ? Number(match[0]) : null
+  }
+
+  const parseHeartRate = (value: string) => {
+    const match = value.match(/\d+/)
+    return match ? Number(match[0]) : null
+  }
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setSubmitError('')
+    setSubmitted(false)
+
+    if (!isLoggedIn || !user) {
+      setSubmitError('請先登入，登入後回饋才會同步到教練端。')
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      await submitTrainingFeedback({
+        student_id: user.id,
+        distance_km: parseDistance(feedback.distance),
+        duration_text: feedback.duration,
+        pace_text: feedback.pace,
+        average_heart_rate: parseHeartRate(feedback.heartRate),
+        rpe: feedback.rpe,
+        feeling: feedback.feeling,
+      })
+
+      setSubmitted(true)
+    } catch (error) {
+      console.error('Submit training feedback error:', error)
+      setSubmitError(error instanceof Error ? error.message : '提交失敗，請稍後再試。')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -135,10 +182,7 @@ export default function StudentPage() {
 
               <form
                 className="space-y-5"
-                onSubmit={(event) => {
-                  event.preventDefault()
-                  setSubmitted(true)
-                }}
+                onSubmit={handleSubmit}
               >
                 <div className="grid gap-4 sm:grid-cols-2">
                   {[
@@ -222,9 +266,19 @@ export default function StudentPage() {
                   </div>
                 )}
 
-                <button type="submit" className="apple-button-primary w-full gap-2">
+                {submitError && (
+                  <div className="rounded-3xl bg-red-50 p-4 text-sm leading-6 text-red-700">
+                    {submitError}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting || isLoading}
+                  className="apple-button-primary w-full gap-2 disabled:cursor-not-allowed disabled:opacity-60"
+                >
                   <Send className="h-4 w-4" />
-                  提交給教練
+                  {isSubmitting ? '提交中...' : '提交給教練'}
                 </button>
               </form>
             </section>
