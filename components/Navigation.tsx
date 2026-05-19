@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { ChevronDown, Globe2, Menu, X, User, LogOut, LogIn, ShoppingBag } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
+import Image from 'next/image'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/app/providers'
@@ -38,6 +39,7 @@ export default function Navigation() {
     { key: 'home', name: t.navigation.home, href: '/' },
     { key: 'courses', name: t.navigation.courses, href: '/courses' },
     { key: 'about', name: t.navigation.about, href: '/about' },
+    { key: 'testimonials', name: t.navigation.testimonials, href: '/testimonials' },
     { key: 'shop', name: t.navigation.shop, href: '/shop' },
   ]
 
@@ -108,7 +110,7 @@ export default function Navigation() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div
             className={clsx(
-              'flex items-center justify-between rounded-full border px-4 shadow-lg backdrop-blur-xl transition-all duration-300 sm:px-6',
+              'relative flex items-center justify-between rounded-full border px-4 shadow-lg backdrop-blur-xl transition-all duration-300 sm:px-6',
               isScrolled
                 ? 'border-transparent bg-transparent py-0 shadow-none'
                 : 'border-white/40 bg-white/82 py-3'
@@ -118,14 +120,23 @@ export default function Navigation() {
             <motion.div
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="flex items-center space-x-2"
+              className="flex items-center space-x-2 justify-self-start"
             >
-              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-apple-blue to-apple-orange" />
+              <div className="relative h-10 w-10 overflow-hidden rounded-full border border-black/10 bg-white shadow-sm">
+                <Image
+                  src="/goodluck-logo.svg"
+                  alt="好運跑班 Logo"
+                  fill
+                  sizes="40px"
+                  className="object-cover"
+                  priority
+                />
+              </div>
               <span className="text-xl font-bold tracking-tight">{t.common.brand}</span>
             </motion.div>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-8">
+            <div className="absolute left-1/2 hidden -translate-x-1/2 items-center justify-center space-x-7 md:flex">
               {navItems.map((item) => {
                 const isExternal = item.href.startsWith('http')
                 const isHashLink = item.href.startsWith('#')
@@ -175,7 +186,7 @@ export default function Navigation() {
             </div>
 
             {/* Auth Buttons */}
-            <div className="hidden md:flex items-center space-x-4">
+            <div className="hidden md:flex items-center space-x-4 justify-self-end">
               {languageSwitcher}
               {isLoggedIn ? (
                 <motion.div
@@ -226,7 +237,7 @@ export default function Navigation() {
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden rounded-full p-2 hover:bg-apple-gray-100 transition-colors duration-200"
+              className="justify-self-end rounded-full p-2 transition-colors duration-200 hover:bg-apple-gray-100 md:hidden"
             >
               {isMenuOpen ? (
                 <X className="h-6 w-6 text-apple-gray-700" />

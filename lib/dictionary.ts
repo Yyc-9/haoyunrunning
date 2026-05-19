@@ -25,6 +25,7 @@ export const dictionary = {
       home: '首頁',
       courses: '訓練課程',
       about: '關於我們',
+      testimonials: '學員見證',
       shop: '商店',
     },
     hero: {
@@ -161,6 +162,7 @@ export const dictionary = {
       home: '首页',
       courses: '训练课程',
       about: '关于我们',
+      testimonials: '学员见证',
       shop: '商店',
     },
     hero: {
@@ -297,6 +299,7 @@ export const dictionary = {
       home: 'Home',
       courses: 'Courses',
       about: 'About',
+      testimonials: 'Stories',
       shop: 'Shop',
     },
     hero: {

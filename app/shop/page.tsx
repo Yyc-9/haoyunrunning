@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useMemo } from 'react'
-import { ShoppingBag, Star, Package, Truck, Shield, ChevronRight, Search } from 'lucide-react'
+import { CreditCard, ShoppingBag, Star, Package, Truck, Shield, ChevronRight, Search } from 'lucide-react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { useCart } from '@/app/cart-provider'
@@ -96,7 +96,7 @@ export default function ShopPage() {
       price: product.price,
       image: product.image,
     })
-    showToast(`${product.name} 已加入詢問清單`, 'success')
+    showToast(`${product.name} 已加入購物車`, 'success')
   }
 
   const handleSuggestion = (suggestion: string) => {
@@ -297,14 +297,23 @@ export default function ShopPage() {
                       )}
                     </div>
 
-                    {/* 按钮 */}
-                    <button
-                      onClick={() => handleAddToCart(product)}
-                      className="apple-button-primary w-full gap-2 py-2.5"
-                    >
-                      <ShoppingBag className="w-4 h-4" />
-                      加入詢問清單
-                    </button>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <button
+                        onClick={() => handleAddToCart(product)}
+                        className="apple-button-secondary gap-2 px-4 py-2.5 text-sm"
+                      >
+                        <ShoppingBag className="w-4 h-4" />
+                        加入購物車
+                      </button>
+                      <Link
+                        href="/checkout"
+                        onClick={() => handleAddToCart(product)}
+                        className="apple-button-primary gap-2 px-4 py-2.5 text-sm"
+                      >
+                        <CreditCard className="w-4 h-4" />
+                        前往結帳
+                      </Link>
+                    </div>
                   </div>
                 </motion.div>
               ))}

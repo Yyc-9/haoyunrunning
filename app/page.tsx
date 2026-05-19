@@ -3,7 +3,6 @@ import UpcomingActivitiesSection from '@/components/UpcomingActivitiesSection'
 import FeaturesSection from '@/components/FeaturesSection'
 import CoursesSection from '@/components/CoursesSection'
 import RunnerPortalSection from '@/components/RunnerPortalSection'
-import TestimonialsSection from '@/components/TestimonialsSection'
 
 export default function Home() {
   return (
@@ -13,7 +12,6 @@ export default function Home() {
       <FeaturesSection />
       <CoursesSection />
       <RunnerPortalSection />
-      <TestimonialsSection />
     </>
   )
 }
