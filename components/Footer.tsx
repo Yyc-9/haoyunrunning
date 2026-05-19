@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { KeyRound, Mail, MapPin, User } from 'lucide-react'
+import { KeyRound, Mail, MapPin, User, UserRoundCheck } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
 
 export default function Footer() {
@@ -111,6 +111,13 @@ export default function Footer() {
 
           {/* Social Media */}
           <div className="flex items-center space-x-4">
+            <Link
+              href="/student"
+              className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-gray-50 hover:text-black hover:shadow-md"
+            >
+              <UserRoundCheck className="h-4 w-4" />
+              學員看板
+            </Link>
             <Link
               href="/coach"
               className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-gray-50 hover:text-black hover:shadow-md"

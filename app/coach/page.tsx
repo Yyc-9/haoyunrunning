@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import {
+  AlertTriangle,
+  ArrowRight,
   CalendarDays,
   ClipboardList,
   KeyRound,
@@ -8,167 +10,174 @@ import {
   ShieldCheck,
   UsersRound,
 } from 'lucide-react'
+import { coachStudents, feedbackQueue } from '@/lib/training-workflow-data'
 
 export const metadata = {
   title: '教練工作台 - 好運跑班',
-  description: '好運跑班教練端概念頁，用於規劃課表同步、學員回饋與教練權限入口。',
+  description: '好運跑班教練端概念頁，用於查看學員回饋、同步課表與管理教練權限。',
 }
 
-const focusCards = [
+const statusStyle = {
+  new: 'bg-blue-50 text-blue-700',
+  flagged: 'bg-amber-50 text-amber-700',
+  reviewed: 'bg-green-50 text-green-700',
+  missing: 'bg-gray-100 text-gray-700',
+}
+
+const quickLinks = [
   {
-    icon: CalendarDays,
-    title: '同步本週課表',
-    description: '依照班級、目標賽事與學員狀態，發布本週訓練內容與注意事項。',
+    href: '/coach/students',
+    icon: UsersRound,
+    title: '學員列表',
+    description: '查看每位學員的週數、目標、最近回饋與風險提醒。',
   },
   {
-    icon: MessageSquareText,
-    title: '查看訓練回饋',
-    description: '集中閱讀學員提交的里程、配速、心率、RPE、截圖與主觀感受。',
-  },
-  {
+    href: '/coach/planner',
     icon: NotebookPen,
-    title: '留下教練建議',
-    description: '針對疲勞、傷痛、配速失衡或狀態良好的學員，給出下一步調整。',
+    title: '出課表面板',
+    description: '用接近 Excel 的方式編輯週課表，之後可同步到學員端。',
   },
-]
-
-const feedbackQueue = [
-  { name: '台北 PB 班學員', workout: '800m x 6', status: '需要配速建議', tag: '待回覆' },
-  { name: '竹北夜跑班學員', workout: 'E 跑 10km', status: 'RPE 偏高', tag: '留意恢復' },
-  { name: '初心補習班學員', workout: '跑走 40 分鐘', status: '完成度良好', tag: '可鼓勵' },
-]
-
-const weekPlan = [
-  { day: '週一', title: '有氧基礎', detail: 'E 跑 8-10km，保持能完整說話的強度。' },
-  { day: '週三', title: '速度刺激', detail: '間歇 800m x 6，組間慢跑恢復 400m。' },
-  { day: '週六', title: '長距離', detail: '16-24km，依班級與賽事目標調整距離。' },
+  {
+    href: '/student',
+    icon: MessageSquareText,
+    title: '查看學員端',
+    description: '站在學員視角檢查今日訓練與回饋表單。',
+  },
 ]
 
 export default function CoachPage() {
+  const flaggedCount = feedbackQueue.filter((item) => item.status === 'flagged').length
+  const missingCount = coachStudents.filter((student) => student.lastFeedback === '尚未回報').length
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
-      <section className="px-4 py-16 sm:px-6 lg:px-8">
-        <div className="container mx-auto">
-          <div className="grid gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+      <section className="px-4 py-10 sm:px-6 lg:px-8">
+        <div className="container mx-auto max-w-7xl">
+          <div className="mb-8 grid gap-6 lg:grid-cols-[1fr_360px] lg:items-end">
             <div>
               <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
                 Coach workspace
               </p>
-              <h1 className="mb-6 text-4xl font-black leading-tight text-apple-gray-900 md:text-6xl">
-                給教練一個安靜、
-                <span className="block">清楚的工作台。</span>
+              <h1 className="text-4xl font-black leading-tight text-apple-gray-900 md:text-6xl">
+                今天不用再一個一個等 Line。
               </h1>
-              <p className="text-lg leading-8 text-apple-gray-600">
-                這裡先作為教練端概念頁。未來教練可以在這裡發布本週課表、查看學員訓練回饋，並依照每個人的狀態調整下一步訓練。
+              <p className="mt-5 max-w-3xl text-lg leading-8 text-apple-gray-600">
+                教練端先把回饋集中、風險標出、課表入口放清楚。未來接上資料庫後，這裡就會成為每天調整訓練的主畫面。
               </p>
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link href="/profile" className="apple-button-primary">
-                  先查看學員中心
-                </Link>
-                <Link href="/courses" className="apple-button-outline">
-                  回到課程列表
-                </Link>
-              </div>
             </div>
 
-            <div className="apple-card p-6 md:p-8">
-              <div className="mb-6 flex items-center justify-between">
+            <div className="apple-card p-6">
+              <div className="mb-5 flex items-center justify-between">
                 <div>
                   <p className="text-sm text-apple-gray-500">Access model</p>
-                  <h2 className="text-2xl font-bold text-apple-gray-900">教練權限概念</h2>
+                  <h2 className="text-xl font-bold text-apple-gray-900">教練權限</h2>
                 </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black text-white">
-                  <ShieldCheck className="h-6 w-6" />
+                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-black text-white">
+                  <ShieldCheck className="h-5 w-5" />
                 </div>
               </div>
-
-              <div className="space-y-4">
-                <div className="rounded-3xl bg-apple-gray-100 p-5">
-                  <div className="mb-3 flex items-center gap-3">
-                    <KeyRound className="h-5 w-5 text-apple-gray-700" />
-                    <h3 className="font-bold text-apple-gray-900">邀请码升级</h3>
-                  </div>
-                  <p className="text-sm leading-6 text-apple-gray-600">
-                    普通注册不打扰学员。教练注册后，在隐藏入口输入内部邀请码，即可升级为教练权限。
-                  </p>
+              <div className="rounded-3xl bg-apple-gray-100 p-4">
+                <div className="mb-2 flex items-center gap-2">
+                  <KeyRound className="h-4 w-4 text-apple-gray-700" />
+                  <p className="font-bold text-apple-gray-900">邀请码升级</p>
                 </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-black/10 bg-white p-4">
-                    <div className="text-3xl font-black text-apple-gray-900">3</div>
-                    <p className="text-sm text-apple-gray-500">待回覆回饋</p>
-                  </div>
-                  <div className="rounded-2xl border border-black/10 bg-white p-4">
-                    <div className="text-3xl font-black text-apple-gray-900">11</div>
-                    <p className="text-sm text-apple-gray-500">目前班級</p>
-                  </div>
-                </div>
+                <p className="text-sm leading-6 text-apple-gray-600">
+                  普通註冊預設是學員；教練從頁腳入口輸入內部邀请码後升級權限。
+                </p>
               </div>
             </div>
           </div>
-        </div>
-      </section>
 
-      <section className="px-4 pb-16 sm:px-6 lg:px-8">
-        <div className="container mx-auto">
-          <div className="grid gap-6 md:grid-cols-3">
-            {focusCards.map((item) => (
-              <article key={item.title} className="apple-card p-7">
-                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-black text-white">
-                  <item.icon className="h-6 w-6" />
-                </div>
-                <h2 className="mb-3 text-xl font-bold text-apple-gray-900">{item.title}</h2>
-                <p className="leading-7 text-apple-gray-600">{item.description}</p>
-              </article>
+          <div className="mb-8 grid gap-4 md:grid-cols-4">
+            {[
+              { label: '今日新回饋', value: feedbackQueue.length, icon: MessageSquareText },
+              { label: '需要留意', value: flaggedCount, icon: AlertTriangle },
+              { label: '尚未回報', value: missingCount, icon: ClipboardList },
+              { label: '管理學員', value: coachStudents.length, icon: UsersRound },
+            ].map((item) => (
+              <div key={item.label} className="apple-card p-5">
+                <item.icon className="mb-4 h-5 w-5 text-apple-gray-600" />
+                <p className="text-3xl font-black text-apple-gray-900">{item.value}</p>
+                <p className="mt-1 text-sm text-apple-gray-500">{item.label}</p>
+              </div>
             ))}
           </div>
-        </div>
-      </section>
 
-      <section className="px-4 pb-24 sm:px-6 lg:px-8">
-        <div className="container mx-auto">
-          <div className="grid gap-8 lg:grid-cols-2">
-            <div className="apple-card p-6 md:p-8">
-              <div className="mb-6 flex items-center gap-3">
-                <ClipboardList className="h-5 w-5 text-apple-gray-700" />
-                <h2 className="text-xl font-bold text-apple-gray-900">本週課表示例</h2>
+          <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+            <section className="apple-card p-6 md:p-8">
+              <div className="mb-6 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm text-apple-gray-500">Feedback queue</p>
+                  <h2 className="text-2xl font-black text-apple-gray-900">今日待處理回饋</h2>
+                </div>
+                <Link href="/coach/students" className="apple-button-secondary gap-2 px-4 py-2 text-sm">
+                  全部學員
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
               </div>
-              <div className="space-y-4">
-                {weekPlan.map((item) => (
-                  <div key={item.day} className="rounded-3xl bg-apple-gray-100 p-5">
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="apple-chip apple-chip-active px-3 py-1 text-xs">{item.day}</span>
-                      <span className="text-xs font-semibold text-apple-gray-500">可按班級覆寫</span>
-                    </div>
-                    <h3 className="mb-2 font-bold text-apple-gray-900">{item.title}</h3>
-                    <p className="text-sm leading-6 text-apple-gray-600">{item.detail}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
 
-            <div className="apple-card p-6 md:p-8">
-              <div className="mb-6 flex items-center gap-3">
-                <UsersRound className="h-5 w-5 text-apple-gray-700" />
-                <h2 className="text-xl font-bold text-apple-gray-900">學員回饋佇列</h2>
-              </div>
               <div className="space-y-4">
                 {feedbackQueue.map((item) => (
-                  <div key={item.name} className="rounded-3xl border border-black/10 bg-white p-5">
-                    <div className="mb-3 flex items-start justify-between gap-4">
+                  <article key={item.id} className="rounded-3xl border border-black/10 bg-white p-5">
+                    <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                       <div>
-                        <h3 className="font-bold text-apple-gray-900">{item.name}</h3>
-                        <p className="text-sm text-apple-gray-500">{item.workout}</p>
+                        <h3 className="text-lg font-bold text-apple-gray-900">{item.student}</h3>
+                        <p className="text-sm text-apple-gray-500">
+                          {item.program} · {item.submittedAt}
+                        </p>
                       </div>
-                      <span className="rounded-full bg-apple-gray-100 px-3 py-1 text-xs font-semibold text-apple-gray-700">
-                        {item.tag}
+                      <span className={`rounded-full px-3 py-1 text-xs font-bold ${statusStyle[item.status]}`}>
+                        {item.status === 'flagged' ? '需留意' : item.status === 'new' ? '新回饋' : '已看過'}
                       </span>
                     </div>
-                    <p className="text-sm leading-6 text-apple-gray-600">{item.status}</p>
-                  </div>
+
+                    <div className="grid gap-3 sm:grid-cols-4">
+                      {[
+                        ['課表', item.workout],
+                        ['實際', item.distance],
+                        ['心率', item.heartRate],
+                        ['RPE', item.rpe],
+                      ].map(([label, value]) => (
+                        <div key={label} className="rounded-2xl bg-apple-gray-100 p-3">
+                          <p className="text-xs text-apple-gray-500">{label}</p>
+                          <p className="mt-1 font-bold text-apple-gray-900">{value}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <p className="mt-4 rounded-2xl bg-apple-gray-50 p-4 text-sm leading-6 text-apple-gray-700">
+                      {item.feeling}
+                    </p>
+                  </article>
                 ))}
               </div>
-            </div>
+            </section>
+
+            <aside className="space-y-6">
+              {quickLinks.map((item) => (
+                <Link key={item.href} href={item.href} className="apple-card block p-6">
+                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-black text-white">
+                    <item.icon className="h-6 w-6" />
+                  </div>
+                  <h2 className="text-xl font-bold text-apple-gray-900">{item.title}</h2>
+                  <p className="mt-3 leading-7 text-apple-gray-600">{item.description}</p>
+                  <div className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-apple-gray-900">
+                    進入
+                    <ArrowRight className="h-4 w-4" />
+                  </div>
+                </Link>
+              ))}
+
+              <div className="apple-card p-6">
+                <div className="mb-4 flex items-center gap-3">
+                  <CalendarDays className="h-5 w-5 text-apple-gray-700" />
+                  <h2 className="font-bold text-apple-gray-900">下一步後端</h2>
+                </div>
+                <p className="text-sm leading-6 text-apple-gray-600">
+                  等前端流程確認後，這裡可以接 Supabase：學生提交回饋、教練讀取待處理、課表按學員權限同步。
+                </p>
+              </div>
+            </aside>
           </div>
         </div>
       </section>

@@ -6,6 +6,7 @@ import { useAuth } from '@/app/providers'
 import TrainingLogPreview from '@/components/TrainingLogPreview'
 import { motion } from 'framer-motion'
 import { User, Settings, TrendingUp, Calendar, Target } from 'lucide-react'
+import Link from 'next/link'
 
 function QuickLink({ icon: Icon, label, onClick }: { icon: React.ElementType; label: string; onClick?: () => void }) {
   return (
@@ -62,6 +63,10 @@ export default function ProfilePage() {
                 </div>
               )}
             </div>
+            <Link href="/student" className="apple-button-primary flex items-center space-x-2">
+              <Calendar className="h-4 w-4" />
+              <span>进入学员看板</span>
+            </Link>
             <button className="apple-button-outline flex items-center space-x-2">
               <Settings className="h-4 w-4" />
               <span>编辑资料</span>
