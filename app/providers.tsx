@@ -162,7 +162,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('註冊失敗，請稍後再試。')
       }
 
-      await supabase
+      if (!signUpData.session) {
+        throw new Error('帳戶已建立。請先到信箱完成驗證，再回來登入。')
+      }
+
+      const { error: profileError } = await supabase
         .from('profiles')
         .update({
           name: userData.name,
@@ -172,6 +176,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role: 'student',
         })
         .eq('id', authUser.id)
+
+      if (profileError) {
+        throw profileError
+      }
 
       await loadProfile(authUser.id, userData.email)
     } catch (error) {

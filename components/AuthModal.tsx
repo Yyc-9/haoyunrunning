@@ -17,6 +17,9 @@ interface AuthModalProps {
 export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModalProps) {
   const [activeMode, setActiveMode] = useState<'login' | 'register'>(mode)
   const [showPassword, setShowPassword] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -31,6 +34,15 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
 
   useEffect(() => {
     if (isOpen) {
+      setActiveMode(mode)
+      setErrorMessage('')
+      setSuccessMessage('')
+      setIsSubmitting(false)
+    }
+  }, [isOpen, mode])
+
+  useEffect(() => {
+    if (isOpen) {
       document.body.style.overflow = 'hidden'
     } else {
       document.body.style.overflow = 'unset'
@@ -42,10 +54,17 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setErrorMessage('')
+    setSuccessMessage('')
+    setIsSubmitting(true)
 
-    if (activeMode === 'login') {
-      await login(formData.email, formData.password)
-    } else {
+    try {
+      if (activeMode === 'login') {
+        await login(formData.email, formData.password)
+        onClose()
+        return
+      }
+
       await register({
         name: formData.name,
         email: formData.email,
@@ -54,12 +73,15 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
         pb: formData.pb,
         password: formData.password,
       })
-    }
 
-    onClose()
-
-    if (activeMode === 'register') {
+      setSuccessMessage('帳戶已建立，正在前往個人中心。')
       router.push('/profile')
+      onClose()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '操作失敗，請稍後再試。'
+      setErrorMessage(message)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -131,8 +153,13 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                   {(['login', 'register'] as const).map((mode) => (
                     <motion.button
                       key={mode}
+                      type="button"
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => setActiveMode(mode)}
+                      onClick={() => {
+                        setActiveMode(mode)
+                        setErrorMessage('')
+                        setSuccessMessage('')
+                      }}
                       className={clsx(
                         'flex-1 py-2 rounded-xl text-sm font-medium transition-all duration-200',
                         activeMode === mode
@@ -258,6 +285,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                         value={formData.password}
                         onChange={handleChange}
                         placeholder={t.auth.passwordPlaceholder}
+                        minLength={6}
                         className="apple-input pl-10 pr-10"
                         required
                       />
@@ -276,14 +304,33 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                   </div>
                 </div>
 
+                {errorMessage && (
+                  <div className="mt-5 rounded-2xl bg-red-50 px-4 py-3 text-sm leading-6 text-red-700">
+                    {errorMessage}
+                  </div>
+                )}
+
+                {successMessage && (
+                  <div className="mt-5 rounded-2xl bg-green-50 px-4 py-3 text-sm leading-6 text-green-700">
+                    {successMessage}
+                  </div>
+                )}
+
                 {/* Submit Button */}
                 <motion.button
                   type="submit"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full apple-button-primary mt-8"
+                  disabled={isSubmitting}
+                  className="w-full apple-button-primary mt-8 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {activeMode === 'login' ? t.auth.submitLogin : t.auth.submitRegister}
+                  {isSubmitting
+                    ? activeMode === 'login'
+                      ? '登入中...'
+                      : '建立中...'
+                    : activeMode === 'login'
+                      ? t.auth.submitLogin
+                      : t.auth.submitRegister}
                   <ChevronRight className="h-5 w-5 inline-block ml-2" />
                 </motion.button>
 
@@ -305,9 +352,11 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                 <div className="text-center mt-6">
                   <button
                     type="button"
-                    onClick={() =>
+                    onClick={() => {
                       setActiveMode(activeMode === 'login' ? 'register' : 'login')
-                    }
+                      setErrorMessage('')
+                      setSuccessMessage('')
+                    }}
                     className="text-apple-blue hover:underline text-sm font-medium"
                   >
                     {activeMode === 'login'

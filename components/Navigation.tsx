@@ -17,6 +17,7 @@ export default function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isLanguageOpen, setIsLanguageOpen] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
   const { isLoggedIn, logout } = useAuth()
   const { language, setLanguage, t } = useLanguage()
   const searchParams = useSearchParams()
@@ -31,6 +32,11 @@ export default function Navigation() {
 
   useEffect(() => {
     if (searchParams.get('auth') === 'login') {
+      setAuthMode('login')
+      setIsAuthModalOpen(true)
+    }
+    if (searchParams.get('auth') === 'register') {
+      setAuthMode('register')
       setIsAuthModalOpen(true)
     }
   }, [searchParams])
@@ -216,19 +222,30 @@ export default function Navigation() {
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => setIsAuthModalOpen(true)}
+                    onClick={() => {
+                      setAuthMode('login')
+                      setIsAuthModalOpen(true)
+                    }}
                     className="apple-button-outline text-sm px-4 py-2"
                   >
                     <LogIn className="h-4 w-4 inline-block mr-1" />
                     {t.common.login}
                   </motion.button>
-                  <motion.button
+                  <motion.div
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="apple-button-primary text-sm px-6 py-2"
                   >
-                    {t.common.joinNow}
-                  </motion.button>
+                    <Link
+                      href="/?auth=register"
+                      onClick={() => {
+                        setAuthMode('register')
+                        setIsAuthModalOpen(true)
+                      }}
+                      className="apple-button-primary text-sm px-6 py-2"
+                    >
+                      {t.common.joinNow}
+                    </Link>
+                  </motion.div>
                 </>
               )}
             </div>
@@ -332,6 +349,7 @@ export default function Navigation() {
                       <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => {
+                          setAuthMode('login')
                           setIsAuthModalOpen(true)
                           setIsMenuOpen(false)
                         }}
@@ -339,12 +357,21 @@ export default function Navigation() {
                       >
                         {t.common.login}
                       </motion.button>
-                      <motion.button
+                      <motion.div
                         whileTap={{ scale: 0.95 }}
-                        className="w-full apple-button-primary"
                       >
-                        {t.common.joinNow}
-                      </motion.button>
+                        <Link
+                          href="/?auth=register"
+                          onClick={() => {
+                            setAuthMode('register')
+                            setIsAuthModalOpen(true)
+                            setIsMenuOpen(false)
+                          }}
+                          className="w-full apple-button-primary"
+                        >
+                          {t.common.joinNow}
+                        </Link>
+                      </motion.div>
                     </>
                   )}
                 </div>
@@ -355,7 +382,11 @@ export default function Navigation() {
       </AnimatePresence>
 
       {/* Auth Modal */}
-      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        mode={authMode}
+      />
     </>
   )
 }
