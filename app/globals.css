@@ -47,23 +47,31 @@
   }
 
   .apple-card {
-    @apply bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300;
+    @apply rounded-3xl border border-black/10 bg-white/90 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-black/15 hover:shadow-lg;
   }
 
   .apple-button-primary {
-    @apply bg-gradient-to-r from-green-400 to-emerald-500 text-black font-bold rounded-full px-8 py-3 shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-300 hover:scale-105 active:scale-95;
+    @apply inline-flex items-center justify-center rounded-full bg-black px-8 py-3 font-semibold text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-apple-gray-900 hover:shadow-lg active:translate-y-0 active:scale-[0.98];
   }
 
   .apple-button-secondary {
-    @apply bg-gradient-to-r from-orange-400 to-orange-500 text-white font-bold rounded-full px-8 py-3 shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-300 hover:scale-105 active:scale-95;
+    @apply inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-8 py-3 font-semibold text-black shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-black/20 hover:bg-apple-gray-100 hover:shadow-md active:translate-y-0 active:scale-[0.98];
   }
 
   .apple-button-outline {
-    @apply bg-transparent border border-apple-gray-300 text-black rounded-full px-8 py-3 font-semibold hover:bg-apple-gray-100 transition-all duration-200 hover:scale-105 active:scale-95;
+    @apply inline-flex items-center justify-center rounded-full border border-black/10 bg-white/70 px-8 py-3 font-semibold text-black shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-black/20 hover:bg-white hover:shadow-md active:translate-y-0 active:scale-[0.98];
   }
 
   .apple-input {
-    @apply w-full rounded-2xl border border-apple-gray-300 bg-white px-4 py-3 text-base focus:border-apple-blue focus:ring-2 focus:ring-apple-blue/20 focus:outline-none transition-all duration-200;
+    @apply w-full rounded-2xl border border-black/10 bg-white/85 px-4 py-3 text-base shadow-sm backdrop-blur-sm transition-all duration-200 placeholder:text-apple-gray-400 focus:border-black/25 focus:outline-none focus:ring-4 focus:ring-black/5;
+  }
+
+  .apple-chip {
+    @apply rounded-full border border-black/10 bg-white/75 px-4 py-2 text-sm font-semibold text-apple-gray-800 shadow-sm backdrop-blur-md transition-all duration-200 hover:border-black/20 hover:bg-white;
+  }
+
+  .apple-chip-active {
+    @apply border-black bg-black text-white hover:bg-apple-gray-900;
   }
 
   .apple-slider {

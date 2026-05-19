@@ -37,7 +37,7 @@ export default function Navigation() {
   const navItems = [
     { key: 'home', name: t.navigation.home, href: '/' },
     { key: 'courses', name: t.navigation.courses, href: '/courses' },
-    { key: 'about', name: t.navigation.about, href: '/#about' },
+    { key: 'about', name: t.navigation.about, href: '/about' },
     { key: 'shop', name: t.navigation.shop, href: '/shop' },
   ]
 
@@ -102,11 +102,18 @@ export default function Navigation() {
           'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
           isScrolled
             ? 'bg-white/90 backdrop-blur-glass border-b border-apple-gray-200 py-3'
-            : 'bg-transparent py-5'
+            : 'py-4'
         )}
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
+          <div
+            className={clsx(
+              'flex items-center justify-between rounded-full border px-4 shadow-lg backdrop-blur-xl transition-all duration-300 sm:px-6',
+              isScrolled
+                ? 'border-transparent bg-transparent py-0 shadow-none'
+                : 'border-white/40 bg-white/82 py-3'
+            )}
+          >
             {/* Logo */}
             <motion.div
               whileHover={{ scale: 1.05 }}
@@ -142,7 +149,7 @@ export default function Navigation() {
                             }
                           }
                         }}
-                        className="text-sm font-semibold text-apple-gray-800 hover:text-apple-blue transition-all duration-300 group"
+                      className="text-sm font-semibold text-apple-gray-900 hover:text-apple-blue transition-all duration-300 group"
                       >
                         {item.name}
                         {item.key === 'shop' && (
@@ -153,7 +160,7 @@ export default function Navigation() {
                     ) : (
                       <Link
                         href={item.href}
-                        className="text-sm font-semibold text-apple-gray-800 hover:text-apple-blue transition-all duration-300 group"
+                        className="text-sm font-semibold text-apple-gray-900 hover:text-apple-blue transition-all duration-300 group"
                       >
                         {item.name}
                         {item.key === 'shop' && (
