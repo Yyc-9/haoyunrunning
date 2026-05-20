@@ -42,7 +42,7 @@ async function fetchCoachStudents() {
   } = await supabase.auth.getSession()
 
   if (!session?.access_token) {
-    throw new Error('請先登入教練帳號。')
+    throw new Error('请先登入教练账号。')
   }
 
   const response = await fetch('/api/coach/students', {
@@ -57,7 +57,7 @@ async function fetchCoachStudents() {
   }
 
   if (!response.ok) {
-    throw new Error(payload.error || '讀取學員失敗，請稍後再試。')
+    throw new Error(payload.error || '读取学员失败，请稍后再试。')
   }
 
   return payload.students ?? []
@@ -82,7 +82,7 @@ export default function CoachStudentsClient() {
       const rows = await fetchCoachStudents()
       setStudents(rows)
     } catch (err) {
-      setError(err instanceof Error ? err.message : '讀取學員失敗，請稍後再試。')
+      setError(err instanceof Error ? err.message : '读取学员失败，请稍后再试。')
       setStudents([])
     } finally {
       setIsLoading(false)
@@ -113,7 +113,7 @@ export default function CoachStudentsClient() {
         <div className="container mx-auto max-w-7xl">
           <Link href="/coach" className="mb-8 inline-flex items-center gap-2 text-sm font-bold text-apple-gray-700">
             <ArrowLeft className="h-4 w-4" />
-            回教練工作台
+            回教练工作台
           </Link>
 
           <div className="mb-8 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">

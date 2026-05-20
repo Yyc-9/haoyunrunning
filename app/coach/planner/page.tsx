@@ -195,7 +195,7 @@ export default function CoachPlannerPage() {
         }),
       }) as { count?: number }
 
-      setMessage(`已派发 ${payload.count ?? workouts.length} 条训练课表，学员端会立即显示。`)
+      setMessage(`已储存 ${payload.count ?? workouts.length} 条训练课表，已写入 training_plans 并同步到学员端。`)
     } catch (err) {
       setError(err instanceof Error ? err.message : '课表派发失败，请稍后再试。')
     } finally {
@@ -217,7 +217,7 @@ export default function CoachPlannerPage() {
               <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
                 Training planner
               </p>
-              <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">课表派发面板</h1>
+              <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">课表面板</h1>
               <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
                 选择已绑定学员，填写本周训练内容并保存。课表会写入 Supabase，并同步到学员端的本周课表。
               </p>
@@ -288,7 +288,7 @@ export default function CoachPlannerPage() {
               className="apple-button-primary gap-2 px-5 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              {isSaving ? '派发中...' : '保存并派发课表'}
+              {isSaving ? '派发中...' : '储存课表并同步'}
             </button>
           </div>
 

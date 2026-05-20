@@ -69,15 +69,15 @@ export default function ProfilePage() {
                   Coach account
                 </p>
                 <h1 className="text-2xl font-bold text-apple-gray-900 md:text-3xl">
-                  {user.name || '好運教練'}
+                  {user.name || '好运教练'}
                 </h1>
                 <p className="mt-1 text-apple-gray-500">{user.email}</p>
                 <div className="mt-3 inline-flex items-center rounded-full bg-green-50 px-3 py-1 text-sm font-bold text-green-700">
-                  教練權限已啟用
+                  教练权限已启用
                 </div>
               </div>
               <Link href="/coach" className="apple-button-primary gap-2">
-                進入教練工作台
+                进入教练工作台
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
@@ -88,20 +88,20 @@ export default function ProfilePage() {
               {
                 href: '/coach/students',
                 icon: UsersRound,
-                title: '學員管理',
-                description: '查看已綁定學員，後續會加入風險提醒、最近回饋與訓練進度。',
+                title: '学员管理',
+                description: '查看已绑定学员，后续会加入风险提醒、最近回馈与训练进度。',
               },
               {
                 href: '/coach/planner',
                 icon: NotebookPen,
-                title: '課表工作區',
-                description: '保留熟悉的表格節奏，把每週訓練內容整理後同步給學員。',
+                title: '课表面板',
+                description: '保存后写入 training_plans，并同步给学员端查看。',
               },
               {
                 href: '/coach',
                 icon: MessageSquareText,
-                title: '回饋隊列',
-                description: '集中處理學員提交的 RPE、訓練感受、里程與心率資訊。',
+                title: '回馈隊列',
+                description: '集中处理学员提交的 RPE、训练感受、里程与心率信息。',
               },
             ].map((item) => (
               <Link key={item.href} href={item.href} className="apple-card block p-6">
@@ -122,13 +122,13 @@ export default function ProfilePage() {
           >
             <div className="mb-6 flex items-center gap-3">
               <ClipboardList className="h-6 w-6 text-apple-gray-700" />
-              <h2 className="text-xl font-bold text-apple-gray-900">接下來可以設計的教練個人頁</h2>
+              <h2 className="text-xl font-bold text-apple-gray-900">接下來可以设计的教练個人頁</h2>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
               {[
-                ['本週待處理', '顯示未查看回饋、異常 RPE、缺回報學員。'],
-                ['常用課表模板', '沉澱間歇、節奏跑、長距離與恢復跑模板。'],
-                ['教練備註庫', '記錄每位學員近期狀態，減少翻 Line 的成本。'],
+                ['本周待处理', '显示未查看回馈、异常 RPE、缺回报学员。'],
+                ['常用课表模板', '沉澱間歇、节奏跑、长距离与恢复跑模板。'],
+                ['教练備註庫', '记录每位学员近期状态，减少翻 Line 的成本。'],
               ].map(([title, description]) => (
                 <div key={title} className="rounded-3xl bg-apple-gray-100 p-5">
                   <h3 className="font-bold text-apple-gray-900">{title}</h3>
@@ -157,7 +157,7 @@ export default function ProfilePage() {
             </div>
             <div className="flex-1">
               <h1 className="text-2xl md:text-3xl font-bold text-apple-gray-900">
-                {user.name || '好運学员'}
+                {user.name || '好运学员'}
               </h1>
               <p className="text-apple-gray-500 mt-1">{user.email}</p>
               {user.pb && (

@@ -25,6 +25,7 @@ type FeedbackItem = {
   program: string
   workout: string
   submittedAt: string
+  createdAt: string
   distance: string
   pace: string
   heartRate: string
@@ -58,20 +59,20 @@ const quickLinks = [
   {
     href: '/coach/students',
     icon: UsersRound,
-    title: '學員列表',
-    description: '查看每位學員的週數、目標、最近回饋與風險提醒。',
+    title: '学员列表',
+    description: '查看每位学员的周数、目标、最近回馈与风险提醒。',
   },
   {
     href: '/coach/planner',
     icon: NotebookPen,
-    title: '出課表面板',
-    description: '用接近 Excel 的方式編輯週課表，之後可同步到學員端。',
+    title: '课表面板',
+    description: '编辑周课表并写入 training_plans，同步到学员端。',
   },
   {
     href: '/student',
     icon: MessageSquareText,
-    title: '查看學員端',
-    description: '站在學員視角檢查今日訓練與回饋表單。',
+    title: '查看学员端',
+    description: '站在学员视角检查今日训练与回馈表单。',
   },
 ]
 
@@ -149,7 +150,7 @@ async function fetchCoachStudents() {
   } = await supabase.auth.getSession()
 
   if (!session?.access_token) {
-    throw new Error('請先登入教練帳號。')
+    throw new Error('请先登入教练账号。')
   }
 
   const response = await fetch('/api/coach/students', {
@@ -164,7 +165,7 @@ async function fetchCoachStudents() {
   }
 
   if (!response.ok) {
-    throw new Error(payload.error || '讀取學員失敗，請稍後再試。')
+    throw new Error(payload.error || '读取学员失败，请稍后再试。')
   }
 
   return payload.students ?? []
@@ -172,15 +173,16 @@ async function fetchCoachStudents() {
 
 const formatFeedback = (item: any): FeedbackItem => ({
   id: item.id,
-  student: item.profiles?.name || '已登入學員',
+  student: item.profiles?.name || '已登录学员',
   program: item.profiles?.program || '尚未分班',
-  workout: item.training_plans?.target || '自主訓練回饋',
-  submittedAt: new Date(item.created_at).toLocaleString('zh-TW', {
+  workout: item.training_plans?.target || '自主训练回馈',
+  submittedAt: new Date(item.created_at).toLocaleString('zh-CN', {
     month: 'numeric',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
   }),
+  createdAt: item.created_at,
   distance: item.distance_km ? `${item.distance_km}km` : '-',
   pace: item.pace_text || '-',
   heartRate: item.average_heart_rate ? String(item.average_heart_rate) : '-',
@@ -205,7 +207,7 @@ export default function CoachDashboardClient() {
       const rows = await fetchCoachStudents()
       setCoachStudents(rows)
     } catch (err) {
-      setStudentLoadError(err instanceof Error ? err.message : '讀取學員失敗，請稍後再試。')
+      setStudentLoadError(err instanceof Error ? err.message : '读取学员失败，请稍后再试。')
       setCoachStudents([])
     }
   }, [])
@@ -229,7 +231,7 @@ export default function CoachDashboardClient() {
           training_plans:training_plan_id (target)
         `)
         .order('created_at', { ascending: false })
-        .limit(10)
+        .limit(50)
 
       if (error) {
         setLoadError(error.message)
@@ -245,17 +247,22 @@ export default function CoachDashboardClient() {
 
   const displayFeedback = liveFeedback
   const displayStudents = coachStudents.filter((row) => row.student).slice(0, 3)
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+  const weekStart = new Date(todayStart)
+  weekStart.setDate(todayStart.getDate() - ((todayStart.getDay() + 6) % 7))
+  const todayFeedbackCount = displayFeedback.filter((item) => new Date(item.createdAt) >= todayStart).length
+  const weekFeedbackCount = displayFeedback.filter((item) => new Date(item.createdAt) >= weekStart).length
   const flaggedCount = displayFeedback.filter((item) => item.status === 'flagged').length
-  const missingCount = 0
 
   const stats = useMemo(
     () => [
-      { label: '今日新回饋', value: displayFeedback.length, icon: MessageSquareText },
+      { label: '今日回馈', value: todayFeedbackCount, icon: MessageSquareText },
+      { label: '本周回馈', value: weekFeedbackCount, icon: ClipboardList },
       { label: '需要留意', value: flaggedCount, icon: AlertTriangle },
-      { label: '尚未回報', value: missingCount, icon: ClipboardList },
-      { label: '管理學員', value: coachStudents.length > 0 ? coachStudents.length : '待綁定', icon: UsersRound },
+      { label: '管理学员', value: coachStudents.length > 0 ? coachStudents.length : '待绑定', icon: UsersRound },
     ],
-    [displayFeedback.length, flaggedCount, missingCount, coachStudents.length]
+    [todayFeedbackCount, weekFeedbackCount, flaggedCount, coachStudents.length]
   )
 
   const handleCopyNote = async (note: string, title: string) => {
@@ -281,10 +288,10 @@ export default function CoachDashboardClient() {
                 Coach workspace
               </p>
               <h1 className="text-4xl font-black leading-tight text-apple-gray-900 md:text-6xl">
-                今天不用再一個一個等 Line。
+                今天不用再一个一个等 Line。
               </h1>
               <p className="mt-5 max-w-3xl text-lg leading-8 text-apple-gray-600">
-                教練端先把回饋集中、風險標出、課表入口放清楚。未來接上資料庫後，這裡就會成為每天調整訓練的主畫面。
+                教练端会集中训练回馈、标出风险，并提供清晰的课表入口。这里会成为每天调整训练的主画面。
               </p>
             </div>
 
@@ -303,13 +310,13 @@ export default function CoachDashboardClient() {
 
           {loadError && (
             <div className="mb-6 rounded-3xl bg-amber-50 p-4 text-sm leading-6 text-amber-800">
-              目前教練端讀取真實資料受權限限制。之後完成教練角色與學員綁定後，這裡會只顯示所屬學員回饋。訊息：{loadError}
+              目前教练端读取真实资料受权限限制。之后完成教练角色与学员绑定后，这里会只显示所属学员回馈。信息：{loadError}
             </div>
           )}
 
           {studentLoadError && (
             <div className="mb-6 rounded-3xl bg-amber-50 p-4 text-sm leading-6 text-amber-800">
-              目前無法讀取已綁定學員。請確認帳號已啟用教練權限。訊息：{studentLoadError}
+              目前无法读取已绑定学员。请确认账号已启用教练权限。信息：{studentLoadError}
             </div>
           )}
 
@@ -421,10 +428,10 @@ export default function CoachDashboardClient() {
               <div className="mb-6 flex items-center justify-between gap-4">
                 <div>
                   <p className="text-sm text-apple-gray-500">Feedback queue</p>
-                  <h2 className="text-2xl font-black text-apple-gray-900">今日待處理回饋</h2>
+                  <h2 className="text-2xl font-black text-apple-gray-900">今日 / 本周训练回馈</h2>
                 </div>
                 <Link href="/coach/students" className="apple-button-secondary gap-2 px-4 py-2 text-sm">
-                  全部學員
+                  全部学员
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
@@ -444,17 +451,17 @@ export default function CoachDashboardClient() {
                         {item.status === 'flagged'
                           ? '需留意'
                           : item.status === 'new'
-                            ? '新回饋'
+                            ? '新回馈'
                             : item.status === 'missing'
-                              ? '未回報'
-                              : '已看過'}
+                              ? '未回报'
+                              : '已看过'}
                       </span>
                     </div>
 
                     <div className="grid gap-3 sm:grid-cols-4">
                       {[
-                        ['課表', item.workout],
-                        ['實際', item.distance],
+                        ['课表', item.workout],
+                        ['实际', item.distance],
                         ['心率', item.heartRate],
                         ['RPE', item.rpe],
                       ].map(([label, value]) => (
@@ -473,9 +480,9 @@ export default function CoachDashboardClient() {
                 </div>
               ) : (
                 <div className="rounded-3xl border border-dashed border-black/15 bg-white p-8 text-center">
-                  <p className="text-lg font-bold text-apple-gray-900">還沒有真實學員回饋</p>
+                  <p className="text-lg font-bold text-apple-gray-900">还没有真实学员回馈</p>
                   <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-apple-gray-600">
-                    學員從 `/student` 提交訓練回饋後，資料會出現在這裡。下一步完成教練角色與學員綁定後，這個列表會只顯示該教練負責的學員。
+                    学员从 `/student` 提交训练回馈后，资料会出现在这里；教练能看到当天或本周训练状态。
                   </p>
                 </div>
               )}
@@ -540,7 +547,7 @@ export default function CoachDashboardClient() {
                   <h2 className="text-xl font-bold text-apple-gray-900">{item.title}</h2>
                   <p className="mt-3 leading-7 text-apple-gray-600">{item.description}</p>
                   <div className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-apple-gray-900">
-                    進入
+                    进入
                     <ArrowRight className="h-4 w-4" />
                   </div>
                 </Link>
@@ -549,12 +556,12 @@ export default function CoachDashboardClient() {
               <div className="apple-card p-6">
                 <div className="mb-4 flex items-center gap-3">
                   <CalendarDays className="h-5 w-5 text-apple-gray-700" />
-                  <h2 className="font-bold text-apple-gray-900">資料庫狀態</h2>
+                  <h2 className="font-bold text-apple-gray-900">数据库状态</h2>
                 </div>
                 <p className="text-sm leading-6 text-apple-gray-600">
                   {liveFeedback.length > 0
-                    ? '已讀取 Supabase 的真實學員回饋。'
-                    : '已切換為真實資料模式；目前等待學員提交第一筆回饋。'}
+                    ? '已读取 Supabase 的真实学员回馈。'
+                    : '已切换为真实资料模式；目前等待学员提交第一笔回馈。'}
                 </p>
               </div>
 
