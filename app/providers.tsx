@@ -41,7 +41,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (error) {
       console.error('Load profile error:', error)
-      return null
+
+      const fallbackUser: User = {
+        id: userId,
+        name: fallbackEmail ? fallbackEmail.split('@')[0] : '好運學員',
+        email: fallbackEmail,
+        phone: '',
+        gender: 'other',
+        pb: '',
+        role: 'student',
+      }
+
+      setUser(fallbackUser)
+      return fallbackUser
     }
 
     const nextUser: User = {
@@ -93,7 +105,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!mounted) return
 
       if (session?.user) {
-        loadProfile(session.user.id, session.user.email ?? '')
+        setUser({
+          id: session.user.id,
+          name:
+            (session.user.user_metadata?.name as string | undefined) ||
+            session.user.email?.split('@')[0] ||
+            '好運學員',
+          email: session.user.email ?? '',
+          phone: '',
+          gender: 'other',
+          pb: '',
+          role: 'student',
+        })
+
+        setTimeout(() => {
+          loadProfile(session.user.id, session.user.email ?? '')
+        }, 0)
       } else {
         setUser(null)
       }
@@ -120,6 +147,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error
 
       if (data.user) {
+        setUser({
+          id: data.user.id,
+          name:
+            (data.user.user_metadata?.name as string | undefined) ||
+            data.user.email?.split('@')[0] ||
+            '好運學員',
+          email: data.user.email ?? email,
+          phone: '',
+          gender: 'other',
+          pb: '',
+          role: 'student',
+        })
         await loadProfile(data.user.id, data.user.email ?? email)
       }
     } catch (error) {
@@ -178,8 +217,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', authUser.id)
 
       if (profileError) {
-        throw profileError
+        console.error('Profile update error:', profileError)
       }
+
+      setUser({
+        id: authUser.id,
+        name: userData.name || userData.email.split('@')[0],
+        email: userData.email,
+        phone: userData.phone,
+        gender: userData.gender,
+        pb: userData.pb,
+        role: 'student',
+      })
 
       await loadProfile(authUser.id, userData.email)
     } catch (error) {
