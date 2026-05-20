@@ -152,3 +152,48 @@ export const weeklySchedulePreview = [
     note: '依目標賽事調整距離，補給與配速一併記錄。',
   },
 ]
+
+export function courseSlug(course: Course) {
+  return course.name
+    .replace(/^2026\s*好運跑步訓練營\s*X\s*/, '')
+    .replaceAll('週', '周')
+    .replaceAll('訓練', '训练')
+    .replaceAll('補習', '补习')
+    .replaceAll('課', '课')
+    .replaceAll('階', '阶')
+    .replace(/\s+/g, '-')
+    .replace(/[，。/]/g, '-')
+    .toLowerCase()
+}
+
+export const allCourses = courseGroups.flatMap((group) =>
+  group.courses.map((course) => ({ ...course, groupTitle: group.title, slug: courseSlug(course) }))
+)
+
+export function getCourseBySlug(slug: string) {
+  return allCourses.find((course) => course.slug === slug)
+}
+
+export function getCourseCoach(course: Course) {
+  if (course.name.includes('PB')) {
+    return {
+      name: '好运竞速教练组',
+      title: 'PB 与间歇训练专项',
+      bio: '擅长用分段配速、间歇结构和恢复监控协助跑者提升 5000m、10000m、半马与全马成绩。',
+    }
+  }
+
+  if (course.name.includes('初心') || course.name.includes('初階')) {
+    return {
+      name: '好运基础教练组',
+      title: '新手跑姿与基础体能专项',
+      bio: '专注帮助新手建立安全跑步习惯，从跑姿、肌力、呼吸节奏到训练负荷逐步打底。',
+    }
+  }
+
+  return {
+    name: '好运跑班教练组',
+    title: '耐力训练与赛事备赛专项',
+    bio: '以周期化训练安排团练课表，结合课后回馈调整强度，让跑者稳定累积跑量并减少伤痛风险。',
+  }
+}

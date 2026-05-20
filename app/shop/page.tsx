@@ -2,8 +2,8 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useMemo } from 'react'
-import { CreditCard, ShoppingBag, Star, Package, Truck, Shield, ChevronRight, Search } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { CreditCard, Package, Search, Shield, ShoppingBag, Star, Truck } from 'lucide-react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -22,87 +22,78 @@ type Product = {
   name: string
   category: string
   price: number
-  originalPrice: number
   priceLabel: string
   image: string
   rating: number
   reviews: number
   tags: string[]
   variants?: ProductVariant[]
+  sizes?: string[]
 }
 
 const products: Product[] = [
   {
     id: '1',
-    name: '好運競速跑步背心',
-    category: '跑者服飾',
+    name: '好运竞速跑步背心',
+    category: '跑者服饰',
     price: 0,
-    originalPrice: 0,
-    priceLabel: '私訊洽詢',
+    priceLabel: '私信咨询',
     image: '/goodluck-running-vest.jpg',
     rating: 5,
     reviews: 0,
-    tags: ['團隊裝備'],
+    tags: ['团队装备'],
+    sizes: ['XS', 'S', 'M', 'L', 'XL'],
     variants: [
-      {
-        id: 'purple-white',
-        name: '紫電白',
-        image: '/goodluck-running-vest.jpg',
-      },
-      {
-        id: 'black-blue',
-        name: '曜黑藍',
-        image: '/goodluck-running-vest-black.jpg',
-      },
+      { id: 'purple-white', name: '紫电白', image: '/goodluck-running-vest.jpg' },
+      { id: 'black-blue', name: '曜黑蓝', image: '/goodluck-running-vest-black.jpg' },
     ],
   },
   {
     id: '2',
-    name: '好運跑步 T 恤',
-    category: '跑者服飾',
+    name: '好运跑步 T 恤',
+    category: '跑者服饰',
     price: 0,
-    originalPrice: 0,
-    priceLabel: '私訊洽詢',
+    priceLabel: '私信咨询',
     image: '/goodluck-running-tee.jpg',
     rating: 5,
     reviews: 0,
-    tags: ['團隊裝備'],
+    tags: ['团队装备'],
+    sizes: ['XS', 'S', 'M', 'L', 'XL'],
   },
   {
     id: '3',
-    name: '好運跑步帽',
+    name: '好运跑步帽',
     category: '跑者配件',
     price: 0,
-    originalPrice: 0,
-    priceLabel: '私訊洽詢',
-    image: '/calbomb-energy-gel.png',
+    priceLabel: '私信咨询',
+    image: '',
     rating: 5,
     reviews: 0,
-    tags: ['日常訓練'],
+    tags: ['日常训练'],
+    sizes: ['S/M', 'L/XL'],
   },
   {
     id: '4',
-    name: '好運毛巾衣',
-    category: '跑者服飾',
+    name: '好运毛巾衣',
+    category: '跑者服饰',
     price: 0,
-    originalPrice: 0,
-    priceLabel: '私訊洽詢',
+    priceLabel: '私信咨询',
     image: '',
     rating: 5,
     reviews: 0,
-    tags: ['賽後恢復'],
+    tags: ['赛后恢复'],
+    sizes: ['S', 'M', 'L', 'XL'],
   },
   {
     id: '5',
-    name: 'CALBOMB 蜂蜜檸檬能量膠',
-    category: '運動補給',
+    name: 'CALBOMB 蜂蜜柠檬能量胶',
+    category: '运动补给',
     price: 0,
-    originalPrice: 0,
-    priceLabel: '私訊洽詢',
-    image: '',
+    priceLabel: '私信咨询',
+    image: '/calbomb-energy-gel.png',
     rating: 5,
     reviews: 0,
-    tags: ['訓練補給', '無添加認證'],
+    tags: ['训练补给', '无添加认证'],
   },
 ]
 
@@ -114,6 +105,7 @@ export default function ShopPage() {
   const [sortBy, setSortBy] = useState<'relevance' | 'price-low' | 'price-high' | 'rating'>('relevance')
   const [currentPage, setCurrentPage] = useState(0)
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({})
+  const [selectedSizes, setSelectedSizes] = useState<Record<string, string>>({})
 
   const engine = useMemo(() => new SearchEngine(products, ['name', 'category']), [])
 
@@ -127,94 +119,53 @@ export default function ShopPage() {
     })
   }, [query, selectedCategory, sortBy, currentPage, engine])
 
-  const suggestions = useMemo(() => {
-    return query ? engine.getSuggestions(query, 5) : []
-  }, [query, engine])
+  const suggestions = useMemo(() => (query ? engine.getSuggestions(query, 5) : []), [query, engine])
+  const categories = useMemo(() => engine.getFilterOptions('category'), [engine])
 
-  const categories = useMemo(() => {
-    return engine.getFilterOptions('category')
-  }, [engine])
+  const handleAddToCart = (product: Product, variant?: ProductVariant, size?: string) => {
+    const optionName = [variant?.name, size ? `尺码 ${size}` : ''].filter(Boolean).join(' / ')
+    const displayName = optionName ? `${product.name} - ${optionName}` : product.name
 
-  const handleAddToCart = (product: Product, variant?: ProductVariant) => {
     addItem({
-      id: variant ? `${product.id}-${variant.id}` : product.id,
-      name: variant ? `${product.name} - ${variant.name}` : product.name,
+      id: [product.id, variant?.id, size].filter(Boolean).join('-'),
+      name: displayName,
       price: product.price,
       image: variant?.image ?? product.image,
     })
-    showToast(`${variant ? `${product.name} - ${variant.name}` : product.name} 已加入購物車`, 'success')
-  }
-
-  const handleSuggestion = (suggestion: string) => {
-    setQuery(suggestion)
-    setCurrentPage(0)
-  }
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 },
-    },
-  }
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.5 },
-    },
+    showToast(`${displayName} 已加入购物车`, 'success')
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-white">
       <div className="relative h-96 overflow-hidden bg-black">
-        <div
-          className="absolute inset-0 bg-cover bg-center opacity-75"
-          style={{ backgroundImage: 'url("/20250605[好運]三周年慶-7096.jpg")' }}
-        />
+        <div className="absolute inset-0 bg-cover bg-center opacity-75" style={{ backgroundImage: 'url("/20250605[好運]三周年慶-7096.jpg")' }} />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/15 to-black/25" />
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="relative z-10 h-full flex flex-col items-center justify-center text-white px-4"
-        >
-          <h1 className="text-5xl font-bold mb-4 text-center">好運商店</h1>
-          <p className="text-xl text-white/85 text-center max-w-2xl leading-8">
-            跑班裝備與訓練補給，先把真正會用上的東西整理好。
-          </p>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="relative z-10 flex h-full flex-col items-center justify-center px-4 text-white">
+          <h1 className="mb-4 text-center text-5xl font-bold">好运商店</h1>
+          <p className="max-w-2xl text-center text-xl leading-8 text-white/85">跑班装备与训练补给，先把真正会用上的东西整理好。</p>
         </motion.div>
       </div>
 
-      {/* 搜索和过滤区域 */}
       <div className="container mx-auto px-4 py-12">
-        {/* 搜索栏 */}
-        <div className="mb-8 relative max-w-2xl mx-auto">
+        <div className="relative mx-auto mb-8 max-w-2xl">
           <div className="relative">
-            <Search className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
             <input
               type="text"
-              placeholder="搜尋商品..."
+              placeholder="搜索商品..."
               value={query}
-              onChange={e => {
-                setQuery(e.target.value)
+              onChange={(event) => {
+                setQuery(event.target.value)
                 setCurrentPage(0)
               }}
               className="apple-input pl-12"
             />
           </div>
 
-          {/* 搜索建议 */}
           {suggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 z-10 mt-2 overflow-hidden rounded-2xl border border-black/10 bg-white shadow-lg">
-              {suggestions.map(suggestion => (
-                <button
-                  key={suggestion}
-                  onClick={() => handleSuggestion(suggestion)}
-                  className="w-full border-b px-4 py-3 text-left text-sm transition last:border-b-0 hover:bg-apple-gray-100"
-                >
+            <div className="absolute left-0 right-0 top-full z-10 mt-2 overflow-hidden rounded-2xl border border-black/10 bg-white shadow-lg">
+              {suggestions.map((suggestion) => (
+                <button key={suggestion} onClick={() => setQuery(suggestion)} className="w-full border-b px-4 py-3 text-left text-sm transition last:border-b-0 hover:bg-apple-gray-100">
                   {suggestion}
                 </button>
               ))}
@@ -222,136 +173,58 @@ export default function ShopPage() {
           )}
         </div>
 
-        {/* 分类和排序 */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-          {/* 分类过滤 */}
+        <div className="mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
           <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => {
-                setSelectedCategory('')
-                setCurrentPage(0)
-              }}
-              className={`apple-chip ${selectedCategory === '' ? 'apple-chip-active' : ''}`}
-            >
-              全部
-            </button>
-            {(categories as string[]).map(category => (
-              <button
-                key={category}
-                onClick={() => {
-                  setSelectedCategory(category)
-                  setCurrentPage(0)
-                }}
-                className={`apple-chip ${selectedCategory === category ? 'apple-chip-active' : ''}`}
-              >
+            <button onClick={() => setSelectedCategory('')} className={`apple-chip ${selectedCategory === '' ? 'apple-chip-active' : ''}`}>全部</button>
+            {(categories as string[]).map((category) => (
+              <button key={category} onClick={() => setSelectedCategory(category)} className={`apple-chip ${selectedCategory === category ? 'apple-chip-active' : ''}`}>
                 {category}
               </button>
             ))}
           </div>
 
-          {/* 排序 */}
-          <select
-            value={sortBy}
-            onChange={e => setSortBy(e.target.value as any)}
-            className="apple-input w-auto min-w-48 py-2 text-sm"
-          >
-            <option value="relevance">相關度</option>
-            <option value="price-low">價格: 低到高</option>
-            <option value="price-high">價格: 高到低</option>
-            <option value="rating">推薦度: 高到低</option>
+          <select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} className="apple-input w-auto min-w-48 py-2 text-sm">
+            <option value="relevance">相关度</option>
+            <option value="price-low">价格：低到高</option>
+            <option value="price-high">价格：高到低</option>
+            <option value="rating">推荐度：高到低</option>
           </select>
         </div>
 
-        {/* 结果计数 */}
-        <p className="text-gray-600 mb-6">
-          共 {results.total} 件商品 {query && `（搜尋「${query}」）`}
-        </p>
+        <p className="mb-6 text-gray-600">共 {results.total} 件商品 {query && `（搜索“${query}”）`}</p>
 
-        {/* 商品网格 */}
         {results.items.length > 0 ? (
-          <>
-            <motion.div
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12"
-            >
-              {results.items.map(product => {
-                const selectedVariant =
-                  product.variants?.find(
-                    variant => variant.id === selectedVariants[product.id]
-                  ) ?? product.variants?.[0]
-                const productImage = selectedVariant?.image ?? product.image
+          <motion.div initial="hidden" animate="visible" className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {results.items.map((product) => {
+              const selectedVariant = product.variants?.find((variant) => variant.id === selectedVariants[product.id]) ?? product.variants?.[0]
+              const selectedSize = selectedSizes[product.id] ?? product.sizes?.[0]
+              const productImage = selectedVariant?.image ?? product.image
 
-                return (
-                  <motion.div
-                    key={product.id}
-                    variants={itemVariants}
-                    className="apple-card group overflow-hidden"
-                  >
-                  {/* 商品图片 */}
+              return (
+                <motion.div key={product.id} className="apple-card group overflow-hidden">
                   <div className="relative h-64 overflow-hidden bg-apple-gray-100">
                     {productImage ? (
-                      <Image
-                        src={productImage}
-                        alt={selectedVariant ? `${product.name} ${selectedVariant.name}` : product.name}
-                        fill
-                        sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
-                        className="object-cover transition duration-500 group-hover:scale-105"
-                      />
+                      <Image src={productImage} alt={selectedVariant ? `${product.name} ${selectedVariant.name}` : product.name} fill sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw" className="object-cover transition duration-500 group-hover:scale-105" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-white via-apple-gray-100 to-apple-gray-200">
-                        <Package className="w-16 h-16 text-apple-gray-400" />
+                        <Package className="h-16 w-16 text-apple-gray-400" />
                       </div>
                     )}
-
-                    {/* 标签 */}
-                    <div className="absolute top-3 left-3 flex gap-2">
-                      {product.tags.map(tag => (
-                        <span
-                          key={tag}
-                          className="rounded-full bg-black/80 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm"
-                        >
-                          {tag}
-                        </span>
-                      ))}
+                    <div className="absolute left-3 top-3 flex gap-2">
+                      {product.tags.map((tag) => <span key={tag} className="rounded-full bg-black/80 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">{tag}</span>)}
                     </div>
-
-                    {product.originalPrice > 0 && (
-                      <div className="absolute bottom-3 right-3 bg-white/90 px-3 py-1 rounded-full text-sm font-semibold text-gray-900">
-                        {Math.round((1 - product.price / product.originalPrice) * 100)}% OFF
-                      </div>
-                    )}
                   </div>
 
-                  {/* 商品信息 */}
                   <div className="p-5">
-                    <p className="text-xs text-gray-500 mb-2">{product.category}</p>
-                    <h3 className="font-bold text-gray-900 mb-2 group-hover:text-black transition">
-                      {product.name}
-                    </h3>
+                    <p className="mb-2 text-xs text-gray-500">{product.category}</p>
+                    <h3 className="mb-2 font-bold text-gray-900 transition group-hover:text-black">{product.name}</h3>
 
                     {product.variants && (
                       <div className="mb-3 flex flex-wrap gap-2">
-                        {product.variants.map(variant => {
+                        {product.variants.map((variant) => {
                           const isSelected = variant.id === selectedVariant?.id
-
                           return (
-                            <button
-                              key={variant.id}
-                              type="button"
-                              onClick={() =>
-                                setSelectedVariants(current => ({
-                                  ...current,
-                                  [product.id]: variant.id,
-                                }))
-                              }
-                              className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                                isSelected
-                                  ? 'border-black bg-black text-white'
-                                  : 'border-black/10 bg-white text-gray-700 hover:border-black/30'
-                              }`}
-                            >
+                            <button key={variant.id} type="button" onClick={() => setSelectedVariants((current) => ({ ...current, [product.id]: variant.id }))} className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${isSelected ? 'border-black bg-black text-white' : 'border-black/10 bg-white text-gray-700 hover:border-black/30'}`}>
                               {variant.name}
                             </button>
                           )
@@ -359,107 +232,64 @@ export default function ShopPage() {
                       </div>
                     )}
 
-                    {/* 评分 */}
-                    <div className="flex items-center gap-1 mb-3">
+                    {product.sizes && (
+                      <label className="mb-3 block">
+                        <span className="mb-2 block text-xs font-semibold text-gray-600">尺寸 / 尺码</span>
+                        <select value={selectedSize} onChange={(event) => setSelectedSizes((current) => ({ ...current, [product.id]: event.target.value }))} className="apple-input py-2 text-sm">
+                          {product.sizes.map((size) => <option key={size} value={size}>{size}</option>)}
+                        </select>
+                      </label>
+                    )}
+
+                    <div className="mb-3 flex items-center gap-1">
                       <div className="flex text-amber-400">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`w-4 h-4 ${
-                              i < Math.floor(product.rating) ? 'fill-current' : ''
-                            }`}
-                          />
-                        ))}
+                        {Array.from({ length: 5 }).map((_, index) => <Star key={index} className={`h-4 w-4 ${index < Math.floor(product.rating) ? 'fill-current' : ''}`} />)}
                       </div>
-                      <span className="text-sm text-gray-600">
-                      {product.reviews > 0 ? `${product.rating} (${product.reviews})` : '好運推薦'}
-                      </span>
+                      <span className="text-sm text-gray-600">{product.reviews > 0 ? `${product.rating} (${product.reviews})` : '好运推荐'}</span>
                     </div>
 
-                    {/* 价格 */}
-                    <div className="flex items-baseline gap-2 mb-4">
-                      <span className="text-2xl font-bold text-gray-900">
-                        {product.price > 0 ? `NT$${(product.price / 100).toFixed(0)}` : product.priceLabel}
-                      </span>
-                      {product.originalPrice > 0 && (
-                        <span className="text-sm text-gray-400 line-through">
-                          NT${(product.originalPrice / 100).toFixed(0)}
-                        </span>
-                      )}
+                    <div className="mb-4 flex items-baseline gap-2">
+                      <span className="text-2xl font-bold text-gray-900">{product.price > 0 ? `NT$${(product.price / 100).toFixed(0)}` : product.priceLabel}</span>
                     </div>
 
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <button
-                        onClick={() => handleAddToCart(product, selectedVariant)}
-                        className="apple-button-secondary gap-2 px-4 py-2.5 text-sm"
-                      >
-                        <ShoppingBag className="w-4 h-4" />
-                        加入購物車
+                      <button onClick={() => handleAddToCart(product, selectedVariant, selectedSize)} className="apple-button-secondary gap-2 px-4 py-2.5 text-sm">
+                        <ShoppingBag className="h-4 w-4" />
+                        加入购物车
                       </button>
-                      <Link
-                        href="/checkout"
-                        onClick={() => handleAddToCart(product, selectedVariant)}
-                        className="apple-button-primary gap-2 px-4 py-2.5 text-sm"
-                      >
-                        <CreditCard className="w-4 h-4" />
-                        前往結帳
+                      <Link href="/checkout" onClick={() => handleAddToCart(product, selectedVariant, selectedSize)} className="apple-button-primary gap-2 px-4 py-2.5 text-sm">
+                        <CreditCard className="h-4 w-4" />
+                        前往结账
                       </Link>
                     </div>
                   </div>
                 </motion.div>
-                )
-              })}
-            </motion.div>
-
-            {/* 分页 */}
-            {results.hasMore && (
-              <div className="text-center mb-12">
-                <button
-                  onClick={() => setCurrentPage(p => p + 1)}
-                  className="apple-button-secondary gap-2"
-                >
-                  加载更多 <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-          </>
+              )
+            })}
+          </motion.div>
         ) : (
-          <div className="text-center py-12">
-            <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg mb-4">未找到匹配的商品</p>
-            <button
-              onClick={() => {
-                setQuery('')
-                setSelectedCategory('')
-                setCurrentPage(0)
-              }}
-              className="apple-button-primary px-6 py-2"
-            >
-              清除篩選
-            </button>
+          <div className="py-12 text-center">
+            <Package className="mx-auto mb-4 h-16 w-16 text-gray-300" />
+            <p className="mb-4 text-lg text-gray-500">未找到匹配的商品</p>
+            <button onClick={() => { setQuery(''); setSelectedCategory('') }} className="apple-button-primary px-6 py-2">清除筛选</button>
           </div>
         )}
       </div>
 
-      {/* 特性区域 */}
-      <div className="bg-gray-50 py-12 border-t">
+      <div className="border-t bg-gray-50 py-12">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <Truck className="w-12 h-12 text-black mx-auto mb-4" />
-              <h4 className="font-bold text-gray-900 mb-2">跑班自取 / 配送</h4>
-              <p className="text-gray-600">依商品與課程活動安排</p>
-            </div>
-            <div className="text-center">
-              <Shield className="w-12 h-12 text-black mx-auto mb-4" />
-              <h4 className="font-bold text-gray-900 mb-2">實用優先</h4>
-              <p className="text-gray-600">只整理跑者真正會用到的裝備</p>
-            </div>
-            <div className="text-center">
-              <Package className="w-12 h-12 text-black mx-auto mb-4" />
-              <h4 className="font-bold text-gray-900 mb-2">補給支援</h4>
-              <p className="text-gray-600">訓練與賽事前後都能補上</p>
-            </div>
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+            {[
+              { icon: Truck, title: '跑班自取 / 配送', description: '依商品与课程活动安排' },
+              { icon: Shield, title: '实用优先', description: '只整理跑者真正会用到的装备' },
+              { icon: Package, title: '补给支援', description: '训练与赛事前后都能补上' },
+            ].map((item) => (
+              <div key={item.title} className="text-center">
+                <item.icon className="mx-auto mb-4 h-12 w-12 text-black" />
+                <h4 className="mb-2 font-bold text-gray-900">{item.title}</h4>
+                <p className="text-gray-600">{item.description}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>

@@ -2,9 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Mail, Search, Target, UsersRound } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Mail, MessageSquareText, NotebookPen, Search, Target, UsersRound } from 'lucide-react'
 import CoachAccessPanel from '@/components/CoachAccessPanel'
 import { supabase } from '@/lib/supabase'
+
+type RecentFeedback = {
+  id: string
+  created_at: string
+  distance_km: number | null
+  pace_text: string | null
+  average_heart_rate: number | null
+  rpe: number | null
+  feeling: string | null
+  status: 'new' | 'flagged' | 'reviewed'
+}
 
 type BoundStudentRow = {
   id: string
@@ -18,6 +29,7 @@ type BoundStudentRow = {
     goal: string | null
     pb: string | null
   } | null
+  recentFeedback?: RecentFeedback[]
 }
 
 async function fetchCoachStudents() {
@@ -109,9 +121,9 @@ export default function CoachStudentsClient() {
               <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
                 Athletes
               </p>
-              <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">學員列表</h1>
+              <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">学员列表</h1>
               <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
-                綁定完成後，這裡會只顯示目前教練負責的學員，方便查看目標、PB 與後續回饋狀態。
+                绑定完成后，这里会显示当前教练负责的学员，并提供课表派发与最近回馈入口。
               </p>
             </div>
 
@@ -120,7 +132,7 @@ export default function CoachStudentsClient() {
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="搜尋姓名、班級或目標"
+                placeholder="搜索姓名、班级或目标"
                 className="apple-input pl-11"
               />
             </div>
@@ -132,12 +144,12 @@ export default function CoachStudentsClient() {
 
           {error && (
             <div className="mb-6 rounded-3xl bg-amber-50 p-4 text-sm leading-6 text-amber-800">
-              目前無法讀取學員綁定資料。請確認帳號已用邀请码升級為教練，並已執行最新的 Supabase SQL。訊息：{error}
+目前无法读取学员绑定资料。请确认账号已启用教练权限。信息：{error}
             </div>
           )}
 
           {isLoading ? (
-            <div className="apple-card p-8 text-center text-apple-gray-600">讀取學員中...</div>
+            <div className="apple-card p-8 text-center text-apple-gray-600">读取学员中...</div>
           ) : filteredStudents.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {filteredStudents.map((row) => {
@@ -157,15 +169,15 @@ export default function CoachStudentsClient() {
                         </p>
                       </div>
                       <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">
-                        已綁定
+已绑定
                       </span>
                     </div>
 
                     <div className="space-y-3">
                       {[
-                        ['班級', student.program || '尚未填寫'],
-                        ['目標', student.goal || '尚未填寫'],
-                        ['PB', student.pb || '尚未填寫'],
+                        ['班级', student.program || '尚未填写'],
+                        ['目标', student.goal || '尚未填写'],
+                        ['PB', student.pb || '尚未填写'],
                       ].map(([label, value]) => (
                         <div key={label} className="rounded-2xl bg-apple-gray-100 p-4">
                           <p className="text-xs text-apple-gray-500">{label}</p>
@@ -174,9 +186,47 @@ export default function CoachStudentsClient() {
                       ))}
                     </div>
 
-                    <div className="mt-5 flex items-center gap-2 text-sm font-bold text-apple-gray-900">
-                      <Target className="h-4 w-4" />
-                      課表與回饋面板開發中
+                    <div id={`feedback-${student.id}`} className="mt-5 rounded-2xl bg-apple-gray-100 p-4">
+                      <div className="mb-3 flex items-center gap-2 text-sm font-bold text-apple-gray-900">
+                        <MessageSquareText className="h-4 w-4" />
+                        最近回馈
+                      </div>
+                      {row.recentFeedback && row.recentFeedback.length > 0 ? (
+                        <div className="space-y-2">
+                          {row.recentFeedback.slice(0, 2).map((feedback) => (
+                            <div key={feedback.id} className="rounded-xl bg-white p-3 text-sm text-apple-gray-700">
+                              <div className="mb-1 flex items-center justify-between gap-3">
+                                <span className="font-semibold text-apple-gray-900">
+                                  {new Date(feedback.created_at).toLocaleDateString('zh-CN')}
+                                </span>
+                                <span className="rounded-full bg-apple-gray-100 px-2 py-0.5 text-xs font-semibold">
+                                  RPE {feedback.rpe ?? '-'}
+                                </span>
+                              </div>
+                              <p className="line-clamp-2 leading-6">{feedback.feeling || '学员未填写文字感受。'}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm leading-6 text-apple-gray-600">暂无回馈。学员提交训练感受后会显示在这里。</p>
+                      )}
+                    </div>
+
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                      <Link
+                        href={`/coach/planner?studentId=${student.id}`}
+                        className="apple-button-primary gap-2 px-4 py-2.5 text-sm"
+                      >
+                        <NotebookPen className="h-4 w-4" />
+                        下发课表
+                      </Link>
+                      <a
+                        href={`#feedback-${student.id}`}
+                        className="apple-button-secondary gap-2 px-4 py-2.5 text-sm"
+                      >
+                        <CalendarDays className="h-4 w-4" />
+                        查看回馈
+                      </a>
                     </div>
                   </article>
                 )
@@ -187,9 +237,9 @@ export default function CoachStudentsClient() {
               <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-black text-white">
                 <UsersRound className="h-8 w-8" />
               </div>
-              <h2 className="text-2xl font-black text-apple-gray-900">尚未綁定真實學員</h2>
+              <h2 className="text-2xl font-black text-apple-gray-900">尚未绑定真实学员</h2>
               <p className="mx-auto mt-4 max-w-2xl leading-7 text-apple-gray-600">
-                先請測試學員註冊帳號，再用上方欄位輸入對方信箱。綁定成功後，這裡就會出現真實學員資料。
+                先请测试学员注册账号，再用上方栏位输入对方邮箱。绑定成功后，这里就会出现真实学员资料。
               </p>
             </div>
           )}

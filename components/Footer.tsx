@@ -16,7 +16,7 @@ export default function Footer() {
 
   const contactInfo = [
     { icon: Instagram, text: '@nurture.running.team' },
-    { icon: Mail, text: '課程與商品諮詢請先透過 Instagram 聯絡' },
+    { icon: Mail, text: '课程与商品咨询请先通过 Instagram 联系' },
     { icon: MapPin, text: t.footer.address },
   ]
 
@@ -34,7 +34,7 @@ export default function Footer() {
               <div className="relative h-14 w-14 overflow-hidden rounded-full border border-black/10 bg-white shadow-sm">
                 <Image
                   src="/goodluck-logo.svg"
-                  alt="好運跑班 Logo"
+                  alt="好运跑班 Logo"
                   fill
                   sizes="56px"
                   className="object-cover"
@@ -114,14 +114,14 @@ export default function Footer() {
               className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-gray-50 hover:text-black hover:shadow-md"
             >
               <UserRoundCheck className="h-4 w-4" />
-              學員看板
+              学员看板
             </Link>
             <Link
               href="/coach"
               className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-gray-50 hover:text-black hover:shadow-md"
             >
               <KeyRound className="h-4 w-4" />
-              教練入口
+              教练入口
             </Link>
             {socialMedia.map((social, index) => {
               const Icon = social.icon

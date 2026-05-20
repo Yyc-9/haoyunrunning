@@ -2,162 +2,121 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Calendar, MapPin, Target, Clock, ChevronRight } from 'lucide-react'
-import { courseGroups } from '@/lib/goodluck-data'
+import { CalendarDays, ChevronRight, Clock, MapPin, Target, Users } from 'lucide-react'
+import { allCourses } from '@/lib/goodluck-data'
+
+const weekdayOrder = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+
+function normalizeWeekday(weekday: string) {
+  return weekday.replace('週', '周')
+}
 
 export default function CoursesSection() {
+  const courses = [...allCourses].sort(
+    (a, b) => weekdayOrder.indexOf(normalizeWeekday(a.weekday)) - weekdayOrder.indexOf(normalizeWeekday(b.weekday))
+  )
+
   return (
-    <section id="courses" className="py-20 bg-white">
+    <section id="courses" className="bg-white py-16">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="mb-10"
         >
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-black to-apple-gray-800">
-              2026 好運跑步訓練營
-            </span>
-          </h2>
-          <p className="text-xl text-apple-gray-600 max-w-3xl mx-auto">
-            依照程度、地點與訓練目標安排班級，陪伴跑者備戰 5000m、10000m、半馬與全馬。
-          </p>
-        </motion.div>
-
-        <div className="space-y-10">
-          {courseGroups.map((group, groupIndex) => (
-            <motion.div
-              key={group.title}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: groupIndex * 0.1 }}
-              viewport={{ once: true }}
-              className="rounded-3xl border border-apple-gray-200 bg-white p-6 shadow-sm md:p-8"
-            >
-              <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                  <div className="mb-4 inline-flex items-center rounded-full bg-apple-blue/10 px-4 py-2 text-sm font-semibold text-apple-blue">
-                    {group.courses.length} 個班級
-                  </div>
-                  <h3 className="mb-3 text-2xl font-bold text-apple-gray-900 md:text-3xl">
-                    {group.title}
-                  </h3>
-                  <p className="max-w-3xl text-apple-gray-600">{group.description}</p>
-                </div>
-                <p className="max-w-md rounded-2xl bg-apple-gray-50 p-4 text-sm leading-6 text-apple-gray-600">
-                  {group.audience}
-                </p>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {group.courses.map((course, index) => (
-                  <motion.article
-                    key={course.name}
-                    whileHover={{ y: -6 }}
-                    className="rounded-2xl border border-apple-gray-200 bg-apple-gray-50 p-5 transition-all duration-300 hover:bg-white hover:shadow-md"
-                  >
-                    <div className="mb-5 flex items-center justify-between gap-3">
-                      <span className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-apple-blue shadow-sm">
-                        {course.weekday}
-                      </span>
-                      {groupIndex === 0 && index === 0 && (
-                        <span className="rounded-full bg-apple-orange/10 px-3 py-1 text-xs font-semibold text-apple-orange">
-                          初心推薦
-                        </span>
-                      )}
-                      {course.name.includes('PB') && (
-                        <span className="rounded-full bg-apple-orange/10 px-3 py-1 text-xs font-semibold text-apple-orange">
-                          PB 目標
-                        </span>
-                      )}
-                    </div>
-
-                    <h4 className="mb-4 min-h-14 text-lg font-bold leading-7 text-apple-gray-900">
-                      {course.name}
-                    </h4>
-
-                    <div className="mb-5 space-y-3 text-sm text-apple-gray-600">
-                      <div className="flex items-center">
-                        <MapPin className="mr-2 h-4 w-4 text-apple-blue" />
-                        {course.location}
-                      </div>
-                      <div className="flex items-center">
-                        <Calendar className="mr-2 h-4 w-4 text-apple-blue" />
-                        {course.period}
-                      </div>
-                      <div className="flex items-start">
-                        <Target className="mr-2 mt-0.5 h-4 w-4 flex-shrink-0 text-apple-blue" />
-                        <span>{course.focus}</span>
-                      </div>
-                    </div>
-
-                    <div className="border-t border-apple-gray-200 pt-4">
-                      <Link
-                        href="/shop"
-                        className="inline-flex items-center text-sm font-semibold text-apple-blue"
-                      >
-                        購買或洽詢課程
-                        <ChevronRight className="ml-1 h-4 w-4" />
-                      </Link>
-                    </div>
-                  </motion.article>
-                ))}
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          viewport={{ once: true }}
-          className="mt-12 rounded-3xl border border-apple-gray-200 bg-gradient-to-r from-apple-blue/5 via-white to-apple-orange/5 p-8"
-        >
-          <div className="grid gap-8 md:grid-cols-3">
-            {[
-              {
-                icon: Clock,
-                title: '12 週週期',
-                description: '目前班級集中在 4 月至 6 月，方便以完整週期建立訓練節奏。',
-              },
-              {
-                icon: Target,
-                title: '多目標備賽',
-                description: '支援 5000m、10000m、半馬、全馬與 PB 目標的訓練安排。',
-              },
-              {
-                icon: MapPin,
-                title: '台灣多地開課',
-                description: '台北、新竹、竹北、板橋、三重、竹南等班級逐步整理上線。',
-              },
-            ].map((item) => (
-              <div key={item.title}>
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-apple-blue to-apple-orange">
-                  <item.icon className="h-6 w-6 text-white" />
-                </div>
-                <h4 className="mb-2 font-bold text-apple-gray-900">{item.title}</h4>
-                <p className="text-sm leading-6 text-apple-gray-600">{item.description}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="text-center mt-8">
-            <motion.a
+          <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">Training schedule</p>
+          <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+            <div>
+              <h2 className="text-3xl font-black text-apple-gray-900 md:text-5xl">训练课程日程大表</h2>
+              <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
+                以日程表汇总所有班级，按星期、地点、周期与训练重点快速比较。点击课程名称即可查看专属详情页与教练介绍。
+              </p>
+            </div>
+            <a
               href="https://www.instagram.com/nurture.running.team/"
               target="_blank"
               rel="noreferrer"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="apple-button-secondary inline-flex items-center"
+              className="apple-button-secondary gap-2 px-5 py-2.5 text-sm"
             >
-              聯絡好運，詢問適合班級
-              <ChevronRight className="h-5 w-5 ml-2" />
-            </motion.a>
+              咨询适合班级
+              <ChevronRight className="h-4 w-4" />
+            </a>
           </div>
         </motion.div>
+
+        <div className="apple-card overflow-hidden p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[980px] border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-black/10 bg-apple-gray-100 text-left">
+                  <th className="w-28 p-4 font-bold text-apple-gray-900">星期</th>
+                  <th className="w-[30%] p-4 font-bold text-apple-gray-900">课程</th>
+                  <th className="p-4 font-bold text-apple-gray-900">地点</th>
+                  <th className="p-4 font-bold text-apple-gray-900">周期</th>
+                  <th className="w-[28%] p-4 font-bold text-apple-gray-900">训练重点</th>
+                  <th className="p-4 font-bold text-apple-gray-900">详情</th>
+                </tr>
+              </thead>
+              <tbody>
+                {courses.map((course) => (
+                  <tr key={course.slug} className="border-b border-black/10 last:border-b-0 hover:bg-apple-gray-50">
+                    <td className="p-4 align-top">
+                      <span className="rounded-full bg-black px-3 py-1 text-xs font-bold text-white">
+                        {normalizeWeekday(course.weekday)}
+                      </span>
+                    </td>
+                    <td className="p-4 align-top">
+                      <Link href={`/courses/${course.slug}`} className="font-bold leading-6 text-apple-gray-900 hover:text-apple-blue">
+                        {course.name.replaceAll('訓練營', '训练营').replaceAll('週', '周')}
+                      </Link>
+                      <p className="mt-2 text-xs text-apple-gray-500">{course.groupTitle.replaceAll('運', '运').replaceAll('課程', '课程')}</p>
+                    </td>
+                    <td className="p-4 align-top text-apple-gray-700">
+                      <span className="inline-flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-apple-blue" />
+                        {course.location}
+                      </span>
+                    </td>
+                    <td className="p-4 align-top text-apple-gray-700">
+                      <span className="inline-flex items-center gap-2">
+                        <CalendarDays className="h-4 w-4 text-apple-blue" />
+                        {course.period}
+                      </span>
+                    </td>
+                    <td className="p-4 align-top text-apple-gray-700">
+                      <span className="inline-flex items-start gap-2 leading-6">
+                        <Target className="mt-0.5 h-4 w-4 shrink-0 text-apple-blue" />
+                        {course.focus.replaceAll('訓練', '训练').replaceAll('節奏', '节奏')}
+                      </span>
+                    </td>
+                    <td className="p-4 align-top">
+                      <Link href={`/courses/${course.slug}`} className="inline-flex items-center gap-1 text-sm font-bold text-apple-blue">
+                        查看
+                        <ChevronRight className="h-4 w-4" />
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
+          {[
+            { icon: Clock, title: '12 周周期', description: '课程集中在 4 月至 6 月，适合完整建立训练节奏。' },
+            { icon: Target, title: '多目标备赛', description: '覆盖 5000m、10000m、半马、全马与 PB 目标。' },
+            { icon: Users, title: '多地团练', description: '台北、新竹、竹北、板桥、三重、竹南等班级同步整理。' },
+          ].map((item) => (
+            <div key={item.title} className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
+              <item.icon className="mb-4 h-5 w-5 text-apple-gray-700" />
+              <h3 className="font-bold text-apple-gray-900">{item.title}</h3>
+              <p className="mt-2 text-sm leading-6 text-apple-gray-600">{item.description}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   )

@@ -59,12 +59,33 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: profilesError.message }, { status: 500 })
   }
 
+  const { data: feedbackRows, error: feedbackError } = await supabaseAdmin
+    .from('training_feedback')
+    .select('id, student_id, created_at, distance_km, pace_text, average_heart_rate, rpe, feeling, status, coach_note')
+    .in('student_id', studentIds)
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  if (feedbackError) {
+    return NextResponse.json({ error: feedbackError.message }, { status: 500 })
+  }
+
+  const feedbackByStudent = new Map<string, unknown[]>()
+  ;(feedbackRows ?? []).forEach((feedback) => {
+    const list = feedbackByStudent.get(feedback.student_id) ?? []
+    if (list.length < 3) {
+      list.push(feedback)
+      feedbackByStudent.set(feedback.student_id, list)
+    }
+  })
+
   const profilesById = new Map((profiles ?? []).map((profile) => [profile.id, profile]))
   const students = rows.map((row) => ({
     id: row.id,
     active: row.active,
     created_at: row.created_at,
     student: profilesById.get(row.student_id) ?? null,
+    recentFeedback: feedbackByStudent.get(row.student_id) ?? [],
   }))
 
   return NextResponse.json({ students })

@@ -6,12 +6,12 @@ export const languages = [
 
 export type Language = (typeof languages)[number]['code']
 
-export const defaultLanguage: Language = 'zh-TW'
+export const defaultLanguage: Language = 'zh-CN'
 
 export const dictionary = {
   'zh-TW': {
     common: {
-      brand: '好運跑班',
+      brand: '好运跑班',
       tagline: '認識跑步，嘗試跑步，愛上跑步',
       joinNow: '立即加入',
       login: '登入',
@@ -54,7 +54,7 @@ export const dictionary = {
       ],
     },
     features: {
-      title: '好運跑班如何陪你進步？',
+      title: '好运跑班如何陪你進步？',
       subtitle: '從第一次規律跑步到站上賽道，我們把課表、團練、回饋與社群放在同一個訓練節奏裡',
       items: [
         { title: '初心到菁英都能加入', description: '依照程度安排初心補習班、初階班、夜跑班、早鳥班與 PB 班' },
@@ -120,7 +120,7 @@ export const dictionary = {
       loginTitle: '登入帳戶',
       registerTitle: '建立帳戶',
       loginSubtitle: '使用您的手機號或信箱登入',
-      registerSubtitle: '加入好運跑班，開始您的跑步之旅',
+      registerSubtitle: '加入好运跑班，開始您的跑步之旅',
       loginTab: '登入',
       registerTab: '註冊',
       name: '姓名',
@@ -148,7 +148,7 @@ export const dictionary = {
   },
   'zh-CN': {
     common: {
-      brand: '好運跑班',
+      brand: '好运跑班',
       tagline: '认识跑步，尝试跑步，爱上跑步',
       joinNow: '立即加入',
       login: '登录',
@@ -162,7 +162,7 @@ export const dictionary = {
       home: '首页',
       courses: '训练课程',
       about: '关于我们',
-      testimonials: '学员见证',
+      testimonials: '上期学员回顾',
       shop: '商店',
     },
     hero: {
@@ -191,7 +191,7 @@ export const dictionary = {
       ],
     },
     features: {
-      title: '好運跑班如何陪你进步？',
+      title: '好运跑班如何陪你进步？',
       subtitle: '从第一次规律跑步到站上赛道，我们把课表、团练、回馈与社群放在同一个训练节奏里',
       items: [
         { title: '初心到精英都能加入', description: '依照程度安排初心补习班、初阶班、夜跑班、早鸟班与 PB 班' },
@@ -228,8 +228,8 @@ export const dictionary = {
       ],
     },
     testimonials: {
-      title: '学员见证',
-      subtitle: '听听我们的学员如何通过科学训练实现个人突破',
+      title: '上期学员回顾',
+      subtitle: '查看上期课程与训练营结营学员的真实回顾。',
       items: [
         { name: '张伟', role: '马拉松跑者', content: '经过16周的训练，我的全马成绩从4小时30分提升到3小时45分，教练的专业指导让我少走了很多弯路。', progress: '全马PB提升45分钟', avatar: '张' },
         { name: '李娜', role: '半程马拉松新手', content: '从完全不跑步到完成半程马拉松，教练的耐心指导和安全第一的理念让我充满信心地完成了挑战。', progress: '从0到完成半马', avatar: '李' },
@@ -257,7 +257,7 @@ export const dictionary = {
       loginTitle: '登录账户',
       registerTitle: '创建账户',
       loginSubtitle: '使用您的手机号或邮箱登录',
-      registerSubtitle: '加入好運跑班，开始您的跑步之旅',
+      registerSubtitle: '加入好运跑班，开始您的跑步之旅',
       loginTab: '登录',
       registerTab: '注册',
       name: '姓名',

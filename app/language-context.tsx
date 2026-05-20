@@ -203,6 +203,12 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const savedLanguage = window.localStorage.getItem('language') as Language | null
+    if (savedLanguage === 'zh-TW') {
+      window.localStorage.setItem('language', 'zh-CN')
+      setLanguageState('zh-CN')
+      return
+    }
+
     if (savedLanguage && savedLanguage in dictionary) {
       setLanguageState(savedLanguage)
     }
