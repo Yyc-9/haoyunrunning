@@ -22,40 +22,26 @@ export interface AuthContextType {
   logout: () => void
   register: (data: Omit<User, 'id'> & { password: string }) => Promise<void>
   updateUser: (data: Partial<User>) => void
+  refreshUser: () => Promise<User | null>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+type ProfilePayload = {
+  id: string
+  role?: 'student' | 'coach' | 'admin'
+  name?: string | null
+  email?: string | null
+  phone?: string | null
+  pb?: string | null
+  avatar_url?: string | null
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const loadProfile = useCallback(async (userId: string, fallbackEmail = '') => {
-    if (!supabase) return null
-
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
-
-    if (error) {
-      console.error('Load profile error:', error)
-
-      const fallbackUser: User = {
-        id: userId,
-        name: fallbackEmail ? fallbackEmail.split('@')[0] : '好運學員',
-        email: fallbackEmail,
-        phone: '',
-        gender: 'other',
-        pb: '',
-        role: 'student',
-      }
-
-      setUser(fallbackUser)
-      return fallbackUser
-    }
-
+  const applyProfile = useCallback((data: ProfilePayload, fallbackEmail = '') => {
     const nextUser: User = {
       id: data.id,
       name: data.name || '好運學員',
@@ -70,6 +56,75 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(nextUser)
     return nextUser
   }, [])
+
+  const loadProfileFromServer = useCallback(async (fallbackEmail = '') => {
+    if (!supabase) return null
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!session?.access_token) return null
+
+    const response = await fetch('/api/account/me', {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    })
+
+    const payload = (await response.json().catch(() => ({}))) as {
+      profile?: ProfilePayload
+      error?: string
+    }
+
+    if (!response.ok || !payload.profile) {
+      throw new Error(payload.error || '讀取帳號角色失敗。')
+    }
+
+    return applyProfile(payload.profile, fallbackEmail)
+  }, [applyProfile])
+
+  const loadProfile = useCallback(async (userId: string, fallbackEmail = '') => {
+    if (!supabase) return null
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (!error && data) {
+      return applyProfile(data as ProfilePayload, fallbackEmail)
+    }
+
+    if (error) {
+      console.error('Load profile error:', error)
+    }
+
+    try {
+      return await loadProfileFromServer(fallbackEmail)
+    } catch (serverError) {
+      console.error('Load server profile error:', serverError)
+
+      const savedRole =
+        typeof window !== 'undefined'
+          ? (window.localStorage.getItem('goodluck-user-role') as User['role'] | null)
+          : null
+
+      const fallbackUser: User = {
+        id: userId,
+        name: fallbackEmail ? fallbackEmail.split('@')[0] : '好運學員',
+        email: fallbackEmail,
+        phone: '',
+        gender: 'other',
+        pb: '',
+        role: savedRole || 'student',
+      }
+
+      setUser(fallbackUser)
+      return fallbackUser
+    }
+  }, [applyProfile, loadProfileFromServer])
 
   useEffect(() => {
     let mounted = true
@@ -115,7 +170,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           phone: '',
           gender: 'other',
           pb: '',
-          role: 'student',
+          role:
+            (typeof window !== 'undefined'
+              ? (window.localStorage.getItem('goodluck-user-role') as User['role'] | null)
+              : null) || 'student',
         })
 
         setTimeout(() => {
@@ -167,12 +225,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [loadProfile])
 
   const logout = useCallback(() => {
     if (supabase) {
       supabase.auth.signOut()
     }
+    window.localStorage.removeItem('goodluck-user-role')
     setUser(null)
   }, [])
 
@@ -240,8 +299,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loadProfile])
 
   const updateUser = useCallback((data: Partial<User>) => {
-    setUser(prev => prev ? { ...prev, ...data } : null)
+    setUser(prev => {
+      const nextUser = prev ? { ...prev, ...data } : null
+      if (data.role) {
+        window.localStorage.setItem('goodluck-user-role', data.role)
+      }
+      return nextUser
+    })
   }, [])
+
+  const refreshUser = useCallback(async () => {
+    if (!supabase) return null
+
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser()
+
+    if (!authUser) {
+      setUser(null)
+      return null
+    }
+
+    return loadProfile(authUser.id, authUser.email ?? '')
+  }, [loadProfile])
 
   const value: AuthContextType = {
     user,
@@ -250,7 +330,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     login,
     logout,
     register,
-    updateUser
+    updateUser,
+    refreshUser,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

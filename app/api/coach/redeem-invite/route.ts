@@ -26,7 +26,6 @@ export async function POST(request: NextRequest) {
     .from('coach_invites')
     .select('*')
     .eq('code', code)
-    .is('used_by', null)
     .maybeSingle()
 
   if (inviteError) {
@@ -34,7 +33,11 @@ export async function POST(request: NextRequest) {
   }
 
   if (!invite) {
-    return NextResponse.json({ error: '邀请码不存在，或已被使用。' }, { status: 404 })
+    return NextResponse.json({ error: '邀请码不存在。' }, { status: 404 })
+  }
+
+  if (invite.used_by && invite.used_by !== user.id) {
+    return NextResponse.json({ error: '邀请码已被其他帳號使用。' }, { status: 409 })
   }
 
   if (invite.expires_at && new Date(invite.expires_at).getTime() < Date.now()) {
