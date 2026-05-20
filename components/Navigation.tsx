@@ -58,7 +58,7 @@ export default function Navigation() {
         whileHover={{ scale: 1.04 }}
         whileTap={{ scale: 0.96 }}
         onClick={() => setIsLanguageOpen((open) => !open)}
-        className="inline-flex items-center gap-2 rounded-full border border-apple-gray-200 bg-white/80 px-3 py-2 text-sm font-semibold text-apple-gray-800 shadow-sm backdrop-blur-sm transition-all duration-200 hover:border-apple-blue/40 hover:text-apple-blue"
+        className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/92 px-3 py-2 text-sm font-semibold text-apple-gray-950 shadow-sm backdrop-blur-sm transition-all duration-200 hover:border-apple-blue/40 hover:text-apple-blue"
         aria-label={t.common.language}
       >
         <Globe2 className="h-4 w-4" />
@@ -107,19 +107,19 @@ export default function Navigation() {
         animate={{ y: 0 }}
         transition={{ duration: 0.3 }}
         className={clsx(
-          'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
+          'fixed left-0 right-0 top-0 z-50 transition-all duration-300',
           isScrolled
-            ? 'bg-white/90 backdrop-blur-glass border-b border-apple-gray-200 py-3'
+            ? 'border-b border-apple-gray-200 bg-white/92 py-3 shadow-sm backdrop-blur-glass'
             : 'py-4'
         )}
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div
             className={clsx(
-              'relative flex items-center justify-between rounded-full border px-4 shadow-lg backdrop-blur-xl transition-all duration-300 sm:px-6',
+              'relative flex items-center justify-between rounded-full border px-4 text-apple-gray-950 shadow-lg backdrop-blur-2xl transition-all duration-300 sm:px-6',
               isScrolled
                 ? 'border-transparent bg-transparent py-0 shadow-none'
-                : 'border-white/40 bg-white/82 py-3'
+                : 'border-black/10 bg-white/94 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.18)] ring-1 ring-white/70'
             )}
           >
             {/* Logo */}
@@ -138,7 +138,7 @@ export default function Navigation() {
                   priority
                 />
               </div>
-              <span className="text-xl font-bold tracking-tight">{t.common.brand}</span>
+              <span className="text-xl font-bold tracking-tight text-apple-gray-950">{t.common.brand}</span>
             </motion.div>
 
             {/* Desktop Navigation */}
@@ -166,7 +166,7 @@ export default function Navigation() {
                             }
                           }
                         }}
-                      className="text-sm font-semibold text-apple-gray-900 hover:text-apple-blue transition-all duration-300 group"
+                      className="group text-sm font-semibold text-apple-gray-950 transition-all duration-300 hover:text-apple-blue"
                       >
                         {item.name}
                         {item.key === 'shop' && (
@@ -177,7 +177,7 @@ export default function Navigation() {
                     ) : (
                       <Link
                         href={item.href}
-                        className="text-sm font-semibold text-apple-gray-900 hover:text-apple-blue transition-all duration-300 group"
+                        className="group text-sm font-semibold text-apple-gray-950 transition-all duration-300 hover:text-apple-blue"
                       >
                         {item.name}
                         {item.key === 'shop' && (
@@ -200,12 +200,12 @@ export default function Navigation() {
                   whileTap={{ scale: 0.95 }}
                   className="flex items-center space-x-3"
                 >
-                  <div className="h-8 w-8 rounded-full bg-apple-gray-200 flex items-center justify-center">
-                    <User className="h-4 w-4 text-apple-gray-600" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-black/10">
+                    <User className="h-4 w-4 text-apple-gray-700" />
                   </div>
                   <Link
                     href="/profile"
-                    className="text-sm font-medium text-apple-gray-700 hover:text-apple-blue transition-colors duration-200"
+                    className="text-sm font-semibold text-apple-gray-950 transition-colors duration-200 hover:text-apple-blue"
                   >
                     {t.common.myAccount}
                   </Link>
