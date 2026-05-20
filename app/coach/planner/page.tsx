@@ -1,9 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Copy, Save, Sparkles } from 'lucide-react'
-import { coachStudents, plannerRows } from '@/lib/training-workflow-data'
+import { ArrowLeft, Copy, Save, Sparkles, UserRoundPlus } from 'lucide-react'
 
 const columns = [
   { key: 'mon', label: '週一' },
@@ -15,18 +14,28 @@ const columns = [
   { key: 'sun', label: '週日' },
 ] as const
 
-type PlannerRow = (typeof plannerRows)[number]
+type PlannerRow = {
+  date: string
+  mon: string
+  tue: string
+  wed: string
+  thu: string
+  fri: string
+  sat: string
+  sun: string
+}
+
 type PlannerKey = keyof PlannerRow
 
-export default function CoachPlannerPage() {
-  const [selectedStudentId, setSelectedStudentId] = useState(coachStudents[0].id)
-  const [rows, setRows] = useState(plannerRows)
-  const [saved, setSaved] = useState(false)
+const emptyRows: PlannerRow[] = [
+  { date: '', mon: '', tue: '', wed: '', thu: '', fri: '', sat: '', sun: '' },
+  { date: '', mon: '', tue: '', wed: '', thu: '', fri: '', sat: '', sun: '' },
+  { date: '', mon: '', tue: '', wed: '', thu: '', fri: '', sat: '', sun: '' },
+]
 
-  const selectedStudent = useMemo(
-    () => coachStudents.find((student) => student.id === selectedStudentId) ?? coachStudents[0],
-    [selectedStudentId]
-  )
+export default function CoachPlannerPage() {
+  const [rows, setRows] = useState(emptyRows)
+  const [saved, setSaved] = useState(false)
 
   const updateCell = (rowIndex: number, key: PlannerKey, value: string) => {
     setRows((current) =>
@@ -51,27 +60,17 @@ export default function CoachPlannerPage() {
               </p>
               <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">出課表面板</h1>
               <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
-                先保留教練熟悉的 Excel 節奏：第一欄是日期與週數，後面依星期填課表。之後每一格都可以同步到學員端。
+                這裡保留教練熟悉的表格節奏：第一欄是日期與週數，後面依星期填課表。學員綁定完成後，儲存會同步到該學員看板。
               </p>
             </div>
 
             <div className="apple-card p-5">
-              <label className="block">
-                <span className="mb-2 block text-sm font-semibold text-apple-gray-700">選擇學員</span>
-                <select
-                  value={selectedStudentId}
-                  onChange={(event) => setSelectedStudentId(event.target.value)}
-                  className="apple-input"
-                >
-                  {coachStudents.map((student) => (
-                    <option key={student.id} value={student.id}>
-                      {student.name} · {student.program}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <p className="mt-4 text-sm leading-6 text-apple-gray-600">
-                {selectedStudent.goal} · 第 {selectedStudent.week} 週
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-black text-white">
+                <UserRoundPlus className="h-6 w-6" />
+              </div>
+              <h2 className="font-bold text-apple-gray-900">尚未選擇真實學員</h2>
+              <p className="mt-2 text-sm leading-6 text-apple-gray-600">
+                下一步會接上 coach_students 綁定資料。現在可先整理課表格式，等待選擇真實學員後同步。
               </p>
             </div>
           </div>
@@ -84,7 +83,7 @@ export default function CoachPlannerPage() {
               </button>
               <button className="apple-button-secondary gap-2 px-4 py-2 text-sm">
                 <Sparkles className="h-4 w-4" />
-                套用半馬模板
+                套用模板
               </button>
             </div>
             <button
@@ -92,13 +91,13 @@ export default function CoachPlannerPage() {
               className="apple-button-primary gap-2 px-5 py-2.5 text-sm"
             >
               <Save className="h-4 w-4" />
-              儲存並同步概念
+              儲存課表
             </button>
           </div>
 
           {saved && (
             <div className="mb-5 rounded-3xl bg-green-50 p-4 text-sm font-semibold text-green-800">
-              已保存概念狀態。真正接後端後，這一步會把課表同步給學員端。
+              已暫存。完成教練與學員綁定後，這裡會寫入 Supabase 的 training_plans。
             </div>
           )}
 
@@ -117,11 +116,12 @@ export default function CoachPlannerPage() {
                 </thead>
                 <tbody>
                   {rows.map((row, rowIndex) => (
-                    <tr key={row.date} className="border-b border-black/10 last:border-b-0">
+                    <tr key={rowIndex} className="border-b border-black/10 last:border-b-0">
                       <td className="bg-white p-4 align-top font-bold text-apple-gray-900">
                         <input
                           value={row.date}
                           onChange={(event) => updateCell(rowIndex, 'date', event.target.value)}
+                          placeholder="2026/5/20（1）"
                           className="w-full rounded-2xl border border-transparent bg-apple-gray-100 px-3 py-2 font-bold outline-none transition focus:border-black/20 focus:bg-white"
                         />
                       </td>
@@ -130,6 +130,7 @@ export default function CoachPlannerPage() {
                           <textarea
                             value={row[column.key]}
                             onChange={(event) => updateCell(rowIndex, column.key, event.target.value)}
+                            placeholder="輸入訓練內容"
                             rows={5}
                             className="min-h-28 w-full resize-none rounded-2xl border border-black/10 bg-white px-3 py-3 leading-6 text-apple-gray-800 outline-none transition focus:border-black/30 focus:shadow-sm"
                           />
@@ -144,9 +145,9 @@ export default function CoachPlannerPage() {
 
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {[
-              ['第一版', '先保存成網站資料，取代 Line 追訊息。'],
-              ['第二版', '接 Supabase 後做學員權限與教練權限。'],
-              ['第三版', '支援 Google Sheets 匯入/匯出，讓既有流程平順轉移。'],
+              ['現在', '表格可先整理課表格式，等待真實學員綁定。'],
+              ['下一步', '建立教練邀请码與 coach_students 綁定。'],
+              ['完成後', '儲存課表會寫入 training_plans 並同步到學員端。'],
             ].map(([title, description]) => (
               <div key={title} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/10">
                 <h2 className="font-bold text-apple-gray-900">{title}</h2>

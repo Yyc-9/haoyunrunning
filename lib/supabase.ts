@@ -43,6 +43,37 @@ export interface TrainingFeedbackInsert {
   feeling?: string
 }
 
+export interface TrainingPlan {
+  id: string
+  student_id: string
+  coach_id: string
+  week_number: number
+  week_start: string
+  workout_date: string
+  day_label: string
+  title: string
+  target: string
+  pace: string | null
+  note: string | null
+  sort_order: number
+}
+
+export interface TrainingFeedback {
+  id: string
+  training_plan_id: string | null
+  student_id: string
+  coach_id: string | null
+  completed_at: string
+  distance_km: number | null
+  duration_text: string | null
+  pace_text: string | null
+  average_heart_rate: number | null
+  rpe: number | null
+  feeling: string | null
+  status: 'new' | 'flagged' | 'reviewed'
+  created_at: string
+}
+
 export async function getCurrentProfile() {
   if (!supabase) return null
 
@@ -82,4 +113,39 @@ export async function submitTrainingFeedback(input: TrainingFeedbackInsert) {
   }
 
   return data
+}
+
+export async function getMyTrainingPlans(studentId: string) {
+  if (!supabase) return []
+
+  const { data, error } = await supabase
+    .from('training_plans')
+    .select('*')
+    .eq('student_id', studentId)
+    .order('workout_date', { ascending: false })
+    .order('sort_order', { ascending: true })
+    .limit(21)
+
+  if (error) {
+    throw error
+  }
+
+  return (data ?? []) as TrainingPlan[]
+}
+
+export async function getMyTrainingFeedback(studentId: string) {
+  if (!supabase) return []
+
+  const { data, error } = await supabase
+    .from('training_feedback')
+    .select('*')
+    .eq('student_id', studentId)
+    .order('created_at', { ascending: false })
+    .limit(8)
+
+  if (error) {
+    throw error
+  }
+
+  return (data ?? []) as TrainingFeedback[]
 }

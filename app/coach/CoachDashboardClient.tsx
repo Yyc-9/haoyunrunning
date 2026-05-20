@@ -14,7 +14,6 @@ import {
   UsersRound,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { coachStudents, feedbackQueue } from '@/lib/training-workflow-data'
 
 type FeedbackItem = {
   id: string
@@ -113,16 +112,16 @@ export default function CoachDashboardClient() {
     loadFeedback()
   }, [])
 
-  const displayFeedback = liveFeedback.length > 0 ? liveFeedback : feedbackQueue
+  const displayFeedback = liveFeedback
   const flaggedCount = displayFeedback.filter((item) => item.status === 'flagged').length
-  const missingCount = coachStudents.filter((student) => student.lastFeedback === '尚未回報').length
+  const missingCount = 0
 
   const stats = useMemo(
     () => [
       { label: '今日新回饋', value: displayFeedback.length, icon: MessageSquareText },
       { label: '需要留意', value: flaggedCount, icon: AlertTriangle },
       { label: '尚未回報', value: missingCount, icon: ClipboardList },
-      { label: '管理學員', value: coachStudents.length, icon: UsersRound },
+      { label: '管理學員', value: '待綁定', icon: UsersRound },
     ],
     [displayFeedback.length, flaggedCount, missingCount]
   )
@@ -178,7 +177,7 @@ export default function CoachDashboardClient() {
 
           {loadError && (
             <div className="mb-6 rounded-3xl bg-amber-50 p-4 text-sm leading-6 text-amber-800">
-              目前教練端讀取真實資料受權限限制，暫時顯示概念資料。訊息：{loadError}
+              目前教練端讀取真實資料受權限限制。之後完成教練角色與學員綁定後，這裡會只顯示所屬學員回饋。訊息：{loadError}
             </div>
           )}
 
@@ -195,9 +194,10 @@ export default function CoachDashboardClient() {
                 </Link>
               </div>
 
-              <div className="space-y-4">
-                {displayFeedback.map((item) => (
-                  <article key={item.id} className="rounded-3xl border border-black/10 bg-white p-5">
+              {displayFeedback.length > 0 ? (
+                <div className="space-y-4">
+                  {displayFeedback.map((item) => (
+                    <article key={item.id} className="rounded-3xl border border-black/10 bg-white p-5">
                     <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                       <div>
                         <h3 className="text-lg font-bold text-apple-gray-900">{item.student}</h3>
@@ -233,9 +233,17 @@ export default function CoachDashboardClient() {
                     <p className="mt-4 rounded-2xl bg-apple-gray-50 p-4 text-sm leading-6 text-apple-gray-700">
                       {item.feeling}
                     </p>
-                  </article>
-                ))}
-              </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-3xl border border-dashed border-black/15 bg-white p-8 text-center">
+                  <p className="text-lg font-bold text-apple-gray-900">還沒有真實學員回饋</p>
+                  <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-apple-gray-600">
+                    學員從 `/student` 提交訓練回饋後，資料會出現在這裡。下一步完成教練角色與學員綁定後，這個列表會只顯示該教練負責的學員。
+                  </p>
+                </div>
+              )}
             </section>
 
             <aside className="space-y-6">
@@ -261,7 +269,7 @@ export default function CoachDashboardClient() {
                 <p className="text-sm leading-6 text-apple-gray-600">
                   {liveFeedback.length > 0
                     ? '已讀取 Supabase 的真實學員回饋。'
-                    : '還沒有真實回饋時，先顯示概念資料供教練確認流程。'}
+                    : '已切換為真實資料模式；目前等待學員提交第一筆回饋。'}
                 </p>
               </div>
             </aside>

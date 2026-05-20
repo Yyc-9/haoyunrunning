@@ -1,6 +1,5 @@
 import Link from 'next/link'
-import { ArrowLeft, CalendarClock, Search, Target, UserRoundCheck } from 'lucide-react'
-import { coachStudents } from '@/lib/training-workflow-data'
+import { ArrowLeft, Link2, Search, UsersRound } from 'lucide-react'
 
 export const metadata = {
   title: '學員列表 - 好運跑班教練端',
@@ -24,7 +23,7 @@ export default function CoachStudentsPage() {
               </p>
               <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">學員列表</h1>
               <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
-                先用一張清楚的列表讓教練知道：誰已經回報、誰要留意、誰的下一課需要調整。
+                這裡會顯示真實綁定到教練帳號的學員。尚未完成綁定前，先保留搜尋與空狀態。
               </p>
             </div>
 
@@ -34,51 +33,27 @@ export default function CoachStudentsPage() {
             </div>
           </div>
 
-          <div className="grid gap-5 md:grid-cols-2">
-            {coachStudents.map((student) => (
-              <article key={student.id} className="apple-card p-6">
-                <div className="mb-5 flex items-start justify-between gap-4">
-                  <div>
-                    <h2 className="text-2xl font-black text-apple-gray-900">{student.name}</h2>
-                    <p className="mt-1 text-sm text-apple-gray-500">{student.program}</p>
-                  </div>
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-bold ${
-                      student.readiness === '需調整' || student.readiness === '待追蹤'
-                        ? 'bg-amber-50 text-amber-700'
-                        : 'bg-green-50 text-green-700'
-                    }`}
-                  >
-                    {student.readiness}
-                  </span>
+          <div className="apple-card p-8 text-center md:p-12">
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-black text-white">
+              <UsersRound className="h-8 w-8" />
+            </div>
+            <h2 className="text-2xl font-black text-apple-gray-900">尚未綁定真實學員</h2>
+            <p className="mx-auto mt-4 max-w-2xl leading-7 text-apple-gray-600">
+              下一步會加入教練邀请码與學員綁定流程。完成後，教練可以在這裡看到每位學員的週數、目標、最近回饋與需要留意的狀態。
+            </p>
+            <div className="mt-8 grid gap-4 md:grid-cols-3">
+              {[
+                ['建立教練角色', '用邀请码把指定帳號升級為 coach。'],
+                ['綁定學員', '由管理員或教練把 student 加入負責名單。'],
+                ['讀取真實狀態', '依照 coach_students 只顯示所屬學員。'],
+              ].map(([title, description]) => (
+                <div key={title} className="rounded-3xl bg-apple-gray-100 p-5 text-left">
+                  <Link2 className="mb-4 h-5 w-5 text-apple-gray-700" />
+                  <h3 className="font-bold text-apple-gray-900">{title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-apple-gray-600">{description}</p>
                 </div>
-
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {[
-                    { icon: Target, label: '目標', value: student.goal },
-                    { icon: CalendarClock, label: '週數', value: `第 ${student.week} 週` },
-                    { icon: UserRoundCheck, label: '回饋', value: student.lastFeedback },
-                  ].map((item) => (
-                    <div key={item.label} className="rounded-2xl bg-apple-gray-100 p-4">
-                      <item.icon className="mb-3 h-4 w-4 text-apple-gray-600" />
-                      <p className="text-xs text-apple-gray-500">{item.label}</p>
-                      <p className="mt-1 text-sm font-bold text-apple-gray-900">{item.value}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-5 grid gap-3 rounded-3xl border border-black/10 bg-white p-4 sm:grid-cols-2">
-                  <div>
-                    <p className="text-xs text-apple-gray-500">風險提醒</p>
-                    <p className="mt-1 font-semibold text-apple-gray-900">{student.risk}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-apple-gray-500">下一課</p>
-                    <p className="mt-1 font-semibold text-apple-gray-900">{student.nextWorkout}</p>
-                  </div>
-                </div>
-              </article>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>

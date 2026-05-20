@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ClipboardList, MessageSquareText, NotebookPen, UsersRound } from 'lucide-react'
-import { weeklySchedulePreview } from '@/lib/goodluck-data'
 
 export default function RunnerPortalSection() {
   return (
@@ -77,26 +76,38 @@ export default function RunnerPortalSection() {
             <div className="mb-6 flex items-center justify-between">
               <div>
                 <p className="text-sm text-apple-gray-500">Preview</p>
-                <h3 className="text-2xl font-bold text-apple-gray-900">本週課表示例</h3>
+                <h3 className="text-2xl font-bold text-apple-gray-900">訓練同步狀態</h3>
               </div>
               <span className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-apple-blue shadow-sm">
-                Coach sync
+                Live
               </span>
             </div>
 
             <div className="space-y-4">
-              {weeklySchedulePreview.map((item) => (
-                <div key={item.day} className="rounded-2xl bg-white p-5 shadow-sm">
+              {[
+                {
+                  title: '登入後看自己的資料',
+                  description: '學員看板會讀取登入者姓名、個人回饋與已同步課表。',
+                },
+                {
+                  title: '尚未同步就顯示空狀態',
+                  description: '尚未綁定課表時，清楚提示等待教練同步。',
+                },
+                {
+                  title: '回饋已連接 Supabase',
+                  description: '送出的里程、心率、RPE 與感受會寫入資料庫。',
+                },
+              ].map((item) => (
+                <div key={item.title} className="rounded-2xl bg-white p-5 shadow-sm">
                   <div className="mb-2 flex items-center justify-between gap-4">
                     <span className="rounded-full bg-apple-blue/10 px-3 py-1 text-sm font-semibold text-apple-blue">
-                      {item.day}
+                      Server ready
                     </span>
-                    <span className="text-sm text-apple-gray-500">依班級調整</span>
                   </div>
                   <h4 className="mb-2 text-lg font-bold text-apple-gray-900">
-                    {item.workout}
+                    {item.title}
                   </h4>
-                  <p className="text-sm leading-6 text-apple-gray-600">{item.note}</p>
+                  <p className="text-sm leading-6 text-apple-gray-600">{item.description}</p>
                 </div>
               ))}
             </div>
