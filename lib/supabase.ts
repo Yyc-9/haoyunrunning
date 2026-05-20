@@ -74,6 +74,36 @@ export interface TrainingFeedback {
   created_at: string
 }
 
+export type StudentRaceStatus = 'accepted' | 'planned' | 'completed'
+export type StudentRaceSource = 'catalog' | 'custom'
+
+export interface StudentRace {
+  id: string
+  student_id: string
+  race_name: string
+  location: string
+  country: string
+  race_date: string | null
+  distance: string
+  status: StudentRaceStatus
+  source: StudentRaceSource
+  notes: string
+  created_at: string
+  updated_at: string
+}
+
+export interface StudentRaceInsert {
+  student_id: string
+  race_name: string
+  location?: string
+  country?: string
+  race_date?: string | null
+  distance?: string
+  status?: StudentRaceStatus
+  source?: StudentRaceSource
+  notes?: string
+}
+
 export async function getCurrentProfile() {
   if (!supabase) return null
 
@@ -148,4 +178,59 @@ export async function getMyTrainingFeedback(studentId: string) {
   }
 
   return (data ?? []) as TrainingFeedback[]
+}
+
+export async function getMyStudentRaces(studentId: string) {
+  if (!supabase) return []
+
+  const { data, error } = await supabase
+    .from('student_races')
+    .select('*')
+    .eq('student_id', studentId)
+    .order('race_date', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    throw error
+  }
+
+  return (data ?? []) as StudentRace[]
+}
+
+export async function addMyStudentRace(input: StudentRaceInsert) {
+  if (!supabase) {
+    throw new Error('Supabase is not configured.')
+  }
+
+  const { data, error } = await supabase
+    .from('student_races')
+    .insert({
+      ...input,
+      status: input.status ?? 'accepted',
+      source: input.source ?? 'catalog',
+    })
+    .select('*')
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  return data as StudentRace
+}
+
+export async function removeMyStudentRace(id: string, studentId: string) {
+  if (!supabase) {
+    throw new Error('Supabase is not configured.')
+  }
+
+  const { error } = await supabase
+    .from('student_races')
+    .delete()
+    .eq('id', id)
+    .eq('student_id', studentId)
+
+  if (error) {
+    throw error
+  }
 }

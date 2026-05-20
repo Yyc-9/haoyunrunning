@@ -6,26 +6,68 @@ import {
   ArrowRight,
   CalendarDays,
   CheckCircle2,
+  Globe2,
   HeartPulse,
   ImageUp,
   Mic,
+  MapPin,
   MessageSquareText,
   NotebookPen,
+  Plus,
   Route,
   Send,
   ShieldCheck,
   Timer,
+  Trash2,
+  Trophy,
   UsersRound,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '@/app/providers'
 import {
+  addMyStudentRace,
+  getMyStudentRaces,
   getMyTrainingFeedback,
   getMyTrainingPlans,
+  removeMyStudentRace,
   submitTrainingFeedback,
+  type StudentRace,
   type TrainingFeedback,
   type TrainingPlan,
 } from '@/lib/supabase'
+
+type RaceCatalogItem = {
+  id: string
+  raceName: string
+  location: string
+  country: string
+  raceDate: string
+  distance: string
+}
+
+const worldRaceCatalog: RaceCatalogItem[] = [
+  { id: 'tokyo-marathon', raceName: 'Tokyo Marathon', location: 'Tokyo', country: 'Japan', raceDate: '2026-03-01', distance: 'Marathon' },
+  { id: 'boston-marathon', raceName: 'Boston Marathon', location: 'Boston', country: 'United States', raceDate: '2026-04-20', distance: 'Marathon' },
+  { id: 'london-marathon', raceName: 'London Marathon', location: 'London', country: 'United Kingdom', raceDate: '2026-04-26', distance: 'Marathon' },
+  { id: 'berlin-marathon', raceName: 'Berlin Marathon', location: 'Berlin', country: 'Germany', raceDate: '2026-09-27', distance: 'Marathon' },
+  { id: 'chicago-marathon', raceName: 'Chicago Marathon', location: 'Chicago', country: 'United States', raceDate: '2026-10-11', distance: 'Marathon' },
+  { id: 'new-york-city-marathon', raceName: 'New York City Marathon', location: 'New York', country: 'United States', raceDate: '2026-11-01', distance: 'Marathon' },
+  { id: 'paris-marathon', raceName: 'Paris Marathon', location: 'Paris', country: 'France', raceDate: '2026-04-12', distance: 'Marathon' },
+  { id: 'gold-coast-marathon', raceName: 'Gold Coast Marathon', location: 'Gold Coast', country: 'Australia', raceDate: '2026-07-05', distance: 'Marathon' },
+  { id: 'seoul-marathon', raceName: 'Seoul Marathon', location: 'Seoul', country: 'South Korea', raceDate: '2026-03-15', distance: 'Marathon' },
+  { id: 'taipei-marathon', raceName: 'Taipei Marathon', location: 'Taipei', country: 'Taiwan', raceDate: '2026-12-20', distance: 'Marathon / Half Marathon' },
+]
+
+function formatRaceDate(date: string | null) {
+  if (!date) return '日期待确认'
+  return new Date(
+    date + 'T00:00:00'
+  ).toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
 
 export default function StudentPage() {
   const { user, isLoggedIn, isLoading } = useAuth()
@@ -34,8 +76,20 @@ export default function StudentPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [plans, setPlans] = useState<TrainingPlan[]>([])
   const [recentFeedback, setRecentFeedback] = useState<TrainingFeedback[]>([])
+  const [studentRaces, setStudentRaces] = useState<StudentRace[]>([])
   const [dataError, setDataError] = useState('')
   const [isLoadingData, setIsLoadingData] = useState(false)
+  const [selectedRaceId, setSelectedRaceId] = useState(worldRaceCatalog[0].id)
+  const [raceError, setRaceError] = useState('')
+  const [raceMessage, setRaceMessage] = useState('')
+  const [isAddingRace, setIsAddingRace] = useState(false)
+  const [customRace, setCustomRace] = useState({
+    raceName: '',
+    location: '',
+    country: '',
+    raceDate: '',
+    distance: '',
+  })
   const [feedback, setFeedback] = useState({
     distance: '',
     duration: '',
@@ -51,6 +105,8 @@ export default function StudentPage() {
   const currentProgram = user?.role === 'coach' ? '教練帳號' : '好運跑班學員'
   const currentGoal = user?.pb ? `目前 PB：${user.pb}` : '等待教練同步目標'
   const isCoach = user?.role === 'coach' || user?.role === 'admin'
+  const selectedCatalogRace = worldRaceCatalog.find((race) => race.id === selectedRaceId) ?? worldRaceCatalog[0]
+  const isCustomRace = selectedRaceId === 'custom'
 
   const groupedPlans = useMemo(() => {
     const byWeek = new Map<number, TrainingPlan[]>()
@@ -71,6 +127,7 @@ export default function StudentPage() {
       if (!user) {
         setPlans([])
         setRecentFeedback([])
+        setStudentRaces([])
         return
       }
 
@@ -78,13 +135,15 @@ export default function StudentPage() {
       setDataError('')
 
       try {
-        const [planData, feedbackData] = await Promise.all([
+        const [planData, feedbackData, raceData] = await Promise.all([
           getMyTrainingPlans(user.id),
           getMyTrainingFeedback(user.id),
+          getMyStudentRaces(user.id),
         ])
 
         setPlans(planData)
         setRecentFeedback(feedbackData)
+        setStudentRaces(raceData)
       } catch (error) {
         console.error('Load student dashboard data error:', error)
         setDataError(error instanceof Error ? error.message : '讀取學員資料失敗。')
@@ -108,6 +167,85 @@ export default function StudentPage() {
   const parseHeartRate = (value: string) => {
     const match = value.match(/\d+/)
     return match ? Number(match[0]) : null
+  }
+
+
+  const updateCustomRace = (field: keyof typeof customRace, value: string) => {
+    setCustomRace((current) => ({ ...current, [field]: value }))
+    setRaceMessage('')
+    setRaceError('')
+  }
+
+  const handleAddRace = async () => {
+    setRaceError('')
+    setRaceMessage('')
+
+    if (!isLoggedIn || !user) {
+      setRaceError('请先登录，登录后才能保存赛事目标。')
+      return
+    }
+
+    const raceInput = isCustomRace
+      ? {
+          race_name: customRace.raceName.trim(),
+          location: customRace.location.trim(),
+          country: customRace.country.trim(),
+          race_date: customRace.raceDate || null,
+          distance: customRace.distance.trim(),
+          source: 'custom' as const,
+        }
+      : {
+          race_name: selectedCatalogRace.raceName,
+          location: selectedCatalogRace.location,
+          country: selectedCatalogRace.country,
+          race_date: selectedCatalogRace.raceDate,
+          distance: selectedCatalogRace.distance,
+          source: 'catalog' as const,
+        }
+
+    if (!raceInput.race_name) {
+      setRaceError('请填写赛事名称。')
+      return
+    }
+
+    setIsAddingRace(true)
+
+    try {
+      const savedRace = await addMyStudentRace({
+        student_id: user.id,
+        ...raceInput,
+        status: 'accepted',
+        notes: '学员已中签，加入目标赛事面板。',
+      })
+      setStudentRaces((current) =>
+        [...current, savedRace].sort((a, b) =>
+          (a.race_date || '9999-12-31').localeCompare(b.race_date || '9999-12-31')
+        )
+      )
+      setRaceMessage('已加入你的目标赛事面板。')
+      if (isCustomRace) {
+        setCustomRace({ raceName: '', location: '', country: '', raceDate: '', distance: '' })
+      }
+    } catch (error) {
+      setRaceError(error instanceof Error ? error.message : '保存赛事失败，请稍后再试。')
+    } finally {
+      setIsAddingRace(false)
+    }
+  }
+
+  const handleRemoveRace = async (raceId: string) => {
+    if (!user) return
+
+    setRaceError('')
+    setRaceMessage('')
+
+    try {
+      await removeMyStudentRace(raceId, user.id)
+      setStudentRaces((current) => current.filter((race) => race.id !== raceId))
+      setRaceMessage('已从面板移除该赛事。')
+    } catch (error) {
+      setRaceError(error instanceof Error ? error.message : '移除赛事失败，请稍后再试。')
+    }
   }
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -296,6 +434,113 @@ export default function StudentPage() {
                       <p className="mt-1 font-bold text-apple-gray-900">{item.value}</p>
                     </div>
                   ))}
+                </div>
+              </article>
+
+
+              <article className="apple-card p-6 md:p-8">
+                <div className="mb-6 flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-apple-blue">Global race goals</p>
+                    <h2 className="mt-1 text-2xl font-black text-apple-gray-900">我的目标赛事</h2>
+                    <p className="mt-2 text-sm leading-6 text-apple-gray-600">
+                      中签后把赛事加入面板，教练之后可以围绕目标比赛调整训练节奏。
+                    </p>
+                  </div>
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-black text-white">
+                    <Trophy className="h-6 w-6" />
+                  </div>
+                </div>
+
+                {studentRaces.length > 0 ? (
+                  <div className="mb-6 space-y-3">
+                    {studentRaces.map((race) => (
+                      <div key={race.id} className="rounded-2xl border border-black/10 bg-white p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h3 className="font-bold text-apple-gray-900">{race.race_name}</h3>
+                            <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-apple-gray-600">
+                              <span className="inline-flex items-center gap-1">
+                                <MapPin className="h-3.5 w-3.5" />
+                                {race.location}{race.country ? ', ' + race.country : ''}
+                              </span>
+                              <span>{formatRaceDate(race.race_date)}</span>
+                              <span>{race.distance || '距离待确认'}</span>
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveRace(race.id)}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white text-apple-gray-600 transition hover:bg-red-50 hover:text-red-600"
+                            aria-label="移除赛事"
+                            title="移除赛事"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <div className="mt-3 inline-flex rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">
+                          已中签
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mb-6 rounded-3xl border border-dashed border-black/15 bg-white p-6 text-center">
+                    <Globe2 className="mx-auto mb-3 h-8 w-8 text-apple-gray-400" />
+                    <p className="font-bold text-apple-gray-900">还没有目标赛事</p>
+                    <p className="mt-2 text-sm leading-6 text-apple-gray-600">选择一个全球赛事，或手动输入你已中签的比赛。</p>
+                  </div>
+                )}
+
+                <div className="rounded-3xl bg-apple-gray-100 p-4">
+                  <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-semibold text-apple-gray-700">选择赛事</span>
+                      <select
+                        value={selectedRaceId}
+                        onChange={(event) => {
+                          setSelectedRaceId(event.target.value)
+                          setRaceError('')
+                          setRaceMessage('')
+                        }}
+                        className="apple-input bg-white"
+                      >
+                        {worldRaceCatalog.map((race) => (
+                          <option key={race.id} value={race.id}>
+                            {race.raceName} · {race.location}
+                          </option>
+                        ))}
+                        <option value="custom">自定义其他赛事</option>
+                      </select>
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={handleAddRace}
+                      disabled={isAddingRace}
+                      className="apple-button-primary gap-2 px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Plus className="h-4 w-4" />
+                      {isAddingRace ? '添加中...' : '加入面板'}
+                    </button>
+                  </div>
+
+                  {isCustomRace ? (
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <input value={customRace.raceName} onChange={(event) => updateCustomRace('raceName', event.target.value)} placeholder="赛事名称" className="apple-input bg-white" />
+                      <input value={customRace.distance} onChange={(event) => updateCustomRace('distance', event.target.value)} placeholder="距离，例如 Marathon / 10K" className="apple-input bg-white" />
+                      <input value={customRace.location} onChange={(event) => updateCustomRace('location', event.target.value)} placeholder="城市" className="apple-input bg-white" />
+                      <input value={customRace.country} onChange={(event) => updateCustomRace('country', event.target.value)} placeholder="国家 / 地区" className="apple-input bg-white" />
+                      <input type="date" value={customRace.raceDate} onChange={(event) => updateCustomRace('raceDate', event.target.value)} className="apple-input bg-white sm:col-span-2" />
+                    </div>
+                  ) : (
+                    <div className="mt-4 rounded-2xl bg-white p-4 text-sm leading-6 text-apple-gray-600">
+                      {selectedCatalogRace.location}, {selectedCatalogRace.country} · {formatRaceDate(selectedCatalogRace.raceDate)} · {selectedCatalogRace.distance}
+                    </div>
+                  )}
+
+                  {raceMessage && <p className="mt-4 rounded-2xl bg-green-50 p-3 text-sm font-semibold text-green-800">{raceMessage}</p>}
+                  {raceError && <p className="mt-4 rounded-2xl bg-red-50 p-3 text-sm font-semibold text-red-700">{raceError}</p>}
                 </div>
               </article>
 
