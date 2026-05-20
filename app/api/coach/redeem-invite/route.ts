@@ -43,8 +43,18 @@ export async function POST(request: NextRequest) {
 
   const { data: profile, error: profileError } = await supabaseAdmin
     .from('profiles')
-    .update({ role: 'coach' })
-    .eq('id', user.id)
+    .upsert(
+      {
+        id: user.id,
+        email: user.email ?? '',
+        name:
+          (user.user_metadata?.name as string | undefined) ||
+          user.email?.split('@')[0] ||
+          '好運教練',
+        role: 'coach',
+      },
+      { onConflict: 'id' }
+    )
     .select('*')
     .single()
 
