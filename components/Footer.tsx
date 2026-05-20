@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { KeyRound, Mail, MapPin, User, UserRoundCheck } from 'lucide-react'
+import { Instagram, KeyRound, Mail, MapPin, UserRoundCheck } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
 
 export default function Footer() {
@@ -15,15 +15,13 @@ export default function Footer() {
   }))
 
   const contactInfo = [
-    { icon: User, text: '+86 138 8888 8888' },
-    { icon: Mail, text: 'contact@goodluckrunning.com' },
+    { icon: Instagram, text: '@nurture.running.team' },
+    { icon: Mail, text: '課程與商品諮詢請先透過 Instagram 聯絡' },
     { icon: MapPin, text: t.footer.address },
   ]
 
   const socialMedia = [
-    { icon: User, href: '#', isPrimary: true },
-    { icon: Mail, href: '#' },
-    { icon: MapPin, href: '#' },
+    { icon: Instagram, href: 'https://www.instagram.com/nurture.running.team/', isPrimary: true },
   ]
 
   return (

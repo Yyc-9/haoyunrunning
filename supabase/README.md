@@ -40,3 +40,11 @@ This creates:
 - Coaches can read assigned students, plans, and feedback.
 - Admins can manage role assignment and coach/student relations.
 
+## 4. Coach invite test flow
+
+If the initial schema has already been run, also run:
+
+1. `supabase/coach-binding-policies.sql`
+2. `supabase/create-coach-invite.sql`
+
+Then log in on `/coach`, enter `GOODLUCK-COACH-2026`, and bind a registered student by email.

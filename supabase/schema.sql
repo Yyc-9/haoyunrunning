@@ -218,6 +218,7 @@ on public.training_feedback for select
 using (
   student_id = auth.uid()
   or coach_id = auth.uid()
+  or public.is_coach_of(auth.uid(), student_id)
   or public.is_admin(auth.uid())
 );
 
@@ -254,7 +255,10 @@ using (
   or exists (
     select 1 from public.training_feedback
     where training_feedback.id = feedback_attachments.feedback_id
-      and training_feedback.coach_id = auth.uid()
+      and (
+        training_feedback.coach_id = auth.uid()
+        or public.is_coach_of(auth.uid(), training_feedback.student_id)
+      )
   )
   or public.is_admin(auth.uid())
 );

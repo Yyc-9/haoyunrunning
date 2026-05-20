@@ -7,13 +7,12 @@ import {
   ArrowRight,
   CalendarDays,
   ClipboardList,
-  KeyRound,
   MessageSquareText,
   NotebookPen,
-  ShieldCheck,
   UsersRound,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import CoachAccessPanel from '@/components/CoachAccessPanel'
 
 type FeedbackItem = {
   id: string
@@ -143,26 +142,7 @@ export default function CoachDashboardClient() {
               </p>
             </div>
 
-            <div className="apple-card p-6">
-              <div className="mb-5 flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-apple-gray-500">Access model</p>
-                  <h2 className="text-xl font-bold text-apple-gray-900">教練權限</h2>
-                </div>
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-black text-white">
-                  <ShieldCheck className="h-5 w-5" />
-                </div>
-              </div>
-              <div className="rounded-3xl bg-apple-gray-100 p-4">
-                <div className="mb-2 flex items-center gap-2">
-                  <KeyRound className="h-4 w-4 text-apple-gray-700" />
-                  <p className="font-bold text-apple-gray-900">邀请码升级</p>
-                </div>
-                <p className="text-sm leading-6 text-apple-gray-600">
-                  普通註冊預設是學員；教練從頁腳入口輸入內部邀请码後升級權限。
-                </p>
-              </div>
-            </div>
+            <CoachAccessPanel compact />
           </div>
 
           <div className="mb-8 grid gap-4 md:grid-cols-4">

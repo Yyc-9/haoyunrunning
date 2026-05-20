@@ -108,7 +108,7 @@ export const dictionary = {
     },
     footer: {
       description: '專業的跑步訓練平台，為跑者提供科學、系統、個人化的訓練指導，幫助每一位跑者安全、高效地提升跑步能力，實現個人目標。',
-      address: '北京市朝陽區跑步大道 123 號',
+      address: '台灣各城市團練據點',
       copyright: '保留所有權利.',
       columns: [
         { title: '訓練課程', links: ['馬拉松訓練', '半程馬拉松', '10 公里訓練', '新手入門'] },
@@ -245,7 +245,7 @@ export const dictionary = {
     },
     footer: {
       description: '专业的跑步训练平台，为跑者提供科学、系统、个性化的训练指导，帮助每一位跑者安全、高效地提升跑步能力，实现个人目标。',
-      address: '北京市朝阳区跑步大道123号',
+      address: '台湾各城市团练据点',
       copyright: '保留所有权利.',
       columns: [
         { title: '训练课程', links: ['马拉松训练', '半程马拉松', '10公里训练', '新手入门'] },
@@ -382,7 +382,7 @@ export const dictionary = {
     },
     footer: {
       description: 'A professional running training platform that offers scientific, structured, and personalized coaching to help every runner improve safely and efficiently.',
-      address: '123 Running Avenue, Chaoyang District, Beijing',
+      address: 'Training groups across Taiwan',
       copyright: 'All rights reserved.',
       columns: [
         { title: 'Training Courses', links: ['Marathon Training', 'Half Marathon', '10K Training', 'Beginner Course'] },
