@@ -3,16 +3,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Activity,
+  ArrowRight,
   CalendarDays,
   CheckCircle2,
   HeartPulse,
   ImageUp,
   Mic,
   MessageSquareText,
+  NotebookPen,
   Route,
   Send,
+  ShieldCheck,
   Timer,
+  UsersRound,
 } from 'lucide-react'
+import Link from 'next/link'
 import { useAuth } from '@/app/providers'
 import {
   getMyTrainingFeedback,
@@ -45,6 +50,7 @@ export default function StudentPage() {
   const currentWeek = latestPlan?.week_number
   const currentProgram = user?.role === 'coach' ? '教練帳號' : '好運跑班學員'
   const currentGoal = user?.pb ? `目前 PB：${user.pb}` : '等待教練同步目標'
+  const isCoach = user?.role === 'coach' || user?.role === 'admin'
 
   const groupedPlans = useMemo(() => {
     const byWeek = new Map<number, TrainingPlan[]>()
@@ -138,6 +144,71 @@ export default function StudentPage() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  if (isCoach) {
+    return (
+      <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+        <section className="px-4 py-10 sm:px-6 lg:px-8">
+          <div className="container mx-auto max-w-7xl">
+            <div className="mb-8 grid gap-6 lg:grid-cols-[1fr_360px] lg:items-end">
+              <div>
+                <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
+                  Coach dashboard
+                </p>
+                <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">
+                  {displayName}，這裡改為教練工作視角。
+                </h1>
+                <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
+                  你的帳號已經啟用教練權限，因此不再顯示學員的訓練感受表單。接下來的重點會放在學員狀態、課表同步與回饋處理。
+                </p>
+              </div>
+
+              <div className="apple-card p-5">
+                <p className="text-sm text-apple-gray-500">目前身份</p>
+                <p className="mt-1 text-xl font-bold text-apple-gray-900">好運跑班教練</p>
+                <p className="mt-1 text-sm text-apple-gray-600">可管理綁定學員與訓練課表</p>
+              </div>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-3">
+              {[
+                {
+                  href: '/coach',
+                  icon: ShieldCheck,
+                  title: '教練工作台',
+                  description: '集中查看學員回饋、權限狀態與今日待處理事項。',
+                },
+                {
+                  href: '/coach/students',
+                  icon: UsersRound,
+                  title: '學員狀態',
+                  description: '綁定學員後，查看目標、PB、班級與後續回饋狀態。',
+                },
+                {
+                  href: '/coach/planner',
+                  icon: NotebookPen,
+                  title: '出課表',
+                  description: '用接近表格的方式整理週課表，準備同步到學員端。',
+                },
+              ].map((item) => (
+                <Link key={item.href} href={item.href} className="apple-card block p-6">
+                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-black text-white">
+                    <item.icon className="h-6 w-6" />
+                  </div>
+                  <h2 className="text-xl font-bold text-apple-gray-900">{item.title}</h2>
+                  <p className="mt-3 leading-7 text-apple-gray-600">{item.description}</p>
+                  <div className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-apple-gray-900">
+                    進入
+                    <ArrowRight className="h-4 w-4" />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      </main>
+    )
   }
 
   return (
