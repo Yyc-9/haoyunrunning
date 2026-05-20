@@ -20,8 +20,35 @@ type BoundStudentRow = {
   } | null
 }
 
-type RawBoundStudentRow = Omit<BoundStudentRow, 'student'> & {
-  student: BoundStudentRow['student'] | BoundStudentRow['student'][]
+async function fetchCoachStudents() {
+  if (!supabase) {
+    throw new Error('Supabase 尚未設定。')
+  }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  if (!session?.access_token) {
+    throw new Error('請先登入教練帳號。')
+  }
+
+  const response = await fetch('/api/coach/students', {
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  })
+
+  const payload = (await response.json().catch(() => ({}))) as {
+    error?: string
+    students?: BoundStudentRow[]
+  }
+
+  if (!response.ok) {
+    throw new Error(payload.error || '讀取學員失敗，請稍後再試。')
+  }
+
+  return payload.students ?? []
 }
 
 export default function CoachStudentsClient() {
@@ -39,37 +66,15 @@ export default function CoachStudentsClient() {
     setIsLoading(true)
     setError('')
 
-    const { data, error: loadError } = await supabase
-      .from('coach_students')
-      .select(`
-        id,
-        active,
-        created_at,
-        student:student_id (
-          id,
-          name,
-          email,
-          program,
-          goal,
-          pb
-        )
-      `)
-      .eq('active', true)
-      .order('created_at', { ascending: false })
-
-    if (loadError) {
-      setError(loadError.message)
-      setStudents([])
-    } else {
-      const rows = ((data ?? []) as unknown as RawBoundStudentRow[]).map((row) => ({
-        ...row,
-        student: Array.isArray(row.student) ? row.student[0] ?? null : row.student,
-      }))
-
+    try {
+      const rows = await fetchCoachStudents()
       setStudents(rows)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '讀取學員失敗，請稍後再試。')
+      setStudents([])
+    } finally {
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
   }, [])
 
   useEffect(() => {

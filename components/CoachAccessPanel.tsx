@@ -7,7 +7,7 @@ import { useAuth } from '@/app/providers'
 
 type CoachAccessPanelProps = {
   compact?: boolean
-  onStudentBound?: () => void
+  onStudentBound?: () => void | Promise<void>
 }
 
 async function postWithSession(path: string, body: Record<string, string>) {
@@ -95,7 +95,7 @@ export default function CoachAccessPanel({ compact = false, onStudentBound }: Co
       await postWithSession('/api/coach/bind-student', { email: studentEmail })
       setStudentEmail('')
       setMessage('學員已綁定。列表會讀取這位學員的真實資料。')
-      onStudentBound?.()
+      await onStudentBound?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : '學員綁定失敗。')
     } finally {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
   AlertTriangle,
@@ -31,6 +31,20 @@ type FeedbackItem = {
   rpe: number | string
   feeling: string
   status: 'new' | 'flagged' | 'reviewed' | 'missing'
+}
+
+type BoundStudentRow = {
+  id: string
+  active: boolean
+  created_at: string
+  student: {
+    id: string
+    name: string
+    email: string
+    program: string | null
+    goal: string | null
+    pb: string | null
+  } | null
 }
 
 const statusStyle = {
@@ -125,6 +139,37 @@ const coachNotes = [
   },
 ]
 
+async function fetchCoachStudents() {
+  if (!supabase) {
+    throw new Error('Supabase 尚未設定。')
+  }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  if (!session?.access_token) {
+    throw new Error('請先登入教練帳號。')
+  }
+
+  const response = await fetch('/api/coach/students', {
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  })
+
+  const payload = (await response.json().catch(() => ({}))) as {
+    error?: string
+    students?: BoundStudentRow[]
+  }
+
+  if (!response.ok) {
+    throw new Error(payload.error || '讀取學員失敗，請稍後再試。')
+  }
+
+  return payload.students ?? []
+}
+
 const formatFeedback = (item: any): FeedbackItem => ({
   id: item.id,
   student: item.profiles?.name || '已登入學員',
@@ -146,8 +191,24 @@ const formatFeedback = (item: any): FeedbackItem => ({
 
 export default function CoachDashboardClient() {
   const [liveFeedback, setLiveFeedback] = useState<FeedbackItem[]>([])
+  const [coachStudents, setCoachStudents] = useState<BoundStudentRow[]>([])
   const [loadError, setLoadError] = useState('')
+  const [studentLoadError, setStudentLoadError] = useState('')
   const [copiedNote, setCopiedNote] = useState('')
+
+  const loadCoachStudents = useCallback(async () => {
+    if (!supabase) return
+
+    setStudentLoadError('')
+
+    try {
+      const rows = await fetchCoachStudents()
+      setCoachStudents(rows)
+    } catch (err) {
+      setStudentLoadError(err instanceof Error ? err.message : '讀取學員失敗，請稍後再試。')
+      setCoachStudents([])
+    }
+  }, [])
 
   useEffect(() => {
     const loadFeedback = async () => {
@@ -179,9 +240,11 @@ export default function CoachDashboardClient() {
     }
 
     loadFeedback()
-  }, [])
+    loadCoachStudents()
+  }, [loadCoachStudents])
 
   const displayFeedback = liveFeedback
+  const displayStudents = coachStudents.filter((row) => row.student).slice(0, 3)
   const flaggedCount = displayFeedback.filter((item) => item.status === 'flagged').length
   const missingCount = 0
 
@@ -190,9 +253,9 @@ export default function CoachDashboardClient() {
       { label: '今日新回饋', value: displayFeedback.length, icon: MessageSquareText },
       { label: '需要留意', value: flaggedCount, icon: AlertTriangle },
       { label: '尚未回報', value: missingCount, icon: ClipboardList },
-      { label: '管理學員', value: '待綁定', icon: UsersRound },
+      { label: '管理學員', value: coachStudents.length > 0 ? coachStudents.length : '待綁定', icon: UsersRound },
     ],
-    [displayFeedback.length, flaggedCount, missingCount]
+    [displayFeedback.length, flaggedCount, missingCount, coachStudents.length]
   )
 
   const handleCopyNote = async (note: string, title: string) => {
@@ -225,7 +288,7 @@ export default function CoachDashboardClient() {
               </p>
             </div>
 
-            <CoachAccessPanel compact />
+            <CoachAccessPanel compact onStudentBound={loadCoachStudents} />
           </div>
 
           <div className="mb-8 grid gap-4 md:grid-cols-4">
@@ -241,6 +304,12 @@ export default function CoachDashboardClient() {
           {loadError && (
             <div className="mb-6 rounded-3xl bg-amber-50 p-4 text-sm leading-6 text-amber-800">
               目前教練端讀取真實資料受權限限制。之後完成教練角色與學員綁定後，這裡會只顯示所屬學員回饋。訊息：{loadError}
+            </div>
+          )}
+
+          {studentLoadError && (
+            <div className="mb-6 rounded-3xl bg-amber-50 p-4 text-sm leading-6 text-amber-800">
+              目前無法讀取已綁定學員。請確認帳號已啟用教練權限。訊息：{studentLoadError}
             </div>
           )}
 
@@ -413,6 +482,56 @@ export default function CoachDashboardClient() {
             </section>
 
             <aside className="space-y-6">
+              <div className="apple-card p-6">
+                <div className="mb-5 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm text-apple-gray-500">Bound athletes</p>
+                    <h2 className="text-xl font-bold text-apple-gray-900">已绑定学员</h2>
+                  </div>
+                  <span className="rounded-full bg-apple-gray-100 px-3 py-1 text-xs font-bold text-apple-gray-700">
+                    {coachStudents.length} 人
+                  </span>
+                </div>
+
+                {displayStudents.length > 0 ? (
+                  <div className="space-y-3">
+                    {displayStudents.map((row) => {
+                      const student = row.student!
+
+                      return (
+                        <Link
+                          key={row.id}
+                          href="/coach/students"
+                          className="block rounded-2xl border border-black/10 bg-white p-4 transition hover:border-black/20 hover:bg-apple-gray-50"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <h3 className="font-bold text-apple-gray-900">
+                                {student.name || student.email.split('@')[0]}
+                              </h3>
+                              <p className="mt-1 text-sm text-apple-gray-500">{student.email}</p>
+                            </div>
+                            <ArrowRight className="h-4 w-4 shrink-0 text-apple-gray-500" />
+                          </div>
+                          <p className="mt-3 text-sm leading-6 text-apple-gray-600">
+                            {student.program || student.goal || '尚未填写班级与目标'}
+                          </p>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-black/15 bg-white p-5 text-sm leading-6 text-apple-gray-600">
+                    绑定成功后，学员会马上出现在这里。
+                  </div>
+                )}
+
+                <Link href="/coach/students" className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-apple-gray-900">
+                  查看全部学员
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+
               {quickLinks.map((item) => (
                 <Link key={item.href} href={item.href} className="apple-card block p-6">
                   <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-black text-white">
