@@ -6,9 +6,14 @@ import {
   AlertTriangle,
   ArrowRight,
   CalendarDays,
+  CheckCircle2,
   ClipboardList,
+  Copy,
+  FileText,
   MessageSquareText,
   NotebookPen,
+  Sparkles,
+  TimerReset,
   UsersRound,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -56,6 +61,70 @@ const quickLinks = [
   },
 ]
 
+const weeklyPending = [
+  {
+    title: '回看高风险反馈',
+    student: '3 位学员',
+    detail: 'RPE 偏高、膝盖不适或连续两次疲劳反馈',
+    due: '今天',
+    tone: 'bg-amber-50 text-amber-700',
+  },
+  {
+    title: '补发本周课表',
+    student: '半马进阶组',
+    detail: '确认周三间歇和周末长距离安排',
+    due: '周三前',
+    tone: 'bg-blue-50 text-blue-700',
+  },
+  {
+    title: '追踪未回报学员',
+    student: '5 位学员',
+    detail: '超过 48 小时未提交训练记录',
+    due: '今晚',
+    tone: 'bg-gray-100 text-gray-700',
+  },
+  {
+    title: '复查伤痛备注',
+    student: '恢复跑名单',
+    detail: '下调强度或改为交叉训练',
+    due: '本周内',
+    tone: 'bg-green-50 text-green-700',
+  },
+]
+
+const scheduleTemplates = [
+  {
+    name: '半马基础周',
+    focus: '有氧容量 + 轻量节奏',
+    sessions: ['E 跑 45 分', '节奏跑 3 x 8 分', '长距离 90 分'],
+  },
+  {
+    name: '全马赛前调整',
+    focus: '降量、保频率、保感觉',
+    sessions: ['E 跑 35 分', '短间歇唤醒', '赛前 20 分轻松跑'],
+  },
+  {
+    name: '伤后恢复周',
+    focus: '低冲击 + 观察疼痛反应',
+    sessions: ['跑走结合', '椭圆机 40 分', '灵活性与臀腿激活'],
+  },
+]
+
+const coachNotes = [
+  {
+    title: '状态正常',
+    body: '这周状态稳定，先维持当前强度。注意 easy run 不要跑快，长距离后补足碳水和睡眠。',
+  },
+  {
+    title: '疲劳偏高',
+    body: '今天反馈显示疲劳偏高，下一次训练先下调 20% 量，保留轻松跑和拉伸，暂不追配速。',
+  },
+  {
+    title: '疼痛观察',
+    body: '先记录疼痛位置、程度和出现时机。若热身后没有缓解，本周把质量课改成交叉训练。',
+  },
+]
+
 const formatFeedback = (item: any): FeedbackItem => ({
   id: item.id,
   student: item.profiles?.name || '已登入學員',
@@ -78,6 +147,7 @@ const formatFeedback = (item: any): FeedbackItem => ({
 export default function CoachDashboardClient() {
   const [liveFeedback, setLiveFeedback] = useState<FeedbackItem[]>([])
   const [loadError, setLoadError] = useState('')
+  const [copiedNote, setCopiedNote] = useState('')
 
   useEffect(() => {
     const loadFeedback = async () => {
@@ -125,6 +195,19 @@ export default function CoachDashboardClient() {
     [displayFeedback.length, flaggedCount, missingCount]
   )
 
+  const handleCopyNote = async (note: string, title: string) => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(note)
+      }
+    } catch {
+      // Some embedded browsers block clipboard access; keep the UI feedback responsive.
+    }
+
+    setCopiedNote(title)
+    window.setTimeout(() => setCopiedNote(''), 1800)
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
       <section className="px-4 py-10 sm:px-6 lg:px-8">
@@ -160,6 +243,109 @@ export default function CoachDashboardClient() {
               目前教練端讀取真實資料受權限限制。之後完成教練角色與學員綁定後，這裡會只顯示所屬學員回饋。訊息：{loadError}
             </div>
           )}
+
+          <div className="mb-8 grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+            <section className="apple-card p-6 md:p-7">
+              <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+                <div>
+                  <p className="text-sm text-apple-gray-500">Weekly queue</p>
+                  <h2 className="text-2xl font-black text-apple-gray-900">本周待处理</h2>
+                </div>
+                <Link href="/coach/students" className="apple-button-secondary gap-2 px-4 py-2 text-sm">
+                  查看学员
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                {weeklyPending.map((item) => (
+                  <article key={item.title} className="rounded-2xl border border-black/10 bg-white p-4">
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="font-bold text-apple-gray-900">{item.title}</h3>
+                        <p className="mt-1 text-sm text-apple-gray-500">{item.student}</p>
+                      </div>
+                      <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${item.tone}`}>
+                        {item.due}
+                      </span>
+                    </div>
+                    <p className="text-sm leading-6 text-apple-gray-600">{item.detail}</p>
+                  </article>
+                ))}
+              </div>
+            </section>
+
+            <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-1">
+              <section className="apple-card p-6 md:p-7">
+                <div className="mb-5 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm text-apple-gray-500">Templates</p>
+                    <h2 className="text-2xl font-black text-apple-gray-900">常用课表模版</h2>
+                  </div>
+                  <Sparkles className="h-5 w-5 text-apple-gray-600" />
+                </div>
+
+                <div className="space-y-3">
+                  {scheduleTemplates.map((template) => (
+                    <Link
+                      key={template.name}
+                      href="/coach/planner"
+                      className="block rounded-2xl border border-black/10 bg-white p-4 transition hover:border-black/20 hover:bg-apple-gray-50"
+                    >
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <h3 className="font-bold text-apple-gray-900">{template.name}</h3>
+                        <ArrowRight className="h-4 w-4 text-apple-gray-500" />
+                      </div>
+                      <p className="mb-3 text-sm text-apple-gray-500">{template.focus}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {template.sessions.map((session) => (
+                          <span
+                            key={session}
+                            className="rounded-full bg-apple-gray-100 px-3 py-1 text-xs font-semibold text-apple-gray-700"
+                          >
+                            {session}
+                          </span>
+                        ))}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+
+              <section className="apple-card p-6 md:p-7">
+                <div className="mb-5 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm text-apple-gray-500">Reply library</p>
+                    <h2 className="text-2xl font-black text-apple-gray-900">教练备注库</h2>
+                  </div>
+                  <FileText className="h-5 w-5 text-apple-gray-600" />
+                </div>
+
+                <div className="space-y-3">
+                  {coachNotes.map((note) => (
+                    <article key={note.title} className="rounded-2xl border border-black/10 bg-white p-4">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <h3 className="font-bold text-apple-gray-900">{note.title}</h3>
+                        <button
+                          onClick={() => handleCopyNote(note.body, note.title)}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white text-apple-gray-700 transition hover:bg-apple-gray-100"
+                          title={`复制${note.title}备注`}
+                          aria-label={`复制${note.title}备注`}
+                        >
+                          {copiedNote === note.title ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-sm leading-6 text-apple-gray-600">{note.body}</p>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            </div>
+          </div>
 
           <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
             <section className="apple-card p-6 md:p-8">
@@ -251,6 +437,17 @@ export default function CoachDashboardClient() {
                     ? '已讀取 Supabase 的真實學員回饋。'
                     : '已切換為真實資料模式；目前等待學員提交第一筆回饋。'}
                 </p>
+              </div>
+
+              <div className="apple-card p-6">
+                <div className="mb-4 flex items-center gap-3">
+                  <TimerReset className="h-5 w-5 text-apple-gray-700" />
+                  <h2 className="font-bold text-apple-gray-900">本周节奏</h2>
+                </div>
+                <div className="space-y-3 text-sm leading-6 text-apple-gray-600">
+                  <p>周一到周三优先处理反馈与补课表。</p>
+                  <p>周四检查疲劳趋势，周五确认周末长距离安排。</p>
+                </div>
               </div>
             </aside>
           </div>
