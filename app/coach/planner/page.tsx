@@ -202,9 +202,7 @@ export default function CoachPlannerPage() {
     )
   }, [activeWeekStart, weekGroups])
   const historyWeeks = weekGroups.filter(
-    (group) =>
-      group.weekStart !== activeWeekStart &&
-      !group.plans.some((plan) => plan.workout_date >= activeWeekStart && plan.workout_date <= activeRangeEnd)
+    (group) => group.weekStart !== activeWeekStart
   )
 
   useEffect(() => {
@@ -535,49 +533,58 @@ export default function CoachPlannerPage() {
 
           {showHistory && historyWeeks.length > 0 && (
             <section className="mt-8 space-y-4">
-              <h2 className="text-xl font-black text-apple-gray-900">历史课表</h2>
-              {historyWeeks.map((week) => {
-                const historyRows = plansToRows(week.plans, formatWeekLabel(week.weekStart, week.weekNumber))
+              <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+                <div>
+                  <h2 className="text-xl font-black text-apple-gray-900">历史课表</h2>
+                  <p className="mt-1 text-sm text-apple-gray-500">
+                    共 {historyWeeks.length} 周，较新的周排在前面；内容多时可在框内滚动。
+                  </p>
+                </div>
+              </div>
+              <div className="max-h-[620px] space-y-4 overflow-y-auto rounded-3xl border border-black/10 bg-white/70 p-3 shadow-inner">
+                {historyWeeks.map((week) => {
+                  const historyRows = plansToRows(week.plans, formatWeekLabel(week.weekStart, week.weekNumber))
 
-                return (
-                  <details key={week.key} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/10" open={week === previousWeek}>
-                    <summary className="cursor-pointer text-base font-black text-apple-gray-900">
-                      {formatWeekLabel(week.weekStart, week.weekNumber)}
-                    </summary>
-                    <div className="mt-4 overflow-x-auto">
-                      <table className="w-full min-w-[980px] border-collapse text-sm">
-                        <thead>
-                          <tr className="border-b border-black/10 bg-apple-gray-100 text-left">
-                            <th className="w-36 p-3 font-bold text-apple-gray-900">周起始日期</th>
-                            {columns.map((column) => (
-                              <th key={column.key} className="w-32 p-3 font-bold text-apple-gray-900">
-                                {column.label}
-                                <span className="mt-1 block text-xs font-normal text-apple-gray-500">
-                                  {addDays(week.weekStart, column.offset)}
-                                </span>
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {historyRows.map((row) => (
-                            <tr key={row.date}>
-                              <td className="p-3 align-top font-black text-apple-gray-900">{row.date}</td>
+                  return (
+                    <details key={week.key} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/10" open={week === previousWeek}>
+                      <summary className="cursor-pointer text-base font-black text-apple-gray-900">
+                        {formatWeekLabel(week.weekStart, week.weekNumber)}
+                      </summary>
+                      <div className="mt-4 overflow-x-auto">
+                        <table className="w-full min-w-[980px] border-collapse text-sm">
+                          <thead>
+                            <tr className="border-b border-black/10 bg-apple-gray-100 text-left">
+                              <th className="w-36 p-3 font-bold text-apple-gray-900">周起始日期</th>
                               {columns.map((column) => (
-                                <td key={column.key} className="p-3 align-top">
-                                  <div className="min-h-24 whitespace-pre-wrap rounded-2xl bg-apple-gray-100 p-3 leading-6 text-apple-gray-700">
-                                    {row[column.key] || '-'}
-                                  </div>
-                                </td>
+                                <th key={column.key} className="w-32 p-3 font-bold text-apple-gray-900">
+                                  {column.label}
+                                  <span className="mt-1 block text-xs font-normal text-apple-gray-500">
+                                    {addDays(week.weekStart, column.offset)}
+                                  </span>
+                                </th>
                               ))}
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </details>
-                )
-              })}
+                          </thead>
+                          <tbody>
+                            {historyRows.map((row) => (
+                              <tr key={row.date}>
+                                <td className="p-3 align-top font-black text-apple-gray-900">{row.date}</td>
+                                {columns.map((column) => (
+                                  <td key={column.key} className="p-3 align-top">
+                                    <div className="min-h-24 whitespace-pre-wrap rounded-2xl bg-apple-gray-100 p-3 leading-6 text-apple-gray-700">
+                                      {row[column.key] || '-'}
+                                    </div>
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </details>
+                  )
+                })}
+              </div>
             </section>
           )}
 
