@@ -12,8 +12,6 @@ import {
   FileText,
   MessageSquareText,
   NotebookPen,
-  Sparkles,
-  TimerReset,
   UsersRound,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -32,6 +30,7 @@ type FeedbackItem = {
   rpe: number | string
   feeling: string
   status: 'new' | 'flagged' | 'reviewed' | 'missing'
+  risk: RiskAssessment
 }
 
 type BoundStudentRow = {
@@ -48,80 +47,101 @@ type BoundStudentRow = {
   } | null
 }
 
-const statusStyle = {
-  new: 'bg-blue-50 text-blue-700',
-  flagged: 'bg-amber-50 text-amber-700',
-  reviewed: 'bg-green-50 text-green-700',
-  missing: 'bg-gray-100 text-gray-700',
+type RiskLevel = 'high' | 'medium' | 'low'
+
+type RiskAssessment = {
+  level: RiskLevel
+  label: string
+  tone: string
+  score: number
+  reasons: string[]
+  action: string
+}
+
+const riskTone: Record<RiskLevel, string> = {
+  high: 'bg-red-50 text-red-700',
+  medium: 'bg-amber-50 text-amber-700',
+  low: 'bg-green-50 text-green-700',
+}
+
+const riskRank: Record<RiskLevel, number> = {
+  high: 3,
+  medium: 2,
+  low: 1,
+}
+
+const redFlagPattern = /胸痛|胸闷|心悸|头晕|眩晕|呼吸困难|喘不过气|晕厥|昏厥|恶心|冒冷汗|麻木|刺痛|跛|跛行|不能走|无法走|肿|肿胀|红肿|剧痛|锐痛|撕裂|拉伤|扭伤|发热|发烧/i
+const fatiguePattern = /疲劳|很累|睡眠差|睡不好|没恢复|恢复差|沉重|乏力|酸痛|压力大|状态差|不舒服|不适/i
+
+function assessFeedbackRisk(rpeValue: number | string, feeling: string, status: FeedbackItem['status']): RiskAssessment {
+  const rpe = typeof rpeValue === 'number' ? rpeValue : Number(rpeValue)
+  const reasons: string[] = []
+  let score = 0
+
+  if (Number.isFinite(rpe)) {
+    if (rpe >= 8) {
+      score += 3
+      reasons.push(`RPE ${rpe}：接近很吃力到最大努力`)
+    } else if (rpe >= 6) {
+      score += 2
+      reasons.push(`RPE ${rpe}：偏高强度`)
+    } else if (rpe >= 1) {
+      score += 1
+      reasons.push(`RPE ${rpe}：可继续观察`)
+    }
+  }
+
+  if (redFlagPattern.test(feeling)) {
+    score += 4
+    reasons.push('出现疼痛、肿胀、头晕、胸闷等红旗描述')
+  } else if (fatiguePattern.test(feeling)) {
+    score += 2
+    reasons.push('出现疲劳、恢复差或不适描述')
+  }
+
+  if (status === 'flagged') {
+    score += 2
+    reasons.push('系统已标记为需留意')
+  }
+
+  if (score >= 5) {
+    return {
+      level: 'high',
+      label: '高风险',
+      tone: riskTone.high,
+      score,
+      reasons,
+      action: '优先联系学员，必要时暂停质量课并建议就医或转介专业人员。',
+    }
+  }
+
+  if (score >= 3) {
+    return {
+      level: 'medium',
+      label: '中风险',
+      tone: riskTone.medium,
+      score,
+      reasons,
+      action: '下次训练先降量或改轻松跑，24-48 小时内复查恢复情况。',
+    }
+  }
+
+  return {
+    level: 'low',
+    label: '低风险',
+    tone: riskTone.low,
+    score,
+    reasons: reasons.length > 0 ? reasons : ['未出现高 RPE 或红旗描述'],
+    action: '维持计划，继续观察回馈趋势。',
+  }
 }
 
 const quickLinks = [
-  {
-    href: '/coach/students',
-    icon: UsersRound,
-    title: '学员列表',
-    description: '查看每位学员的周数、目标、最近回馈与风险提醒。',
-  },
   {
     href: '/coach/planner',
     icon: NotebookPen,
     title: '课表面板',
     description: '编辑周课表并写入 training_plans，同步到学员端。',
-  },
-  {
-    href: '/student',
-    icon: MessageSquareText,
-    title: '查看学员端',
-    description: '站在学员视角检查今日训练与回馈表单。',
-  },
-]
-
-const weeklyPending = [
-  {
-    title: '回看高风险反馈',
-    student: '3 位学员',
-    detail: 'RPE 偏高、膝盖不适或连续两次疲劳反馈',
-    due: '今天',
-    tone: 'bg-amber-50 text-amber-700',
-  },
-  {
-    title: '补发本周课表',
-    student: '半马进阶组',
-    detail: '确认周三间歇和周末长距离安排',
-    due: '周三前',
-    tone: 'bg-blue-50 text-blue-700',
-  },
-  {
-    title: '追踪未回报学员',
-    student: '5 位学员',
-    detail: '超过 48 小时未提交训练记录',
-    due: '今晚',
-    tone: 'bg-gray-100 text-gray-700',
-  },
-  {
-    title: '复查伤痛备注',
-    student: '恢复跑名单',
-    detail: '下调强度或改为交叉训练',
-    due: '本周内',
-    tone: 'bg-green-50 text-green-700',
-  },
-]
-
-const scheduleTemplates = [
-  {
-    name: '半马基础周',
-    focus: '有氧容量 + 轻量节奏',
-    sessions: ['E 跑 45 分', '节奏跑 3 x 8 分', '长距离 90 分'],
-  },
-  {
-    name: '全马赛前调整',
-    focus: '降量、保频率、保感觉',
-    sessions: ['E 跑 35 分', '短间歇唤醒', '赛前 20 分轻松跑'],
-  },
-  {
-    name: '伤后恢复周',
-    focus: '低冲击 + 观察疼痛反应',
-    sessions: ['跑走结合', '椭圆机 40 分', '灵活性与臀腿激活'],
   },
 ]
 
@@ -171,25 +191,32 @@ async function fetchCoachStudents() {
   return payload.students ?? []
 }
 
-const formatFeedback = (item: any): FeedbackItem => ({
-  id: item.id,
-  student: item.profiles?.name || '已登录学员',
-  program: item.profiles?.program || '尚未分班',
-  workout: item.training_plans?.target || '自主训练回馈',
-  submittedAt: new Date(item.created_at).toLocaleString('zh-CN', {
-    month: 'numeric',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }),
-  createdAt: item.created_at,
-  distance: item.distance_km ? `${item.distance_km}km` : '-',
-  pace: item.pace_text || '-',
-  heartRate: item.average_heart_rate ? String(item.average_heart_rate) : '-',
-  rpe: item.rpe ?? '-',
-  feeling: item.feeling || '尚未填寫感受。',
-  status: item.status,
-})
+const formatFeedback = (item: any): FeedbackItem => {
+  const feeling = item.feeling || '尚未填写感受。'
+  const rpe = item.rpe ?? '-'
+  const status = item.status as FeedbackItem['status']
+
+  return {
+    id: item.id,
+    student: item.profiles?.name || '已登录学员',
+    program: item.profiles?.program || '尚未分班',
+    workout: item.training_plans?.target || '自主训练回馈',
+    submittedAt: new Date(item.created_at).toLocaleString('zh-CN', {
+      month: 'numeric',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+    createdAt: item.created_at,
+    distance: item.distance_km ? `${item.distance_km}km` : '-',
+    pace: item.pace_text || '-',
+    heartRate: item.average_heart_rate ? String(item.average_heart_rate) : '-',
+    rpe,
+    feeling,
+    status,
+    risk: assessFeedbackRisk(rpe, feeling, status),
+  }
+}
 
 export default function CoachDashboardClient() {
   const [liveFeedback, setLiveFeedback] = useState<FeedbackItem[]>([])
@@ -253,16 +280,20 @@ export default function CoachDashboardClient() {
   weekStart.setDate(todayStart.getDate() - ((todayStart.getDay() + 6) % 7))
   const todayFeedbackCount = displayFeedback.filter((item) => new Date(item.createdAt) >= todayStart).length
   const weekFeedbackCount = displayFeedback.filter((item) => new Date(item.createdAt) >= weekStart).length
-  const flaggedCount = displayFeedback.filter((item) => item.status === 'flagged').length
+  const highRiskCount = displayFeedback.filter((item) => item.risk.level === 'high').length
+  const pendingRiskItems = displayFeedback
+    .filter((item) => item.risk.level !== 'low' && item.status !== 'reviewed')
+    .sort((a, b) => riskRank[b.risk.level] - riskRank[a.risk.level] || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 6)
 
   const stats = useMemo(
     () => [
       { label: '今日回馈', value: todayFeedbackCount, icon: MessageSquareText },
       { label: '本周回馈', value: weekFeedbackCount, icon: ClipboardList },
-      { label: '需要留意', value: flaggedCount, icon: AlertTriangle },
+      { label: '高风险', value: highRiskCount, icon: AlertTriangle },
       { label: '管理学员', value: coachStudents.length > 0 ? coachStudents.length : '待绑定', icon: UsersRound },
     ],
-    [todayFeedbackCount, weekFeedbackCount, flaggedCount, coachStudents.length]
+    [todayFeedbackCount, weekFeedbackCount, highRiskCount, coachStudents.length]
   )
 
   const handleCopyNote = async (note: string, title: string) => {
@@ -324,8 +355,11 @@ export default function CoachDashboardClient() {
             <section className="apple-card p-6 md:p-7">
               <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
                 <div>
-                  <p className="text-sm text-apple-gray-500">Weekly queue</p>
-                  <h2 className="text-2xl font-black text-apple-gray-900">本周待处理</h2>
+                  <p className="text-sm text-apple-gray-500">Risk queue</p>
+                  <h2 className="text-2xl font-black text-apple-gray-900">风险与待处理</h2>
+                  <p className="mt-2 text-sm leading-6 text-apple-gray-600">
+                    根据 RPE、疼痛/红旗描述、恢复状态和系统标记自动排序；高风险优先处理。
+                  </p>
                 </div>
                 <Link href="/coach/students" className="apple-button-secondary gap-2 px-4 py-2 text-sm">
                   查看学员
@@ -333,58 +367,60 @@ export default function CoachDashboardClient() {
                 </Link>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-2">
-                {weeklyPending.map((item) => (
-                  <article key={item.title} className="rounded-2xl border border-black/10 bg-white p-4">
-                    <div className="mb-3 flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="font-bold text-apple-gray-900">{item.title}</h3>
-                        <p className="mt-1 text-sm text-apple-gray-500">{item.student}</p>
+              {pendingRiskItems.length > 0 ? (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {pendingRiskItems.map((item) => (
+                    <article key={item.id} className="rounded-2xl border border-black/10 bg-white p-4">
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <div>
+                          <h3 className="font-bold text-apple-gray-900">{item.student}</h3>
+                          <p className="mt-1 text-sm text-apple-gray-500">{item.submittedAt}</p>
+                        </div>
+                        <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${item.risk.tone}`}>
+                          {item.risk.label}
+                        </span>
                       </div>
-                      <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${item.tone}`}>
-                        {item.due}
-                      </span>
-                    </div>
-                    <p className="text-sm leading-6 text-apple-gray-600">{item.detail}</p>
-                  </article>
-                ))}
-              </div>
+                      <p className="text-sm leading-6 text-apple-gray-600">{item.risk.reasons.join('；')}</p>
+                      <p className="mt-3 rounded-2xl bg-apple-gray-100 p-3 text-sm leading-6 text-apple-gray-700">
+                        {item.risk.action}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-3xl border border-dashed border-black/15 bg-white p-8 text-center">
+                  <p className="font-bold text-apple-gray-900">当前没有中高风险回馈</p>
+                  <p className="mt-2 text-sm leading-6 text-apple-gray-600">
+                    学员提交 RPE 偏高、疼痛、头晕、胸闷或恢复差等信息后，会自动进入这里。
+                  </p>
+                </div>
+              )}
             </section>
 
             <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-1">
               <section className="apple-card p-6 md:p-7">
                 <div className="mb-5 flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-sm text-apple-gray-500">Templates</p>
-                    <h2 className="text-2xl font-black text-apple-gray-900">常用课表模版</h2>
+                    <p className="text-sm text-apple-gray-500">Risk standard</p>
+                    <h2 className="text-2xl font-black text-apple-gray-900">风险评判标准</h2>
                   </div>
-                  <Sparkles className="h-5 w-5 text-apple-gray-600" />
+                  <AlertTriangle className="h-5 w-5 text-apple-gray-600" />
                 </div>
 
-                <div className="space-y-3">
-                  {scheduleTemplates.map((template) => (
-                    <Link
-                      key={template.name}
-                      href="/coach/planner"
-                      className="block rounded-2xl border border-black/10 bg-white p-4 transition hover:border-black/20 hover:bg-apple-gray-50"
-                    >
-                      <div className="mb-3 flex items-center justify-between gap-3">
-                        <h3 className="font-bold text-apple-gray-900">{template.name}</h3>
-                        <ArrowRight className="h-4 w-4 text-apple-gray-500" />
-                      </div>
-                      <p className="mb-3 text-sm text-apple-gray-500">{template.focus}</p>
-                      <div className="flex flex-wrap gap-2">
-                        {template.sessions.map((session) => (
-                          <span
-                            key={session}
-                            className="rounded-full bg-apple-gray-100 px-3 py-1 text-xs font-semibold text-apple-gray-700"
-                          >
-                            {session}
-                          </span>
-                        ))}
-                      </div>
-                    </Link>
+                <div className="space-y-3 text-sm leading-6 text-apple-gray-600">
+                  {[
+                    ['高风险', 'RPE >= 8，或出现胸痛、胸闷、头晕、呼吸困难、明显疼痛/肿胀/跛行等红旗描述。'],
+                    ['中风险', 'RPE 6-7，或出现疲劳、睡眠差、恢复差、酸痛和不适等描述。'],
+                    ['低风险', 'RPE <= 5，且没有红旗或明显疲劳描述，按趋势继续观察。'],
+                  ].map(([title, description]) => (
+                    <div key={title} className="rounded-2xl border border-black/10 bg-white p-4">
+                      <h3 className="font-bold text-apple-gray-900">{title}</h3>
+                      <p className="mt-2">{description}</p>
+                    </div>
                   ))}
+                  <p className="rounded-2xl bg-apple-gray-100 p-4">
+                    依据：Borg CR10/RPE 用于主观强度监控；IOC 共识支持训练负荷、疲劳、疼痛和健康状态监测；ACSM/AHA 将胸痛、头晕、异常呼吸困难等列为运动中需要停止并评估的警示信号。
+                  </p>
                 </div>
               </section>
 
@@ -447,14 +483,8 @@ export default function CoachDashboardClient() {
                           {item.program} · {item.submittedAt}
                         </p>
                       </div>
-                      <span className={`rounded-full px-3 py-1 text-xs font-bold ${statusStyle[item.status]}`}>
-                        {item.status === 'flagged'
-                          ? '需留意'
-                          : item.status === 'new'
-                            ? '新回馈'
-                            : item.status === 'missing'
-                              ? '未回报'
-                              : '已看过'}
+                      <span className={`rounded-full px-3 py-1 text-xs font-bold ${item.risk.tone}`}>
+                        {item.risk.label}
                       </span>
                     </div>
 
@@ -474,6 +504,9 @@ export default function CoachDashboardClient() {
 
                     <p className="mt-4 rounded-2xl bg-apple-gray-50 p-4 text-sm leading-6 text-apple-gray-700">
                       {item.feeling}
+                    </p>
+                    <p className="mt-3 text-sm leading-6 text-apple-gray-600">
+                      判断：{item.risk.reasons.join('；')}。建议：{item.risk.action}
                     </p>
                     </article>
                   ))}
@@ -565,16 +598,6 @@ export default function CoachDashboardClient() {
                 </p>
               </div>
 
-              <div className="apple-card p-6">
-                <div className="mb-4 flex items-center gap-3">
-                  <TimerReset className="h-5 w-5 text-apple-gray-700" />
-                  <h2 className="font-bold text-apple-gray-900">本周节奏</h2>
-                </div>
-                <div className="space-y-3 text-sm leading-6 text-apple-gray-600">
-                  <p>周一到周三优先处理反馈与补课表。</p>
-                  <p>周四检查疲劳趋势，周五确认周末长距离安排。</p>
-                </div>
-              </div>
             </aside>
           </div>
         </div>

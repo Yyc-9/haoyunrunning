@@ -9,7 +9,6 @@ import {
   ArrowRight,
   Calendar,
   ClipboardList,
-  MessageSquareText,
   NotebookPen,
   Settings,
   Target,
@@ -19,15 +18,15 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 
-function QuickLink({ icon: Icon, label, onClick }: { icon: React.ElementType; label: string; onClick?: () => void }) {
+function QuickLink({ icon: Icon, label, href }: { icon: React.ElementType; label: string; href: string }) {
   return (
-    <button
-      onClick={onClick}
+    <Link
+      href={href}
       className="flex flex-col items-center p-4 rounded-2xl hover:bg-gray-50 transition-colors"
     >
       <Icon className="h-6 w-6 text-apple-blue mb-2" />
       <span className="text-sm font-medium">{label}</span>
-    </button>
+    </Link>
   )
 }
 
@@ -83,25 +82,19 @@ export default function ProfilePage() {
             </div>
           </motion.div>
 
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2">
             {[
               {
                 href: '/coach/students',
                 icon: UsersRound,
                 title: '学员管理',
-                description: '查看已绑定学员，后续会加入风险提醒、最近回馈与训练进度。',
+                description: '查看已绑定学员、最近回馈和训练进度。',
               },
               {
                 href: '/coach/planner',
                 icon: NotebookPen,
                 title: '课表面板',
                 description: '保存后写入 training_plans，并同步给学员端查看。',
-              },
-              {
-                href: '/coach',
-                icon: MessageSquareText,
-                title: '回馈隊列',
-                description: '集中处理学员提交的 RPE、训练感受、里程与心率信息。',
               },
             ].map((item) => (
               <Link key={item.href} href={item.href} className="apple-card block p-6">
@@ -122,13 +115,13 @@ export default function ProfilePage() {
           >
             <div className="mb-6 flex items-center gap-3">
               <ClipboardList className="h-6 w-6 text-apple-gray-700" />
-              <h2 className="text-xl font-bold text-apple-gray-900">接下來可以设计的教练個人頁</h2>
+              <h2 className="text-xl font-bold text-apple-gray-900">教练工作台处理逻辑</h2>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
               {[
-                ['本周待处理', '显示未查看回馈、异常 RPE、缺回报学员。'],
-                ['常用课表模板', '沉澱間歇、节奏跑、长距离与恢复跑模板。'],
-                ['教练備註庫', '记录每位学员近期状态，减少翻 Line 的成本。'],
+                ['高风险优先', 'RPE 很高或出现胸闷、头晕、明显疼痛等红旗描述，优先联系。'],
+                ['中风险降量', '疲劳、恢复差或 RPE 偏高时，下次训练先降量观察。'],
+                ['低风险观察', '回馈稳定时维持计划，继续看趋势。'],
               ].map(([title, description]) => (
                 <div key={title} className="rounded-3xl bg-apple-gray-100 p-5">
                   <h3 className="font-bold text-apple-gray-900">{title}</h3>
@@ -167,22 +160,22 @@ export default function ProfilePage() {
                 </div>
               )}
             </div>
-            <Link href="/student" className="apple-button-primary flex items-center space-x-2">
+            <Link href="/student#feedback" className="apple-button-primary flex items-center space-x-2">
               <Calendar className="h-4 w-4" />
-              <span>进入学员看板</span>
+              <span>提交今日回馈</span>
             </Link>
-            <button className="apple-button-outline flex items-center space-x-2">
+            <Link href="/student#settings" className="apple-button-outline flex items-center space-x-2">
               <Settings className="h-4 w-4" />
               <span>编辑资料</span>
-            </button>
+            </Link>
           </div>
 
           {/* 快捷入口 */}
           <div className="grid grid-cols-4 gap-2 md:gap-4 mt-8 pt-6 border-t border-apple-gray-200">
-            <QuickLink icon={TrendingUp} label="训练数据" />
-            <QuickLink icon={Calendar} label="训练计划" />
-            <QuickLink icon={Target} label="我的目标" />
-            <QuickLink icon={Settings} label="设置" />
+            <QuickLink icon={TrendingUp} label="训练数据" href="/student#training-data" />
+            <QuickLink icon={Calendar} label="训练计划" href="/student#training-plan" />
+            <QuickLink icon={Target} label="我的目标" href="/student#goals" />
+            <QuickLink icon={Settings} label="设置" href="/student#settings" />
           </div>
         </motion.div>
 
