@@ -6,6 +6,7 @@ import {
   ArrowRight,
   CalendarDays,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   Gauge,
   Globe2,
@@ -314,6 +315,14 @@ export default function StudentPage() {
 
   const updateField = (field: keyof typeof feedback, value: string | number) => {
     setFeedback((current) => ({ ...current, [field]: value }))
+  }
+
+  const scrollPlanTrack = (week: number, direction: 'left' | 'right') => {
+    const track = document.getElementById(`week-plan-track-${week}`)
+    track?.scrollBy({
+      left: direction === 'left' ? -280 : 280,
+      behavior: 'smooth',
+    })
   }
 
   const updateProfileField = (field: keyof typeof profileForm, value: string) => {
@@ -772,8 +781,8 @@ export default function StudentPage() {
             </article>
           </section>
 
-          <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-            <section className="space-y-6">
+          <div className="grid min-w-0 gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+            <section className="min-w-0 space-y-6">
               <article id="training-plan" className="apple-card scroll-mt-28 p-6 md:p-8">
                 {latestPlan ? (
                   <>
@@ -935,21 +944,42 @@ export default function StudentPage() {
                 </div>
               </article>
 
-              <article className="apple-card p-6 md:p-8">
+              <article className="apple-card min-w-0 overflow-hidden p-6 md:p-8">
                 <h2 className="mb-5 text-xl font-bold text-apple-gray-900">本周课表</h2>
                 {groupedPlans.length > 0 ? (
                   <div className="space-y-5">
                     {groupedPlans.map((group) => (
-                      <div key={group.week} className="rounded-3xl border border-black/10 bg-white p-5">
+                      <div key={group.week} className="min-w-0 rounded-3xl border border-black/10 bg-white p-5">
                         <div className="mb-4 flex items-center justify-between gap-3">
                           <h3 className="font-bold text-apple-gray-900">第 {group.week} 周</h3>
-                          <p className="text-xs font-semibold text-apple-gray-500">横向滑动查看</p>
+                          <div className="flex items-center gap-2">
+                            <p className="hidden text-xs font-semibold text-apple-gray-500 sm:block">横向滑动查看</p>
+                            <button
+                              type="button"
+                              onClick={() => scrollPlanTrack(group.week, 'left')}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-black/10 bg-white text-apple-gray-700 transition hover:bg-apple-gray-100"
+                              aria-label={`向左查看第 ${group.week} 周课表`}
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => scrollPlanTrack(group.week, 'right')}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-black/10 bg-white text-apple-gray-700 transition hover:bg-apple-gray-100"
+                              aria-label={`向右查看第 ${group.week} 周课表`}
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex gap-3 overflow-x-auto pb-2">
+                        <div
+                          id={`week-plan-track-${group.week}`}
+                          className="flex max-w-full min-w-0 snap-x gap-3 overflow-x-auto overscroll-x-contain scroll-smooth pb-2"
+                        >
                           {group.plans.map((workout) => (
                             <div
                               key={workout.id}
-                              className="min-w-[220px] flex-1 rounded-2xl bg-apple-gray-100 p-4 sm:min-w-[240px]"
+                              className="w-[220px] shrink-0 snap-start rounded-2xl bg-apple-gray-100 p-4 sm:w-[240px]"
                             >
                               <div className="mb-3 flex items-start justify-between gap-3">
                                 <p className="text-sm font-bold text-apple-gray-900">{workout.day_label}</p>
