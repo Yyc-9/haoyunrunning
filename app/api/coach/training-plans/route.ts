@@ -152,12 +152,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '请至少填写一项训练内容。' }, { status: 400 })
   }
 
-  const { error: deleteError } = await supabaseAdmin!
+  const { data: deletedPlans, error: deleteError } = await supabaseAdmin!
     .from('training_plans')
     .delete()
-    .eq('coach_id', context.user.id)
+    .select('id')
     .eq('student_id', studentId)
-    .eq('week_start', weekStart)
+    .or(`week_start.eq.${weekStart},week_number.eq.${weekNumber}`)
 
   if (deleteError) {
     return NextResponse.json({ error: deleteError.message }, { status: 500 })
@@ -172,5 +172,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: insertError.message }, { status: 500 })
   }
 
-  return NextResponse.json({ plans: data ?? [], count: data?.length ?? 0 })
+  return NextResponse.json({
+    plans: data ?? [],
+    count: data?.length ?? 0,
+    replacedCount: deletedPlans?.length ?? 0,
+  })
 }

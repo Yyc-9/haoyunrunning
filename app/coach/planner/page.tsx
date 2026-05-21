@@ -339,11 +339,15 @@ export default function CoachPlannerPage() {
           weekStart: currentWeekStart,
           workouts,
         }),
-      }) as { count?: number; plans?: TrainingPlan[] }
+      }) as { count?: number; replacedCount?: number; plans?: TrainingPlan[] }
 
       const refreshed = await authedFetch(`/api/coach/training-plans?studentId=${encodeURIComponent(selectedStudentId)}`) as { plans?: TrainingPlan[] }
       setSavedPlans(refreshed.plans ?? payload.plans ?? [])
-      setMessage(`已储存 ${payload.count ?? workouts.length} 条训练课表，已写入 training_plans 并同步到学员端。`)
+      setMessage(
+        payload.replacedCount
+          ? `已覆盖本周旧课表，并储存 ${payload.count ?? workouts.length} 条新训练。`
+          : `已储存 ${payload.count ?? workouts.length} 条训练课表，已写入 training_plans 并同步到学员端。`
+      )
     } catch (err) {
       setError(err instanceof Error ? err.message : '课表派发失败，请稍后再试。')
     } finally {
