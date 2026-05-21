@@ -132,6 +132,32 @@ export async function submitTrainingFeedback(input: TrainingFeedbackInsert) {
     throw new Error('Supabase is not configured.')
   }
 
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  if (session?.access_token) {
+    const response = await fetch('/api/student/training-feedback', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(input),
+    })
+
+    const payload = (await response.json().catch(() => ({}))) as {
+      feedback?: TrainingFeedback
+      error?: string
+    }
+
+    if (!response.ok || !payload.feedback) {
+      throw new Error(payload.error || '提交训练回馈失败，请稍后再试。')
+    }
+
+    return payload.feedback
+  }
+
   const { data, error } = await supabase
     .from('training_feedback')
     .insert(input)
@@ -189,6 +215,29 @@ export async function getMyTrainingPlans(studentId: string) {
 
 export async function getMyTrainingFeedback(studentId: string) {
   if (!supabase) return []
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  if (session?.access_token) {
+    const response = await fetch('/api/student/training-feedback', {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    })
+
+    const payload = (await response.json().catch(() => ({}))) as {
+      feedback?: TrainingFeedback[]
+      error?: string
+    }
+
+    if (!response.ok) {
+      throw new Error(payload.error || '读取最近回馈失败，请稍后再试。')
+    }
+
+    return payload.feedback ?? []
+  }
 
   const { data, error } = await supabase
     .from('training_feedback')
