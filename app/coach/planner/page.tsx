@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Copy, Loader2, Save, Sparkles, UserRoundPlus } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronUp, Copy, Loader2, Save, UserRoundPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 const columns = [
@@ -40,31 +40,100 @@ type BoundStudentRow = {
   } | null
 }
 
-const createEmptyRows = (): PlannerRow[] => [
-  { date: '第 1 组', mon: '', tue: '', wed: '', thu: '', fri: '', sat: '', sun: '' },
-  { date: '第 2 组', mon: '', tue: '', wed: '', thu: '', fri: '', sat: '', sun: '' },
-  { date: '第 3 组', mon: '', tue: '', wed: '', thu: '', fri: '', sat: '', sun: '' },
+type TrainingPlan = {
+  id: string
+  student_id: string
+  coach_id: string
+  week_number: number
+  week_start: string
+  workout_date: string
+  day_label: string
+  title: string
+  target: string
+  pace: string | null
+  note: string | null
+  sort_order: number
+}
+
+type WeekGroup = {
+  key: string
+  weekStart: string
+  weekNumber: number
+  plans: TrainingPlan[]
+}
+
+const createEmptyRows = (label: string): PlannerRow[] => [
+  { date: label, mon: '', tue: '', wed: '', thu: '', fri: '', sat: '', sun: '' },
 ]
 
-const templateRows: PlannerRow[] = [
-  {
-    date: '基础周',
-    mon: 'E 跑 45 分钟\nRPE 4-5',
-    tue: '休息或核心 20 分钟',
-    wed: '节奏跑 3 x 8 分钟\n组间慢跑 3 分钟',
-    thu: 'E 跑 40 分钟 + 6 组加速跑',
-    fri: '休息 + 拉伸',
-    sat: '长距离 90 分钟\n轻松完成',
-    sun: '恢复跑 30 分钟或交叉训练',
-  },
-  { date: '备注', mon: '', tue: '', wed: '注意配速不要冲太快', thu: '', fri: '', sat: '跑后补碳水和蛋白质', sun: '' },
-  { date: '疼痛预案', mon: '', tue: '', wed: '若疼痛超过 3/10，改 E 跑', thu: '', fri: '', sat: '若疲劳高，降量 20%', sun: '' },
-]
+function toIsoDate(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 function addDays(dateText: string, offset: number) {
   const date = new Date(`${dateText}T00:00:00`)
   date.setDate(date.getDate() + offset)
-  return date.toISOString().slice(0, 10)
+  return toIsoDate(date)
+}
+
+function getMonday(date = new Date()) {
+  const localDate = new Date(date)
+  localDate.setHours(0, 0, 0, 0)
+  localDate.setDate(localDate.getDate() - ((localDate.getDay() + 6) % 7))
+  return toIsoDate(localDate)
+}
+
+function formatWeekLabel(weekStart: string, weekNumber: number) {
+  const date = new Date(`${weekStart}T00:00:00`)
+  const year = String(date.getFullYear()).slice(2)
+  return `${year}/${date.getMonth() + 1}/${date.getDate()}[${weekNumber}]`
+}
+
+function planToColumnKey(plan: TrainingPlan) {
+  const date = new Date(`${plan.workout_date}T00:00:00`)
+  const index = (date.getDay() + 6) % 7
+  return columns[index]?.key ?? 'mon'
+}
+
+function plansToRows(plans: TrainingPlan[], label: string): PlannerRow[] {
+  const row = createEmptyRows(label)[0]
+  const byDay = new Map<string, string[]>()
+
+  plans.forEach((plan) => {
+    const key = planToColumnKey(plan)
+    const list = byDay.get(key) ?? []
+    list.push(plan.target)
+    byDay.set(key, list)
+  })
+
+  columns.forEach((column) => {
+    row[column.key] = (byDay.get(column.key) ?? []).join('\n\n')
+  })
+
+  return [row]
+}
+
+function groupPlansByWeek(plans: TrainingPlan[]) {
+  const groups = new Map<string, WeekGroup>()
+
+  plans.forEach((plan) => {
+    const key = plan.week_start
+    const group = groups.get(key) ?? {
+      key,
+      weekStart: plan.week_start,
+      weekNumber: plan.week_number,
+      plans: [],
+    }
+
+    group.weekNumber = Math.min(group.weekNumber, plan.week_number)
+    group.plans.push(plan)
+    groups.set(key, group)
+  })
+
+  return Array.from(groups.values()).sort((a, b) => b.weekStart.localeCompare(a.weekStart))
 }
 
 async function authedFetch(path: string, init?: RequestInit) {
@@ -98,15 +167,43 @@ async function authedFetch(path: string, init?: RequestInit) {
 }
 
 export default function CoachPlannerPage() {
-  const [rows, setRows] = useState<PlannerRow[]>(createEmptyRows)
+  const currentWeekStart = useMemo(() => getMonday(), [])
+  const [rows, setRows] = useState<PlannerRow[]>(createEmptyRows(formatWeekLabel(currentWeekStart, 1)))
   const [students, setStudents] = useState<BoundStudentRow[]>([])
   const [selectedStudentId, setSelectedStudentId] = useState('')
-  const [weekStart, setWeekStart] = useState(() => new Date().toISOString().slice(0, 10))
-  const [weekNumber, setWeekNumber] = useState(1)
+  const [savedPlans, setSavedPlans] = useState<TrainingPlan[]>([])
+  const [showHistory, setShowHistory] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [isLoadingStudents, setIsLoadingStudents] = useState(true)
+  const [isLoadingPlans, setIsLoadingPlans] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [isCopyingPrevious, setIsCopyingPrevious] = useState(false)
+
+  const weekGroups = useMemo(() => groupPlansByWeek(savedPlans), [savedPlans])
+  const currentRangeEnd = useMemo(() => addDays(currentWeekStart, 6), [currentWeekStart])
+  const plansInCurrentRange = useMemo(
+    () => savedPlans.filter((plan) => plan.workout_date >= currentWeekStart && plan.workout_date <= currentRangeEnd),
+    [currentRangeEnd, currentWeekStart, savedPlans]
+  )
+  const exactCurrentWeek = weekGroups.find((group) => group.weekStart === currentWeekStart)
+  const inferredCurrentWeekNumber =
+    exactCurrentWeek?.weekNumber ??
+    plansInCurrentRange[0]?.week_number ??
+    (weekGroups.length > 0 ? Math.max(...weekGroups.map((group) => group.weekNumber)) + 1 : 1)
+  const currentWeekLabel = formatWeekLabel(currentWeekStart, inferredCurrentWeekNumber)
+  const previousWeek = useMemo(() => {
+    const previousWeekStart = addDays(currentWeekStart, -7)
+    return (
+      weekGroups.find((group) => group.weekStart === previousWeekStart) ??
+      weekGroups.find((group) => group.weekStart < currentWeekStart)
+    )
+  }, [currentWeekStart, weekGroups])
+  const historyWeeks = weekGroups.filter(
+    (group) =>
+      group.weekStart !== currentWeekStart &&
+      !group.plans.some((plan) => plan.workout_date >= currentWeekStart && plan.workout_date <= currentRangeEnd)
+  )
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -121,9 +218,9 @@ export default function CoachPlannerPage() {
 
       try {
         const payload = await authedFetch('/api/coach/students') as { students?: BoundStudentRow[] }
-        const rows = payload.students ?? []
-        setStudents(rows)
-        setSelectedStudentId((current) => current || rows.find((row) => row.student)?.student?.id || '')
+        const studentRows = payload.students ?? []
+        setStudents(studentRows)
+        setSelectedStudentId((current) => current || studentRows.find((row) => row.student)?.student?.id || '')
       } catch (err) {
         setError(err instanceof Error ? err.message : '读取学员失败。')
       } finally {
@@ -134,26 +231,75 @@ export default function CoachPlannerPage() {
     loadStudents()
   }, [])
 
+  useEffect(() => {
+    if (!selectedStudentId) {
+      setSavedPlans([])
+      setRows(createEmptyRows(currentWeekLabel))
+      return
+    }
+
+    const loadPlans = async () => {
+      setIsLoadingPlans(true)
+      setError('')
+
+      try {
+        const payload = await authedFetch(`/api/coach/training-plans?studentId=${encodeURIComponent(selectedStudentId)}`) as { plans?: TrainingPlan[] }
+        const plans = payload.plans ?? []
+        setSavedPlans(plans)
+
+        const grouped = groupPlansByWeek(plans)
+        const exact = grouped.find((group) => group.weekStart === currentWeekStart)
+        const rangePlans = plans.filter((plan) => plan.workout_date >= currentWeekStart && plan.workout_date <= currentRangeEnd)
+        const displayPlans = exact?.plans ?? rangePlans
+        const weekNumber =
+          exact?.weekNumber ??
+          rangePlans[0]?.week_number ??
+          (grouped.length > 0 ? Math.max(...grouped.map((group) => group.weekNumber)) + 1 : 1)
+        const label = formatWeekLabel(currentWeekStart, weekNumber)
+        setRows(displayPlans.length > 0 ? plansToRows(displayPlans, label) : createEmptyRows(label))
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '读取课表失败。')
+        setSavedPlans([])
+        setRows(createEmptyRows(currentWeekLabel))
+      } finally {
+        setIsLoadingPlans(false)
+      }
+    }
+
+    loadPlans()
+  }, [currentRangeEnd, currentWeekLabel, currentWeekStart, selectedStudentId])
+
+  useEffect(() => {
+    setRows((current) => current.map((row) => ({ ...row, date: currentWeekLabel })))
+  }, [currentWeekLabel])
+
   const selectedStudent = useMemo(
     () => students.find((row) => row.student?.id === selectedStudentId)?.student ?? null,
     [selectedStudentId, students]
   )
 
   const updateCell = (rowIndex: number, key: PlannerKey, value: string) => {
+    if (key === 'date') return
+
     setRows((current) =>
       current.map((row, index) => (index === rowIndex ? { ...row, [key]: value } : row))
     )
     setMessage('')
   }
 
-  const applyTemplate = () => {
-    setRows(templateRows)
-    setMessage('已套用基础周模板，可继续微调后派发。')
-  }
-
   const copyPreviousWeek = () => {
-    setRows((current) => current.map((row) => ({ ...row })))
-    setMessage('已复制当前表格内容。')
+    setError('')
+    setMessage('')
+
+    if (!previousWeek) {
+      setError('还没有可复制的上一周课表。')
+      return
+    }
+
+    setIsCopyingPrevious(true)
+    setRows(plansToRows(previousWeek.plans, currentWeekLabel))
+    setMessage(`已复制 ${formatWeekLabel(previousWeek.weekStart, previousWeek.weekNumber)} 到本周课表，可继续调整后保存。`)
+    setIsCopyingPrevious(false)
   }
 
   const savePlans = async () => {
@@ -165,19 +311,19 @@ export default function CoachPlannerPage() {
       return
     }
 
-    const workouts = rows.flatMap((row, rowIndex) =>
+    const workouts = rows.flatMap((row) =>
       columns
         .map((column) => {
           const target = row[column.key].trim()
           if (!target) return null
 
           return {
-            workoutDate: addDays(weekStart, column.offset),
+            workoutDate: addDays(currentWeekStart, column.offset),
             dayLabel: column.label,
-            title: row.date.trim() || '训练课表',
+            title: currentWeekLabel,
             target,
             note: '',
-            sortOrder: rowIndex * 10 + column.offset,
+            sortOrder: column.offset,
           }
         })
         .filter(Boolean)
@@ -189,12 +335,14 @@ export default function CoachPlannerPage() {
         method: 'POST',
         body: JSON.stringify({
           studentId: selectedStudentId,
-          weekNumber,
-          weekStart,
+          weekNumber: inferredCurrentWeekNumber,
+          weekStart: currentWeekStart,
           workouts,
         }),
-      }) as { count?: number }
+      }) as { count?: number; plans?: TrainingPlan[] }
 
+      const refreshed = await authedFetch(`/api/coach/training-plans?studentId=${encodeURIComponent(selectedStudentId)}`) as { plans?: TrainingPlan[] }
+      setSavedPlans(refreshed.plans ?? payload.plans ?? [])
       setMessage(`已储存 ${payload.count ?? workouts.length} 条训练课表，已写入 training_plans 并同步到学员端。`)
     } catch (err) {
       setError(err instanceof Error ? err.message : '课表派发失败，请稍后再试。')
@@ -219,7 +367,7 @@ export default function CoachPlannerPage() {
               </p>
               <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">课表面板</h1>
               <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
-                选择已绑定学员，填写本周训练内容并保存。课表会写入 Supabase，并同步到学员端的本周课表。
+                当前只展开本周课表，上一周和更早课表默认折叠。复制上一周后，可直接在本周课表里微调再保存。
               </p>
             </div>
 
@@ -242,26 +390,12 @@ export default function CoachPlannerPage() {
                     </option>
                   ))}
                 </select>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="block">
-                    <span className="mb-1 block text-xs font-semibold text-apple-gray-600">周起始日</span>
-                    <input
-                      type="date"
-                      value={weekStart}
-                      onChange={(event) => setWeekStart(event.target.value)}
-                      className="apple-input"
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="mb-1 block text-xs font-semibold text-apple-gray-600">训练周数</span>
-                    <input
-                      type="number"
-                      min="1"
-                      value={weekNumber}
-                      onChange={(event) => setWeekNumber(Number(event.target.value))}
-                      className="apple-input"
-                    />
-                  </label>
+                <div className="rounded-2xl bg-apple-gray-100 p-4">
+                  <p className="text-xs font-semibold text-apple-gray-500">本周课表</p>
+                  <p className="mt-1 text-xl font-black text-apple-gray-900">{currentWeekLabel}</p>
+                  <p className="mt-1 text-sm text-apple-gray-600">
+                    {columns[0].label} {currentWeekStart} 至 {columns[6].label} {currentRangeEnd}
+                  </p>
                 </div>
                 <p className="text-sm leading-6 text-apple-gray-600">
                   {selectedStudent ? `当前学员：${selectedStudent.name || selectedStudent.email}` : '绑定学员后可在这里选择。'}
@@ -272,13 +406,23 @@ export default function CoachPlannerPage() {
 
           <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row">
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={copyPreviousWeek} className="apple-button-secondary gap-2 px-4 py-2 text-sm">
+              <button
+                type="button"
+                onClick={copyPreviousWeek}
+                disabled={!previousWeek || isLoadingPlans || isCopyingPrevious}
+                className="apple-button-secondary gap-2 px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              >
                 <Copy className="h-4 w-4" />
-                复制当前周
+                复制上一周
               </button>
-              <button type="button" onClick={applyTemplate} className="apple-button-secondary gap-2 px-4 py-2 text-sm">
-                <Sparkles className="h-4 w-4" />
-                套用模板
+              <button
+                type="button"
+                onClick={() => setShowHistory((current) => !current)}
+                disabled={historyWeeks.length === 0}
+                className="apple-button-secondary gap-2 px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {showHistory ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                {showHistory ? '收起历史周' : `回看上一周${historyWeeks.length > 1 ? `等 ${historyWeeks.length} 周` : ''}`}
               </button>
             </div>
             <button
@@ -288,24 +432,29 @@ export default function CoachPlannerPage() {
               className="apple-button-primary gap-2 px-5 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              {isSaving ? '派发中...' : '储存课表并同步'}
+              {isSaving ? '派发中...' : '储存本周课表并同步'}
             </button>
           </div>
 
           {message && <div className="mb-5 rounded-3xl bg-green-50 p-4 text-sm font-semibold text-green-800">{message}</div>}
           {error && <div className="mb-5 rounded-3xl bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
 
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-xl font-black text-apple-gray-900">本周课表</h2>
+            {isLoadingPlans && <span className="text-sm font-semibold text-apple-gray-500">读取中...</span>}
+          </div>
+
           <div className="apple-card overflow-hidden p-0">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1100px] border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-black/10 bg-apple-gray-100 text-left">
-                    <th className="w-40 p-4 font-bold text-apple-gray-900">分组 / 备注</th>
+                    <th className="w-40 p-4 font-bold text-apple-gray-900">周起始日期</th>
                     {columns.map((column) => (
                       <th key={column.key} className="w-36 p-4 font-bold text-apple-gray-900">
                         {column.label}
                         <span className="mt-1 block text-xs font-normal text-apple-gray-500">
-                          {weekStart ? addDays(weekStart, column.offset) : ''}
+                          {addDays(currentWeekStart, column.offset)}
                         </span>
                       </th>
                     ))}
@@ -314,13 +463,10 @@ export default function CoachPlannerPage() {
                 <tbody>
                   {rows.map((row, rowIndex) => (
                     <tr key={rowIndex} className="border-b border-black/10 last:border-b-0">
-                      <td className="bg-white p-4 align-top font-bold text-apple-gray-900">
-                        <input
-                          value={row.date}
-                          onChange={(event) => updateCell(rowIndex, 'date', event.target.value)}
-                          placeholder="例如：质量课"
-                          className="w-full rounded-2xl border border-transparent bg-apple-gray-100 px-3 py-2 font-bold outline-none transition focus:border-black/20 focus:bg-white"
-                        />
+                      <td className="bg-white p-4 align-top">
+                        <div className="rounded-2xl bg-apple-gray-100 px-3 py-3 font-black text-apple-gray-900">
+                          {row.date}
+                        </div>
                       </td>
                       {columns.map((column) => (
                         <td key={column.key} className="p-3 align-top">
@@ -340,11 +486,59 @@ export default function CoachPlannerPage() {
             </div>
           </div>
 
+          {showHistory && historyWeeks.length > 0 && (
+            <section className="mt-8 space-y-4">
+              <h2 className="text-xl font-black text-apple-gray-900">历史课表</h2>
+              {historyWeeks.map((week) => {
+                const historyRows = plansToRows(week.plans, formatWeekLabel(week.weekStart, week.weekNumber))
+
+                return (
+                  <details key={week.key} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/10" open={week === previousWeek}>
+                    <summary className="cursor-pointer text-base font-black text-apple-gray-900">
+                      {formatWeekLabel(week.weekStart, week.weekNumber)}
+                    </summary>
+                    <div className="mt-4 overflow-x-auto">
+                      <table className="w-full min-w-[980px] border-collapse text-sm">
+                        <thead>
+                          <tr className="border-b border-black/10 bg-apple-gray-100 text-left">
+                            <th className="w-36 p-3 font-bold text-apple-gray-900">周起始日期</th>
+                            {columns.map((column) => (
+                              <th key={column.key} className="w-32 p-3 font-bold text-apple-gray-900">
+                                {column.label}
+                                <span className="mt-1 block text-xs font-normal text-apple-gray-500">
+                                  {addDays(week.weekStart, column.offset)}
+                                </span>
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {historyRows.map((row) => (
+                            <tr key={row.date}>
+                              <td className="p-3 align-top font-black text-apple-gray-900">{row.date}</td>
+                              {columns.map((column) => (
+                                <td key={column.key} className="p-3 align-top">
+                                  <div className="min-h-24 whitespace-pre-wrap rounded-2xl bg-apple-gray-100 p-3 leading-6 text-apple-gray-700">
+                                    {row[column.key] || '-'}
+                                  </div>
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </details>
+                )
+              })}
+            </section>
+          )}
+
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {[
               ['选择学员', '只显示已绑定到当前教练账号的学员。'],
-              ['派发课表', '保存后会覆盖该学员同一周起始日的旧课表，避免重复。'],
-              ['学员回馈', '学员端提交训练感受后，会回到教练面板集中查看。'],
+              ['保存本周', '保存后会覆盖该学员本周起始日的旧课表，避免重复。'],
+              ['复制上一周', '复制后训练内容会进入本周课表，可调整日期对应的内容后再保存。'],
             ].map(([title, description]) => (
               <div key={title} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/10">
                 <h2 className="font-bold text-apple-gray-900">{title}</h2>

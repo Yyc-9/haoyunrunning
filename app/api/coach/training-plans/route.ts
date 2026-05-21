@@ -22,14 +22,14 @@ function isIsoDate(value: string | undefined) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value))
 }
 
-export async function POST(request: NextRequest) {
+async function getCoachContext(authorization: string | null) {
   if (!supabaseAdmin) {
-    return NextResponse.json({ error: 'Supabase 尚未设置。' }, { status: 500 })
+    return { error: NextResponse.json({ error: 'Supabase 尚未设置。' }, { status: 500 }) }
   }
 
-  const user = await getAuthedUser(request.headers.get('authorization'))
+  const user = await getAuthedUser(authorization)
   if (!user) {
-    return NextResponse.json({ error: '请先登录教练账号。' }, { status: 401 })
+    return { error: NextResponse.json({ error: '请先登录教练账号。' }, { status: 401 }) }
   }
 
   const { data: coachProfile, error: coachError } = await supabaseAdmin
@@ -39,12 +39,73 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (coachError) {
-    return NextResponse.json({ error: coachError.message }, { status: 500 })
+    return { error: NextResponse.json({ error: coachError.message }, { status: 500 }) }
   }
 
   if (!['coach', 'admin'].includes(coachProfile.role)) {
-    return NextResponse.json({ error: '目前账号尚未取得教练权限。' }, { status: 403 })
+    return { error: NextResponse.json({ error: '目前账号尚未取得教练权限。' }, { status: 403 }) }
   }
+
+  return { user, coachProfile }
+}
+
+async function verifyStudentAccess(coachId: string, studentId: string, isAdmin: boolean) {
+  if (isAdmin) return null
+
+  const { data: binding, error: bindingError } = await supabaseAdmin!
+    .from('coach_students')
+    .select('id')
+    .eq('coach_id', coachId)
+    .eq('student_id', studentId)
+    .eq('active', true)
+    .maybeSingle()
+
+  if (bindingError) {
+    return NextResponse.json({ error: bindingError.message }, { status: 500 })
+  }
+
+  if (!binding) {
+    return NextResponse.json({ error: '只能查看或派发已绑定学员的课表。' }, { status: 403 })
+  }
+
+  return null
+}
+
+export async function GET(request: NextRequest) {
+  const context = await getCoachContext(request.headers.get('authorization'))
+  if (context.error) return context.error
+
+  const studentId = request.nextUrl.searchParams.get('studentId')?.trim()
+  if (!studentId) {
+    return NextResponse.json({ error: '请选择要查看课表的学员。' }, { status: 400 })
+  }
+
+  const accessError = await verifyStudentAccess(
+    context.user.id,
+    studentId,
+    context.coachProfile.role === 'admin'
+  )
+  if (accessError) return accessError
+
+  const { data, error } = await supabaseAdmin!
+    .from('training_plans')
+    .select('*')
+    .eq('student_id', studentId)
+    .order('week_start', { ascending: false })
+    .order('workout_date', { ascending: true })
+    .order('sort_order', { ascending: true })
+    .limit(140)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ plans: data ?? [] })
+}
+
+export async function POST(request: NextRequest) {
+  const context = await getCoachContext(request.headers.get('authorization'))
+  if (context.error) return context.error
 
   const body = (await request.json().catch(() => ({}))) as SavePlansBody
   const studentId = body.studentId?.trim()
@@ -64,27 +125,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '请填写有效的周起始日期。' }, { status: 400 })
   }
 
-  const { data: binding, error: bindingError } = await supabaseAdmin
-    .from('coach_students')
-    .select('id')
-    .eq('coach_id', user.id)
-    .eq('student_id', studentId)
-    .eq('active', true)
-    .maybeSingle()
-
-  if (bindingError) {
-    return NextResponse.json({ error: bindingError.message }, { status: 500 })
-  }
-
-  if (!binding && coachProfile.role !== 'admin') {
-    return NextResponse.json({ error: '只能给已绑定学员派发课表。' }, { status: 403 })
-  }
+  const accessError = await verifyStudentAccess(
+    context.user.id,
+    studentId,
+    context.coachProfile.role === 'admin'
+  )
+  if (accessError) return accessError
 
   const cleanedWorkouts = workouts
     .filter((workout) => workout.target?.trim() || workout.title?.trim())
     .map((workout, index) => ({
       student_id: studentId,
-      coach_id: user.id,
+      coach_id: context.user.id,
       week_number: weekNumber,
       week_start: weekStart,
       workout_date: isIsoDate(workout.workoutDate) ? workout.workoutDate : weekStart,
@@ -100,10 +152,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '请至少填写一项训练内容。' }, { status: 400 })
   }
 
-  const { error: deleteError } = await supabaseAdmin
+  const { error: deleteError } = await supabaseAdmin!
     .from('training_plans')
     .delete()
-    .eq('coach_id', user.id)
+    .eq('coach_id', context.user.id)
     .eq('student_id', studentId)
     .eq('week_start', weekStart)
 
@@ -111,7 +163,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: deleteError.message }, { status: 500 })
   }
 
-  const { data, error: insertError } = await supabaseAdmin
+  const { data, error: insertError } = await supabaseAdmin!
     .from('training_plans')
     .insert(cleanedWorkouts)
     .select('*')
