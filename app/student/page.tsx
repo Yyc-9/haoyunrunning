@@ -950,8 +950,7 @@ export default function StudentPage() {
                   <div className="space-y-5">
                     {groupedPlans.map((group) => (
                       <div key={group.week} className="min-w-0 rounded-3xl border border-black/10 bg-white p-5">
-                        <div className="mb-4 flex items-center justify-between gap-3">
-                          <h3 className="font-bold text-apple-gray-900">第 {group.week} 周</h3>
+                        <div className="mb-4 flex items-center justify-end gap-3">
                           <div className="flex items-center gap-2">
                             <p className="hidden text-xs font-semibold text-apple-gray-500 sm:block">横向滑动查看</p>
                             <button
@@ -982,11 +981,9 @@ export default function StudentPage() {
                               className="w-[220px] shrink-0 snap-start rounded-2xl bg-apple-gray-100 p-4 sm:w-[240px]"
                             >
                               <div className="mb-3 flex items-start justify-between gap-3">
-                                <p className="text-sm font-bold text-apple-gray-900">{workout.day_label}</p>
-                                <p className="text-xs text-apple-gray-500">{workout.workout_date}</p>
+                                <p className="text-sm font-bold text-apple-gray-900">{workout.workout_date}</p>
                               </div>
-                              <h4 className="font-bold text-apple-gray-900">{workout.title}</h4>
-                              <p className="mt-2 text-sm leading-6 text-apple-gray-600">{workout.target}</p>
+                              <p className="text-sm leading-6 text-apple-gray-700">{workout.target}</p>
                               {workout.pace && (
                                 <p className="mt-3 rounded-full bg-white px-3 py-1 text-xs font-semibold text-apple-gray-600">
                                   {workout.pace}
