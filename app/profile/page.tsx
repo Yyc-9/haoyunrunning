@@ -164,7 +164,7 @@ export default function ProfilePage() {
               <Calendar className="h-4 w-4" />
               <span>提交今日回馈</span>
             </Link>
-            <Link href="/student#settings" className="apple-button-outline flex items-center space-x-2">
+            <Link href="/student?settings=1" className="apple-button-outline flex items-center space-x-2">
               <Settings className="h-4 w-4" />
               <span>编辑资料</span>
             </Link>
@@ -175,7 +175,7 @@ export default function ProfilePage() {
             <QuickLink icon={TrendingUp} label="训练数据" href="/student#training-data" />
             <QuickLink icon={Calendar} label="训练计划" href="/student#training-plan" />
             <QuickLink icon={Target} label="我的目标" href="/student#goals" />
-            <QuickLink icon={Settings} label="设置" href="/student#settings" />
+            <QuickLink icon={Settings} label="设置" href="/student?settings=1" />
           </div>
         </motion.div>
 

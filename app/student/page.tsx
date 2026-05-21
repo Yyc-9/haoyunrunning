@@ -90,6 +90,7 @@ export default function StudentPage() {
   const [settingsMessage, setSettingsMessage] = useState('')
   const [settingsError, setSettingsError] = useState('')
   const [isSavingSettings, setIsSavingSettings] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [customRace, setCustomRace] = useState({
     raceName: '',
     location: '',
@@ -141,11 +142,54 @@ export default function StudentPage() {
         )
       : null
   const latestFeedback = recentFeedback[0]
-  const dashboardNav = [
-    { href: '#training-data', icon: Gauge, label: '训练数据' },
-    { href: '#training-plan', icon: CalendarDays, label: '训练计划' },
-    { href: '#goals', icon: Trophy, label: '我的目标' },
-    { href: '#settings', icon: Settings, label: '设置' },
+  const recentLoadItems = recentFeedback
+    .slice(0, 7)
+    .reverse()
+    .map((item) => ({
+      id: item.id,
+      label: new Date(item.created_at).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }),
+      load: Math.round((item.distance_km ?? 0) * (item.rpe ?? 0)),
+      distance: item.distance_km ?? 0,
+      rpe: item.rpe,
+    }))
+  const maxRecentLoad = Math.max(...recentLoadItems.map((item) => item.load), 1)
+  const trainingLoad = recentLoadItems.reduce((sum, item) => sum + item.load, 0)
+  const intensityScore = averageRpe ? Math.min(100, Math.round((averageRpe / 10) * 100)) : 0
+  const aerobicShare =
+    recentFeedback.length > 0
+      ? Math.round((recentFeedback.filter((item) => (item.rpe ?? 0) <= 5).length / recentFeedback.length) * 100)
+      : 0
+  const tempoShare =
+    recentFeedback.length > 0
+      ? Math.round((recentFeedback.filter((item) => (item.rpe ?? 0) > 5 && (item.rpe ?? 0) <= 7).length / recentFeedback.length) * 100)
+      : 0
+  const hardShare = recentFeedback.length > 0 ? Math.max(0, 100 - aerobicShare - tempoShare) : 0
+  const trainingStatus =
+    recentFeedback.length === 0
+      ? '等待记录'
+      : averageRpe && averageRpe >= 8
+        ? '强度偏高'
+        : completionRate >= 75
+          ? '稳定推进'
+          : '建立节奏'
+  const recoveryHint =
+    recentFeedback.length === 0
+      ? '先提交一次训练回馈'
+      : averageRpe && averageRpe >= 8
+        ? '建议和教练确认恢复'
+        : averageHeartRate && averageHeartRate >= 170
+          ? '关注心率与睡眠'
+          : '可以按计划推进'
+  const loadZone =
+    trainingLoad === 0 ? '暂无负荷' : trainingLoad < 180 ? '轻负荷' : trainingLoad < 420 ? '适中负荷' : '高负荷'
+  const dashboardNav: Array<
+    | { type: 'link'; href: string; icon: React.ElementType; label: string }
+    | { type: 'button'; icon: React.ElementType; label: string }
+  > = [
+    { type: 'link', href: '#training-data', icon: Gauge, label: '训练数据' },
+    { type: 'link', href: '#training-plan', icon: CalendarDays, label: '训练计划' },
+    { type: 'link', href: '#goals', icon: Trophy, label: '我的目标' },
+    { type: 'button', icon: Settings, label: '设置' },
   ]
 
   const groupedPlans = useMemo(() => {
@@ -238,6 +282,35 @@ export default function StudentPage() {
       pb: user.pb || '',
     })
   }, [user])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('settings') === '1') {
+      setIsSettingsOpen(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isSettingsOpen) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsSettingsOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isSettingsOpen])
 
   const updateField = (field: keyof typeof feedback, value: string | number) => {
     setFeedback((current) => ({ ...current, [field]: value }))
@@ -409,6 +482,7 @@ export default function StudentPage() {
         pb: profileForm.pb.trim(),
       })
       setSettingsMessage('资料已更新。')
+      window.setTimeout(() => setIsSettingsOpen(false), 500)
     } catch (error) {
       setSettingsError(error instanceof Error ? error.message : '保存失败，请稍后再试。')
     } finally {
@@ -515,19 +589,36 @@ export default function StudentPage() {
 
           <nav className="mb-6 grid gap-3 sm:grid-cols-4" aria-label="学员看板功能">
             {dashboardNav.map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
-                className="group flex min-h-16 items-center justify-between gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 text-left shadow-sm transition hover:border-black/20 hover:bg-apple-gray-100"
-              >
-                <span className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black text-white">
-                    <item.icon className="h-4 w-4" />
+              item.type === 'link' ? (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  className="group flex min-h-16 items-center justify-between gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 text-left shadow-sm transition hover:border-black/20 hover:bg-apple-gray-100"
+                >
+                  <span className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black text-white">
+                      <item.icon className="h-4 w-4" />
+                    </span>
+                    <span className="font-bold text-apple-gray-900">{item.label}</span>
                   </span>
-                  <span className="font-bold text-apple-gray-900">{item.label}</span>
-                </span>
-                <ChevronRight className="h-4 w-4 text-apple-gray-400 transition group-hover:translate-x-0.5 group-hover:text-apple-gray-800" />
-              </a>
+                  <ChevronRight className="h-4 w-4 text-apple-gray-400 transition group-hover:translate-x-0.5 group-hover:text-apple-gray-800" />
+                </a>
+              ) : (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="group flex min-h-16 items-center justify-between gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 text-left shadow-sm transition hover:border-black/20 hover:bg-apple-gray-100"
+                >
+                  <span className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black text-white">
+                      <item.icon className="h-4 w-4" />
+                    </span>
+                    <span className="font-bold text-apple-gray-900">{item.label}</span>
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-apple-gray-400 transition group-hover:translate-x-0.5 group-hover:text-apple-gray-800" />
+                </button>
+              )
             ))}
           </nav>
 
@@ -538,7 +629,7 @@ export default function StudentPage() {
                   <p className="text-sm font-semibold text-apple-blue">Training data</p>
                   <h2 className="mt-1 text-2xl font-black text-apple-gray-900">训练数据</h2>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-apple-gray-600">
-                    只保留最需要看的数据：完成情况、近期强度、里程和最新感受。
+                    用训练负荷、完成率和体感趋势，快速判断这一周该推进、维持还是先恢复。
                   </p>
                 </div>
                 <a href="#feedback" className="apple-button-secondary gap-2 px-5 py-2.5 text-sm">
@@ -547,45 +638,136 @@ export default function StudentPage() {
                 </a>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-4">
-                {[
-                  { label: '课表完成率', value: plans.length > 0 ? `${completionRate}%` : '待同步', note: `${completedPlanCount}/${plans.length} 节已回报` },
-                  { label: '近期里程', value: totalDistance > 0 ? `${totalDistance.toFixed(1)} km` : '暂无', note: `最近 ${recentFeedback.length} 次回馈` },
-                  { label: '平均 RPE', value: averageRpe ? averageRpe.toFixed(1) : '暂无', note: '体感强度 1-10' },
-                  { label: '平均心率', value: averageHeartRate ? `${averageHeartRate}` : '暂无', note: '来自已填写记录' },
-                ].map((item) => (
-                  <div key={item.label} className="rounded-2xl border border-black/10 bg-white p-4">
-                    <p className="text-xs font-semibold text-apple-gray-500">{item.label}</p>
-                    <p className="mt-2 text-2xl font-black text-apple-gray-900">{item.value}</p>
-                    <p className="mt-1 text-xs text-apple-gray-500">{item.note}</p>
+              <div className="grid gap-4 xl:grid-cols-[1.05fr_1fr]">
+                <div className="rounded-3xl bg-black p-5 text-white">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm text-white/60">当前训练状态</p>
+                      <h3 className="mt-2 text-3xl font-black">{trainingStatus}</h3>
+                    </div>
+                    <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-black">
+                      {loadZone}
+                    </span>
                   </div>
-                ))}
+
+                  <div className="mt-6 grid grid-cols-3 gap-3">
+                    {[
+                      { label: '负荷', value: trainingLoad || '-' },
+                      { label: '完成率', value: plans.length > 0 ? `${completionRate}%` : '-' },
+                      { label: '平均 RPE', value: averageRpe ? averageRpe.toFixed(1) : '-' },
+                    ].map((item) => (
+                      <div key={item.label} className="rounded-2xl bg-white/10 p-3">
+                        <p className="text-xs text-white/55">{item.label}</p>
+                        <p className="mt-1 text-xl font-black">{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-5 rounded-2xl bg-white/10 p-4">
+                    <p className="text-xs text-white/55">好运建议</p>
+                    <p className="mt-1 text-sm font-semibold leading-6">{recoveryHint}</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[
+                    { label: '近期里程', value: totalDistance > 0 ? `${totalDistance.toFixed(1)} km` : '暂无', note: `最近 ${recentFeedback.length} 次回馈` },
+                    { label: '平均心率', value: averageHeartRate ? `${averageHeartRate}` : '暂无', note: '来自已填写记录' },
+                    { label: '课表完成', value: plans.length > 0 ? `${completedPlanCount}/${plans.length}` : '待同步', note: '按训练回馈匹配课表' },
+                    { label: '强度指数', value: intensityScore ? `${intensityScore}` : '暂无', note: '由 RPE 换算' },
+                  ].map((item) => (
+                    <div key={item.label} className="rounded-2xl border border-black/10 bg-white p-4">
+                      <p className="text-xs font-semibold text-apple-gray-500">{item.label}</p>
+                      <p className="mt-2 text-2xl font-black text-apple-gray-900">{item.value}</p>
+                      <p className="mt-1 text-xs text-apple-gray-500">{item.note}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div className="mt-5 rounded-3xl bg-apple-gray-100 p-5">
-                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-                  <div>
-                    <p className="text-sm font-bold text-apple-gray-900">最近一次回馈</p>
-                    <p className="mt-1 text-sm leading-6 text-apple-gray-600">
-                      {latestFeedback
-                        ? `${new Date(latestFeedback.created_at).toLocaleString('zh-CN', {
-                            month: 'numeric',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })} · ${latestFeedback.distance_km ?? '-'} km · RPE ${latestFeedback.rpe ?? '-'}`
-                        : '还没有训练回馈，完成一次训练后从下方提交即可。'}
-                    </p>
+              <div className="mt-4 grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+                <div className="rounded-3xl border border-black/10 bg-white p-5">
+                  <div className="mb-5 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold text-apple-gray-900">近 7 次训练负荷</p>
+                      <p className="mt-1 text-xs text-apple-gray-500">里程 × RPE，用来观察疲劳趋势</p>
+                    </div>
+                    <span className="rounded-full bg-apple-gray-100 px-3 py-1 text-xs font-bold text-apple-gray-600">
+                      {recentLoadItems.length || 0} 次
+                    </span>
                   </div>
-                  <span className="inline-flex w-fit rounded-full bg-white px-3 py-1 text-xs font-bold text-apple-gray-700">
-                    {latestFeedback?.status === 'reviewed' ? '教练已看' : latestFeedback ? '等待教练查看' : '待开始'}
-                  </span>
+
+                  {recentLoadItems.length > 0 ? (
+                    <div className="flex h-44 items-end gap-2">
+                      {recentLoadItems.map((item) => (
+                        <div key={item.id} className="flex min-w-0 flex-1 flex-col items-center gap-2">
+                          <div className="flex h-32 w-full items-end rounded-full bg-apple-gray-100 px-1.5 py-1.5">
+                            <div
+                              className="w-full rounded-full bg-gradient-to-t from-apple-blue to-apple-orange"
+                              style={{ height: `${Math.max(10, Math.round((item.load / maxRecentLoad) * 100))}%` }}
+                              title={`${item.distance.toFixed(1)} km · RPE ${item.rpe ?? '-'}`}
+                            />
+                          </div>
+                          <p className="truncate text-xs font-semibold text-apple-gray-500">{item.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-black/15 bg-apple-gray-100 p-6 text-center">
+                      <p className="font-bold text-apple-gray-900">还没有负荷趋势</p>
+                      <p className="mt-2 text-sm text-apple-gray-600">提交训练回馈后，这里会自动生成趋势。</p>
+                    </div>
+                  )}
                 </div>
-                {latestFeedback?.feeling && (
-                  <p className="mt-4 rounded-2xl bg-white p-4 text-sm leading-6 text-apple-gray-700">
-                    {latestFeedback.feeling}
-                  </p>
-                )}
+
+                <div className="space-y-4">
+                  <div className="rounded-3xl border border-black/10 bg-white p-5">
+                    <p className="text-sm font-bold text-apple-gray-900">强度分布</p>
+                    <div className="mt-4 space-y-3">
+                      {[
+                        { label: '轻松 / 恢复', value: aerobicShare, color: 'bg-green-500' },
+                        { label: '节奏 / 稳态', value: tempoShare, color: 'bg-apple-blue' },
+                        { label: '高强度', value: hardShare, color: 'bg-apple-orange' },
+                      ].map((item) => (
+                        <div key={item.label}>
+                          <div className="mb-1 flex justify-between text-xs font-semibold text-apple-gray-600">
+                            <span>{item.label}</span>
+                            <span>{item.value}%</span>
+                          </div>
+                          <div className="h-2 rounded-full bg-apple-gray-100">
+                            <div className={`h-full rounded-full ${item.color}`} style={{ width: `${item.value}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl bg-apple-gray-100 p-5">
+                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center xl:flex-col xl:items-start">
+                      <div>
+                        <p className="text-sm font-bold text-apple-gray-900">最近一次回馈</p>
+                        <p className="mt-1 text-sm leading-6 text-apple-gray-600">
+                          {latestFeedback
+                            ? `${new Date(latestFeedback.created_at).toLocaleString('zh-CN', {
+                                month: 'numeric',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })} · ${latestFeedback.distance_km ?? '-'} km · RPE ${latestFeedback.rpe ?? '-'}`
+                            : '还没有训练回馈，完成一次训练后从下方提交即可。'}
+                        </p>
+                      </div>
+                      <span className="inline-flex w-fit rounded-full bg-white px-3 py-1 text-xs font-bold text-apple-gray-700">
+                        {latestFeedback?.status === 'reviewed' ? '教练已看' : latestFeedback ? '等待教练查看' : '待开始'}
+                      </span>
+                    </div>
+                    {latestFeedback?.feeling && (
+                      <p className="mt-4 rounded-2xl bg-white p-4 text-sm leading-6 text-apple-gray-700">
+                        {latestFeedback.feeling}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             </article>
           </section>
@@ -756,24 +938,30 @@ export default function StudentPage() {
               <article className="apple-card p-6 md:p-8">
                 <h2 className="mb-5 text-xl font-bold text-apple-gray-900">本周课表</h2>
                 {groupedPlans.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     {groupedPlans.map((group) => (
                       <div key={group.week} className="rounded-3xl border border-black/10 bg-white p-5">
-                        <h3 className="mb-4 font-bold text-apple-gray-900">第 {group.week} 周</h3>
-                        <div className="space-y-3">
+                        <div className="mb-4 flex items-center justify-between gap-3">
+                          <h3 className="font-bold text-apple-gray-900">第 {group.week} 周</h3>
+                          <p className="text-xs font-semibold text-apple-gray-500">横向滑动查看</p>
+                        </div>
+                        <div className="flex gap-3 overflow-x-auto pb-2">
                           {group.plans.map((workout) => (
                             <div
                               key={workout.id}
-                              className="grid gap-4 rounded-2xl bg-apple-gray-100 p-4 md:grid-cols-[120px_1fr]"
+                              className="min-w-[220px] flex-1 rounded-2xl bg-apple-gray-100 p-4 sm:min-w-[240px]"
                             >
-                              <div>
+                              <div className="mb-3 flex items-start justify-between gap-3">
                                 <p className="text-sm font-bold text-apple-gray-900">{workout.day_label}</p>
                                 <p className="text-xs text-apple-gray-500">{workout.workout_date}</p>
                               </div>
-                              <div>
-                                <h4 className="font-bold text-apple-gray-900">{workout.title}</h4>
-                                <p className="mt-2 text-sm text-apple-gray-600">{workout.target}</p>
-                              </div>
+                              <h4 className="font-bold text-apple-gray-900">{workout.title}</h4>
+                              <p className="mt-2 text-sm leading-6 text-apple-gray-600">{workout.target}</p>
+                              {workout.pace && (
+                                <p className="mt-3 rounded-full bg-white px-3 py-1 text-xs font-semibold text-apple-gray-600">
+                                  {workout.pace}
+                                </p>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -906,76 +1094,109 @@ export default function StudentPage() {
             </section>
           </div>
 
-          <section id="settings" className="scroll-mt-28">
-            <article className="apple-card mt-6 p-6 md:p-8">
-              <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-start">
-                <div>
-                  <p className="text-sm font-semibold text-apple-blue">Account settings</p>
-                  <h2 className="mt-1 text-2xl font-black text-apple-gray-900">设置</h2>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-apple-gray-600">
-                    这里只放影响训练沟通的资料，避免把账号页做得太重。
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-apple-gray-100 px-4 py-3 text-sm text-apple-gray-600">
-                  登录邮箱：{user?.email || '-'}
-                </div>
+        </div>
+      </section>
+
+      {isSettingsOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-6 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="student-settings-title"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setIsSettingsOpen(false)
+            }
+          }}
+        >
+          <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl md:p-8">
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-apple-blue">Account settings</p>
+                <h2 id="student-settings-title" className="mt-1 text-2xl font-black text-apple-gray-900">
+                  设置
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-apple-gray-600">
+                  这里只放影响训练沟通的资料，保存后会同步给教练端查看。
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSettingsOpen(false)}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-black/10 bg-white text-xl leading-none text-apple-gray-500 transition hover:bg-apple-gray-100 hover:text-apple-gray-900"
+                aria-label="关闭设置"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mb-5 rounded-2xl bg-apple-gray-100 px-4 py-3 text-sm text-apple-gray-600">
+              登录邮箱：{user?.email || '-'}
+            </div>
+
+            <form onSubmit={handleSaveSettings} className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-apple-gray-700">姓名</span>
+                  <input
+                    value={profileForm.name}
+                    onChange={(event) => updateProfileField('name', event.target.value)}
+                    className="apple-input"
+                    placeholder="你的称呼"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-apple-gray-700">手机 / 联系方式</span>
+                  <input
+                    value={profileForm.phone}
+                    onChange={(event) => updateProfileField('phone', event.target.value)}
+                    className="apple-input"
+                    placeholder="方便教练联系"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-apple-gray-700">当前 PB</span>
+                  <input
+                    value={profileForm.pb}
+                    onChange={(event) => updateProfileField('pb', event.target.value)}
+                    className="apple-input"
+                    placeholder="例如 3:45:20"
+                  />
+                </label>
               </div>
 
-              <form onSubmit={handleSaveSettings} className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-semibold text-apple-gray-700">姓名</span>
-                    <input
-                      value={profileForm.name}
-                      onChange={(event) => updateProfileField('name', event.target.value)}
-                      className="apple-input"
-                      placeholder="你的称呼"
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-semibold text-apple-gray-700">手机 / 联系方式</span>
-                    <input
-                      value={profileForm.phone}
-                      onChange={(event) => updateProfileField('phone', event.target.value)}
-                      className="apple-input"
-                      placeholder="方便教练联系"
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-semibold text-apple-gray-700">当前 PB</span>
-                    <input
-                      value={profileForm.pb}
-                      onChange={(event) => updateProfileField('pb', event.target.value)}
-                      className="apple-input"
-                      placeholder="例如 3:45:20"
-                    />
-                  </label>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSavingSettings}
-                  className="apple-button-primary h-12 gap-2 px-6 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <Settings className="h-4 w-4" />
-                  {isSavingSettings ? '保存中...' : '保存设置'}
-                </button>
-              </form>
-
               {settingsMessage && (
-                <p className="mt-4 rounded-2xl bg-green-50 p-3 text-sm font-semibold text-green-800">
+                <p className="rounded-2xl bg-green-50 p-3 text-sm font-semibold text-green-800">
                   {settingsMessage}
                 </p>
               )}
               {settingsError && (
-                <p className="mt-4 rounded-2xl bg-red-50 p-3 text-sm font-semibold text-red-700">
+                <p className="rounded-2xl bg-red-50 p-3 text-sm font-semibold text-red-700">
                   {settingsError}
                 </p>
               )}
-            </article>
-          </section>
+
+              <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsSettingsOpen(false)}
+                  className="apple-button-outline px-6 py-2.5 text-sm"
+                >
+                  取消
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingSettings}
+                  className="apple-button-primary gap-2 px-6 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Settings className="h-4 w-4" />
+                  {isSavingSettings ? '保存中...' : '保存设置'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      </section>
+      )}
     </main>
   )
 }
