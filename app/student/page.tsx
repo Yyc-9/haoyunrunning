@@ -30,6 +30,7 @@ import {
   getMyTrainingFeedback,
   getMyTrainingPlans,
   removeMyStudentRace,
+  supabase,
   submitTrainingFeedback,
   type StudentRace,
   type TrainingFeedback,
@@ -123,6 +124,8 @@ export default function StudentPage() {
   }, [plans])
 
   useEffect(() => {
+    let isActive = true
+
     const loadStudentData = async () => {
       if (!user) {
         setPlans([])
@@ -141,18 +144,50 @@ export default function StudentPage() {
           getMyStudentRaces(user.id),
         ])
 
+        if (!isActive) return
         setPlans(planData)
         setRecentFeedback(feedbackData)
         setStudentRaces(raceData)
       } catch (error) {
         console.error('Load student dashboard data error:', error)
-        setDataError(error instanceof Error ? error.message : '读取学员资料失败。')
+        if (isActive) {
+          setDataError(error instanceof Error ? error.message : '读取学员资料失败。')
+        }
       } finally {
-        setIsLoadingData(false)
+        if (isActive) setIsLoadingData(false)
       }
     }
 
     loadStudentData()
+
+    const realtimeClient = supabase
+
+    if (!user || !realtimeClient) {
+      return () => {
+        isActive = false
+      }
+    }
+
+    const channel = realtimeClient
+      .channel(`student-training-plans-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'training_plans',
+          filter: `student_id=eq.${user.id}`,
+        },
+        () => {
+          loadStudentData()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      isActive = false
+      realtimeClient.removeChannel(channel)
+    }
   }, [user])
 
   const updateField = (field: keyof typeof feedback, value: string | number) => {

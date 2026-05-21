@@ -148,13 +148,37 @@ export async function submitTrainingFeedback(input: TrainingFeedbackInsert) {
 export async function getMyTrainingPlans(studentId: string) {
   if (!supabase) return []
 
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  if (session?.access_token) {
+    const response = await fetch('/api/student/training-plans', {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    })
+
+    const payload = (await response.json().catch(() => ({}))) as {
+      plans?: TrainingPlan[]
+      error?: string
+    }
+
+    if (!response.ok) {
+      throw new Error(payload.error || '读取课表失败，请稍后再试。')
+    }
+
+    return payload.plans ?? []
+  }
+
   const { data, error } = await supabase
     .from('training_plans')
     .select('*')
     .eq('student_id', studentId)
-    .order('workout_date', { ascending: false })
+    .order('week_start', { ascending: false })
+    .order('workout_date', { ascending: true })
     .order('sort_order', { ascending: true })
-    .limit(21)
+    .limit(35)
 
   if (error) {
     throw error
