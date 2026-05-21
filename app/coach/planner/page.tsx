@@ -248,6 +248,12 @@ export default function CoachPlannerPage() {
         setSavedPlans(plans)
 
         const grouped = groupPlansByWeek(plans)
+        const hasBaseWeek = grouped.some((group) => group.weekStart === baseWeekStart)
+        if (activeWeekStart === baseWeekStart && !hasBaseWeek && grouped.length > 0) {
+          setActiveWeekStart(grouped[0].weekStart)
+          return
+        }
+
         const exact = grouped.find((group) => group.weekStart === activeWeekStart)
         const rangePlans = plans.filter((plan) => plan.workout_date >= activeWeekStart && plan.workout_date <= activeRangeEnd)
         const displayPlans = exact?.plans ?? rangePlans
@@ -267,7 +273,7 @@ export default function CoachPlannerPage() {
     }
 
     loadPlans()
-  }, [activeRangeEnd, activeWeekLabel, activeWeekStart, selectedStudentId])
+  }, [activeRangeEnd, activeWeekLabel, activeWeekStart, baseWeekStart, selectedStudentId])
 
   useEffect(() => {
     setRows((current) => current.map((row) => ({ ...row, date: activeWeekLabel })))
