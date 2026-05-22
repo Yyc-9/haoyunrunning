@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { CalendarDays, ChevronRight, Clock, MapPin, Target, Users } from 'lucide-react'
 import { allCourses } from '@/lib/goodluck-data'
+import CoursePaymentInfo from '@/components/CoursePaymentInfo'
 
 const weekdayOrder = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
 
@@ -45,6 +46,10 @@ export default function CoursesSection() {
             </a>
           </div>
         </motion.div>
+
+        <div className="mb-8">
+          <CoursePaymentInfo />
+        </div>
 
         <div className="apple-card overflow-hidden p-0">
           <div className="overflow-x-auto">
