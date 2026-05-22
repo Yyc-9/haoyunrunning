@@ -62,7 +62,24 @@ export default function HeroSection() {
     )
   }
 
+  const renderEntryContent = (item: (typeof entryCards)[number]) => {
+    const Icon = item.icon
+
+    return (
+      <>
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-black text-white">
+          <Icon className="h-5 w-5" />
+        </span>
+        <span>
+          <span className="block text-lg font-black text-apple-gray-950">{item.title}</span>
+          <span className="mt-2 block text-sm leading-6 text-apple-gray-600">{item.description}</span>
+        </span>
+      </>
+    )
+  }
+
   return (
+    <>
     <section className="relative h-screen min-h-[640px] overflow-hidden bg-black">
       <div className="absolute inset-0">
         {images.map((image, index) => (
@@ -104,44 +121,6 @@ export default function HeroSection() {
         </motion.button>
       </div>
 
-      <div className="absolute inset-x-0 bottom-28 z-20 px-4 sm:px-6 lg:px-8">
-        <div className="container mx-auto max-w-6xl">
-          <div className="grid gap-3 md:grid-cols-3">
-            {entryCards.map((item) => {
-              const Icon = item.icon
-              const className =
-                'group flex min-h-[118px] items-start gap-4 rounded-3xl border border-white/45 bg-white/90 p-5 text-left text-black shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:bg-white'
-
-              const content = (
-                <>
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black text-white">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <span>
-                    <span className="block text-base font-black text-apple-gray-950">{item.title}</span>
-                    <span className="mt-2 block text-sm leading-6 text-apple-gray-600">{item.description}</span>
-                  </span>
-                </>
-              )
-
-              if ('external' in item && item.external) {
-                return (
-                  <a key={item.title} href={item.href} target="_blank" rel="noreferrer" className={className}>
-                    {content}
-                  </a>
-                )
-              }
-
-              return (
-                <Link key={item.title} href={item.href} className={className}>
-                  {content}
-                </Link>
-              )
-            })}
-          </div>
-        </div>
-      </div>
-
       <div className="absolute bottom-8 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-5">
         <div className="flex items-center gap-3 rounded-full bg-black/25 px-4 py-3 backdrop-blur-md">
           {images.map((_, index) => (
@@ -180,5 +159,33 @@ export default function HeroSection() {
         </motion.button>
       </div>
     </section>
+
+    <section className="border-b border-black/10 bg-white px-4 py-8 sm:px-6 lg:px-8">
+      <div className="container mx-auto max-w-6xl">
+        <p className="mb-4 text-sm font-semibold uppercase tracking-wide text-apple-blue">{t.hero.entryLabel}</p>
+        <div className="grid gap-3 md:grid-cols-3">
+          {entryCards.map((item) => {
+            const className =
+              'group flex min-h-[132px] items-start gap-4 rounded-2xl border border-black/10 bg-white p-5 text-left text-black shadow-sm transition duration-300 hover:-translate-y-1 hover:border-black/20 hover:shadow-xl'
+            const content = renderEntryContent(item)
+
+            if ('external' in item && item.external) {
+              return (
+                <a key={item.title} href={item.href} target="_blank" rel="noreferrer" className={className}>
+                  {content}
+                </a>
+              )
+            }
+
+            return (
+              <Link key={item.title} href={item.href} className={className}>
+                {content}
+              </Link>
+            )
+          })}
+        </div>
+      </div>
+    </section>
+    </>
   )
 }
