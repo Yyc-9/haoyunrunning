@@ -91,7 +91,7 @@ export default function RunnerPortalSection() {
                 },
                 {
                   title: '尚未同步就顯示空狀態',
-                  description: '尚未綁定課表時，清楚提示等待教練同步。',
+                  description: '尚未綁定課表時，顯示等待教練同步。',
                 },
                 {
                   title: '回饋已連接 Supabase',

@@ -11,8 +11,6 @@ import {
   Gauge,
   Globe2,
   HeartPulse,
-  ImageUp,
-  Mic,
   MapPin,
   MessageSquareText,
   NotebookPen,
@@ -177,7 +175,7 @@ export default function StudentPage() {
     recentFeedback.length === 0
       ? '先提交一次训练回馈'
       : averageRpe && averageRpe >= 8
-        ? '建议和教练确认恢复'
+        ? '请和教练确认恢复'
         : averageHeartRate && averageHeartRate >= 170
           ? '关注心率与睡眠'
           : '可以按计划推进'
@@ -673,7 +671,7 @@ export default function StudentPage() {
                   </div>
 
                   <div className="mt-5 rounded-2xl bg-white/10 p-4">
-                    <p className="text-xs text-white/55">好运建议</p>
+                    <p className="text-xs text-white/55">当前状态</p>
                     <p className="mt-1 text-sm font-semibold leading-6">{recoveryHint}</p>
                   </div>
                 </div>
@@ -928,7 +926,7 @@ export default function StudentPage() {
                   {isCustomRace ? (
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
                       <input value={customRace.raceName} onChange={(event) => updateCustomRace('raceName', event.target.value)} placeholder="赛事名称" className="apple-input bg-white" />
-                      <input value={customRace.distance} onChange={(event) => updateCustomRace('distance', event.target.value)} placeholder="距离，例如 Marathon / 10K" className="apple-input bg-white" />
+                      <input value={customRace.distance} onChange={(event) => updateCustomRace('distance', event.target.value)} placeholder="距离" className="apple-input bg-white" />
                       <input value={customRace.location} onChange={(event) => updateCustomRace('location', event.target.value)} placeholder="城市" className="apple-input bg-white" />
                       <input value={customRace.country} onChange={(event) => updateCustomRace('country', event.target.value)} placeholder="国家 / 地区" className="apple-input bg-white" />
                       <input type="date" value={customRace.raceDate} onChange={(event) => updateCustomRace('raceDate', event.target.value)} className="apple-input bg-white sm:col-span-2" />
@@ -1023,10 +1021,10 @@ export default function StudentPage() {
               >
                 <div className="grid gap-4 sm:grid-cols-2">
                   {[
-                    { key: 'distance', label: '实际里程', placeholder: '例如 8.2 km', icon: Route },
-                    { key: 'duration', label: '完成時間', placeholder: '例如 42:10', icon: Timer },
-                    { key: 'pace', label: '平均配速', placeholder: '例如 5:03/km', icon: Activity },
-                    { key: 'heartRate', label: '平均心率', placeholder: '例如 158', icon: HeartPulse },
+                    { key: 'distance', label: '实际里程', placeholder: '填写实际里程', icon: Route },
+                    { key: 'duration', label: '完成時間', placeholder: '填写完成时间', icon: Timer },
+                    { key: 'pace', label: '平均配速', placeholder: '填写平均配速', icon: Activity },
+                    { key: 'heartRate', label: '平均心率', placeholder: '填写平均心率', icon: HeartPulse },
                   ].map((field) => (
                     <label key={field.key} className="block">
                       <span className="mb-2 block text-sm font-semibold text-apple-gray-700">
@@ -1068,31 +1066,16 @@ export default function StudentPage() {
 
                 <label className="block">
                   <div className="mb-2 flex items-center justify-between gap-3">
-                    <span className="text-sm font-semibold text-apple-gray-700">文字或語音感受</span>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold text-apple-gray-700"
-                    >
-                      <Mic className="h-3.5 w-3.5" />
-                      語音輸入開發中
-                    </button>
+                    <span className="text-sm font-semibold text-apple-gray-700">训练感受</span>
                   </div>
                   <textarea
                     value={feedback.feeling}
                     onChange={(event) => updateField('feeling', event.target.value)}
                     rows={5}
-                    placeholder="例如：今天 T 段最后一公里偏硬，右小腿有一点紧，但没有痛。"
+                    placeholder="填写训练感受"
                     className="apple-input resize-none"
                   />
                 </label>
-
-                <div className="rounded-3xl border border-dashed border-black/20 bg-white p-6 text-center">
-                  <ImageUp className="mx-auto mb-3 h-8 w-8 text-apple-gray-400" />
-                  <p className="font-semibold text-apple-gray-800">上傳跑步 App 截圖</p>
-                  <p className="mt-1 text-sm text-apple-gray-500">
-                    第一版先做保存图片；自动辨識里程、心率与配速可放到后端階段。
-                  </p>
-                </div>
 
                 {submitted && (
                   <div className="flex items-start gap-3 rounded-3xl bg-green-50 p-4 text-green-800">
@@ -1187,7 +1170,7 @@ export default function StudentPage() {
                     value={profileForm.pb}
                     onChange={(event) => updateProfileField('pb', event.target.value)}
                     className="apple-input"
-                    placeholder="例如 3:45:20"
+                    placeholder="当前 PB"
                   />
                 </label>
               </div>

@@ -165,7 +165,7 @@ export default function TrainingLogPreview() {
       >
         <h2 className="text-3xl font-black text-apple-gray-900 md:text-4xl">训练日志系统</h2>
         <p className="mt-3 max-w-3xl text-lg leading-8 text-apple-gray-600">
-          这里会同步教练派发的真实课表；课表清空或尚未派发时，不再显示示例训练。
+          这里会同步教练派发的真实课表；课表清空或尚未派发时显示空状态。
         </p>
       </motion.div>
 
@@ -215,7 +215,7 @@ export default function TrainingLogPreview() {
               <div className="grid grid-cols-2 gap-4">
                 {[
                   { icon: CalendarDays, label: '训练日', value: latestPlan.day_label },
-                  { icon: Timer, label: '建议配速', value: latestPlan.pace || '由教练调整' },
+                  { icon: Timer, label: '目标配速', value: latestPlan.pace || '由教练调整' },
                   { icon: TrendingUp, label: '周数', value: `第 ${latestPlan.week_number} 周` },
                   { icon: Heart, label: '状态', value: '完成后回报' },
                 ].map((item) => (
@@ -261,10 +261,10 @@ export default function TrainingLogPreview() {
             <div className="space-y-6">
               <div className="grid gap-4 sm:grid-cols-2">
                 {[
-                  { name: 'distance', label: '完成里程 (km)', icon: MapPin, placeholder: '例如：10.5' },
-                  { name: 'duration', label: '完成时间', icon: Timer, placeholder: '例如：52:30' },
-                  { name: 'pace', label: '平均配速', icon: Timer, placeholder: '例如：5:45/km' },
-                  { name: 'heartRate', label: '平均心率', icon: Heart, placeholder: '例如：145' },
+                  { name: 'distance', label: '完成里程 (km)', icon: MapPin, placeholder: '填写完成里程' },
+                  { name: 'duration', label: '完成时间', icon: Timer, placeholder: '填写完成时间' },
+                  { name: 'pace', label: '平均配速', icon: Timer, placeholder: '填写平均配速' },
+                  { name: 'heartRate', label: '平均心率', icon: Heart, placeholder: '填写平均心率' },
                 ].map((field) => (
                   <label key={field.name} className="block">
                     <span className="mb-2 block text-sm font-medium text-apple-gray-700">{field.label}</span>

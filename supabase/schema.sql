@@ -74,6 +74,31 @@ create table public.feedback_attachments (
   created_at timestamptz not null default now()
 );
 
+create table public.shop_orders (
+  id uuid primary key default gen_random_uuid(),
+  order_number text not null unique,
+  user_id uuid references public.profiles(id) on delete set null,
+  customer_name text not null,
+  contact text not null,
+  email text default '',
+  fulfillment_note text default '',
+  item_count integer not null default 0,
+  status text not null default 'new',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table public.shop_order_items (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid not null references public.shop_orders(id) on delete cascade,
+  product_id text not null,
+  name text not null,
+  quantity integer not null check (quantity > 0),
+  price integer not null default 0,
+  image text default '',
+  created_at timestamptz not null default now()
+);
+
 create table public.coach_invites (
   id uuid primary key default gen_random_uuid(),
   code text not null unique,
@@ -100,6 +125,10 @@ for each row execute function public.set_updated_at();
 
 create trigger training_plans_set_updated_at
 before update on public.training_plans
+for each row execute function public.set_updated_at();
+
+create trigger shop_orders_set_updated_at
+before update on public.shop_orders
 for each row execute function public.set_updated_at();
 
 create or replace function public.handle_new_user()
@@ -156,6 +185,8 @@ alter table public.coach_students enable row level security;
 alter table public.training_plans enable row level security;
 alter table public.training_feedback enable row level security;
 alter table public.feedback_attachments enable row level security;
+alter table public.shop_orders enable row level security;
+alter table public.shop_order_items enable row level security;
 alter table public.coach_invites enable row level security;
 
 create policy "profiles_select_own_or_coach_or_admin"
@@ -267,6 +298,40 @@ create policy "feedback_attachments_student_insert"
 on public.feedback_attachments for insert
 with check (student_id = auth.uid());
 
+create policy "shop_orders_select_own_or_admin"
+on public.shop_orders for select
+using (
+  user_id = auth.uid()
+  or public.is_admin(auth.uid())
+);
+
+create policy "shop_orders_insert_own"
+on public.shop_orders for insert
+with check (user_id = auth.uid() or user_id is null);
+
+create policy "shop_order_items_select_related"
+on public.shop_order_items for select
+using (
+  exists (
+    select 1 from public.shop_orders
+    where shop_orders.id = shop_order_items.order_id
+      and (
+        shop_orders.user_id = auth.uid()
+        or public.is_admin(auth.uid())
+      )
+  )
+);
+
+create policy "shop_order_items_insert_related"
+on public.shop_order_items for insert
+with check (
+  exists (
+    select 1 from public.shop_orders
+    where shop_orders.id = shop_order_items.order_id
+      and (shop_orders.user_id = auth.uid() or shop_orders.user_id is null)
+  )
+);
+
 create policy "coach_invites_admin_all"
 on public.coach_invites for all
 using (public.is_admin(auth.uid()))
@@ -303,6 +368,8 @@ create index coach_students_student_id_idx on public.coach_students (student_id)
 create index training_plans_student_date_idx on public.training_plans (student_id, workout_date desc);
 create index training_feedback_coach_status_idx on public.training_feedback (coach_id, status, created_at desc);
 create index training_feedback_student_created_idx on public.training_feedback (student_id, created_at desc);
+create index shop_orders_user_created_idx on public.shop_orders (user_id, created_at desc);
+create index shop_order_items_order_idx on public.shop_order_items (order_id);
 -- Add student race goals for accepted lottery races.
 
 create table if not exists public.student_races (

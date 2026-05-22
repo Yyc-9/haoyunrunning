@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useCallback } from 'react'
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
 
 export interface CartItem {
   id: string
@@ -25,6 +25,24 @@ const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
+
+  useEffect(() => {
+    const savedCart = window.localStorage.getItem('goodluck-cart')
+    if (!savedCart) return
+
+    try {
+      const parsed = JSON.parse(savedCart) as CartItem[]
+      if (Array.isArray(parsed)) {
+        setItems(parsed.filter((item) => item.id && item.name && item.quantity > 0))
+      }
+    } catch {
+      window.localStorage.removeItem('goodluck-cart')
+    }
+  }, [])
+
+  useEffect(() => {
+    window.localStorage.setItem('goodluck-cart', JSON.stringify(items))
+  }, [items])
 
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
@@ -59,6 +77,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clear = useCallback(() => {
     setItems([])
+    window.localStorage.removeItem('goodluck-cart')
   }, [])
 
   const value: CartContextType = {
@@ -87,9 +106,6 @@ export function useCart() {
   return context
 }
 
-/**
- * 购物车工具函数
- */
 export function calculateShipping(total: number, freeShippingThreshold: number = 299): number {
   if (total >= freeShippingThreshold) {
     return 0
@@ -102,20 +118,8 @@ export function calculateTax(total: number, taxRate: number = 0): number {
 }
 
 export function calculateDiscount(total: number, couponCode: string): number {
-  // 模拟优惠券
-  const coupons: Record<string, number> = {
-    'WELCOME10': 0.1,  // 10% 折扣
-    'SUMMER20': 0.2,   // 20% 折扣
-    'FIRST50': 50,     // 固定 50 元
-  }
-
-  const discount = coupons[couponCode]
-  if (!discount) return 0
-
-  if (discount < 1) {
-    return Math.round(total * discount * 100) / 100
-  }
-  return discount
+  if (!couponCode.trim()) return 0
+  return 0
 }
 
 export function calculateTotal(subtotal: number, options = {}) {

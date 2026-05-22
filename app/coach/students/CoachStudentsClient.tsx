@@ -239,7 +239,7 @@ export default function CoachStudentsClient() {
               </div>
               <h2 className="text-2xl font-black text-apple-gray-900">尚未绑定真实学员</h2>
               <p className="mx-auto mt-4 max-w-2xl leading-7 text-apple-gray-600">
-                先请测试学员注册账号，再用上方栏位输入对方邮箱。绑定成功后，这里就会出现真实学员资料。
+                请先让学员注册账号，再用上方栏位输入对方邮箱。绑定成功后，这里会出现真实学员资料。
               </p>
             </div>
           )}
