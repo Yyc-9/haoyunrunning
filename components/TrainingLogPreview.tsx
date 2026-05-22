@@ -1,48 +1,149 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
-  TrendingUp,
-  Heart,
-  Timer,
-  MapPin,
-  CheckCircle,
-  Upload,
-  MessageSquare,
   Activity,
+  CalendarDays,
+  CheckCircle,
+  Heart,
+  MapPin,
+  MessageSquare,
+  Timer,
+  TrendingUp,
 } from 'lucide-react'
 import Toast from '@/components/Toast'
+import { useAuth } from '@/app/providers'
+import {
+  getMyTrainingFeedback,
+  getMyTrainingPlans,
+  submitTrainingFeedback,
+  type TrainingFeedback,
+  type TrainingPlan,
+} from '@/lib/supabase'
+
+function parseDistance(value: string) {
+  const match = value.replace(',', '.').match(/\d+(\.\d+)?/)
+  return match ? Number(match[0]) : null
+}
+
+function parseHeartRate(value: string) {
+  const match = value.match(/\d+/)
+  return match ? Number(match[0]) : null
+}
+
+function formatDateTime(value: string) {
+  return new Date(value).toLocaleString('zh-CN', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 
 export default function TrainingLogPreview() {
+  const { user, isLoggedIn } = useAuth()
   const [showToast, setShowToast] = useState(false)
+  const [plans, setPlans] = useState<TrainingPlan[]>([])
+  const [recentFeedback, setRecentFeedback] = useState<TrainingFeedback[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState('')
   const [formData, setFormData] = useState({
     distance: '',
+    duration: '',
     pace: '',
     heartRate: '',
     rpe: 5,
     comment: '',
   })
 
-  const workout = {
-    type: 'E跑',
-    distance: '10km',
-    description: '轻松跑，维持有氧心率区间',
-    date: '今日训练',
+  const latestPlan = plans[0]
+
+  useEffect(() => {
+    let isActive = true
+
+    const loadTrainingLog = async () => {
+      if (!isLoggedIn || !user) {
+        setPlans([])
+        setRecentFeedback([])
+        return
+      }
+
+      setIsLoading(true)
+      setError('')
+
+      try {
+        const [planData, feedbackData] = await Promise.all([
+          getMyTrainingPlans(user.id),
+          getMyTrainingFeedback(user.id),
+        ])
+
+        if (!isActive) return
+        setPlans(planData)
+        setRecentFeedback(feedbackData)
+      } catch (err) {
+        if (isActive) {
+          setError(err instanceof Error ? err.message : '读取训练日志失败。')
+        }
+      } finally {
+        if (isActive) setIsLoading(false)
+      }
+    }
+
+    loadTrainingLog()
+
+    return () => {
+      isActive = false
+    }
+  }, [isLoggedIn, user])
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setError('')
+
+    if (!isLoggedIn || !user) {
+      setError('请先登录，登录后才能提交训练回馈。')
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      await submitTrainingFeedback({
+        training_plan_id: latestPlan?.id ?? null,
+        student_id: user.id,
+        coach_id: latestPlan?.coach_id ?? null,
+        distance_km: parseDistance(formData.distance),
+        duration_text: formData.duration,
+        pace_text: formData.pace,
+        average_heart_rate: parseHeartRate(formData.heartRate),
+        rpe: formData.rpe,
+        feeling: formData.comment,
+      })
+
+      setFormData({
+        distance: '',
+        duration: '',
+        pace: '',
+        heartRate: '',
+        rpe: 5,
+        comment: '',
+      })
+      setRecentFeedback(user ? await getMyTrainingFeedback(user.id) : [])
+      setShowToast(true)
+      window.setTimeout(() => setShowToast(false), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '提交训练回馈失败，请稍后再试。')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    console.log('Training log submitted:', formData)
-    setShowToast(true)
-    // 3秒后隐藏toast
-    setTimeout(() => setShowToast(false), 3000)
-  }
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [event.target.name]: event.target.value,
     })
   }
 
@@ -54,254 +155,221 @@ export default function TrainingLogPreview() {
   }
 
   return (
-    <section className="py-20 bg-apple-gray-100">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="rounded-3xl bg-apple-gray-100 px-4 py-10 sm:px-6 lg:px-8">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        viewport={{ once: true }}
+        className="mb-8"
+      >
+        <h2 className="text-3xl font-black text-apple-gray-900 md:text-4xl">训练日志系统</h2>
+        <p className="mt-3 max-w-3xl text-lg leading-8 text-apple-gray-600">
+          这里会同步教练派发的真实课表；课表清空或尚未派发时，不再显示示例训练。
+        </p>
+      </motion.div>
+
+      {error && (
+        <div className="mb-6 rounded-3xl bg-red-50 p-4 text-sm font-semibold leading-6 text-red-700">
+          {error}
+        </div>
+      )}
+
+      <div className="grid gap-8 lg:grid-cols-2">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, x: -20 }}
+          whileInView={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="text-center mb-12"
+          className="apple-card p-6 md:p-8"
         >
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-black to-apple-gray-800">
-              训练日志系统
-            </span>
-          </h2>
-          <p className="text-xl text-apple-gray-600 max-w-3xl mx-auto">
-            科学记录每一次训练，获取个性化反馈，持续优化训练计划
-          </p>
-        </motion.div>
-
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Daily Workout Card */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-            className="apple-card p-8"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-3">
-                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-apple-blue to-cyan-500 flex items-center justify-center">
-                  <Activity className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <div className="text-sm text-apple-gray-500">{workout.date}</div>
-                  <h3 className="text-xl font-bold">今日训练计划</h3>
-                </div>
+          <div className="mb-6 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-black text-white">
+                <Activity className="h-6 w-6" />
               </div>
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="bg-apple-blue/10 text-apple-blue rounded-full px-4 py-1 text-sm font-medium"
-              >
-                未完成
-              </motion.div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="p-4 bg-apple-gray-50 rounded-2xl">
-                <div className="text-2xl font-bold text-apple-gray-900 mb-1">
-                  {workout.type} {workout.distance}
+              <div>
+                <div className="text-sm text-apple-gray-500">
+                  {latestPlan?.workout_date || (isLoading ? '同步中' : '尚未同步')}
                 </div>
-                <p className="text-apple-gray-600">{workout.description}</p>
+                <h3 className="text-xl font-bold text-apple-gray-900">今日训练计划</h3>
+              </div>
+            </div>
+            <span className="rounded-full bg-apple-blue/10 px-4 py-1 text-sm font-bold text-apple-blue">
+              {latestPlan ? '已同步' : '待同步'}
+            </span>
+          </div>
+
+          {latestPlan ? (
+            <div className="space-y-4">
+              <div className="rounded-2xl bg-apple-gray-100 p-4">
+                <div className="text-2xl font-black text-apple-gray-900">{latestPlan.title}</div>
+                <p className="mt-2 leading-7 text-apple-gray-600">{latestPlan.target}</p>
+                {latestPlan.note && (
+                  <p className="mt-4 rounded-2xl bg-white p-4 text-sm leading-6 text-apple-gray-600">
+                    {latestPlan.note}
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { icon: MapPin, label: '距离', value: workout.distance },
-                  { icon: Timer, label: '建议配速', value: '5:30-6:00/km' },
-                  { icon: Heart, label: '心率区间', value: '130-150' },
-                  { icon: TrendingUp, label: '累计海拔', value: '±50m' },
-                ].map((item, index) => (
-                  <div
-                    key={index}
-                    className="bg-white rounded-xl p-4 border border-apple-gray-200"
-                  >
-                    <div className="flex items-center space-x-2 mb-2">
+                  { icon: CalendarDays, label: '训练日', value: latestPlan.day_label },
+                  { icon: Timer, label: '建议配速', value: latestPlan.pace || '由教练调整' },
+                  { icon: TrendingUp, label: '周数', value: `第 ${latestPlan.week_number} 周` },
+                  { icon: Heart, label: '状态', value: '完成后回报' },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-xl border border-apple-gray-200 bg-white p-4">
+                    <div className="mb-2 flex items-center gap-2">
                       <item.icon className="h-4 w-4 text-apple-blue" />
                       <span className="text-sm text-apple-gray-500">{item.label}</span>
                     </div>
-                    <div className="text-lg font-semibold">{item.value}</div>
+                    <div className="text-base font-bold text-apple-gray-900">{item.value}</div>
                   </div>
                 ))}
               </div>
 
-              <div className="pt-4 border-t border-apple-gray-200">
-                <div className="flex items-center space-x-2 text-apple-gray-600">
+              <div className="border-t border-apple-gray-200 pt-4">
+                <div className="flex items-center gap-2 text-apple-gray-600">
                   <CheckCircle className="h-4 w-4" />
-                  <span className="text-sm">
-                    完成训练后，请在下方提交反馈
-                  </span>
+                  <span className="text-sm">完成训练后，请在右侧提交回馈。</span>
                 </div>
               </div>
             </div>
-          </motion.div>
+          ) : (
+            <div className="rounded-3xl border border-dashed border-black/15 bg-white p-8 text-center">
+              <CalendarDays className="mx-auto mb-3 h-9 w-9 text-apple-gray-400" />
+              <p className="font-bold text-apple-gray-900">
+                {isLoading ? '正在同步课表' : '目前没有已同步课表'}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-apple-gray-600">
+                教练重新派发课表后，这里会自动显示真实训练内容。
+              </p>
+            </div>
+          )}
+        </motion.div>
 
-          {/* Feedback Form */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-            className="apple-card p-8"
-          >
-            <h3 className="text-2xl font-bold mb-6">训练反馈</h3>
-            <form onSubmit={handleSubmit}>
-              <div className="space-y-6">
-                {/* 数值输入部分 */}
-                <div className="grid sm:grid-cols-2 gap-4">
-                  {[
-                    {
-                      name: 'distance',
-                      label: '完成里程 (km)',
-                      icon: MapPin,
-                      placeholder: '例如：10.5',
-                    },
-                    {
-                      name: 'pace',
-                      label: '平均配速',
-                      icon: Timer,
-                      placeholder: '例如：5:45',
-                    },
-                    {
-                      name: 'heartRate',
-                      label: '平均心率',
-                      icon: Heart,
-                      placeholder: '例如：145',
-                    },
-                  ].map((field) => (
-                    <div key={field.name}>
-                      <label className="block text-sm font-medium text-apple-gray-700 mb-2">
-                        {field.label}
-                      </label>
-                      <div className="relative">
-                        <field.icon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-apple-gray-400" />
-                        <input
-                          type="text"
-                          name={field.name}
-                          value={formData[field.name as keyof typeof formData] as string}
-                          onChange={handleChange}
-                          placeholder={field.placeholder}
-                          className="apple-input pl-10"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* RPE Slider */}
-                <div>
-                  <label className="block text-sm font-medium text-apple-gray-700 mb-4">
-                    体感疲劳度 (RPE 1-10):{' '}
-                    <span className="font-bold text-apple-blue">{formData.rpe}</span>
-                  </label>
-                  <div className="space-y-2">
-                    <input
-                      type="range"
-                      min="1"
-                      max="10"
-                      value={formData.rpe}
-                      onChange={(e) => handleRpeChange(parseInt(e.target.value))}
-                      className="apple-slider w-full"
-                    />
-                    <div className="flex justify-between text-xs text-apple-gray-500">
-                      <span>非常轻松</span>
-                      <span>中等</span>
-                      <span>非常困难</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Comment */}
-                <div>
-                  <label className="block text-sm font-medium text-apple-gray-700 mb-2">
-                    训练感受与备注
-                  </label>
-                  <div className="relative">
-                    <MessageSquare className="absolute left-3 top-3 h-5 w-5 text-apple-gray-400" />
-                    <textarea
-                      name="comment"
-                      value={formData.comment}
-                      onChange={handleChange}
-                      placeholder="请描述今天的训练感受..."
-                      rows={3}
-                      className="apple-input pl-10 resize-none"
-                    />
-                  </div>
-                </div>
-
-                {/* File Upload */}
-                <div>
-                  <label className="block text-sm font-medium text-apple-gray-700 mb-2">
-                    上传跑步App截图
-                  </label>
-                  <div className="border-2 border-dashed border-apple-gray-300 rounded-2xl p-8 text-center hover:border-apple-blue transition-colors duration-200">
-                    <Upload className="h-10 w-10 text-apple-gray-400 mx-auto mb-4" />
-                    <p className="text-apple-gray-600 mb-2">
-                      拖拽或点击上传截图 (支持JPG, PNG)
-                    </p>
-                    <p className="text-sm text-apple-gray-500">
-                      建议上传跑步App的训练截图
-                    </p>
-                  </div>
-                </div>
-
-                {/* Submit Button */}
-                <motion.button
-                  type="submit"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full apple-button-primary"
-                >
-                  提交训练反馈
-                </motion.button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-
-        {/* Recent Activities */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
+          initial={{ opacity: 0, x: 20 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="mt-12"
+          className="apple-card p-6 md:p-8"
         >
-          <h4 className="text-lg font-semibold mb-4">最近完成训练</h4>
-          <div className="grid md:grid-cols-3 gap-4">
-            {[
-              { type: '间歇跑', distance: '8km', date: '昨天', status: '已完成' },
-              { type: '长距离', distance: '21km', date: '3天前', status: '已完成' },
-              { type: '恢复跑', distance: '5km', date: '1周前', status: '已完成' },
-            ].map((activity, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-2xl p-4 border border-apple-gray-200"
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <div className="font-semibold">{activity.type}</div>
-                    <div className="text-apple-gray-500 text-sm">{activity.distance}</div>
-                  </div>
-                  <span className="text-xs bg-green-100 text-green-800 rounded-full px-2 py-1">
-                    {activity.status}
-                  </span>
-                </div>
-                <div className="text-xs text-apple-gray-400">{activity.date}</div>
+          <h3 className="mb-6 text-2xl font-bold text-apple-gray-900">训练回馈</h3>
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-6">
+              <div className="grid gap-4 sm:grid-cols-2">
+                {[
+                  { name: 'distance', label: '完成里程 (km)', icon: MapPin, placeholder: '例如：10.5' },
+                  { name: 'duration', label: '完成时间', icon: Timer, placeholder: '例如：52:30' },
+                  { name: 'pace', label: '平均配速', icon: Timer, placeholder: '例如：5:45/km' },
+                  { name: 'heartRate', label: '平均心率', icon: Heart, placeholder: '例如：145' },
+                ].map((field) => (
+                  <label key={field.name} className="block">
+                    <span className="mb-2 block text-sm font-medium text-apple-gray-700">{field.label}</span>
+                    <div className="relative">
+                      <field.icon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-apple-gray-400" />
+                      <input
+                        type="text"
+                        name={field.name}
+                        value={formData[field.name as keyof typeof formData] as string}
+                        onChange={handleChange}
+                        placeholder={field.placeholder}
+                        className="apple-input pl-10"
+                      />
+                    </div>
+                  </label>
+                ))}
               </div>
-            ))}
-          </div>
+
+              <label className="block">
+                <span className="mb-4 block text-sm font-medium text-apple-gray-700">
+                  体感疲劳度 (RPE 1-10): <span className="font-bold text-apple-blue">{formData.rpe}</span>
+                </span>
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  value={formData.rpe}
+                  onChange={(event) => handleRpeChange(Number(event.target.value))}
+                  className="w-full"
+                />
+                <div className="mt-2 flex justify-between text-xs text-apple-gray-500">
+                  <span>非常轻松</span>
+                  <span>中等</span>
+                  <span>非常困难</span>
+                </div>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-apple-gray-700">训练感受与备注</span>
+                <div className="relative">
+                  <MessageSquare className="absolute left-3 top-3 h-5 w-5 text-apple-gray-400" />
+                  <textarea
+                    name="comment"
+                    value={formData.comment}
+                    onChange={handleChange}
+                    placeholder="请描述今天的训练感受..."
+                    rows={4}
+                    className="apple-input resize-none pl-10"
+                  />
+                </div>
+              </label>
+
+              <motion.button
+                type="submit"
+                disabled={isSubmitting}
+                whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
+                whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
+                className="apple-button-primary w-full disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSubmitting ? '提交中...' : '提交训练回馈'}
+              </motion.button>
+            </div>
+          </form>
         </motion.div>
       </div>
 
-      {/* Toast Notification */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.3 }}
+        viewport={{ once: true }}
+        className="mt-10"
+      >
+        <h4 className="mb-4 text-lg font-semibold text-apple-gray-900">最近完成训练</h4>
+        {recentFeedback.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-3">
+            {recentFeedback.slice(0, 3).map((item) => (
+              <div key={item.id} className="rounded-2xl border border-apple-gray-200 bg-white p-4">
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-semibold text-apple-gray-900">{formatDateTime(item.created_at)}</div>
+                    <div className="text-sm text-apple-gray-500">{item.distance_km ?? '-'} km</div>
+                  </div>
+                  <span className="rounded-full bg-green-100 px-2 py-1 text-xs text-green-800">
+                    RPE {item.rpe ?? '-'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs text-apple-gray-500">
+                  <span>配速：{item.pace_text || '-'}</span>
+                  <span>心率：{item.average_heart_rate ?? '-'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-3xl border border-dashed border-black/15 bg-white p-6 text-center">
+            <p className="font-bold text-apple-gray-900">还没有完成记录</p>
+            <p className="mt-2 text-sm text-apple-gray-600">提交第一次真实回馈后，这里会显示最近训练。</p>
+          </div>
+        )}
+      </motion.div>
+
       <Toast
         isVisible={showToast}
-        message="训练反馈已提交！教练将会尽快查看并给予反馈。"
+        message="训练回馈已提交，教练端会同步看到。"
         type="success"
       />
     </section>
