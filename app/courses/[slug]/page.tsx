@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, CalendarDays, MapPin, Target, UserRoundCheck } from 'lucide-react'
 import { allCourses, getCourseBySlug, getCourseCoach } from '@/lib/goodluck-data'
+import CoursePaymentInfo from '@/components/CoursePaymentInfo'
 
 export function generateStaticParams() {
   return allCourses.map((course) => ({ slug: course.slug }))
@@ -97,7 +98,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
               <div className="apple-card p-6">
                 <h2 className="font-bold text-apple-gray-900">报名与咨询</h2>
                 <p className="mt-3 text-sm leading-6 text-apple-gray-600">
-                  课程名额、费用与装备需求请先通过 Instagram 联系好运跑班，我们会根据你的跑龄、目标和可训练时间推荐班级。
+                  课程名额与装备需求请先通过 Instagram 联系好运跑班，我们会根据你的跑龄、目标和可训练时间推荐班级。
                 </p>
                 <a
                   href="https://www.instagram.com/nurture.running.team/"
@@ -108,6 +109,8 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
                   咨询这门课程
                 </a>
               </div>
+
+              <CoursePaymentInfo compact />
             </aside>
           </div>
         </div>

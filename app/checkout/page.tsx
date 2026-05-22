@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { CheckCircle2, MessageCircle, PackageCheck, Send, Truck } from 'lucide-react'
 import { useCart } from '@/app/cart-provider'
 import { supabase } from '@/lib/supabase'
+import CoursePaymentInfo from '@/components/CoursePaymentInfo'
 
 export default function CheckoutPage() {
   const { items, itemCount, clear } = useCart()
@@ -134,6 +135,8 @@ export default function CheckoutPage() {
                   商品和联系资料会同步到订单表。提交成功后，购物车会自动清空。
                 </div>
               </section>
+
+              <CoursePaymentInfo />
             </div>
 
             <aside className="apple-card h-fit p-6 md:p-8">
