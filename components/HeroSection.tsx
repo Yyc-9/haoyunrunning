@@ -2,13 +2,36 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { ChevronDown, ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react'
+import Link from 'next/link'
+import { ChevronDown, ChevronLeft, ChevronRight, GraduationCap, Instagram, Pause, Play, ShieldCheck } from 'lucide-react'
 
 const images = [
   '/20250605[好運]三周年慶-7089.jpg',
   '/20250605[好運]三周年慶-7096.jpg',
   '/20241106[好運]教練拍-13.jpg',
   '/LINE_ALBUM_四週年手機桌布_260515_1.jpg',
+]
+
+const entryCards = [
+  {
+    href: 'https://www.instagram.com/nurture.running.team/',
+    external: true,
+    icon: Instagram,
+    title: '我要报名 / 咨询课程',
+    description: '还不确定适合哪一班？先把目标、跑龄和可训练时间告诉我们。',
+  },
+  {
+    href: '/student',
+    icon: GraduationCap,
+    title: '我是已报名学员',
+    description: '进入学员中心查看课表、提交训练回馈与管理赛事目标。',
+  },
+  {
+    href: '/coach',
+    icon: ShieldCheck,
+    title: '我是教练',
+    description: '进入教练后台，绑定学员、查看回馈并同步本周课表。',
+  },
 ]
 
 export default function HeroSection() {
@@ -81,13 +104,51 @@ export default function HeroSection() {
         </motion.button>
       </div>
 
+      <div className="absolute inset-x-0 bottom-28 z-20 px-4 sm:px-6 lg:px-8">
+        <div className="container mx-auto max-w-6xl">
+          <div className="grid gap-3 md:grid-cols-3">
+            {entryCards.map((item) => {
+              const Icon = item.icon
+              const className =
+                'group flex min-h-[118px] items-start gap-4 rounded-3xl border border-white/45 bg-white/90 p-5 text-left text-black shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:bg-white'
+
+              const content = (
+                <>
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black text-white">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <span>
+                    <span className="block text-base font-black text-apple-gray-950">{item.title}</span>
+                    <span className="mt-2 block text-sm leading-6 text-apple-gray-600">{item.description}</span>
+                  </span>
+                </>
+              )
+
+              if (item.external) {
+                return (
+                  <a key={item.title} href={item.href} target="_blank" rel="noreferrer" className={className}>
+                    {content}
+                  </a>
+                )
+              }
+
+              return (
+                <Link key={item.title} href={item.href} className={className}>
+                  {content}
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
       <div className="absolute bottom-8 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-5">
         <div className="flex items-center gap-3 rounded-full bg-black/25 px-4 py-3 backdrop-blur-md">
           {images.map((_, index) => (
             <button
               key={index}
               type="button"
-              aria-label={`切換到第 ${index + 1} 張照片`}
+              aria-label={`切换到第 ${index + 1} 张照片`}
               onClick={() => setCurrentImageIndex(index)}
               className={`h-2 rounded-full transition-all duration-300 ${
                 index === currentImageIndex ? 'w-8 bg-white' : 'w-2 bg-white/55'
@@ -96,7 +157,7 @@ export default function HeroSection() {
           ))}
           <button
             type="button"
-            aria-label={isAutoPlay ? '暫停輪播' : '播放輪播'}
+            aria-label={isAutoPlay ? '暂停轮播' : '播放轮播'}
             onClick={() => setIsAutoPlay((value) => !value)}
             className="ml-1 flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-white transition-colors duration-200 hover:bg-white/25"
           >
@@ -106,7 +167,7 @@ export default function HeroSection() {
 
         <motion.button
           type="button"
-          aria-label="往下瀏覽"
+          aria-label="往下浏览"
           onClick={scrollToContent}
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}

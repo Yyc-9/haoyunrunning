@@ -53,14 +53,15 @@ export default function CoursesSection() {
 
         <div className="apple-card overflow-hidden p-0">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] border-collapse text-sm">
+            <table className="w-full min-w-[1280px] border-collapse text-sm">
               <thead>
                 <tr className="border-b border-black/10 bg-apple-gray-100 text-left">
                   <th className="w-28 p-4 font-bold text-apple-gray-900">星期</th>
-                  <th className="w-[30%] p-4 font-bold text-apple-gray-900">课程</th>
+                  <th className="w-[25%] p-4 font-bold text-apple-gray-900">课程</th>
+                  <th className="w-[24%] p-4 font-bold text-apple-gray-900">适合对象 / 目标</th>
                   <th className="p-4 font-bold text-apple-gray-900">地点</th>
-                  <th className="p-4 font-bold text-apple-gray-900">周期</th>
-                  <th className="w-[28%] p-4 font-bold text-apple-gray-900">训练重点</th>
+                  <th className="p-4 font-bold text-apple-gray-900">时间 / 集合</th>
+                  <th className="w-[20%] p-4 font-bold text-apple-gray-900">费用与报名</th>
                   <th className="p-4 font-bold text-apple-gray-900">详情</th>
                 </tr>
               </thead>
@@ -77,24 +78,34 @@ export default function CoursesSection() {
                         {course.name.replaceAll('訓練營', '训练营').replaceAll('週', '周')}
                       </Link>
                       <p className="mt-2 text-xs text-apple-gray-500">{course.groupTitle.replaceAll('運', '运').replaceAll('課程', '课程')}</p>
+                      <p className="mt-2 text-xs font-semibold text-apple-gray-700">{course.beginnerFriendly ? '适合新手' : '适合有规律训练基础的跑者'}</p>
+                    </td>
+                    <td className="p-4 align-top text-apple-gray-700">
+                      <p className="leading-6">{course.groupAudience}</p>
+                      <p className="mt-2 inline-flex items-start gap-2 leading-6">
+                        <Target className="mt-0.5 h-4 w-4 shrink-0 text-apple-blue" />
+                        {course.trainingGoal.replaceAll('訓練', '训练').replaceAll('節奏', '节奏')}
+                      </p>
                     </td>
                     <td className="p-4 align-top text-apple-gray-700">
                       <span className="inline-flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-apple-blue" />
                         {course.location}
                       </span>
+                      <p className="mt-2 text-xs leading-5 text-apple-gray-500">{course.period}</p>
                     </td>
                     <td className="p-4 align-top text-apple-gray-700">
-                      <span className="inline-flex items-center gap-2">
-                        <CalendarDays className="h-4 w-4 text-apple-blue" />
-                        {course.period}
-                      </span>
+                      <p className="inline-flex items-start gap-2 leading-6">
+                        <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-apple-blue" />
+                        {course.classTime}
+                      </p>
+                      <p className="mt-2 text-xs leading-5 text-apple-gray-500">{course.meetingPoint}</p>
                     </td>
                     <td className="p-4 align-top text-apple-gray-700">
-                      <span className="inline-flex items-start gap-2 leading-6">
-                        <Target className="mt-0.5 h-4 w-4 shrink-0 text-apple-blue" />
-                        {course.focus.replaceAll('訓練', '训练').replaceAll('節奏', '节奏')}
-                      </span>
+                      <p className="font-semibold leading-6 text-apple-gray-900">费用与名额请通过 Instagram 咨询</p>
+                      <p className="mt-2 text-xs leading-5 text-apple-gray-500">{course.feeNote}</p>
+                      <p className="mt-2 text-xs leading-5 text-apple-gray-500">{course.trialPolicy}</p>
+                      <p className="mt-1 text-xs leading-5 text-apple-gray-500">{course.absencePolicy}</p>
                     </td>
                     <td className="p-4 align-top">
                       <Link href={`/courses/${course.slug}`} className="inline-flex items-center gap-1 text-sm font-bold text-apple-blue">

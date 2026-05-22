@@ -266,7 +266,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
-                        placeholder="name@example.com"
+                        placeholder={t.auth.email}
                         className="apple-input pl-10"
                         required
                       />

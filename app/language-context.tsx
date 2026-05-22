@@ -11,6 +11,8 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
 
+export { LanguageContext }
+
 const simplifiedPairs: Array<[string, string]> = [
   ['運', '运'],
   ['訓', '训'],
@@ -160,7 +162,94 @@ function toSimplified(value: string) {
     .reduce((text, [from, to]) => text.replaceAll(from, to), value)
 }
 
-function simplifyVisibleText(root: ParentNode) {
+const traditionalPairs: Array<[string, string]> = [
+  ['登录', '登入'],
+  ['账号', '帳號'],
+  ['账户', '帳戶'],
+  ['好运', '好運'],
+  ['训练', '訓練'],
+  ['课程', '課程'],
+  ['学员', '學員'],
+  ['教练', '教練'],
+  ['课表', '課表'],
+  ['回馈', '回饋'],
+  ['绑定', '綁定'],
+  ['邀请码', '邀請碼'],
+  ['风险', '風險'],
+  ['状态', '狀態'],
+  ['数据', '資料'],
+  ['数据库', '資料庫'],
+  ['信息', '資訊'],
+  ['咨询', '諮詢'],
+  ['报名', '報名'],
+  ['确认', '確認'],
+  ['后台', '後台'],
+  ['保存', '儲存'],
+  ['储存', '儲存'],
+  ['读取', '讀取'],
+  ['失败', '失敗'],
+  ['这一周', '這一週'],
+  ['本周', '本週'],
+  ['下周', '下週'],
+  ['上一周', '上一週'],
+  ['下一周', '下一週'],
+  ['周', '週'],
+  ['后续', '後續'],
+  ['之后', '之後'],
+  ['目前计划', '目前計畫'],
+  ['训练计划', '訓練計畫'],
+  ['训练感受', '訓練感受'],
+  ['训练回报', '訓練回報'],
+  ['训练回馈', '訓練回饋'],
+  ['适合', '適合'],
+  ['目标', '目標'],
+  ['地点', '地點'],
+  ['费用', '費用'],
+  ['金额', '金額'],
+  ['汇款', '匯款'],
+  ['网银', '網銀'],
+  ['转账', '轉帳'],
+  ['备注', '備註'],
+  ['请', '請'],
+  ['输入', '輸入'],
+  ['填写', '填寫'],
+  ['选择', '選擇'],
+  ['进入', '進入'],
+  ['联系', '聯絡'],
+  ['暂无', '暫無'],
+  ['已绑定', '已綁定'],
+  ['尚未绑定', '尚未綁定'],
+  ['真实', '真實'],
+  ['团队', '團隊'],
+  ['团练', '團練'],
+  ['台湾', '台灣'],
+  ['板桥', '板橋'],
+  ['半马', '半馬'],
+  ['全马', '全馬'],
+  ['马拉松', '馬拉松'],
+  ['节奏', '節奏'],
+  ['间歇', '間歇'],
+  ['轻松', '輕鬆'],
+  ['恢复', '恢復'],
+  ['长距离', '長距離'],
+  ['疲劳', '疲勞'],
+  ['上传', '上傳'],
+  ['截图', '截圖'],
+  ['邮箱', '信箱'],
+  ['手机', '手機'],
+  ['旧生', '舊生'],
+  ['推荐', '推薦'],
+  ['中国信托', '中國信託'],
+  ['银行', '銀行'],
+]
+
+function toTraditional(value: string) {
+  return [...traditionalPairs]
+    .sort((a, b) => b[0].length - a[0].length)
+    .reduce((text, [from, to]) => text.replaceAll(from, to), value)
+}
+
+function convertVisibleText(root: ParentNode, converter: (value: string) => string) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
       const parent = node.parentElement
@@ -181,7 +270,7 @@ function simplifyVisibleText(root: ParentNode) {
   }
 
   textNodes.forEach((node) => {
-    const nextValue = toSimplified(node.nodeValue ?? '')
+    const nextValue = converter(node.nodeValue ?? '')
     if (node.nodeValue !== nextValue) {
       node.nodeValue = nextValue
     }
@@ -192,7 +281,7 @@ function simplifyVisibleText(root: ParentNode) {
       const value = element.getAttribute(attribute)
       if (!value) return
 
-      const nextValue = toSimplified(value)
+      const nextValue = converter(value)
       if (value !== nextValue) element.setAttribute(attribute, nextValue)
     })
   })
@@ -203,12 +292,6 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const savedLanguage = window.localStorage.getItem('language') as Language | null
-    if (savedLanguage === 'zh-TW') {
-      window.localStorage.setItem('language', 'zh-CN')
-      setLanguageState('zh-CN')
-      return
-    }
-
     if (savedLanguage && savedLanguage in dictionary) {
       setLanguageState(savedLanguage)
     }
@@ -222,16 +305,18 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     document.documentElement.lang = language
 
-    if (language !== 'zh-CN') return
+    if (language === 'en') return
+
+    const converter = language === 'zh-CN' ? toSimplified : toTraditional
 
     let frame = window.requestAnimationFrame(() => {
-      simplifyVisibleText(document.body)
+      convertVisibleText(document.body, converter)
     })
 
     const observer = new MutationObserver(() => {
       window.cancelAnimationFrame(frame)
       frame = window.requestAnimationFrame(() => {
-        simplifyVisibleText(document.body)
+        convertVisibleText(document.body, converter)
       })
     })
 

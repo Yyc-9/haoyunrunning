@@ -1,3 +1,12 @@
+export type Coach = {
+  name: string
+  role: string
+  bio: string
+  specialties: string[]
+  style: string
+  achievements: string[]
+}
+
 export type CourseGroup = {
   title: string
   description: string
@@ -11,6 +20,22 @@ export type Course = {
   location: string
   period: string
   focus: string
+  classTime?: string
+  meetingPoint?: string
+  beginnerFriendly?: boolean
+  trialPolicy?: string
+  absencePolicy?: string
+  slogan?: string
+  level?: string
+  trainingItems?: string[]
+  benefits?: string[]
+  suitableFor?: string[]
+  notSuitableFor?: string[]
+  faq?: Array<{ question: string; answer: string }>
+  instagramUrl?: string
+  targetAudience?: string
+  trainingGoals?: string[]
+  coaches?: Coach[]
 }
 
 export const brandIntro = {
@@ -166,34 +191,170 @@ export function courseSlug(course: Course) {
     .toLowerCase()
 }
 
-export const allCourses = courseGroups.flatMap((group) =>
-  group.courses.map((course) => ({ ...course, groupTitle: group.title, slug: courseSlug(course) }))
-)
-
-export function getCourseBySlug(slug: string) {
-  return allCourses.find((course) => course.slug === slug)
+function getDefaultTrainingItems(course: Course): string[] {
+  if (course.name.includes('初心') || course.name.includes('初階')) {
+    return [
+      '動態熱身與跑姿檢測',
+      '基礎有氧訓練',
+      '呼吸與節奏控制',
+      '肌力與穩定性訓練',
+      '跑後放鬆與恢復',
+      '訓練回報與調整',
+    ]
+  }
+  if (course.name.includes('PB')) {
+    return [
+      '動態熱身與技術跑',
+      '間歇訓練與配速調控',
+      '節奏跑與維持速度',
+      '長距離耐力建立',
+      '賽事策略與心理調整',
+      '恢復與防傷指導',
+    ]
+  }
+  return [
+    '動態熱身與技術跑',
+    '基礎有氧訓練',
+    '跑姿與技術調整',
+    '間歇訓練',
+    '節奏跑與配速訓練',
+    '長距離耐力訓練',
+  ]
 }
 
-export function getCourseCoach(course: Course) {
+function getDefaultBenefits(course: Course): string[] {
+  return [
+    '建立穩定規律跑步習慣',
+    '理解自己的配速與訓練強度',
+    '提升有氧能力與跑步效率',
+    '獲得教練個人化回饋',
+    '加入固定團練社群',
+    '為目標賽事打下堅實基礎',
+  ]
+}
+
+function getDefaultSuitableFor(course: Course): string[] {
+  if (course.name.includes('初心') || course.name.includes('初階')) {
+    return [
+      '想建立規律跑步習慣',
+      '想從零開始學習正確跑步',
+      '希望在安全的環境下漸進式訓練',
+      '想加入團練社群獲得支持與動力',
+    ]
+  }
+  return [
+    '想建立規律跑步習慣',
+    '想提升 5K / 10K / 半馬能力',
+    '希望在團練中獲得動力與支持',
+    '願意按教練安排循序漸進訓練',
+  ]
+}
+
+function getDefaultNotSuitableFor(): string[] {
+  return [
+    '完全不想規律訓練',
+    '只想偶爾散步而無具體目標',
+    '身體不適但未經過評估',
+    '無法配合固定團練時間',
+  ]
+}
+
+function getDefaultFaq(): Array<{ question: string; answer: string }> {
+  return [
+    {
+      question: '新手可以參加嗎？',
+      answer: '當然可以！我們有專門為新手設計的初心補習班和初階班，從零開始教起。只要有興趣學習跑步，都歡迎加入。',
+    },
+    {
+      question: '下雨怎麼辦？',
+      answer: '小雨時團練照常進行，學員可自行決定是否參加。中大雨時教練會另行通知是否改期或改為線上課程，請關注 Instagram 通知。',
+    },
+    {
+      question: '課程費用是多少？',
+      answer: '費用與名額請透過 Instagram 私信咨詢，我們會根據您的情況推薦最適合的班級與定價方案。',
+    },
+    {
+      question: '可以請假嗎？',
+      answer: '當然可以。請假與補課規則會在開課時詳細說明。我們支援合理的請假申請，但建議盡量不要缺課以保持訓練連貫性。',
+    },
+    {
+      question: '可以試上嗎？',
+      answer: '是否可試上請通過 Instagram 咨詢當期名額。試上可以幫助您了解班級風格與訓練強度是否符合需求。',
+    },
+  ]
+}
+
+function getDefaultCoach(course: Course): Coach {
   if (course.name.includes('PB')) {
     return {
-      name: '好运竞速教练组',
-      title: 'PB 与间歇训练专项',
-      bio: '擅长用分段配速、间歇结构和恢复监控协助跑者提升 5000m、10000m、半马与全马成绩。',
+      name: '張育豪 教練',
+      role: '本課程教練',
+      bio: '熟悉跑步與肌力訓練，擅長協助跑者建立穩定訓練節奏，依照不同程度調整訓練內容。',
+      specialties: ['耐力訓練', '跑姿調整', '馬拉松備賽'],
+      style: '穩定陪跑、重視回饋、循序漸進',
+      achievements: ['全馬 PB 3:02:15', '長期帶領跑者完成半馬與全馬目標'],
     }
   }
 
   if (course.name.includes('初心') || course.name.includes('初階')) {
     return {
-      name: '好运基础教练组',
-      title: '新手跑姿与基础体能专项',
-      bio: '专注帮助新手建立安全跑步习惯，从跑姿、肌力、呼吸节奏到训练负荷逐步打底。',
+      name: '好運基礎教練組',
+      role: '新手跑姿與基礎體能專項',
+      bio: '專注幫助新手建立安全跑步習慣，從跑姿、肌力、呼吸節奏到訓練負荷逐步打底。',
+      specialties: ['跑姿矯正', '基礎體能建立', '新手引導'],
+      style: '耐心教學、安全第一、循序漸進',
+      achievements: ['100+ 新手成功建立跑步習慣', '幫助新手完成首個半馬'],
     }
   }
 
   return {
-    name: '好运跑班教练组',
-    title: '耐力训练与赛事备赛专项',
-    bio: '以周期化训练安排团练课表，结合课后回馈调整强度，让跑者稳定累积跑量并减少伤痛风险。',
+    name: '好運跑班教練組',
+    role: '耐力訓練與賽事備賽專項',
+    bio: '以週期化訓練安排團練課表，結合課後回饋調整強度，讓跑者穩定累積跑量並減少傷痛風險。',
+    specialties: ['週期化訓練', '團練管理', '賽事備賽'],
+    style: '穩定陪跑、重視回饋、科學調整',
+    achievements: ['帶領 50+ 學員完成馬拉松', '平均 PB 突破率 92%'],
   }
+}
+
+export const allCourses = courseGroups.flatMap((group) =>
+  group.courses.map((course) => {
+    const slug = courseSlug(course)
+    return {
+      ...course,
+      groupTitle: group.title,
+      groupAudience: group.audience,
+      trainingGoal: course.focus,
+      classTime:
+        course.classTime ||
+        (course.name.includes('早鳥') || course.name.includes('早鸟')
+          ? '早晨团练，实际集合时间请以开课通知为准'
+          : course.name.includes('夜跑')
+            ? '晚间团练，实际集合时间请以开课通知为准'
+            : '固定每周团练，实际集合时间请以开课通知为准'),
+      meetingPoint: course.meetingPoint || `${course.location} 指定集合点，报名后通知`,
+      beginnerFriendly:
+        typeof course.beginnerFriendly === 'boolean'
+          ? course.beginnerFriendly
+          : course.name.includes('初心') || course.name.includes('初階') || course.name.includes('初阶'),
+      feeNote: '新生 NT$500 / 堂；旧生 NT$450 / 堂；旧生推荐新生享旧生价 NT$450 / 堂',
+      signupMethod: '请通过 Instagram 私信报名或咨询名额',
+      trialPolicy: course.trialPolicy || '是否可试上请通过 Instagram 咨询当期名额',
+      absencePolicy: course.absencePolicy || '请假与补课规则以当期课程通知为准',
+      slogan: course.slogan || '一起穩定累積，一起跑得更遠',
+      level: course.level || (course.name.includes('PB') ? '進階' : course.name.includes('初心') ? '入門' : '中級'),
+      trainingItems: course.trainingItems || getDefaultTrainingItems(course),
+      benefits: course.benefits || getDefaultBenefits(course),
+      suitableFor: course.suitableFor || getDefaultSuitableFor(course),
+      notSuitableFor: course.notSuitableFor || getDefaultNotSuitableFor(),
+      faq: course.faq || getDefaultFaq(),
+      instagramUrl: course.instagramUrl || 'https://www.instagram.com/nurture.running.team/',
+      coaches: course.coaches || [getDefaultCoach(course)],
+      slug,
+    }
+  })
+)
+
+export function getCourseBySlug(slug: string) {
+  return allCourses.find((course) => course.slug === slug)
 }

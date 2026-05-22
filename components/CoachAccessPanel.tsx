@@ -97,7 +97,16 @@ export default function CoachAccessPanel({ compact = false, onStudentBound }: Co
       setMessage('學員已綁定。列表會讀取這位學員的真實資料。')
       await onStudentBound?.()
     } catch (err) {
-      setError(err instanceof Error ? err.message : '學員綁定失敗。')
+      const message = err instanceof Error ? err.message : '學員綁定失敗。'
+      if (message.includes('找不到')) {
+        setError('找不到该邮箱。请确认学员已用报名邮箱注册账号。')
+      } else if (message.includes('duplicate') || message.includes('already')) {
+        setError('该学员已经绑定过。请刷新学员列表确认。')
+      } else if (message.includes('權限') || message.includes('权限')) {
+        setError('目前账号尚未启用教练权限，请先输入管理员提供的邀请码。')
+      } else {
+        setError(message)
+      }
     } finally {
       setIsBinding(false)
     }
@@ -122,12 +131,12 @@ export default function CoachAccessPanel({ compact = false, onStudentBound }: Co
           <div className="rounded-3xl bg-apple-gray-100 p-4">
             <div className="mb-3 flex items-center gap-2">
               <KeyRound className="h-4 w-4 text-apple-gray-700" />
-              <p className="font-bold text-apple-gray-900">輸入教練邀请码</p>
+              <p className="font-bold text-apple-gray-900">輸入教練邀請碼</p>
             </div>
             <input
               value={inviteCode}
               onChange={(event) => setInviteCode(event.target.value)}
-              placeholder="COACHLUCK2026"
+              placeholder="輸入管理員提供的邀請碼"
               className="apple-input bg-white"
             />
             <button
@@ -150,7 +159,7 @@ export default function CoachAccessPanel({ compact = false, onStudentBound }: Co
           <input
             value={studentEmail}
             onChange={(event) => setStudentEmail(event.target.value)}
-            placeholder="student@example.com"
+            placeholder="輸入學員報名信箱"
             className="apple-input bg-white"
           />
           <button

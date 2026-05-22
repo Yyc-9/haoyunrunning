@@ -88,9 +88,17 @@ function getMonday(date = new Date()) {
 
 function formatWeekLabel(weekStart: string, weekNumber: number) {
   const date = new Date(`${weekStart}T00:00:00`)
-  const year = String(date.getFullYear()).slice(2)
-  return `${year}/${date.getMonth() + 1}/${date.getDate()}[${weekNumber}]`
+  return `${date.getFullYear()} 年 ${date.getMonth() + 1} 月 ${date.getDate()} 日这一周（第 ${weekNumber} 周）`
 }
+
+const workoutTemplates = [
+  '轻松跑：E 40-60 分钟，RPE 3-4，跑后伸展 10 分钟。',
+  '间歇跑：热身 15 分钟，主课表按目标配速执行，放松跑 10 分钟。',
+  '节奏跑：热身 15 分钟，T 配速 20-30 分钟，放松跑 10 分钟。',
+  '长距离：稳定完成指定距离，前段保守，后段维持动作质量。',
+  '恢复跑：RPE 2-3，保持轻松可对话，不追配速。',
+  '休息日：完全休息或轻度活动，睡眠和补给优先。',
+]
 
 function planToColumnKey(plan: TrainingPlan) {
   const date = new Date(`${plan.workout_date}T00:00:00`)
@@ -293,6 +301,21 @@ export default function CoachPlannerPage() {
     setMessage('')
   }
 
+  const appendTemplate = (template: string) => {
+    setRows((current) =>
+      current.map((row, index) => {
+        if (index !== 0) return row
+        const firstEmptyColumn = columns.find((column) => !row[column.key].trim()) ?? columns[0]
+        const currentValue = row[firstEmptyColumn.key].trim()
+        return {
+          ...row,
+          [firstEmptyColumn.key]: currentValue ? `${currentValue}\n\n${template}` : template,
+        }
+      })
+    )
+    setMessage('已加入训练类型模板，可继续调整日期、距离、配速和注意事项。')
+  }
+
   const copyPreviousWeek = () => {
     setError('')
     setMessage('')
@@ -437,6 +460,23 @@ export default function CoachPlannerPage() {
             </div>
           </div>
 
+          <div className="mb-6 grid gap-4 md:grid-cols-4">
+            {[
+              ['1', '先绑定学员', '在学员列表用报名信箱绑定学员，绑定后才会出现在这里。'],
+              ['2', '选择训练周', '默认显示最新一周，也可以开启下一周或回看历史课表。'],
+              ['3', '填写每日训练内容', '用模板快速起稿，再补上距离、配速、组数和提醒。'],
+              ['4', '保存并同步', '保存后会覆盖该周旧课表，并同步到学员端。'],
+            ].map(([step, title, description]) => (
+              <div key={step} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/10">
+                <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-black text-sm font-black text-white">
+                  {step}
+                </div>
+                <h2 className="font-black text-apple-gray-900">{title}</h2>
+                <p className="mt-2 text-sm leading-6 text-apple-gray-600">{description}</p>
+              </div>
+            ))}
+          </div>
+
           <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row">
             <div className="flex flex-wrap gap-2">
               <button
@@ -490,9 +530,44 @@ export default function CoachPlannerPage() {
           {message && <div className="mb-5 rounded-3xl bg-green-50 p-4 text-sm font-semibold text-green-800">{message}</div>}
           {error && <div className="mb-5 rounded-3xl bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
 
+          {!isLoadingStudents && students.length === 0 && (
+            <div className="mb-5 rounded-3xl bg-amber-50 p-5 text-sm leading-6 text-amber-900">
+              目前还没有绑定学员。请先回到教练工作台，用学员报名信箱完成绑定；如果学员还没有账号，请先请他用报名信箱注册。
+            </div>
+          )}
+
+          {!isLoadingStudents && students.length > 0 && !selectedStudentId && (
+            <div className="mb-5 rounded-3xl bg-apple-gray-100 p-5 text-sm leading-6 text-apple-gray-700">
+              请选择一位学员后再编辑课表。顺序是：先绑定学员，再选择训练周，填写每日训练内容，最后保存并同步到学员端。
+            </div>
+          )}
+
           <div className="mb-4 flex items-center justify-between gap-3">
             <h2 className="text-xl font-black text-apple-gray-900">{isEditingNextWeek ? '下一周课表' : '本周课表'}</h2>
             {isLoadingPlans && <span className="text-sm font-semibold text-apple-gray-500">读取中...</span>}
+          </div>
+
+          <div className="mb-5 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/10">
+            <div className="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-wide text-apple-blue">Workout templates</p>
+                <h2 className="mt-1 text-xl font-black text-apple-gray-900">训练类型模板</h2>
+              </div>
+              <p className="text-sm text-apple-gray-500">点击后会填入第一个空白日期，可再手动微调。</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {workoutTemplates.map((template) => (
+                <button
+                  key={template}
+                  type="button"
+                  onClick={() => appendTemplate(template)}
+                  disabled={!selectedStudentId}
+                  className="rounded-full border border-black/10 bg-apple-gray-50 px-4 py-2 text-sm font-bold text-apple-gray-800 transition hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {template.split('：')[0]}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="apple-card overflow-hidden p-0">

@@ -208,7 +208,9 @@ export default function CoachStudentsClient() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm leading-6 text-apple-gray-600">暂无回馈。学员提交训练感受后会显示在这里。</p>
+                        <p className="text-sm leading-6 text-apple-gray-600">
+                          学员还没有提交训练回馈。可以提醒他完成训练后到学员中心填写 RPE、睡眠、疲劳与不适位置。
+                        </p>
                       )}
                     </div>
 

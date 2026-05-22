@@ -1,120 +1,386 @@
+'use client'
+
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, CalendarDays, MapPin, Target, UserRoundCheck } from 'lucide-react'
-import { allCourses, getCourseBySlug, getCourseCoach } from '@/lib/goodluck-data'
+import { useContext, useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
+import {
+  ArrowLeft,
+  CalendarDays,
+  ChevronRight,
+  Clock,
+  Instagram,
+  MapPin,
+  Target,
+} from 'lucide-react'
+import { allCourses, getCourseBySlug } from '@/lib/goodluck-data'
+import { LanguageContext } from '@/app/language-context'
 import CoursePaymentInfo from '@/components/CoursePaymentInfo'
+import CoachCard from '@/components/CoachCard'
+import TrainingItemCard from '@/components/TrainingItemCard'
+import BenefitItem from '@/components/BenefitItem'
+import SuitabilityCard from '@/components/SuitabilityCard'
+import FAQItem from '@/components/FAQItem'
+import EnrollmentStep from '@/components/EnrollmentStep'
 
-export function generateStaticParams() {
-  return allCourses.map((course) => ({ slug: course.slug }))
+interface CourseDetailPageProps {
+  params: Promise<{ slug: string }>
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params
-  const course = getCourseBySlug(slug)
-  return {
-    title: course ? `${course.name} - 好运跑班` : '课程详情 - 好运跑班',
-    description: course ? `${course.location} ${course.period}，${course.focus}` : '好运跑班课程详情',
+export default function CourseDetailPage({ params }: CourseDetailPageProps) {
+  const router = useRouter()
+  const [slug, setSlug] = useState<string | null>(null)
+  const [course, setCourse] = useState<any>(null)
+  const [isMounted, setIsMounted] = useState(false)
+  const languageContext = useContext(LanguageContext)
+
+  if (!languageContext) {
+    throw new Error('CourseDetailPage must be used within LanguageProvider')
   }
-}
 
-function zh(text: string) {
-  return text
-    .replaceAll('好運', '好运')
-    .replaceAll('訓練', '训练')
-    .replaceAll('課程', '课程')
-    .replaceAll('週', '周')
-    .replaceAll('節奏', '节奏')
-    .replaceAll('備賽', '备赛')
-    .replaceAll('階', '阶')
-}
+  const { t } = languageContext
 
-export default async function CourseDetailPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params
-  const course = getCourseBySlug(slug)
-  if (!course) notFound()
+  useEffect(() => {
+    params.then((p) => {
+      setSlug(p.slug)
+    })
+  }, [params])
 
-  const coach = getCourseCoach(course)
+  useEffect(() => {
+    if (slug) {
+      const foundCourse = getCourseBySlug(slug)
+      if (!foundCourse) {
+        notFound()
+      }
+      setCourse(foundCourse)
+    }
+    setIsMounted(true)
+  }, [slug])
+
+  if (!isMounted || !course) {
+    return (
+      <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+        <div className="container mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+          <div className="h-20 animate-pulse rounded-lg bg-apple-gray-100" />
+        </div>
+      </main>
+    )
+  }
+
+  function zh(text: string) {
+    return text
+      .replaceAll('好運', '好运')
+      .replaceAll('訓練', '训练')
+      .replaceAll('課程', '课程')
+      .replaceAll('週', '周')
+      .replaceAll('節奏', '节奏')
+      .replaceAll('備賽', '备赛')
+      .replaceAll('階', '阶')
+  }
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
-      <section className="px-4 py-10 sm:px-6 lg:px-8">
-        <div className="container mx-auto max-w-6xl">
-          <Link href="/courses" className="mb-8 inline-flex items-center gap-2 text-sm font-bold text-apple-gray-700">
+      {/* 返回按钮 */}
+      <div className="sticky top-24 z-40 border-b border-black/5 bg-white/80 backdrop-blur-md">
+        <div className="container mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
+          <Link href="/courses" className="inline-flex items-center gap-2 text-sm font-bold text-apple-gray-700 hover:text-apple-blue transition-colors">
             <ArrowLeft className="h-4 w-4" />
-            返回课程日程
+            {t.courseDetail.backToCourses}
           </Link>
+        </div>
+      </div>
 
-          <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
-            <section>
-              <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">Course detail</p>
-              <h1 className="text-4xl font-black leading-tight text-apple-gray-900 md:text-5xl">{zh(course.name)}</h1>
-              <p className="mt-5 text-lg leading-8 text-apple-gray-600">
-                {zh(course.focus)}。课程会结合团练、课后回馈和阶段性调整，让学员清楚知道每一次训练目的。
-              </p>
+      {/* 1. Hero 区域 */}
+      <section className="border-b border-black/5 bg-gradient-to-b from-apple-blue/5 to-transparent px-4 py-12 sm:px-6 lg:px-8">
+        <div className="container mx-auto max-w-6xl">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-end">
+              <div>
+                <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
+                  {t.courseDetail.courseInfo}
+                </p>
+                <h1 className="text-4xl font-black leading-tight text-apple-gray-900 md:text-5xl">
+                  {zh(course.name)}
+                </h1>
+                <p className="mt-4 text-lg leading-8 text-apple-gray-600">
+                  {course.slogan || '一起穩定累積，一起跑得更遠'}
+                </p>
 
-              <div className="mt-8 grid gap-4 sm:grid-cols-3">
-                {[
-                  { icon: CalendarDays, label: '开课周期', value: course.period },
-                  { icon: MapPin, label: '上课地点', value: course.location },
-                  { icon: Target, label: '训练日', value: zh(course.weekday) },
-                ].map((item) => (
-                  <div key={item.label} className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
-                    <item.icon className="mb-4 h-5 w-5 text-apple-gray-700" />
-                    <p className="text-xs text-apple-gray-500">{item.label}</p>
-                    <p className="mt-1 font-bold text-apple-gray-900">{item.value}</p>
-                  </div>
-                ))}
+                {/* 核心标签 */}
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-apple-blue/10 px-4 py-2 text-sm font-semibold text-apple-blue">
+                    <MapPin className="h-4 w-4" />
+                    {course.location}
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full bg-apple-orange/10 px-4 py-2 text-sm font-semibold text-apple-orange">
+                    <CalendarDays className="h-4 w-4" />
+                    {zh(course.weekday)}
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full bg-green-100 px-4 py-2 text-sm font-semibold text-green-700">
+                    <Clock className="h-4 w-4" />
+                    {course.period}
+                  </span>
+                </div>
               </div>
 
-              <div className="mt-8 apple-card p-6 md:p-8">
-                <h2 className="text-2xl font-black text-apple-gray-900">课程 / 训练内容</h2>
-                <div className="mt-5 grid gap-4 md:grid-cols-2">
+              {/* Instagram 按钮 */}
+              <a
+                href={course.instagramUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="apple-button-primary inline-flex items-center gap-2 px-6 py-3"
+              >
+                <Instagram className="h-5 w-5" />
+                {t.courseDetail.contactInstagram}
+              </a>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* 主内容区 */}
+      <div className="px-4 py-12 sm:px-6 lg:px-8">
+        <div className="container mx-auto max-w-6xl">
+          <div className="grid gap-12 lg:grid-cols-[1fr_380px]">
+            {/* 左侧主内容 */}
+            <div className="space-y-12">
+              {/* 2. 课程核心信息区 */}
+              <motion.section
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                viewport={{ once: true }}
+              >
+                <h2 className="mb-6 text-2xl font-black text-apple-gray-900">
+                  {t.courseDetail.courseInfo}
+                </h2>
+                <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
                   {[
-                    ['热身与跑姿', '动态热身、技术跑、步频与落地控制，降低受伤风险。'],
-                    ['主训练', zh(course.focus)],
-                    ['课后回馈', '学员提交里程、配速、心率、RPE 与主观感受，教练据此调整后续课表。'],
-                    ['阶段目标', '在 12 周周期内建立稳定训练习惯，并逐步靠近个人赛事或体能目标。'],
-                  ].map(([title, description]) => (
-                    <div key={title} className="rounded-2xl bg-apple-gray-100 p-5">
-                      <h3 className="font-bold text-apple-gray-900">{title}</h3>
-                      <p className="mt-2 text-sm leading-6 text-apple-gray-600">{description}</p>
+                    { icon: Target, label: t.courseDetail.courseLevel, value: course.level || '中級' },
+                    {
+                      icon: CalendarDays,
+                      label: t.courseDetail.coursePeriod,
+                      value: course.period,
+                    },
+                    { icon: MapPin, label: t.courseDetail.courseLocation, value: course.location },
+                    {
+                      icon: Clock,
+                      label: t.courseDetail.classTime,
+                      value: course.classTime,
+                    },
+                    {
+                      icon: MapPin,
+                      label: t.courseDetail.meetingPoint,
+                      value: course.meetingPoint,
+                    },
+                    {
+                      icon: Target,
+                      label: '適合新手',
+                      value: course.beginnerFriendly ? t.courseDetail.beginnerFriendly : t.courseDetail.notBeginnerFriendly,
+                    },
+                  ].map((item) => (
+                    <div key={item.label} className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
+                      <item.icon className="mb-3 h-5 w-5 text-apple-blue" />
+                      <p className="text-xs font-semibold uppercase tracking-wide text-apple-gray-500">
+                        {item.label}
+                      </p>
+                      <p className="mt-2 font-bold text-apple-gray-900">{item.value}</p>
                     </div>
                   ))}
                 </div>
-              </div>
-            </section>
+              </motion.section>
 
-            <aside className="space-y-6">
-              <div className="apple-card p-6 md:p-8">
-                <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-black text-white">
-                  <UserRoundCheck className="h-7 w-7" />
+              {/* 3. 课程内容介绍区 */}
+              <motion.section
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                viewport={{ once: true }}
+              >
+                <h2 className="mb-6 text-2xl font-black text-apple-gray-900">
+                  {t.courseDetail.trainingItems}
+                </h2>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {course.trainingItems.map((item: string) => (
+                    <TrainingItemCard key={item} title={zh(item)} />
+                  ))}
                 </div>
-                <p className="text-sm text-apple-gray-500">授课教练</p>
-                <h2 className="mt-1 text-2xl font-black text-apple-gray-900">{coach.name}</h2>
-                <p className="mt-2 font-semibold text-apple-blue">{coach.title}</p>
-                <p className="mt-4 leading-7 text-apple-gray-600">{coach.bio}</p>
-              </div>
+              </motion.section>
 
-              <div className="apple-card p-6">
-                <h2 className="font-bold text-apple-gray-900">报名与咨询</h2>
-                <p className="mt-3 text-sm leading-6 text-apple-gray-600">
-                  课程名额与装备需求请先通过 Instagram 联系好运跑班，我们会根据你的跑龄、目标和可训练时间推荐班级。
-                </p>
+              {/* 4. 参加后可以获得什么 */}
+              <motion.section
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                viewport={{ once: true }}
+              >
+                <h2 className="mb-6 text-2xl font-black text-apple-gray-900">
+                  {t.courseDetail.whatYouWillGet}
+                </h2>
+                <div className="apple-card space-y-4 p-6 md:p-8">
+                  {course.benefits.map((benefit: string) => (
+                    <BenefitItem key={benefit} text={zh(benefit)} />
+                  ))}
+                </div>
+              </motion.section>
+
+              {/* 5. 教练介绍区 */}
+              <motion.section
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                viewport={{ once: true }}
+              >
+                <h2 className="mb-6 text-2xl font-black text-apple-gray-900">
+                  {t.courseDetail.coachIntroduction}
+                </h2>
+                {course.coaches && course.coaches.length > 0 && (
+                  <CoachCard coach={course.coaches[0]} />
+                )}
+              </motion.section>
+
+              {/* 6. 适合与不适合人群 */}
+              <motion.section
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                viewport={{ once: true }}
+              >
+                <h2 className="mb-6 text-2xl font-black text-apple-gray-900">适合人群</h2>
+                <div className="grid gap-6 md:grid-cols-2">
+                  <SuitabilityCard
+                    type="suitable"
+                    title={t.courseDetail.suitableFor}
+                    items={course.suitableFor}
+                  />
+                  <SuitabilityCard
+                    type="notSuitable"
+                    title={t.courseDetail.notSuitableFor}
+                    items={course.notSuitableFor}
+                  />
+                </div>
+              </motion.section>
+
+              {/* 7. 报名流程 */}
+              <motion.section
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                viewport={{ once: true }}
+              >
+                <h2 className="mb-6 text-2xl font-black text-apple-gray-900">
+                  {t.courseDetail.howToJoin}
+                </h2>
+                <div className="apple-card p-6 md:p-8">
+                  {t.courseDetail.enrollmentSteps.map((step, index) => (
+                    <EnrollmentStep
+                      key={step.title}
+                      number={index + 1}
+                      title={step.title}
+                      description={step.description}
+                    />
+                  ))}
+                </div>
+              </motion.section>
+
+              {/* 8. FAQ */}
+              <motion.section
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                viewport={{ once: true }}
+              >
+                <h2 className="mb-6 text-2xl font-black text-apple-gray-900">
+                  {t.courseDetail.faqs}
+                </h2>
+                <div className="apple-card p-6 md:p-8">
+                  {course.faq.map((item: any) => (
+                    <FAQItem
+                      key={item.question}
+                      question={item.question}
+                      answer={item.answer}
+                    />
+                  ))}
+                </div>
+              </motion.section>
+            </div>
+
+            {/* 右侧快速报名卡片 */}
+            <motion.aside
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6 }}
+              viewport={{ once: true }}
+              className="space-y-6 lg:sticky lg:top-32"
+            >
+              {/* 9. 快速总览卡片 */}
+              <div className="apple-card p-6 md:p-8">
+                <h3 className="text-lg font-black text-apple-gray-900">
+                  {t.courseDetail.quickOverview}
+                </h3>
+
+                <div className="mt-6 space-y-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-apple-gray-500">
+                      {t.courseDetail.courseLevel}
+                    </p>
+                    <p className="mt-1 font-bold text-apple-gray-900">
+                      {course.level || '中級'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-apple-gray-500">
+                      {t.courseDetail.coursePeriod}
+                    </p>
+                    <p className="mt-1 font-bold text-apple-gray-900">{course.period}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-apple-gray-500">
+                      {t.courseDetail.courseLocation}
+                    </p>
+                    <p className="mt-1 font-bold text-apple-gray-900">{course.location}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-apple-gray-500">
+                      {t.courseDetail.courseWeekday}
+                    </p>
+                    <p className="mt-1 font-bold text-apple-gray-900">{zh(course.weekday)}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-apple-gray-500">
+                      時間
+                    </p>
+                    <p className="mt-1 font-bold text-apple-gray-900">{course.classTime}</p>
+                  </div>
+                </div>
+
                 <a
-                  href="https://www.instagram.com/nurture.running.team/"
+                  href={course.instagramUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="apple-button-primary mt-5 w-full px-5 py-2.5 text-sm"
+                  className="apple-button-primary mt-6 w-full inline-flex items-center justify-center gap-2 px-5 py-2.5"
                 >
-                  咨询这门课程
+                  <Instagram className="h-5 w-5" />
+                  {t.courseDetail.contactInstagram}
                 </a>
               </div>
 
+              {/* 费用信息 */}
               <CoursePaymentInfo compact />
-            </aside>
+            </motion.aside>
           </div>
         </div>
-      </section>
+      </div>
     </main>
   )
 }
+

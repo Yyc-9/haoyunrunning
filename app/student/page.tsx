@@ -103,6 +103,12 @@ export default function StudentPage() {
     pace: '',
     heartRate: '',
     rpe: 6,
+    sleepQuality: '普通',
+    fatigueLevel: '普通',
+    painLocation: '',
+    completedOriginalPlan: '完成原计划',
+    note: '',
+    screenshotName: '',
     feeling: '',
   })
   const [profileForm, setProfileForm] = useState({
@@ -165,7 +171,7 @@ export default function StudentPage() {
   const hardShare = recentFeedback.length > 0 ? Math.max(0, 100 - aerobicShare - tempoShare) : 0
   const trainingStatus =
     recentFeedback.length === 0
-      ? '等待记录'
+      ? '等待首次回馈'
       : averageRpe && averageRpe >= 8
         ? '强度偏高'
         : completionRate >= 75
@@ -180,7 +186,7 @@ export default function StudentPage() {
           ? '关注心率与睡眠'
           : '可以按计划推进'
   const loadZone =
-    trainingLoad === 0 ? '暂无负荷' : trainingLoad < 180 ? '轻负荷' : trainingLoad < 420 ? '适中负荷' : '高负荷'
+    trainingLoad === 0 ? '完成训练后提交回馈' : trainingLoad < 180 ? '轻负荷' : trainingLoad < 420 ? '适中负荷' : '高负荷'
   const dashboardNav: Array<
     | { type: 'link'; href: string; icon: React.ElementType; label: string }
     | { type: 'button'; icon: React.ElementType; label: string }
@@ -431,6 +437,18 @@ export default function StudentPage() {
     setIsSubmitting(true)
 
     try {
+      const structuredFeeling = [
+        feedback.feeling.trim() ? `训练感受：${feedback.feeling.trim()}` : '',
+        `睡眠质量：${feedback.sleepQuality}`,
+        `疲劳程度：${feedback.fatigueLevel}`,
+        `是否完成原计划：${feedback.completedOriginalPlan}`,
+        feedback.painLocation.trim() ? `疼痛 / 不适位置：${feedback.painLocation.trim()}` : '疼痛 / 不适位置：无明显不适',
+        feedback.note.trim() ? `备注：${feedback.note.trim()}` : '',
+        feedback.screenshotName ? `跑步截图：${feedback.screenshotName}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n')
+
       await submitTrainingFeedback({
         training_plan_id: latestPlan?.id ?? null,
         student_id: user.id,
@@ -440,7 +458,7 @@ export default function StudentPage() {
         pace_text: feedback.pace,
         average_heart_rate: parseHeartRate(feedback.heartRate),
         rpe: feedback.rpe,
-        feeling: feedback.feeling,
+        feeling: structuredFeeling,
       })
 
       setSubmitted(true)
@@ -678,10 +696,10 @@ export default function StudentPage() {
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   {[
-                    { label: '近期里程', value: totalDistance > 0 ? `${totalDistance.toFixed(1)} km` : '暂无', note: `最近 ${recentFeedback.length} 次回馈` },
-                    { label: '平均心率', value: averageHeartRate ? `${averageHeartRate}` : '暂无', note: '来自已填写记录' },
+                    { label: '近期里程', value: totalDistance > 0 ? `${totalDistance.toFixed(1)} km` : '先提交训练回馈', note: `最近 ${recentFeedback.length} 次回馈` },
+                    { label: '平均心率', value: averageHeartRate ? `${averageHeartRate}` : '回馈时可填写', note: '来自已填写记录' },
                     { label: '课表完成', value: plans.length > 0 ? `${completedPlanCount}/${plans.length}` : '待同步', note: '按训练回馈匹配课表' },
-                    { label: '强度指数', value: intensityScore ? `${intensityScore}` : '暂无', note: '由 RPE 换算' },
+                    { label: '强度指数', value: intensityScore ? `${intensityScore}` : '提交 RPE 后生成', note: '由 RPE 换算' },
                   ].map((item) => (
                     <div key={item.label} className="rounded-2xl border border-black/10 bg-white p-4">
                       <p className="text-xs font-semibold text-apple-gray-500">{item.label}</p>
@@ -812,10 +830,10 @@ export default function StudentPage() {
                       {isLoadingData ? '同步中' : '尚未同步课表'}
                     </p>
                     <h2 className="mt-2 text-2xl font-black text-apple-gray-900">
-                      等待教练建立你的第一份课表。
+                      本周课表尚未同步，请等待教练更新。
                     </h2>
                     <p className="mt-3 leading-7 text-apple-gray-600">
-                      你仍然可以先提交自主训练回馈；教练完成绑定与课表面板后，这里会显示你的真实训练内容。
+                      如已报名但看不到资料，请用报名邮箱登录，并联系教练确认账号绑定。你也可以先在下方提交自主训练回馈。
                     </p>
                   </div>
                 )}
@@ -997,7 +1015,7 @@ export default function StudentPage() {
                   <div className="rounded-3xl border border-dashed border-black/15 bg-white p-6 text-center">
                     <p className="font-bold text-apple-gray-900">目前没有已同步课表</p>
                     <p className="mt-2 text-sm leading-6 text-apple-gray-600">
-                      教练端完成学员绑定与课表面板后，这里会自动显示你的周课表。
+                      如果你已经报名，请先确认登录的是报名邮箱；仍看不到资料时，请联系教练绑定账号。本周课表尚未同步时，请等待教练更新。
                     </p>
                   </div>
                 )}
@@ -1014,6 +1032,12 @@ export default function StudentPage() {
                   <h2 className="text-2xl font-black text-apple-gray-900">今日训练感受</h2>
                 </div>
               </div>
+
+              {!isLoggedIn && (
+                <div className="mb-5 rounded-3xl bg-amber-50 p-4 text-sm leading-6 text-amber-800">
+                  请先登录报名邮箱。登录后提交的训练回馈才会同步给教练。
+                </div>
+              )}
 
               <form
                 className="space-y-5"
@@ -1058,11 +1082,62 @@ export default function StudentPage() {
                     className="w-full"
                   />
                   <div className="mt-1 flex justify-between text-xs text-apple-gray-500">
-                    <span>很輕鬆</span>
+                    <span>很轻松</span>
                     <span>刚刚好</span>
                     <span>非常吃力</span>
                   </div>
                 </label>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-apple-gray-700">睡眠质量</span>
+                    <select
+                      value={feedback.sleepQuality}
+                      onChange={(event) => updateField('sleepQuality', event.target.value)}
+                      className="apple-input"
+                    >
+                      <option>很好</option>
+                      <option>普通</option>
+                      <option>偏差</option>
+                      <option>很差</option>
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-apple-gray-700">疲劳程度</span>
+                    <select
+                      value={feedback.fatigueLevel}
+                      onChange={(event) => updateField('fatigueLevel', event.target.value)}
+                      className="apple-input"
+                    >
+                      <option>轻松</option>
+                      <option>普通</option>
+                      <option>偏疲劳</option>
+                      <option>非常疲劳</option>
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-apple-gray-700">是否完成原计划</span>
+                    <select
+                      value={feedback.completedOriginalPlan}
+                      onChange={(event) => updateField('completedOriginalPlan', event.target.value)}
+                      className="apple-input"
+                    >
+                      <option>完成原计划</option>
+                      <option>部分完成</option>
+                      <option>改为轻松跑</option>
+                      <option>未完成 / 休息</option>
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-apple-gray-700">疼痛 / 不适位置</span>
+                    <input
+                      value={feedback.painLocation}
+                      onChange={(event) => updateField('painLocation', event.target.value)}
+                      placeholder="例如：右小腿、左膝；没有可留空"
+                      className="apple-input"
+                    />
+                  </label>
+                </div>
 
                 <label className="block">
                   <div className="mb-2 flex items-center justify-between gap-3">
@@ -1075,6 +1150,30 @@ export default function StudentPage() {
                     placeholder="填写训练感受"
                     className="apple-input resize-none"
                   />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-apple-gray-700">备注</span>
+                  <textarea
+                    value={feedback.note}
+                    onChange={(event) => updateField('note', event.target.value)}
+                    rows={3}
+                    placeholder="例如：今天临时加班、天气很热、补给不足等"
+                    className="apple-input resize-none"
+                  />
+                </label>
+
+                <label className="block rounded-3xl border border-dashed border-black/20 bg-white p-5">
+                  <span className="mb-2 block text-sm font-semibold text-apple-gray-700">上传跑步截图</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => updateField('screenshotName', event.target.files?.[0]?.name || '')}
+                    className="block w-full text-sm text-apple-gray-600 file:mr-4 file:rounded-full file:border-0 file:bg-black file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+                  />
+                  <span className="mt-2 block text-xs leading-5 text-apple-gray-500">
+                    第一版先记录截图文件名；后续可接图片上传与自动识别里程、配速、心率。
+                  </span>
                 </label>
 
                 {submitted && (
