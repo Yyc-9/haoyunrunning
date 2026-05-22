@@ -3,19 +3,9 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
-  Activity,
   ArrowLeft,
-  CalendarDays,
-  CheckCircle2,
   ChevronRight,
-  Clock,
-  Dumbbell,
   Instagram,
-  MapPin,
-  Route,
-  Sparkles,
-  Target,
-  Users,
 } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
 import type { allCourses } from '@/lib/goodluck-data'
@@ -109,28 +99,6 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
 
   const text = (value: string) => localizeText(value, language)
   const instagramUrl = course.instagramUrl || 'https://www.instagram.com/nurture.running.team/'
-  const quickRows = [
-    [t.courseDetail.courseWeekday, text(course.weekday)],
-    [t.courseDetail.classTime, text(course.time)],
-    [t.courseDetail.meetingPoint, text(course.meetingPoint)],
-    [t.courseDetail.coursePeriod, text(course.period)],
-    [t.courseDetail.courseLevel, text(course.level)],
-  ]
-  const infoCards = [
-    { icon: Users, label: t.courseDetail.targetAudience, value: text(course.targetAudience) },
-    { icon: Target, label: t.courseDetail.trainingGoals, value: course.trainingGoals.map(text).join(' / ') },
-    { icon: CalendarDays, label: t.courseDetail.courseWeekday, value: text(course.weekday) },
-    { icon: Clock, label: t.courseDetail.classTime, value: text(course.time) },
-    { icon: MapPin, label: t.courseDetail.meetingPoint, value: text(course.meetingPoint) },
-    { icon: Route, label: t.courseDetail.coursePeriod, value: text(course.period) },
-    { icon: Activity, label: t.courseDetail.courseLevel, value: text(course.level) },
-    {
-      icon: Sparkles,
-      label: t.courseDetail.beginnerFriendly,
-      value: course.isBeginnerFriendly ? t.courseDetail.yes : t.courseDetail.notBeginnerFriendly,
-    },
-    { icon: Dumbbell, label: t.courseDetail.priceNote, value: text(course.priceNote) },
-  ]
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
@@ -187,51 +155,8 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
       </section>
 
       <div className="px-4 py-12 sm:px-6 lg:px-8">
-        <div className="container mx-auto grid max-w-7xl gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
-          <motion.aside
-            initial={{ opacity: 0, y: 18 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            viewport={{ once: true }}
-            className="apple-card order-first p-6 lg:sticky lg:top-36 lg:order-none"
-          >
-            <h2 className="text-xl font-black text-apple-gray-900">{t.courseDetail.quickOverview}</h2>
-            <div className="mt-5 space-y-4">
-              {quickRows.map(([label, value]) => (
-                <div key={label} className="border-b border-black/10 pb-4 last:border-b-0 last:pb-0">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-apple-gray-500">{label}</p>
-                  <p className="mt-1 font-bold leading-6 text-apple-gray-900">{value}</p>
-                </div>
-              ))}
-            </div>
-            <a
-              href={instagramUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="apple-button-primary mt-6 inline-flex w-full items-center justify-center gap-2 px-5 py-2.5"
-            >
-              <Instagram className="h-5 w-5" />
-              {t.courseDetail.contactInstagram}
-            </a>
-          </motion.aside>
-
-          <div className="space-y-12">
-            <motion.section initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }}>
-              <h2 className="mb-6 text-2xl font-black text-apple-gray-900">{t.courseDetail.courseInfo}</h2>
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {infoCards.map((item) => {
-                  const Icon = item.icon
-                  return (
-                    <div key={item.label} className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
-                      <Icon className="mb-4 h-5 w-5 text-apple-blue" />
-                      <p className="text-xs font-semibold uppercase tracking-wide text-apple-gray-500">{item.label}</p>
-                      <p className="mt-2 text-sm font-bold leading-6 text-apple-gray-900">{item.value}</p>
-                    </div>
-                  )
-                })}
-              </div>
-            </motion.section>
-
+        <div className="container mx-auto max-w-7xl">
+          <div className="space-y-16">
             <motion.section initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }}>
               <h2 className="mb-6 text-2xl font-black text-apple-gray-900">{t.courseDetail.trainingItems}</h2>
               <div className="grid gap-4 md:grid-cols-2">
@@ -272,41 +197,20 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
             </motion.section>
 
             <motion.section initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }}>
-              <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1fr)]">
-                <div>
-                  <h2 className="mb-6 text-2xl font-black text-apple-gray-900">{t.courseDetail.howToJoin}</h2>
-                  <div className="apple-card p-6 md:p-8">
-                    {t.courseDetail.enrollmentSteps.map((step, index) => (
-                      <EnrollmentStep key={step.title} number={index + 1} title={step.title} description={step.description} />
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h2 className="mb-6 text-2xl font-black text-apple-gray-900">{t.courseDetail.faqs}</h2>
-                  <div className="apple-card p-6 md:p-8">
-                    {course.faq.map((item) => (
-                      <FAQItem key={item.question} question={text(item.question)} answer={text(item.answer)} />
-                    ))}
-                  </div>
-                </div>
+              <h2 className="mb-6 text-2xl font-black text-apple-gray-900">{t.courseDetail.howToJoin}</h2>
+              <div className="apple-card p-6 md:p-8">
+                {t.courseDetail.enrollmentSteps.map((step, index) => (
+                  <EnrollmentStep key={step.title} number={index + 1} title={step.title} description={step.description} />
+                ))}
               </div>
             </motion.section>
 
-            <motion.section initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }} className="rounded-3xl bg-apple-gray-950 p-6 text-white md:p-8">
-              <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <div className="mb-3 flex items-center gap-2 text-apple-blue">
-                    <CheckCircle2 className="h-5 w-5" />
-                    <span className="text-sm font-semibold uppercase tracking-wide">{t.courseDetail.quickOverview}</span>
-                  </div>
-                  <h2 className="text-2xl font-black">{text(course.title)}</h2>
-                  <p className="mt-2 text-sm leading-6 text-white/70">{text(course.priceNote)}</p>
-                </div>
-                <a href={instagramUrl} target="_blank" rel="noreferrer" className="apple-button-primary inline-flex items-center justify-center gap-2 px-6 py-3">
-                  <Instagram className="h-5 w-5" />
-                  {t.courseDetail.instagramSignup}
-                </a>
+            <motion.section initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }}>
+              <h2 className="mb-6 text-2xl font-black text-apple-gray-900">{t.courseDetail.faqs}</h2>
+              <div className="apple-card p-6 md:p-8">
+                {course.faq.map((item) => (
+                  <FAQItem key={item.question} question={text(item.question)} answer={text(item.answer)} />
+                ))}
               </div>
             </motion.section>
           </div>

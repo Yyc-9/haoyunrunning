@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { CalendarDays, ChevronRight, Clock, MapPin, Target, Users } from 'lucide-react'
 import { allCourses } from '@/lib/goodluck-data'
 import CoursePaymentInfo from '@/components/CoursePaymentInfo'
+import CoursesTable from '@/components/CoursesTable'
 import { useLanguage } from '@/app/language-context'
 
 type CoursesSectionProps = {
@@ -93,9 +94,10 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
           </div>
         )}
 
-        <div className="grid gap-5 lg:grid-cols-2">
-          {courses.map((course) => (
-            <article key={course.slug} className="rounded-3xl border border-black/10 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+        {preview ? (
+          <div className="grid gap-5 lg:grid-cols-2">
+            {courses.map((course) => (
+              <article key={course.slug} className="rounded-3xl border border-black/10 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
               <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                 <div>
                   <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -149,12 +151,15 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
                 <div className="rounded-2xl bg-black p-4 text-white">
                   <p className="mb-2 text-xs font-bold uppercase tracking-wide text-white/50">{t.courses.enrollment}</p>
                   <p className="text-sm font-semibold leading-6">{t.courses.pricingConsult}</p>
-                  {!preview && <p className="mt-2 text-xs leading-5 text-white/60">{localeText(course.feeNote)}</p>}
+                  {preview && <p className="mt-2 text-xs leading-5 text-white/60">{localeText(course.feeNote)}</p>}
                 </div>
               </div>
             </article>
           ))}
-        </div>
+          </div>
+        ) : (
+          <CoursesTable />
+        )}
 
         {!preview && (
           <div className="mt-8 rounded-3xl bg-apple-gray-100 p-6">
