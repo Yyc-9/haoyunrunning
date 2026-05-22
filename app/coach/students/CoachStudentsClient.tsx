@@ -203,7 +203,7 @@ export default function CoachStudentsClient() {
                                   RPE {feedback.rpe ?? '-'}
                                 </span>
                               </div>
-                              <p className="line-clamp-2 leading-6">{feedback.feeling || '学员未填写文字感受。'}</p>
+                              <p className="line-clamp-4 whitespace-pre-line leading-6">{feedback.feeling || '学员未填写文字感受。'}</p>
                             </div>
                           ))}
                         </div>

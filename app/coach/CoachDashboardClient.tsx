@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import CoachAccessPanel from '@/components/CoachAccessPanel'
+import { useLanguage } from '@/app/language-context'
 
 type FeedbackItem = {
   id: string
@@ -219,6 +220,7 @@ const formatFeedback = (item: any): FeedbackItem => {
 }
 
 export default function CoachDashboardClient() {
+  const { t } = useLanguage()
   const [liveFeedback, setLiveFeedback] = useState<FeedbackItem[]>([])
   const [coachStudents, setCoachStudents] = useState<BoundStudentRow[]>([])
   const [loadError, setLoadError] = useState('')
@@ -340,10 +342,10 @@ export default function CoachDashboardClient() {
           </div>
 
           <div className="mb-8 grid gap-4 md:grid-cols-3">
-            {[
-              ['1. 启用教练权限', '教练邀请码由管理员提供。输入一次并启用后，账号会升级为教练，刷新后仍会保留权限。'],
-              ['2. 绑定学员', '使用学员报名时填写的邮箱绑定账号。找不到邮箱时，请先确认学员是否已经注册。'],
-              ['3. 同步课表', '绑定学员后进入课表面板，选择训练周，填写每日训练内容并保存同步到学员端。'],
+              {[
+              [t.coach.inviteInfoTitle, t.coach.inviteInfo],
+              [t.coach.bindTitle, t.coach.bindFeedback],
+              [t.planner.title, t.planner.noSelection],
             ].map(([title, description]) => (
               <div key={title} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/10">
                 <h2 className="font-bold text-apple-gray-900">{title}</h2>
@@ -435,7 +437,7 @@ export default function CoachDashboardClient() {
                     依据：Borg CR10/RPE 用于主观强度监控；IOC 共识支持训练负荷、疲劳、疼痛和健康状态监测；ACSM/AHA 将胸痛、头晕、异常呼吸困难等列为运动中需要停止并评估的警示信号。
                   </p>
                   <p className="rounded-2xl bg-red-50 p-4 font-semibold text-red-700">
-                    免责声明：系统仅用于训练状态监测，不替代医疗诊断。如出现胸痛、头晕、呼吸困难、晕厥、异常心悸或明显肿胀疼痛，应立即停止运动并寻求专业医疗评估。
+                    {t.coach.disclaimer}
                   </p>
                 </div>
               </section>
@@ -518,7 +520,7 @@ export default function CoachDashboardClient() {
                       ))}
                     </div>
 
-                    <p className="mt-4 rounded-2xl bg-apple-gray-50 p-4 text-sm leading-6 text-apple-gray-700">
+                    <p className="mt-4 whitespace-pre-line rounded-2xl bg-apple-gray-50 p-4 text-sm leading-6 text-apple-gray-700">
                       {item.feeling}
                     </p>
                     <p className="mt-3 text-sm leading-6 text-apple-gray-600">

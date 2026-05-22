@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, CalendarPlus, ChevronDown, ChevronUp, Copy, Loader2, Save, UserRoundPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useLanguage } from '@/app/language-context'
+import type { Language } from '@/lib/dictionary'
 
 const columns = [
   { key: 'mon', label: '周一', offset: 0 },
@@ -86,19 +88,15 @@ function getMonday(date = new Date()) {
   return toIsoDate(localDate)
 }
 
-function formatWeekLabel(weekStart: string, weekNumber: number) {
+function formatWeekLabel(weekStart: string, weekNumber: number, language: Language) {
   const date = new Date(`${weekStart}T00:00:00`)
-  return `${date.getFullYear()} 年 ${date.getMonth() + 1} 月 ${date.getDate()} 日这一周（第 ${weekNumber} 周）`
-}
+  if (language === 'en') {
+    return `Week of ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+  }
 
-const workoutTemplates = [
-  '轻松跑：E 40-60 分钟，RPE 3-4，跑后伸展 10 分钟。',
-  '间歇跑：热身 15 分钟，主课表按目标配速执行，放松跑 10 分钟。',
-  '节奏跑：热身 15 分钟，T 配速 20-30 分钟，放松跑 10 分钟。',
-  '长距离：稳定完成指定距离，前段保守，后段维持动作质量。',
-  '恢复跑：RPE 2-3，保持轻松可对话，不追配速。',
-  '休息日：完全休息或轻度活动，睡眠和补给优先。',
-]
+  const weekText = language === 'zh-TW' ? '這一週' : '这一周'
+  return `${date.getFullYear()} 年 ${date.getMonth() + 1} 月 ${date.getDate()} 日${weekText}`
+}
 
 function planToColumnKey(plan: TrainingPlan) {
   const date = new Date(`${plan.workout_date}T00:00:00`)
@@ -175,9 +173,10 @@ async function authedFetch(path: string, init?: RequestInit) {
 }
 
 export default function CoachPlannerPage() {
+  const { language, t } = useLanguage()
   const baseWeekStart = useMemo(() => getMonday(), [])
   const [activeWeekStart, setActiveWeekStart] = useState(baseWeekStart)
-  const [rows, setRows] = useState<PlannerRow[]>(createEmptyRows(formatWeekLabel(baseWeekStart, 1)))
+  const [rows, setRows] = useState<PlannerRow[]>(createEmptyRows(formatWeekLabel(baseWeekStart, 1, language)))
   const [students, setStudents] = useState<BoundStudentRow[]>([])
   const [selectedStudentId, setSelectedStudentId] = useState('')
   const [savedPlans, setSavedPlans] = useState<TrainingPlan[]>([])
@@ -200,7 +199,7 @@ export default function CoachPlannerPage() {
     exactActiveWeek?.weekNumber ??
     plansInActiveRange[0]?.week_number ??
     (weekGroups.length > 0 ? Math.max(...weekGroups.filter((group) => group.weekStart < activeWeekStart).map((group) => group.weekNumber), 0) + 1 : 1)
-  const activeWeekLabel = formatWeekLabel(activeWeekStart, inferredActiveWeekNumber)
+  const activeWeekLabel = formatWeekLabel(activeWeekStart, inferredActiveWeekNumber, language)
   const isEditingNextWeek = activeWeekStart > baseWeekStart
   const previousWeek = useMemo(() => {
     const previousWeekStart = addDays(activeWeekStart, -7)
@@ -212,6 +211,11 @@ export default function CoachPlannerPage() {
   const historyWeeks = weekGroups.filter(
     (group) => group.weekStart !== activeWeekStart
   )
+  const weekdayLabels = language === 'en'
+    ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    : language === 'zh-TW'
+      ? ['週一', '週二', '週三', '週四', '週五', '週六', '週日']
+      : ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -269,7 +273,7 @@ export default function CoachPlannerPage() {
           exact?.weekNumber ??
           rangePlans[0]?.week_number ??
           (grouped.length > 0 ? Math.max(...grouped.filter((group) => group.weekStart < activeWeekStart).map((group) => group.weekNumber), 0) + 1 : 1)
-        const label = formatWeekLabel(activeWeekStart, weekNumber)
+        const label = formatWeekLabel(activeWeekStart, weekNumber, language)
         setRows(displayPlans.length > 0 ? plansToRows(displayPlans, label) : createEmptyRows(label))
       } catch (err) {
         setError(err instanceof Error ? err.message : '读取课表失败。')
@@ -313,7 +317,7 @@ export default function CoachPlannerPage() {
         }
       })
     )
-    setMessage('已加入训练类型模板，可继续调整日期、距离、配速和注意事项。')
+    setMessage(t.planner.templatesHint)
   }
 
   const copyPreviousWeek = () => {
@@ -321,13 +325,13 @@ export default function CoachPlannerPage() {
     setMessage('')
 
     if (!previousWeek) {
-      setError('还没有可复制的上一周课表。')
+      setError(t.planner.noPrevious)
       return
     }
 
     setIsCopyingPrevious(true)
     setRows(plansToRows(previousWeek.plans, activeWeekLabel))
-    setMessage(`已复制 ${formatWeekLabel(previousWeek.weekStart, previousWeek.weekNumber)} 到 ${activeWeekLabel}，可继续调整后保存。`)
+    setMessage(`${t.planner.copyPrevious}: ${formatWeekLabel(previousWeek.weekStart, previousWeek.weekNumber, language)} → ${activeWeekLabel}`)
     setIsCopyingPrevious(false)
   }
 
@@ -339,11 +343,11 @@ export default function CoachPlannerPage() {
     const nextWeekNumber =
       exactNextWeek?.weekNumber ??
       Math.max(inferredActiveWeekNumber + 1, ...weekGroups.filter((group) => group.weekStart < nextWeekStart).map((group) => group.weekNumber + 1), 1)
-    const nextLabel = formatWeekLabel(nextWeekStart, nextWeekNumber)
+    const nextLabel = formatWeekLabel(nextWeekStart, nextWeekNumber, language)
 
     setActiveWeekStart(nextWeekStart)
     setRows(exactNextWeek ? plansToRows(exactNextWeek.plans, nextLabel) : createEmptyRows(nextLabel))
-    setMessage(`已开启 ${nextLabel}，第一列已按上一周格式生成。`)
+    setMessage(`${t.planner.openNext}: ${nextLabel}`)
   }
 
   const returnToThisWeek = () => {
@@ -357,7 +361,7 @@ export default function CoachPlannerPage() {
     setMessage('')
 
     if (!selectedStudentId) {
-      setError('请先选择要派发课表的学员。')
+      setError(t.planner.chooseStudentError)
       return
     }
 
@@ -394,12 +398,10 @@ export default function CoachPlannerPage() {
       const refreshed = await authedFetch(`/api/coach/training-plans?studentId=${encodeURIComponent(selectedStudentId)}`) as { plans?: TrainingPlan[] }
       setSavedPlans(refreshed.plans ?? payload.plans ?? [])
       setMessage(
-        payload.replacedCount
-          ? `已覆盖${activeWeekLabel}旧课表，并储存 ${payload.count ?? workouts.length} 条新训练。`
-          : `已储存 ${payload.count ?? workouts.length} 条训练课表，已写入 training_plans 并同步到学员端。`
+        `${t.planner.saveSuccess} ${payload.count ?? workouts.length}`
       )
     } catch (err) {
-      setError(err instanceof Error ? err.message : '课表派发失败，请稍后再试。')
+      setError(err instanceof Error ? err.message : t.planner.saveFailed)
     } finally {
       setIsSaving(false)
     }
@@ -411,17 +413,17 @@ export default function CoachPlannerPage() {
         <div className="container mx-auto max-w-7xl">
           <Link href="/coach" className="mb-8 inline-flex items-center gap-2 text-sm font-bold text-apple-gray-700">
             <ArrowLeft className="h-4 w-4" />
-            回教练工作台
+            {t.planner.back}
           </Link>
 
           <div className="mb-8 grid gap-6 lg:grid-cols-[1fr_390px] lg:items-end">
             <div>
               <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
-                Training planner
+                {t.planner.sectionLabel}
               </p>
-              <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">课表面板</h1>
+              <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">{t.planner.title}</h1>
               <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
-                当前只展开本周课表，上一周和更早课表默认折叠。复制上一周后，可直接在本周课表里微调再保存。
+                {t.planner.subtitle}
               </p>
             </div>
 
@@ -429,7 +431,7 @@ export default function CoachPlannerPage() {
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-black text-white">
                 <UserRoundPlus className="h-6 w-6" />
               </div>
-              <h2 className="font-bold text-apple-gray-900">派发对象</h2>
+              <h2 className="font-bold text-apple-gray-900">{t.planner.assignTo}</h2>
               <div className="mt-4 space-y-3">
                 <select
                   value={selectedStudentId}
@@ -437,7 +439,7 @@ export default function CoachPlannerPage() {
                   className="apple-input"
                   disabled={isLoadingStudents}
                 >
-                  <option value="">选择学员</option>
+                  <option value="">{t.planner.selectStudent}</option>
                   {students.map((row) => row.student && (
                     <option key={row.id} value={row.student.id}>
                       {row.student.name || row.student.email} · {row.student.email}
@@ -446,27 +448,22 @@ export default function CoachPlannerPage() {
                 </select>
                 <div className="rounded-2xl bg-apple-gray-100 p-4">
                   <p className="text-xs font-semibold text-apple-gray-500">
-                    {isEditingNextWeek ? '下一周课表' : '本周课表'}
+                    {isEditingNextWeek ? t.planner.nextWeek : t.planner.thisWeek}
                   </p>
                   <p className="mt-1 text-xl font-black text-apple-gray-900">{activeWeekLabel}</p>
                   <p className="mt-1 text-sm text-apple-gray-600">
-                    {columns[0].label} {activeWeekStart} 至 {columns[6].label} {activeRangeEnd}
+                    {weekdayLabels[0]} {activeWeekStart} {t.planner.rangeTo} {weekdayLabels[6]} {activeRangeEnd}
                   </p>
                 </div>
                 <p className="text-sm leading-6 text-apple-gray-600">
-                  {selectedStudent ? `当前学员：${selectedStudent.name || selectedStudent.email}` : '绑定学员后可在这里选择。'}
+                  {selectedStudent ? `${t.planner.currentStudentPrefix}${selectedStudent.name || selectedStudent.email}` : t.planner.chooseAfterBinding}
                 </p>
               </div>
             </div>
           </div>
 
           <div className="mb-6 grid gap-4 md:grid-cols-4">
-            {[
-              ['1', '先绑定学员', '在学员列表用报名信箱绑定学员，绑定后才会出现在这里。'],
-              ['2', '选择训练周', '默认显示最新一周，也可以开启下一周或回看历史课表。'],
-              ['3', '填写每日训练内容', '用模板快速起稿，再补上距离、配速、组数和提醒。'],
-              ['4', '保存并同步', '保存后会覆盖该周旧课表，并同步到学员端。'],
-            ].map(([step, title, description]) => (
+            {t.planner.steps.map(([step, title, description]) => (
               <div key={step} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/10">
                 <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-black text-sm font-black text-white">
                   {step}
@@ -486,7 +483,7 @@ export default function CoachPlannerPage() {
                 className="apple-button-secondary gap-2 px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Copy className="h-4 w-4" />
-                复制上一周
+                {t.planner.copyPrevious}
               </button>
               <button
                 type="button"
@@ -495,7 +492,7 @@ export default function CoachPlannerPage() {
                 className="apple-button-secondary gap-2 px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <CalendarPlus className="h-4 w-4" />
-                开启下一周
+                {t.planner.openNext}
               </button>
               {isEditingNextWeek && (
                 <button
@@ -503,7 +500,7 @@ export default function CoachPlannerPage() {
                   onClick={returnToThisWeek}
                   className="apple-button-secondary gap-2 px-4 py-2 text-sm"
                 >
-                  回到本周
+                  {t.planner.returnThisWeek}
                 </button>
               )}
               <button
@@ -513,7 +510,7 @@ export default function CoachPlannerPage() {
                 className="apple-button-secondary gap-2 px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {showHistory ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                {showHistory ? '收起历史周' : `回看上一周${historyWeeks.length > 1 ? `等 ${historyWeeks.length} 周` : ''}`}
+                {showHistory ? t.planner.historyToggleClose : t.planner.historyToggleOpen}
               </button>
             </div>
             <button
@@ -523,7 +520,7 @@ export default function CoachPlannerPage() {
               className="apple-button-primary gap-2 px-5 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              {isSaving ? '派发中...' : `储存${isEditingNextWeek ? '下一周' : '本周'}课表并同步`}
+              {isSaving ? '...' : t.planner.save}
             </button>
           </div>
 
@@ -532,39 +529,39 @@ export default function CoachPlannerPage() {
 
           {!isLoadingStudents && students.length === 0 && (
             <div className="mb-5 rounded-3xl bg-amber-50 p-5 text-sm leading-6 text-amber-900">
-              目前还没有绑定学员。请先回到教练工作台，用学员报名信箱完成绑定；如果学员还没有账号，请先请他用报名信箱注册。
+              {t.planner.noStudents}
             </div>
           )}
 
           {!isLoadingStudents && students.length > 0 && !selectedStudentId && (
             <div className="mb-5 rounded-3xl bg-apple-gray-100 p-5 text-sm leading-6 text-apple-gray-700">
-              请选择一位学员后再编辑课表。顺序是：先绑定学员，再选择训练周，填写每日训练内容，最后保存并同步到学员端。
+              {t.planner.noSelection}
             </div>
           )}
 
           <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-xl font-black text-apple-gray-900">{isEditingNextWeek ? '下一周课表' : '本周课表'}</h2>
-            {isLoadingPlans && <span className="text-sm font-semibold text-apple-gray-500">读取中...</span>}
+            <h2 className="text-xl font-black text-apple-gray-900">{isEditingNextWeek ? t.planner.nextWeek : t.planner.thisWeek}</h2>
+            {isLoadingPlans && <span className="text-sm font-semibold text-apple-gray-500">{t.planner.loading}</span>}
           </div>
 
           <div className="mb-5 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/10">
             <div className="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-wide text-apple-blue">Workout templates</p>
-                <h2 className="mt-1 text-xl font-black text-apple-gray-900">训练类型模板</h2>
+                <p className="text-sm font-semibold uppercase tracking-wide text-apple-blue">{t.planner.templatesLabel}</p>
+                <h2 className="mt-1 text-xl font-black text-apple-gray-900">{t.planner.templatesTitle}</h2>
               </div>
-              <p className="text-sm text-apple-gray-500">点击后会填入第一个空白日期，可再手动微调。</p>
+              <p className="text-sm text-apple-gray-500">{t.planner.templatesHint}</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {workoutTemplates.map((template) => (
+              {t.planner.templates.map(([label, template]) => (
                 <button
-                  key={template}
+                  key={label}
                   type="button"
                   onClick={() => appendTemplate(template)}
                   disabled={!selectedStudentId}
                   className="rounded-full border border-black/10 bg-apple-gray-50 px-4 py-2 text-sm font-bold text-apple-gray-800 transition hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {template.split('：')[0]}
+                  {label}
                 </button>
               ))}
             </div>
@@ -575,10 +572,10 @@ export default function CoachPlannerPage() {
               <table className="w-full min-w-[1100px] border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-black/10 bg-apple-gray-100 text-left">
-                    <th className="w-40 p-4 font-bold text-apple-gray-900">周起始日期</th>
-                    {columns.map((column) => (
+                    <th className="w-40 p-4 font-bold text-apple-gray-900">{t.planner.thisWeek}</th>
+                    {columns.map((column, index) => (
                       <th key={column.key} className="w-36 p-4 font-bold text-apple-gray-900">
-                        {column.label}
+                        {weekdayLabels[index]}
                         <span className="mt-1 block text-xs font-normal text-apple-gray-500">
                           {addDays(activeWeekStart, column.offset)}
                         </span>
@@ -599,7 +596,7 @@ export default function CoachPlannerPage() {
                           <textarea
                             value={row[column.key]}
                             onChange={(event) => updateCell(rowIndex, column.key, event.target.value)}
-                            placeholder="输入训练内容"
+                            placeholder={t.planner.inputPlaceholder}
                             rows={5}
                             className="min-h-28 w-full resize-none rounded-2xl border border-black/10 bg-white px-3 py-3 leading-6 text-apple-gray-800 outline-none transition focus:border-black/30 focus:shadow-sm"
                           />
@@ -616,29 +613,29 @@ export default function CoachPlannerPage() {
             <section className="mt-8 space-y-4">
               <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
                 <div>
-                  <h2 className="text-xl font-black text-apple-gray-900">历史课表</h2>
+                  <h2 className="text-xl font-black text-apple-gray-900">{t.planner.historyTitle}</h2>
                   <p className="mt-1 text-sm text-apple-gray-500">
-                    共 {historyWeeks.length} 周，较新的周排在前面；内容多时可在框内滚动。
+                    {historyWeeks.length} · {t.planner.historyDescription}
                   </p>
                 </div>
               </div>
               <div className="max-h-[620px] space-y-4 overflow-y-auto rounded-3xl border border-black/10 bg-white/70 p-3 shadow-inner">
                 {historyWeeks.map((week) => {
-                  const historyRows = plansToRows(week.plans, formatWeekLabel(week.weekStart, week.weekNumber))
+                  const historyRows = plansToRows(week.plans, formatWeekLabel(week.weekStart, week.weekNumber, language))
 
                   return (
                     <details key={week.key} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/10" open={week === previousWeek}>
                       <summary className="cursor-pointer text-base font-black text-apple-gray-900">
-                        {formatWeekLabel(week.weekStart, week.weekNumber)}
+                        {formatWeekLabel(week.weekStart, week.weekNumber, language)}
                       </summary>
                       <div className="mt-4 overflow-x-auto">
                         <table className="w-full min-w-[980px] border-collapse text-sm">
                           <thead>
                             <tr className="border-b border-black/10 bg-apple-gray-100 text-left">
-                              <th className="w-36 p-3 font-bold text-apple-gray-900">周起始日期</th>
-                              {columns.map((column) => (
+                              <th className="w-36 p-3 font-bold text-apple-gray-900">{t.planner.thisWeek}</th>
+                              {columns.map((column, index) => (
                                 <th key={column.key} className="w-32 p-3 font-bold text-apple-gray-900">
-                                  {column.label}
+                                  {weekdayLabels[index]}
                                   <span className="mt-1 block text-xs font-normal text-apple-gray-500">
                                     {addDays(week.weekStart, column.offset)}
                                   </span>
@@ -670,11 +667,7 @@ export default function CoachPlannerPage() {
           )}
 
           <div className="mt-6 grid gap-4 md:grid-cols-3">
-            {[
-              ['选择学员', '只显示已绑定到当前教练账号的学员。'],
-              ['保存当前周', '保存后会覆盖该学员当前编辑周的旧课表，避免重复。'],
-              ['复制上一周', '复制后训练内容会进入当前编辑周，可调整日期对应的内容后再保存。'],
-            ].map(([title, description]) => (
+            {t.planner.helperCards.map(([title, description]) => (
               <div key={title} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/10">
                 <h2 className="font-bold text-apple-gray-900">{title}</h2>
                 <p className="mt-2 text-sm leading-6 text-apple-gray-600">{description}</p>

@@ -15,18 +15,27 @@ export type CourseGroup = {
 }
 
 export type Course = {
+  slug: string
   name: string
+  title?: string
   weekday: string
   location: string
+  city?: string
   period: string
   focus: string
   classTime?: string
+  time?: string
   meetingPoint?: string
+  feeNote?: string
+  priceNote?: string
+  isBeginnerFriendly?: boolean
   beginnerFriendly?: boolean
   trialPolicy?: string
   absencePolicy?: string
   slogan?: string
   level?: string
+  trainingGoal?: string
+  trainingGoals?: string[]
   trainingItems?: string[]
   benefits?: string[]
   suitableFor?: string[]
@@ -34,7 +43,7 @@ export type Course = {
   faq?: Array<{ question: string; answer: string }>
   instagramUrl?: string
   targetAudience?: string
-  trainingGoals?: string[]
+  coach?: Coach
   coaches?: Coach[]
 }
 
@@ -73,6 +82,7 @@ export const courseGroups: CourseGroup[] = [
     audience: '適合新手小白、剛開始規律跑步、想安全建立基礎的跑者。',
     courses: [
       {
+        slug: 'hsinchu-beginner-tuesday',
         name: '2026 好運跑步訓練營 X 週二竹市初心補習班',
         weekday: '週二',
         location: '新竹市',
@@ -80,6 +90,7 @@ export const courseGroups: CourseGroup[] = [
         focus: '跑步入門、基礎體能、姿勢與節奏建立',
       },
       {
+        slug: 'banqiao-beginner-wednesday',
         name: '2026 好運跑步訓練營 X 週三板橋初心補習班',
         weekday: '週三',
         location: '板橋',
@@ -87,6 +98,7 @@ export const courseGroups: CourseGroup[] = [
         focus: '跑步入門、規律訓練、初階耐力建立',
       },
       {
+        slug: 'sanchong-beginner-thursday',
         name: '2026 好運跑步訓練營 X 週四三重初心補習班',
         weekday: '週四',
         location: '三重',
@@ -101,6 +113,7 @@ export const courseGroups: CourseGroup[] = [
     audience: '適合業餘跑者、目標賽事備賽者、追求 PB 的進階與菁英跑者。',
     courses: [
       {
+        slug: 'zhubei-night-run-monday',
         name: '2026 好運跑步訓練營 X 週一竹北夜跑班',
         weekday: '週一',
         location: '竹北',
@@ -108,6 +121,7 @@ export const courseGroups: CourseGroup[] = [
         focus: '夜間團練、耐力與節奏訓練',
       },
       {
+        slug: 'taipei-night-run-wednesday',
         name: '2026 好運跑步訓練營 X 週三台北夜跑班',
         weekday: '週三',
         location: '台北',
@@ -115,6 +129,7 @@ export const courseGroups: CourseGroup[] = [
         focus: '夜間團練、基礎跑力與配速控制',
       },
       {
+        slug: 'taipei-pb-tuesday',
         name: '2026 好運跑步訓練營 X 週二台北 PB 班',
         weekday: '週二',
         location: '台北',
@@ -122,6 +137,7 @@ export const courseGroups: CourseGroup[] = [
         focus: '速度能力、間歇訓練、賽事 PB 目標',
       },
       {
+        slug: 'hsinchu-morning-run-wednesday',
         name: '2026 好運跑步訓練營 X 週三新竹早鳥班',
         weekday: '週三',
         location: '新竹',
@@ -129,6 +145,7 @@ export const courseGroups: CourseGroup[] = [
         focus: '晨間訓練、耐力建立、穩定輸出',
       },
       {
+        slug: 'zhubei-night-run-wednesday',
         name: '2026 好運跑步訓練營 X 週三竹北夜跑班',
         weekday: '週三',
         location: '竹北',
@@ -136,6 +153,7 @@ export const courseGroups: CourseGroup[] = [
         focus: '夜間團練、跑姿與肌耐力整合',
       },
       {
+        slug: 'hsinchu-night-run-thursday',
         name: '2026 好運跑步訓練營 X 週四竹市夜跑班',
         weekday: '週四',
         location: '新竹市',
@@ -143,6 +161,7 @@ export const courseGroups: CourseGroup[] = [
         focus: '夜間團練、配速感與有氧能力',
       },
       {
+        slug: 'zhunan-beginner-thursday',
         name: '2026 好運跑步訓練營 X 週四竹南初階班',
         weekday: '週四',
         location: '竹南',
@@ -150,6 +169,7 @@ export const courseGroups: CourseGroup[] = [
         focus: '初階跑班、基礎體能與穩定訓練',
       },
       {
+        slug: 'taipei-morning-run-saturday',
         name: '2026 好運跑步訓練營 X 週六台北早鳥班',
         weekday: '週六',
         location: '台北',
@@ -179,16 +199,7 @@ export const weeklySchedulePreview = [
 ]
 
 export function courseSlug(course: Course) {
-  return course.name
-    .replace(/^2026\s*好運跑步訓練營\s*X\s*/, '')
-    .replaceAll('週', '周')
-    .replaceAll('訓練', '训练')
-    .replaceAll('補習', '补习')
-    .replaceAll('課', '课')
-    .replaceAll('階', '阶')
-    .replace(/\s+/g, '-')
-    .replace(/[，。/]/g, '-')
-    .toLowerCase()
+  return course.slug
 }
 
 function getDefaultTrainingItems(course: Course): string[] {
@@ -271,7 +282,7 @@ function getDefaultFaq(): Array<{ question: string; answer: string }> {
     },
     {
       question: '課程費用是多少？',
-      answer: '費用與名額請透過 Instagram 私信咨詢，我們會根據您的情況推薦最適合的班級與定價方案。',
+      answer: '費用與名額請透過 Instagram 私訊諮詢，我們會根據您的情況推薦最適合的班級與定價方案。',
     },
     {
       question: '可以請假嗎？',
@@ -279,7 +290,7 @@ function getDefaultFaq(): Array<{ question: string; answer: string }> {
     },
     {
       question: '可以試上嗎？',
-      answer: '是否可試上請通過 Instagram 咨詢當期名額。試上可以幫助您了解班級風格與訓練強度是否符合需求。',
+      answer: '是否可試上請透過 Instagram 諮詢當期名額。試上可以幫助您了解班級風格與訓練強度是否符合需求。',
     },
   ]
 }
@@ -320,27 +331,43 @@ function getDefaultCoach(course: Course): Coach {
 export const allCourses = courseGroups.flatMap((group) =>
   group.courses.map((course) => {
     const slug = courseSlug(course)
+    const coach = course.coach || course.coaches?.[0] || getDefaultCoach(course)
+    const classTime =
+      course.classTime ||
+      course.time ||
+      (course.name.includes('早鳥') || course.name.includes('早鸟')
+        ? '早晨團練，實際集合時間請以開課通知為準'
+        : course.name.includes('夜跑')
+          ? '晚間團練，實際集合時間請以開課通知為準'
+          : '固定每週團練，實際集合時間請以開課通知為準')
+    const beginnerFriendly =
+      typeof course.beginnerFriendly === 'boolean'
+        ? course.beginnerFriendly
+        : typeof course.isBeginnerFriendly === 'boolean'
+          ? course.isBeginnerFriendly
+          : course.name.includes('初心') || course.name.includes('初階') || course.name.includes('初阶')
+    const trainingGoals = course.trainingGoals || [course.focus]
+
     return {
       ...course,
+      slug,
+      title: course.title || course.name,
+      city: course.city || course.location,
       groupTitle: group.title,
       groupAudience: group.audience,
-      trainingGoal: course.focus,
-      classTime:
-        course.classTime ||
-        (course.name.includes('早鳥') || course.name.includes('早鸟')
-          ? '早晨团练，实际集合时间请以开课通知为准'
-          : course.name.includes('夜跑')
-            ? '晚间团练，实际集合时间请以开课通知为准'
-            : '固定每周团练，实际集合时间请以开课通知为准'),
-      meetingPoint: course.meetingPoint || `${course.location} 指定集合点，报名后通知`,
-      beginnerFriendly:
-        typeof course.beginnerFriendly === 'boolean'
-          ? course.beginnerFriendly
-          : course.name.includes('初心') || course.name.includes('初階') || course.name.includes('初阶'),
-      feeNote: '新生 NT$500 / 堂；旧生 NT$450 / 堂；旧生推荐新生享旧生价 NT$450 / 堂',
-      signupMethod: '请通过 Instagram 私信报名或咨询名额',
-      trialPolicy: course.trialPolicy || '是否可试上请通过 Instagram 咨询当期名额',
-      absencePolicy: course.absencePolicy || '请假与补课规则以当期课程通知为准',
+      targetAudience: course.targetAudience || group.audience,
+      trainingGoal: course.trainingGoal || course.focus,
+      trainingGoals,
+      classTime,
+      time: course.time || classTime,
+      meetingPoint: course.meetingPoint || `${course.location} 指定集合點，報名後通知`,
+      beginnerFriendly,
+      isBeginnerFriendly: beginnerFriendly,
+      priceNote: course.priceNote || course.feeNote || '費用與名額請透過 Instagram 諮詢',
+      feeNote: course.feeNote || course.priceNote || '費用與名額請透過 Instagram 諮詢',
+      signupMethod: '請透過 Instagram 私訊報名或諮詢名額',
+      trialPolicy: course.trialPolicy || '是否可試上請透過 Instagram 諮詢當期名額',
+      absencePolicy: course.absencePolicy || '請假與補課規則以當期課程通知為準',
       slogan: course.slogan || '一起穩定累積，一起跑得更遠',
       level: course.level || (course.name.includes('PB') ? '進階' : course.name.includes('初心') ? '入門' : '中級'),
       trainingItems: course.trainingItems || getDefaultTrainingItems(course),
@@ -349,8 +376,8 @@ export const allCourses = courseGroups.flatMap((group) =>
       notSuitableFor: course.notSuitableFor || getDefaultNotSuitableFor(),
       faq: course.faq || getDefaultFaq(),
       instagramUrl: course.instagramUrl || 'https://www.instagram.com/nurture.running.team/',
-      coaches: course.coaches || [getDefaultCoach(course)],
-      slug,
+      coach,
+      coaches: course.coaches || [coach],
     }
   })
 )

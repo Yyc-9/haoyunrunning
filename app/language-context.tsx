@@ -249,6 +249,92 @@ function toTraditional(value: string) {
     .reduce((text, [from, to]) => text.replaceAll(from, to), value)
 }
 
+const englishPairs: Array<[string, string]> = [
+  ['我要报名 / 咨询课程', 'I want to join / ask about classes'],
+  ['我要報名 / 諮詢課程', 'I want to join / ask about classes'],
+  ['我是已报名学员', 'I am a registered student'],
+  ['我是已報名學員', 'I am a registered student'],
+  ['我是教练', 'I am a coach'],
+  ['我是教練', 'I am a coach'],
+  ['训练日程表', 'Training Schedule'],
+  ['訓練日程表', 'Training Schedule'],
+  ['费用与名额请通过 Instagram 咨询', 'Please contact us on Instagram for pricing and availability'],
+  ['費用與名額請透過 Instagram 諮詢', 'Please contact us on Instagram for pricing and availability'],
+  ['学员中心', 'Student Center'],
+  ['學員中心', 'Student Center'],
+  ['教练后台', 'Coach Workspace'],
+  ['教練後台', 'Coach Workspace'],
+  ['学员看板', 'Student Dashboard'],
+  ['學員看板', 'Student Dashboard'],
+  ['教练入口', 'Coach Entry'],
+  ['教練入口', 'Coach Entry'],
+  ['训练回馈', 'Training Feedback'],
+  ['訓練回饋', 'Training Feedback'],
+  ['训练回报', 'Training Feedback'],
+  ['訓練回報', 'Training Feedback'],
+  ['课表面板', 'Training Plan Board'],
+  ['課表面板', 'Training Plan Board'],
+  ['教练权限', 'Coach Access'],
+  ['教練權限', 'Coach Access'],
+  ['绑定学员', 'Bind Student'],
+  ['綁定學員', 'Bind Student'],
+  ['风险免责声明', 'Risk Disclaimer'],
+  ['風險免責聲明', 'Risk Disclaimer'],
+  ['课程付款', 'Course Payment'],
+  ['課程付款', 'Course Payment'],
+  ['上课时间', 'Class Time'],
+  ['上課時間', 'Class Time'],
+  ['集合地点', 'Meeting Point'],
+  ['集合地點', 'Meeting Point'],
+  ['适合对象', 'Audience'],
+  ['適合對象', 'Audience'],
+  ['训练目标', 'Training Goal'],
+  ['訓練目標', 'Training Goal'],
+  ['课程周期', 'Course Period'],
+  ['課程週期', 'Course Period'],
+  ['课程强度', 'Intensity'],
+  ['課程強度', 'Intensity'],
+  ['是否适合新手', 'Beginner Friendly'],
+  ['是否適合新手', 'Beginner Friendly'],
+  ['报名方式', 'Signup Method'],
+  ['報名方式', 'Signup Method'],
+  ['训练', 'Training'],
+  ['訓練', 'Training'],
+  ['课程', 'Course'],
+  ['課程', 'Course'],
+  ['学员', 'Student'],
+  ['學員', 'Student'],
+  ['教练', 'Coach'],
+  ['教練', 'Coach'],
+  ['报名', 'Signup'],
+  ['報名', 'Signup'],
+  ['咨询', 'Ask'],
+  ['諮詢', 'Ask'],
+  ['查看', 'View'],
+  ['进入', 'Enter'],
+  ['進入', 'Enter'],
+  ['保存', 'Save'],
+  ['儲存', 'Save'],
+  ['同步', 'Sync'],
+  ['暂无', 'No data yet'],
+  ['暫無', 'No data yet'],
+  ['请输入', 'Enter '],
+  ['請輸入', 'Enter '],
+  ['选择', 'Select'],
+  ['選擇', 'Select'],
+  ['首页', 'Home'],
+  ['首頁', 'Home'],
+  ['关于我们', 'About'],
+  ['關於我們', 'About'],
+  ['商店', 'Shop'],
+]
+
+function toEnglish(value: string) {
+  return [...englishPairs]
+    .sort((a, b) => b[0].length - a[0].length)
+    .reduce((text, [from, to]) => text.replaceAll(from, to), value)
+}
+
 function convertVisibleText(root: ParentNode, converter: (value: string) => string) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
@@ -305,9 +391,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     document.documentElement.lang = language
 
-    if (language === 'en') return
-
-    const converter = language === 'zh-CN' ? toSimplified : toTraditional
+    const converter = language === 'zh-CN' ? toSimplified : language === 'zh-TW' ? toTraditional : toEnglish
 
     let frame = window.requestAnimationFrame(() => {
       convertVisibleText(document.body, converter)

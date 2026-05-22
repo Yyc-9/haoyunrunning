@@ -16,7 +16,7 @@ export default function Footer() {
 
   const contactInfo = [
     { icon: Instagram, text: '@nurture.running.team' },
-    { icon: Mail, text: '课程与商品咨询请先通过 Instagram 联系' },
+    { icon: Mail, text: t.footer.contactInstagram },
     { icon: MapPin, text: t.footer.address },
   ]
 
@@ -114,14 +114,14 @@ export default function Footer() {
               className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-gray-50 hover:text-black hover:shadow-md"
             >
               <UserRoundCheck className="h-4 w-4" />
-              学员看板
+              {t.footer.studentDashboard}
             </Link>
             <Link
               href="/coach"
               className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-gray-50 hover:text-black hover:shadow-md"
             >
               <KeyRound className="h-4 w-4" />
-              教练入口
+              {t.footer.coachEntry}
             </Link>
             {socialMedia.map((social, index) => {
               const Icon = social.icon

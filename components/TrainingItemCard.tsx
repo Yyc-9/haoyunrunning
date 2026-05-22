@@ -2,9 +2,10 @@ import { Zap } from 'lucide-react'
 
 interface TrainingItemCardProps {
   title: string
+  description: string
 }
 
-export default function TrainingItemCard({ title }: TrainingItemCardProps) {
+export default function TrainingItemCard({ title, description }: TrainingItemCardProps) {
   return (
     <div className="apple-card p-5 md:p-6">
       <div className="flex items-start gap-4">
@@ -13,6 +14,7 @@ export default function TrainingItemCard({ title }: TrainingItemCardProps) {
         </div>
         <div className="flex-1">
           <h3 className="font-bold text-apple-gray-900">{title}</h3>
+          <p className="mt-2 text-sm leading-6 text-apple-gray-600">{description}</p>
         </div>
       </div>
     </div>

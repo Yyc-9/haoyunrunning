@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { ChevronDown, ChevronLeft, ChevronRight, GraduationCap, Instagram, Pause, Play, ShieldCheck } from 'lucide-react'
+import { useLanguage } from '@/app/language-context'
 
 const images = [
   '/20250605[好運]三周年慶-7089.jpg',
@@ -12,31 +13,30 @@ const images = [
   '/LINE_ALBUM_四週年手機桌布_260515_1.jpg',
 ]
 
-const entryCards = [
-  {
-    href: 'https://www.instagram.com/nurture.running.team/',
-    external: true,
-    icon: Instagram,
-    title: '我要报名 / 咨询课程',
-    description: '还不确定适合哪一班？先把目标、跑龄和可训练时间告诉我们。',
-  },
-  {
-    href: '/student',
-    icon: GraduationCap,
-    title: '我是已报名学员',
-    description: '进入学员中心查看课表、提交训练回馈与管理赛事目标。',
-  },
-  {
-    href: '/coach',
-    icon: ShieldCheck,
-    title: '我是教练',
-    description: '进入教练后台，绑定学员、查看回馈并同步本周课表。',
-  },
-]
-
 export default function HeroSection() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isAutoPlay, setIsAutoPlay] = useState(true)
+  const { t } = useLanguage()
+  const entryCards = [
+    {
+      href: 'https://www.instagram.com/nurture.running.team/',
+      external: true,
+      icon: Instagram,
+      ...t.hero.entries[0],
+    },
+    {
+      href: '/student',
+      external: false,
+      icon: GraduationCap,
+      ...t.hero.entries[1],
+    },
+    {
+      href: '/coach',
+      external: false,
+      icon: ShieldCheck,
+      ...t.hero.entries[2],
+    },
+  ]
 
   useEffect(() => {
     if (!isAutoPlay) return
@@ -84,7 +84,7 @@ export default function HeroSection() {
       <div className="absolute inset-x-0 top-1/2 z-10 flex -translate-y-1/2 justify-between px-4 sm:px-8">
         <motion.button
           type="button"
-          aria-label="上一張照片"
+          aria-label={t.hero.previous}
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.95 }}
           onClick={goToPrev}
@@ -94,7 +94,7 @@ export default function HeroSection() {
         </motion.button>
         <motion.button
           type="button"
-          aria-label="下一張照片"
+          aria-label={t.hero.next}
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.95 }}
           onClick={goToNext}
@@ -124,7 +124,7 @@ export default function HeroSection() {
                 </>
               )
 
-              if (item.external) {
+              if ('external' in item && item.external) {
                 return (
                   <a key={item.title} href={item.href} target="_blank" rel="noreferrer" className={className}>
                     {content}
@@ -148,7 +148,7 @@ export default function HeroSection() {
             <button
               key={index}
               type="button"
-              aria-label={`切换到第 ${index + 1} 张照片`}
+              aria-label={`${t.hero.carousel} ${index + 1}`}
               onClick={() => setCurrentImageIndex(index)}
               className={`h-2 rounded-full transition-all duration-300 ${
                 index === currentImageIndex ? 'w-8 bg-white' : 'w-2 bg-white/55'
@@ -157,7 +157,7 @@ export default function HeroSection() {
           ))}
           <button
             type="button"
-            aria-label={isAutoPlay ? '暂停轮播' : '播放轮播'}
+            aria-label={isAutoPlay ? t.hero.autoplayOn : t.hero.autoplayOff}
             onClick={() => setIsAutoPlay((value) => !value)}
             className="ml-1 flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-white transition-colors duration-200 hover:bg-white/25"
           >
@@ -167,7 +167,7 @@ export default function HeroSection() {
 
         <motion.button
           type="button"
-          aria-label="往下浏览"
+          aria-label={t.hero.learnCourses}
           onClick={scrollToContent}
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}

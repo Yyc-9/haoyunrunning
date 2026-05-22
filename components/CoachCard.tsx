@@ -1,6 +1,4 @@
-'use client'
-
-import { Users } from 'lucide-react'
+import { UserRound } from 'lucide-react'
 
 interface Coach {
   name: string
@@ -13,24 +11,29 @@ interface Coach {
 
 interface CoachCardProps {
   coach: Coach
+  labels: {
+    photo: string
+    photoPending: string
+    specialties: string
+    style: string
+    achievements: string
+  }
 }
 
-export default function CoachCard({ coach }: CoachCardProps) {
+export default function CoachCard({ coach, labels }: CoachCardProps) {
   return (
     <div className="apple-card overflow-hidden p-0 md:flex md:gap-8">
-      {/* 教练照片占位区 */}
-      <div className="flex flex-shrink-0 items-center justify-center bg-apple-gray-100 md:h-64 md:w-56">
-        <div className="flex h-40 w-40 flex-col items-center justify-center md:h-56 md:w-48">
-          <div className="rounded-full bg-apple-gray-200 p-8 text-apple-gray-400">
-            <Users className="h-24 w-24 md:h-32 md:w-32" />
+      <div className="flex flex-shrink-0 items-center justify-center bg-gradient-to-br from-apple-gray-100 to-white p-8 md:min-h-72 md:w-64">
+        <div className="flex flex-col items-center justify-center">
+          <div className="flex h-36 w-36 items-center justify-center rounded-full bg-apple-gray-200 text-apple-gray-400 ring-8 ring-white md:h-44 md:w-44">
+            <UserRound className="h-20 w-20 md:h-24 md:w-24" />
           </div>
-          <p className="mt-4 text-sm text-apple-gray-500">教练照片</p>
-          <p className="text-xs text-apple-gray-400">(后续补充)</p>
+          <p className="mt-4 text-sm font-semibold text-apple-gray-500">{labels.photo}</p>
+          <p className="text-xs text-apple-gray-400">{labels.photoPending}</p>
         </div>
       </div>
 
-      {/* 教练信息 */}
-      <div className="flex flex-col justify-center p-6 md:p-8 md:flex-1">
+      <div className="flex flex-col justify-center p-6 md:flex-1 md:p-8">
         <h3 className="text-2xl font-black text-apple-gray-900">{coach.name}</h3>
         <p className="mt-1 font-semibold text-apple-blue">{coach.role}</p>
 
@@ -38,7 +41,7 @@ export default function CoachCard({ coach }: CoachCardProps) {
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-apple-gray-500">擅长方向</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-apple-gray-500">{labels.specialties}</p>
             <div className="mt-2 space-y-1">
               {coach.specialties.map((specialty) => (
                 <p key={specialty} className="text-sm text-apple-gray-700">
@@ -49,13 +52,13 @@ export default function CoachCard({ coach }: CoachCardProps) {
           </div>
 
           <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-apple-gray-500">带训风格</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-apple-gray-500">{labels.style}</p>
             <p className="mt-2 text-sm leading-6 text-apple-gray-700">{coach.style}</p>
           </div>
         </div>
 
         <div className="mt-6">
-          <p className="text-xs font-bold uppercase tracking-wide text-apple-gray-500">代表经历</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-apple-gray-500">{labels.achievements}</p>
           <div className="mt-2 space-y-1">
             {coach.achievements.map((achievement) => (
               <p key={achievement} className="text-sm text-apple-gray-700">

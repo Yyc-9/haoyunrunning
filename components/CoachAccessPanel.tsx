@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { KeyRound, Link2, Loader2, ShieldCheck } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/app/providers'
+import { useLanguage } from '@/app/language-context'
 
 type CoachAccessPanelProps = {
   compact?: boolean
@@ -53,6 +54,7 @@ async function postWithSession(path: string, body: Record<string, string>) {
 
 export default function CoachAccessPanel({ compact = false, onStudentBound }: CoachAccessPanelProps) {
   const { user, updateUser, refreshUser } = useAuth()
+  const { t } = useLanguage()
   const [inviteCode, setInviteCode] = useState('')
   const [studentEmail, setStudentEmail] = useState('')
   const [isRedeeming, setIsRedeeming] = useState(false)
@@ -78,9 +80,9 @@ export default function CoachAccessPanel({ compact = false, onStudentBound }: Co
       })
       await refreshUser()
       setInviteCode('')
-      setMessage('教練權限已啟用。現在可以綁定學員。')
+      setMessage(t.coach.inviteSuccess)
     } catch (err) {
-      setError(err instanceof Error ? err.message : '邀请码啟用失敗。')
+      setError(err instanceof Error ? err.message : t.coach.inviteFailed)
     } finally {
       setIsRedeeming(false)
     }
@@ -94,16 +96,16 @@ export default function CoachAccessPanel({ compact = false, onStudentBound }: Co
     try {
       await postWithSession('/api/coach/bind-student', { email: studentEmail })
       setStudentEmail('')
-      setMessage('學員已綁定。列表會讀取這位學員的真實資料。')
+      setMessage(t.coach.bindSuccess)
       await onStudentBound?.()
     } catch (err) {
-      const message = err instanceof Error ? err.message : '學員綁定失敗。'
+      const message = err instanceof Error ? err.message : t.coach.bindFailed
       if (message.includes('找不到')) {
-        setError('找不到该邮箱。请确认学员已用报名邮箱注册账号。')
+        setError(t.coach.emailNotFound)
       } else if (message.includes('duplicate') || message.includes('already')) {
-        setError('该学员已经绑定过。请刷新学员列表确认。')
+        setError(t.coach.alreadyBound)
       } else if (message.includes('權限') || message.includes('权限')) {
-        setError('目前账号尚未启用教练权限，请先输入管理员提供的邀请码。')
+        setError(t.coach.noPermission)
       } else {
         setError(message)
       }
@@ -116,9 +118,9 @@ export default function CoachAccessPanel({ compact = false, onStudentBound }: Co
     <div className="apple-card p-6">
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm text-apple-gray-500">Coach access</p>
+          <p className="text-sm text-apple-gray-500">{t.coach.accessLabel}</p>
           <h2 className="text-xl font-bold text-apple-gray-900">
-            {isCoach ? '學員綁定' : '教練權限與學員綁定'}
+            {isCoach ? t.coach.bindTitle : t.coach.inviteInfoTitle}
           </h2>
         </div>
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black text-white">
@@ -131,12 +133,12 @@ export default function CoachAccessPanel({ compact = false, onStudentBound }: Co
           <div className="rounded-3xl bg-apple-gray-100 p-4">
             <div className="mb-3 flex items-center gap-2">
               <KeyRound className="h-4 w-4 text-apple-gray-700" />
-              <p className="font-bold text-apple-gray-900">輸入教練邀請碼</p>
+              <p className="font-bold text-apple-gray-900">{t.coach.inviteInput}</p>
             </div>
             <input
               value={inviteCode}
               onChange={(event) => setInviteCode(event.target.value)}
-              placeholder="輸入管理員提供的邀請碼"
+              placeholder={t.coach.invitePlaceholder}
               className="apple-input bg-white"
             />
             <button
@@ -146,7 +148,7 @@ export default function CoachAccessPanel({ compact = false, onStudentBound }: Co
               className="apple-button-primary mt-3 w-full gap-2 px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isRedeeming && <Loader2 className="h-4 w-4 animate-spin" />}
-              啟用教練權限
+              {t.coach.enableAccess}
             </button>
           </div>
         )}
@@ -154,12 +156,12 @@ export default function CoachAccessPanel({ compact = false, onStudentBound }: Co
         <div className="rounded-3xl bg-apple-gray-100 p-4">
           <div className="mb-3 flex items-center gap-2">
             <Link2 className="h-4 w-4 text-apple-gray-700" />
-            <p className="font-bold text-apple-gray-900">用信箱綁定學員</p>
+            <p className="font-bold text-apple-gray-900">{t.coach.bindByEmail}</p>
           </div>
           <input
             value={studentEmail}
             onChange={(event) => setStudentEmail(event.target.value)}
-            placeholder="輸入學員報名信箱"
+            placeholder={t.coach.studentEmailPlaceholder}
             className="apple-input bg-white"
           />
           <button
@@ -169,20 +171,20 @@ export default function CoachAccessPanel({ compact = false, onStudentBound }: Co
             className="apple-button-primary mt-3 w-full gap-2 px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isBinding && <Loader2 className="h-4 w-4 animate-spin" />}
-            綁定學員
+            {t.coach.bindStudent}
           </button>
         </div>
       </div>
 
       {!user && (
         <p className="mt-4 rounded-2xl bg-amber-50 p-3 text-sm leading-6 text-amber-800">
-          請先登入帳號，再使用邀请码或綁定學員。
+          {t.coach.loginFirst}
         </p>
       )}
 
       {user && isCoach && (
         <p className="mt-4 rounded-2xl bg-green-50 p-3 text-sm leading-6 text-green-800">
-          你的教練權限已啟用。之後只需要用學員信箱建立綁定，不必再次輸入邀请码。
+          {t.coach.coachEnabled}
         </p>
       )}
 

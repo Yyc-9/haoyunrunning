@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { CalendarDays, ChevronRight, Clock, MapPin, Target, Users } from 'lucide-react'
 import { allCourses } from '@/lib/goodluck-data'
 import CoursePaymentInfo from '@/components/CoursePaymentInfo'
+import { useLanguage } from '@/app/language-context'
 
 const weekdayOrder = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
 
@@ -13,9 +14,15 @@ function normalizeWeekday(weekday: string) {
 }
 
 export default function CoursesSection() {
+  const { language, t } = useLanguage()
   const courses = [...allCourses].sort(
     (a, b) => weekdayOrder.indexOf(normalizeWeekday(a.weekday)) - weekdayOrder.indexOf(normalizeWeekday(b.weekday))
   )
+  const localeText = (text: string) => {
+    if (language === 'zh-TW') return text.replaceAll('训练', '訓練').replaceAll('课程', '課程').replaceAll('周', '週').replaceAll('节奏', '節奏').replaceAll('旧生', '舊生').replaceAll('适合', '適合').replaceAll('请', '請').replaceAll('咨询', '諮詢')
+    if (language === 'zh-CN') return text.replaceAll('訓練', '训练').replaceAll('課程', '课程').replaceAll('週', '周').replaceAll('節奏', '节奏').replaceAll('好運', '好运').replaceAll('舊生', '旧生')
+    return text
+  }
 
   return (
     <section id="courses" className="bg-white py-16">
@@ -27,12 +34,12 @@ export default function CoursesSection() {
           viewport={{ once: true }}
           className="mb-10"
         >
-          <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">Training schedule</p>
+          <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">{t.courses.sectionLabel}</p>
           <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
             <div>
-              <h2 className="text-3xl font-black text-apple-gray-900 md:text-5xl">训练课程日程大表</h2>
+              <h2 className="text-3xl font-black text-apple-gray-900 md:text-5xl">{t.courses.title}</h2>
               <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
-                以日程表汇总所有班级，按星期、地点、周期与训练重点快速比较。点击课程名称即可查看专属详情页与教练介绍。
+                {t.courses.subtitle}
               </p>
             </div>
             <a
@@ -41,7 +48,7 @@ export default function CoursesSection() {
               rel="noreferrer"
               className="apple-button-secondary gap-2 px-5 py-2.5 text-sm"
             >
-              咨询适合班级
+              {t.courses.consultCta}
               <ChevronRight className="h-4 w-4" />
             </a>
           </div>
@@ -53,63 +60,67 @@ export default function CoursesSection() {
 
         <div className="apple-card overflow-hidden p-0">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1280px] border-collapse text-sm">
+            <table className="w-full min-w-[1180px] border-collapse text-sm">
               <thead>
                 <tr className="border-b border-black/10 bg-apple-gray-100 text-left">
-                  <th className="w-28 p-4 font-bold text-apple-gray-900">星期</th>
-                  <th className="w-[25%] p-4 font-bold text-apple-gray-900">课程</th>
-                  <th className="w-[24%] p-4 font-bold text-apple-gray-900">适合对象 / 目标</th>
-                  <th className="p-4 font-bold text-apple-gray-900">地点</th>
-                  <th className="p-4 font-bold text-apple-gray-900">时间 / 集合</th>
-                  <th className="w-[20%] p-4 font-bold text-apple-gray-900">费用与报名</th>
-                  <th className="p-4 font-bold text-apple-gray-900">详情</th>
+                  <th className="w-[24%] p-4 font-bold text-apple-gray-900">{t.courses.className}</th>
+                  <th className="w-[25%] p-4 font-bold text-apple-gray-900">{t.courses.audienceGoal}</th>
+                  <th className="w-[23%] p-4 font-bold text-apple-gray-900">{t.courses.timeLocation}</th>
+                  <th className="w-[22%] p-4 font-bold text-apple-gray-900">{t.courses.enrollment}</th>
+                  <th className="p-4 font-bold text-apple-gray-900">{t.courses.details}</th>
                 </tr>
               </thead>
               <tbody>
                 {courses.map((course) => (
                   <tr key={course.slug} className="border-b border-black/10 last:border-b-0 hover:bg-apple-gray-50">
                     <td className="p-4 align-top">
-                      <span className="rounded-full bg-black px-3 py-1 text-xs font-bold text-white">
-                        {normalizeWeekday(course.weekday)}
-                      </span>
-                    </td>
-                    <td className="p-4 align-top">
+                      <div className="mb-3 flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-black px-3 py-1 text-xs font-bold text-white">
+                          {localeText(normalizeWeekday(course.weekday))}
+                        </span>
+                        <span className="rounded-full bg-apple-gray-100 px-3 py-1 text-xs font-bold text-apple-gray-700">
+                          {course.beginnerFriendly ? t.courses.beginnerYes : t.courses.beginnerNo}
+                        </span>
+                      </div>
                       <Link href={`/courses/${course.slug}`} className="font-bold leading-6 text-apple-gray-900 hover:text-apple-blue">
-                        {course.name.replaceAll('訓練營', '训练营').replaceAll('週', '周')}
+                        {localeText(course.name)}
                       </Link>
-                      <p className="mt-2 text-xs text-apple-gray-500">{course.groupTitle.replaceAll('運', '运').replaceAll('課程', '课程')}</p>
-                      <p className="mt-2 text-xs font-semibold text-apple-gray-700">{course.beginnerFriendly ? '适合新手' : '适合有规律训练基础的跑者'}</p>
+                      <p className="mt-2 text-xs text-apple-gray-500">{localeText(course.groupTitle)}</p>
+                      <p className="mt-3 text-xs leading-5 text-apple-gray-500">{t.courses.period}：{localeText(course.period)}</p>
                     </td>
                     <td className="p-4 align-top text-apple-gray-700">
-                      <p className="leading-6">{course.groupAudience}</p>
+                      <p className="leading-6">{localeText(course.groupAudience)}</p>
                       <p className="mt-2 inline-flex items-start gap-2 leading-6">
                         <Target className="mt-0.5 h-4 w-4 shrink-0 text-apple-blue" />
-                        {course.trainingGoal.replaceAll('訓練', '训练').replaceAll('節奏', '节奏')}
+                        {localeText(course.trainingGoal)}
                       </p>
-                    </td>
-                    <td className="p-4 align-top text-apple-gray-700">
-                      <span className="inline-flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-apple-blue" />
-                        {course.location}
-                      </span>
-                      <p className="mt-2 text-xs leading-5 text-apple-gray-500">{course.period}</p>
+                      <p className="mt-2 text-xs font-semibold text-apple-gray-500">
+                        {t.courses.intensity}：{course.beginnerFriendly ? t.courses.beginnerYes : t.courses.beginnerNo}
+                      </p>
                     </td>
                     <td className="p-4 align-top text-apple-gray-700">
                       <p className="inline-flex items-start gap-2 leading-6">
                         <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-apple-blue" />
-                        {course.classTime}
+                        {localeText(course.classTime)}
                       </p>
-                      <p className="mt-2 text-xs leading-5 text-apple-gray-500">{course.meetingPoint}</p>
+                      <p className="mt-2 inline-flex items-start gap-2 leading-6">
+                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-apple-blue" />
+                        {localeText(course.location)}
+                      </p>
+                      <p className="mt-2 text-xs leading-5 text-apple-gray-500">{localeText(course.meetingPoint)}</p>
                     </td>
                     <td className="p-4 align-top text-apple-gray-700">
-                      <p className="font-semibold leading-6 text-apple-gray-900">费用与名额请通过 Instagram 咨询</p>
-                      <p className="mt-2 text-xs leading-5 text-apple-gray-500">{course.feeNote}</p>
-                      <p className="mt-2 text-xs leading-5 text-apple-gray-500">{course.trialPolicy}</p>
-                      <p className="mt-1 text-xs leading-5 text-apple-gray-500">{course.absencePolicy}</p>
+                      <p className="font-semibold leading-6 text-apple-gray-900">{t.courses.pricingConsult}</p>
+                      <p className="mt-2 text-xs leading-5 text-apple-gray-500">{localeText(course.feeNote)}</p>
+                      <div className="mt-3 rounded-2xl bg-apple-gray-100 p-3 text-xs leading-5 text-apple-gray-600">
+                        <p>{t.courses.policy}</p>
+                        <p className="mt-1">{localeText(course.trialPolicy)}</p>
+                        <p className="mt-1">{localeText(course.absencePolicy)}</p>
+                      </div>
                     </td>
                     <td className="p-4 align-top">
                       <Link href={`/courses/${course.slug}`} className="inline-flex items-center gap-1 text-sm font-bold text-apple-blue">
-                        查看
+                        {t.courses.viewDetail}
                         <ChevronRight className="h-4 w-4" />
                       </Link>
                     </td>
@@ -121,17 +132,16 @@ export default function CoursesSection() {
         </div>
 
         <div className="mt-8 grid gap-4 md:grid-cols-3">
-          {[
-            { icon: Clock, title: '12 周周期', description: '课程集中在 4 月至 6 月，适合完整建立训练节奏。' },
-            { icon: Target, title: '多目标备赛', description: '覆盖 5000m、10000m、半马、全马与 PB 目标。' },
-            { icon: Users, title: '多地团练', description: '台北、新竹、竹北、板桥、三重、竹南等班级同步整理。' },
-          ].map((item) => (
+          {t.courses.highlightsDecision.map((item, index) => {
+            const Icon = [Clock, Target, Users][index] ?? Clock
+            return (
             <div key={item.title} className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
-              <item.icon className="mb-4 h-5 w-5 text-apple-gray-700" />
+              <Icon className="mb-4 h-5 w-5 text-apple-gray-700" />
               <h3 className="font-bold text-apple-gray-900">{item.title}</h3>
               <p className="mt-2 text-sm leading-6 text-apple-gray-600">{item.description}</p>
             </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </section>
