@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, CalendarDays, Mail, MessageSquareText, NotebookPen, Search, Target, UsersRound } from 'lucide-react'
 import CoachAccessPanel from '@/components/CoachAccessPanel'
 import { supabase } from '@/lib/supabase'
+import { getStudentDisplayEmail, getStudentDisplayName, hasStudentName } from '@/lib/student-display'
 
 type RecentFeedback = {
   id: string
@@ -101,7 +102,7 @@ export default function CoachStudentsClient() {
       const student = row.student
       if (!student) return false
 
-      return [student.name, student.email, student.program, student.goal, student.pb]
+      return [getStudentDisplayName(student), student.email, student.program, student.goal, student.pb]
         .filter(Boolean)
         .some((value) => value!.toLowerCase().includes(text))
     })
@@ -161,11 +162,11 @@ export default function CoachStudentsClient() {
                     <div className="mb-5 flex items-start justify-between gap-4">
                       <div>
                         <h2 className="text-xl font-black text-apple-gray-900">
-                          {student.name || student.email.split('@')[0]}
+                          {getStudentDisplayName(student) || student.email}
                         </h2>
                         <p className="mt-1 flex items-center gap-2 text-sm text-apple-gray-500">
                           <Mail className="h-4 w-4" />
-                          {student.email}
+                          {hasStudentName(student) ? getStudentDisplayEmail(student) : '学员尚未设置姓名'}
                         </p>
                       </div>
                       <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">

@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '@/app/providers'
+import { useLanguage } from '@/app/language-context'
 import {
   addMyStudentRace,
   getMyStudentRaces,
@@ -38,6 +39,12 @@ import {
   type TrainingFeedback,
   type TrainingPlan,
 } from '@/lib/supabase'
+import {
+  formatTodayLabel,
+  formatWeekRange,
+  getTodayInfo,
+  isToday,
+} from '@/lib/week-dates'
 
 type RaceCatalogItem = {
   id: string
@@ -74,6 +81,7 @@ function formatRaceDate(date: string | null) {
 
 export default function StudentPage() {
   const { user, isLoggedIn, isLoading, updateUser } = useAuth()
+  const { language, t } = useLanguage()
   const [submitted, setSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -116,8 +124,18 @@ export default function StudentPage() {
     phone: '',
     pb: '',
   })
+  const [now, setNow] = useState(() => new Date())
 
-  const latestPlan = plans[0]
+  const todayInfo = useMemo(() => getTodayInfo(now, language), [language, now])
+  const currentWeekPlans = useMemo(
+    () => plans.filter((plan) => plan.week_start === todayInfo.weekStart || (plan.workout_date >= todayInfo.weekStart && plan.workout_date <= todayInfo.weekEnd)),
+    [plans, todayInfo.weekEnd, todayInfo.weekStart]
+  )
+  const todayPlan = useMemo(
+    () => currentWeekPlans.find((plan) => isToday(plan.workout_date, todayInfo.todayIso)) ?? null,
+    [currentWeekPlans, todayInfo.todayIso]
+  )
+  const latestPlan = todayPlan ?? currentWeekPlans[0]
   const displayName = user?.name || '好运跑者'
   const currentWeek = latestPlan?.week_number
   const currentProgram = user?.role === 'coach' ? '教练账号' : '好运跑班学员'
@@ -130,8 +148,9 @@ export default function StudentPage() {
       .map((item) => item.training_plan_id)
       .filter((id): id is string => Boolean(id))
   )
-  const completedPlanCount = submittedPlanIds.size
-  const completionRate = plans.length > 0 ? Math.min(100, Math.round((completedPlanCount / plans.length) * 100)) : 0
+  const currentWeekPlanIds = new Set(currentWeekPlans.map((plan) => plan.id))
+  const completedPlanCount = Array.from(submittedPlanIds).filter((id) => currentWeekPlanIds.has(id)).length
+  const completionRate = currentWeekPlans.length > 0 ? Math.min(100, Math.round((completedPlanCount / currentWeekPlans.length) * 100)) : 0
   const totalDistance = recentFeedback.reduce((sum, item) => sum + (item.distance_km ?? 0), 0)
   const feedbackWithRpe = recentFeedback.filter((item) => typeof item.rpe === 'number')
   const averageRpe =
@@ -198,18 +217,18 @@ export default function StudentPage() {
   ]
 
   const groupedPlans = useMemo(() => {
-    const byWeek = new Map<number, TrainingPlan[]>()
-    plans.forEach((plan) => {
-      const weekPlans = byWeek.get(plan.week_number) ?? []
-      weekPlans.push(plan)
-      byWeek.set(plan.week_number, weekPlans)
-    })
+    if (currentWeekPlans.length === 0) return []
 
-    return Array.from(byWeek.entries()).map(([week, weekPlans]) => ({
-      week,
-      plans: weekPlans,
-    }))
-  }, [plans])
+    return [{
+      week: currentWeek ?? 0,
+      plans: currentWeekPlans,
+    }]
+  }, [currentWeek, currentWeekPlans])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60_000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     let isActive = true
@@ -276,7 +295,7 @@ export default function StudentPage() {
       isActive = false
       realtimeClient.removeChannel(channel)
     }
-  }, [user])
+  }, [todayInfo.weekStart, user])
 
   useEffect(() => {
     if (!user) return
@@ -597,9 +616,15 @@ export default function StudentPage() {
               </p>
             </div>
             <div className="apple-card p-5">
-              <p className="text-sm text-apple-gray-500">目前計畫</p>
+              <p className="text-sm text-apple-gray-500">{t.schedule.thisWeeksPlan}</p>
               <p className="mt-1 text-xl font-bold text-apple-gray-900">{currentProgram}</p>
               <p className="mt-1 text-sm text-apple-gray-600">
+                {formatWeekRange(todayInfo.weekStart, language)}
+              </p>
+              <p className="mt-2 text-sm text-apple-gray-600">
+                {formatTodayLabel(todayInfo.todayIso, language)}
+              </p>
+              <p className="mt-2 text-xs font-semibold text-apple-gray-500">
                 {currentWeek ? `第 ${currentWeek} 周 · ` : ''}
                 {currentGoal}
               </p>
@@ -800,48 +825,60 @@ export default function StudentPage() {
           <div className="grid min-w-0 gap-6 lg:grid-cols-[0.95fr_1.05fr]">
             <section className="min-w-0 space-y-6">
               <article id="training-plan" className="apple-card scroll-mt-28 p-6 md:p-8">
-                {latestPlan ? (
-                  <>
-                    <div className="mb-6 flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-semibold text-apple-blue">
-                          {latestPlan.workout_date}
-                        </p>
-                        <h2 className="mt-2 text-2xl font-black text-apple-gray-900">
-                          最新训练：{latestPlan.title}
-                        </h2>
-                      </div>
-                      <span className="rounded-full bg-black px-4 py-2 text-sm font-semibold text-white">
-                        已同步
-                      </span>
-                    </div>
+                <div className="mb-6 flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-apple-blue">
+                      {t.schedule.dateRange} · {formatWeekRange(todayInfo.weekStart, language)}
+                    </p>
+                    <h2 className="mt-2 text-2xl font-black text-apple-gray-900">
+                      {t.schedule.thisWeeksPlan}
+                    </h2>
+                    <p className="mt-2 text-sm font-semibold text-apple-gray-600">
+                      {formatTodayLabel(todayInfo.todayIso, language)}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-black px-4 py-2 text-sm font-semibold text-white">
+                    {latestPlan ? '已同步' : '待同步'}
+                  </span>
+                </div>
 
-                    <div className="rounded-3xl bg-apple-gray-100 p-5">
-                      <p className="text-2xl font-black text-apple-gray-900">{latestPlan.target}</p>
-                      <p className="mt-2 text-apple-gray-600">{latestPlan.pace || '配速由教练視状态调整'}</p>
-                      <p className="mt-4 rounded-2xl bg-white p-4 text-sm leading-6 text-apple-gray-600">
-                        {latestPlan.note || '完成后请回报 RPE、实际里程、心率与感受。'}
-                      </p>
-                    </div>
-                  </>
+                {latestPlan ? (
+                  <div className={`rounded-3xl p-5 ${todayPlan ? 'bg-black text-white' : 'bg-apple-gray-100 text-apple-gray-900'}`}>
+                    {todayPlan && (
+                      <span className="mb-3 inline-flex rounded-full bg-white px-3 py-1 text-xs font-bold text-black">
+                        {t.schedule.todaysWorkout}
+                      </span>
+                    )}
+                    <p className="text-sm font-bold opacity-80">{latestPlan.workout_date}</p>
+                    <p className="mt-2 text-2xl font-black">{latestPlan.target}</p>
+                    <p className={`mt-2 ${todayPlan ? 'text-white/80' : 'text-apple-gray-600'}`}>
+                      {latestPlan.pace || '配速由教练视状态调整'}
+                    </p>
+                    <p className={`mt-4 rounded-2xl p-4 text-sm leading-6 ${todayPlan ? 'bg-white/10 text-white/85' : 'bg-white text-apple-gray-600'}`}>
+                      {latestPlan.note || '完成后请回报 RPE、实际里程、心率与感受。'}
+                    </p>
+                  </div>
                 ) : (
                   <div className="rounded-3xl bg-apple-gray-100 p-6">
                     <p className="text-sm font-semibold text-apple-blue">
                       {isLoadingData ? '同步中' : '尚未同步课表'}
                     </p>
                     <h2 className="mt-2 text-2xl font-black text-apple-gray-900">
-                      本周课表尚未同步，请等待教练更新。
+                      {t.schedule.unsyncedThisWeekPlan}
                     </h2>
                     <p className="mt-3 leading-7 text-apple-gray-600">
-                      如已报名但看不到资料，请用报名邮箱登录，并联系教练确认账号绑定。你也可以先在下方提交自主训练回馈。
+                      如已报名但看不到资料，请用报名邮箱登录，并联系教练确认账号绑定。你仍然可以提交自主训练回馈。
                     </p>
+                    <a href="#feedback" className="mt-5 inline-flex rounded-full bg-black px-5 py-2 text-sm font-bold text-white">
+                      提交自主训练回馈
+                    </a>
                   </div>
                 )}
 
                 <div className="mt-6 grid gap-3 sm:grid-cols-3">
                   {[
-                    { icon: Route, label: '训练类型', value: latestPlan?.title || '自主回馈' },
-                    { icon: Timer, label: '周数', value: currentWeek ? `第 ${currentWeek} 周` : '待同步' },
+                    { icon: Route, label: '训练类型', value: todayPlan ? t.schedule.todaysWorkout : latestPlan?.target ? '本周训练' : '自主回馈' },
+                    { icon: Timer, label: t.schedule.dateRange, value: formatWeekRange(todayInfo.weekStart, language) },
                     { icon: CalendarDays, label: '教练', value: latestPlan ? '已绑定' : '待绑定' },
                   ].map((item) => (
                     <div key={item.label} className="rounded-2xl border border-black/10 bg-white p-4">
@@ -961,7 +998,15 @@ export default function StudentPage() {
               </article>
 
               <article className="apple-card min-w-0 overflow-hidden p-6 md:p-8">
-                <h2 className="mb-5 text-xl font-bold text-apple-gray-900">本周课表</h2>
+                <div className="mb-5">
+                  <h2 className="text-xl font-bold text-apple-gray-900">{t.schedule.thisWeeksPlan}</h2>
+                  <p className="mt-2 text-sm font-semibold text-apple-gray-600">
+                    {t.schedule.dateRange} · {formatWeekRange(todayInfo.weekStart, language)}
+                  </p>
+                  <p className="mt-1 text-sm text-apple-gray-500">
+                    {formatTodayLabel(todayInfo.todayIso, language)}
+                  </p>
+                </div>
                 {groupedPlans.length > 0 ? (
                   <div className="space-y-5">
                     {groupedPlans.map((group) => (
@@ -994,14 +1039,25 @@ export default function StudentPage() {
                           {group.plans.map((workout) => (
                             <div
                               key={workout.id}
-                              className="w-[220px] shrink-0 snap-start rounded-2xl bg-apple-gray-100 p-4 sm:w-[240px]"
+                              className={`w-[220px] shrink-0 snap-start rounded-2xl p-4 sm:w-[240px] ${
+                                isToday(workout.workout_date, todayInfo.todayIso)
+                                  ? 'bg-black text-white'
+                                  : 'bg-apple-gray-100 text-apple-gray-900'
+                              }`}
                             >
                               <div className="mb-3 flex items-start justify-between gap-3">
-                                <p className="text-sm font-bold text-apple-gray-900">{workout.workout_date}</p>
+                                <p className="text-sm font-bold">{workout.workout_date}</p>
+                                {isToday(workout.workout_date, todayInfo.todayIso) && (
+                                  <span className="rounded-full bg-white px-2 py-1 text-[11px] font-bold text-black">
+                                    {t.schedule.todaysWorkout}
+                                  </span>
+                                )}
                               </div>
-                              <p className="text-sm leading-6 text-apple-gray-700">{workout.target}</p>
+                              <p className={`text-sm leading-6 ${isToday(workout.workout_date, todayInfo.todayIso) ? 'text-white/85' : 'text-apple-gray-700'}`}>
+                                {workout.target}
+                              </p>
                               {workout.pace && (
-                                <p className="mt-3 rounded-full bg-white px-3 py-1 text-xs font-semibold text-apple-gray-600">
+                                <p className={`mt-3 rounded-full px-3 py-1 text-xs font-semibold ${isToday(workout.workout_date, todayInfo.todayIso) ? 'bg-white/15 text-white' : 'bg-white text-apple-gray-600'}`}>
                                   {workout.pace}
                                 </p>
                               )}
@@ -1013,9 +1069,9 @@ export default function StudentPage() {
                   </div>
                 ) : (
                   <div className="rounded-3xl border border-dashed border-black/15 bg-white p-6 text-center">
-                    <p className="font-bold text-apple-gray-900">目前没有已同步课表</p>
+                    <p className="font-bold text-apple-gray-900">{t.schedule.unsyncedThisWeekPlan}</p>
                     <p className="mt-2 text-sm leading-6 text-apple-gray-600">
-                      如果你已经报名，请先确认登录的是报名邮箱；仍看不到资料时，请联系教练绑定账号。本周课表尚未同步时，请等待教练更新。
+                      如果你已经报名，请先确认登录的是报名邮箱；仍看不到资料时，请联系教练绑定账号。你仍然可以提交自主训练回馈。
                     </p>
                   </div>
                 )}

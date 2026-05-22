@@ -17,10 +17,13 @@ import {
 import { supabase } from '@/lib/supabase'
 import CoachAccessPanel from '@/components/CoachAccessPanel'
 import { useLanguage } from '@/app/language-context'
+import { getStudentDisplayEmail, getStudentDisplayName, hasStudentName } from '@/lib/student-display'
 
 type FeedbackItem = {
   id: string
   student: string
+  studentEmail: string
+  studentHasName: boolean
   program: string
   workout: string
   submittedAt: string
@@ -199,7 +202,9 @@ const formatFeedback = (item: any): FeedbackItem => {
 
   return {
     id: item.id,
-    student: item.profiles?.name || '已登录学员',
+    student: getStudentDisplayName(item.profiles) || '已登录学员',
+    studentEmail: getStudentDisplayEmail(item.profiles),
+    studentHasName: hasStudentName(item.profiles),
     program: item.profiles?.program || '尚未分班',
     workout: item.training_plans?.target || '自主训练回馈',
     submittedAt: new Date(item.created_at).toLocaleString('zh-CN', {
@@ -256,7 +261,7 @@ export default function CoachDashboardClient() {
           rpe,
           feeling,
           status,
-          profiles:student_id (name, program),
+          profiles:student_id (name, email, program),
           training_plans:training_plan_id (target)
         `)
         .order('created_at', { ascending: false })
@@ -389,7 +394,9 @@ export default function CoachDashboardClient() {
                       <div className="mb-3 flex items-start justify-between gap-3">
                         <div>
                           <h3 className="font-bold text-apple-gray-900">{item.student}</h3>
-                          <p className="mt-1 text-sm text-apple-gray-500">{item.submittedAt}</p>
+                          <p className="mt-1 text-sm text-apple-gray-500">
+                            {item.studentHasName ? item.studentEmail : '学员尚未设置姓名'} · {item.submittedAt}
+                          </p>
                         </div>
                         <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${item.risk.tone}`}>
                           {item.risk.label}
@@ -498,7 +505,7 @@ export default function CoachDashboardClient() {
                       <div>
                         <h3 className="text-lg font-bold text-apple-gray-900">{item.student}</h3>
                         <p className="text-sm text-apple-gray-500">
-                          {item.program} · {item.submittedAt}
+                          {item.studentHasName ? item.studentEmail : '学员尚未设置姓名'} · {item.program} · {item.submittedAt}
                         </p>
                       </div>
                       <span className={`rounded-full px-3 py-1 text-xs font-bold ${item.risk.tone}`}>
@@ -565,9 +572,11 @@ export default function CoachDashboardClient() {
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <h3 className="font-bold text-apple-gray-900">
-                                {student.name || student.email.split('@')[0]}
+                                {getStudentDisplayName(student) || student.email}
                               </h3>
-                              <p className="mt-1 text-sm text-apple-gray-500">{student.email}</p>
+                              <p className="mt-1 text-sm text-apple-gray-500">
+                                {hasStudentName(student) ? getStudentDisplayEmail(student) : '学员尚未设置姓名'}
+                              </p>
                             </div>
                             <ArrowRight className="h-4 w-4 shrink-0 text-apple-gray-500" />
                           </div>

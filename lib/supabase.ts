@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { getTodayInfo } from '@/lib/week-dates'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -174,12 +175,15 @@ export async function submitTrainingFeedback(input: TrainingFeedbackInsert) {
 export async function getMyTrainingPlans(studentId: string) {
   if (!supabase) return []
 
+  const currentWeekStart = getTodayInfo().weekStart
+
   const {
     data: { session },
   } = await supabase.auth.getSession()
 
   if (session?.access_token) {
-    const response = await fetch('/api/student/training-plans', {
+    const params = new URLSearchParams({ weekStart: currentWeekStart })
+    const response = await fetch(`/api/student/training-plans?${params.toString()}`, {
       headers: {
         Authorization: `Bearer ${session.access_token}`,
       },
@@ -201,10 +205,10 @@ export async function getMyTrainingPlans(studentId: string) {
     .from('training_plans')
     .select('*')
     .eq('student_id', studentId)
-    .order('week_start', { ascending: false })
+    .eq('week_start', currentWeekStart)
     .order('workout_date', { ascending: true })
     .order('sort_order', { ascending: true })
-    .limit(35)
+    .limit(14)
 
   if (error) {
     throw error

@@ -34,7 +34,7 @@ export default function Footer() {
               <div className="relative h-14 w-14 overflow-hidden rounded-full border border-black/10 bg-white shadow-sm">
                 <Image
                   src="/goodluck-logo.svg"
-                  alt="好运跑班 Logo"
+                  alt={`${t.common.brand} Logo`}
                   fill
                   sizes="56px"
                   className="object-cover"

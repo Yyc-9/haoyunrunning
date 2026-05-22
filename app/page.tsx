@@ -12,7 +12,7 @@ export default function Home() {
       <HeroSection />
       <UpcomingActivitiesSection />
       <FeaturesSection />
-      <CoursesSection />
+      <CoursesSection preview />
       <RunnerPortalSection />
     </>
   )

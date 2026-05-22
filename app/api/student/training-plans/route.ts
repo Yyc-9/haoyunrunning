@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
+import { getTodayInfo } from '@/lib/week-dates'
 
 export async function GET(request: NextRequest) {
   if (!supabaseAdmin) {
@@ -11,14 +12,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: '请先登录学员账号。' }, { status: 401 })
   }
 
+  const weekStart = request.nextUrl.searchParams.get('weekStart') ?? getTodayInfo().weekStart
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
+    return NextResponse.json({ error: '课表周参数格式错误。' }, { status: 400 })
+  }
+
   const { data: plans, error } = await supabaseAdmin
     .from('training_plans')
     .select('*')
     .eq('student_id', user.id)
-    .order('week_start', { ascending: false })
+    .eq('week_start', weekStart)
     .order('workout_date', { ascending: true })
     .order('sort_order', { ascending: true })
-    .limit(35)
+    .limit(14)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
@@ -27,5 +33,6 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     plans: plans ?? [],
     count: plans?.length ?? 0,
+    weekStart,
   })
 }
