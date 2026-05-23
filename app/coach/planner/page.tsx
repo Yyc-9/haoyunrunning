@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, CalendarPlus, ChevronDown, ChevronUp, Copy, Loader2, Save, UserRoundPlus } from 'lucide-react'
+import { ArrowLeft, CalendarPlus, ChevronDown, ChevronUp, Copy, Download, Loader2, Save, UserRoundPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useLanguage } from '@/app/language-context'
 import { getStudentDisplayEmail, getStudentDisplayName } from '@/lib/student-display'
@@ -98,6 +98,32 @@ function toChineseNumber(value: number) {
 function formatTrainingWeekLabel(weekNumber: number, language: 'zh-CN' | 'zh-TW' | 'en') {
   if (language === 'en') return `Week ${weekNumber}`
   return `第${toChineseNumber(weekNumber)}周`
+}
+
+function formatExportWeekLabel(weekStart: string, weekNumber: number) {
+  const [year, month, day] = weekStart.split('-').map(Number)
+  return `${year}/${month}/${day}[${weekNumber}]`
+}
+
+function escapeCsvCell(value: string | number) {
+  const text = String(value ?? '')
+  if (/[",\n\r]/.test(text)) {
+    return `"${text.replaceAll('"', '""')}"`
+  }
+  return text
+}
+
+function downloadCsvFile(filename: string, rows: Array<Array<string | number>>) {
+  const csv = rows.map((row) => row.map(escapeCsvCell).join(',')).join('\r\n')
+  const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
 }
 
 function getTrainingWeekNumber(weekStart: string, groups: WeekGroup[]) {
@@ -416,6 +442,34 @@ export default function CoachPlannerPage() {
     }
   }
 
+  const exportCurrentWeekCsv = () => {
+    setError('')
+    setMessage('')
+
+    if (!selectedStudentId) {
+      setError(t.planner.chooseStudentError)
+      return
+    }
+
+    const exportWeekLabel = formatExportWeekLabel(activeWeekStart, activeTrainingWeekNumber)
+    const csvRows: Array<Array<string | number>> = [
+      [
+        t.schedule.dateRange,
+        ...columns.map((column, index) => `${weekdayLabels[index]} ${addDays(activeWeekStart, column.offset)}`),
+      ],
+      ...rows.map((row) => [
+        exportWeekLabel,
+        ...columns.map((column) => row[column.key]),
+      ]),
+    ]
+    const studentName = selectedStudent ? getStudentDisplayName(selectedStudent) || selectedStudent.email : 'student'
+    const safeStudentName = studentName.replace(/[\\/:*?"<>|\s]+/g, '_')
+    const safeWeekLabel = exportWeekLabel.replace(/[\\/:*?"<>|]+/g, '-')
+
+    downloadCsvFile(`${safeStudentName}_${safeWeekLabel}_training_plan.csv`, csvRows)
+    setMessage(`${language === 'en' ? 'CSV exported' : language === 'zh-TW' ? 'CSV 已匯出' : 'CSV 已导出'}：${exportWeekLabel}`)
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
       <section className="px-4 py-10 sm:px-6 lg:px-8">
@@ -524,6 +578,15 @@ export default function CoachPlannerPage() {
               >
                 {showHistory ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 {showHistory ? t.planner.historyToggleClose : t.planner.historyToggleOpen}
+              </button>
+              <button
+                type="button"
+                onClick={exportCurrentWeekCsv}
+                disabled={!selectedStudentId}
+                className="apple-button-secondary gap-2 px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Download className="h-4 w-4" />
+                {language === 'en' ? 'Export CSV' : language === 'zh-TW' ? '匯出 CSV' : '导出 CSV'}
               </button>
             </div>
             <button
