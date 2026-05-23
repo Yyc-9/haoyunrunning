@@ -2,11 +2,11 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ArrowUpRight, CalendarDays, MessageCircle, UserRoundCheck } from 'lucide-react'
+import { ArrowUpRight, CalendarDays, PartyPopper, UsersRound } from 'lucide-react'
 import { recentActivities } from '@/lib/goodluck-data'
 import { useLanguage } from '@/app/language-context'
 
-const icons = [CalendarDays, UserRoundCheck, MessageCircle]
+const icons = [PartyPopper, UsersRound]
 
 export default function UpcomingActivitiesSection() {
   const { t } = useLanguage()
@@ -33,7 +33,7 @@ export default function UpcomingActivitiesSection() {
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2">
           {recentActivities.map((activity, index) => {
             const Icon = icons[index] ?? CalendarDays
             const isExternal = activity.href.startsWith('http')

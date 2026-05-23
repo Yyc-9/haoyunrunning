@@ -79,12 +79,11 @@ export const dictionary = {
     },
     homeUpdates: {
       label: 'Recent updates',
-      title: '近期活動與入口',
-      description: '新訪客可先看近期開課與聯絡方式；已報名學員和教練可直接進入自己的工作區。',
+      title: '近期報名入口',
+      description: '近期活動與團課報名集中在這裡；已報名學員請從 START HERE 的「我是已報名學員」進入。',
       activities: [
-        { title: '2026 好運跑步訓練營', description: '近期課程已整理完成，可先查看班級與地點，再透過 Instagram 諮詢名額。', action: '查看訓練課程' },
-        { title: '已報名學員入口', description: '登入帳號查看本週課表，完成訓練後提交回饋，讓教練更快調整安排。', action: '前往學員中心' },
-        { title: 'Instagram 諮詢', description: '不確定適合哪個班級時，先把跑步經驗、目標距離與可訓練時間傳給我們。', action: '私訊好運跑班' },
+        { title: '好運跑班 4 週年活動', description: '近期 4 週年活動報名與詳情，先透過 Instagram 私訊確認名額與參加方式。', action: '活動報名' },
+        { title: '團課報名', description: '查看目前開放的團體課程，依地點、時間與訓練目標選擇適合自己的班級。', action: '查看團課' },
       ],
     },
     runnerPortal: {
@@ -462,12 +461,11 @@ export const dictionary = {
     },
     homeUpdates: {
       label: 'Recent updates',
-      title: '近期活动与入口',
-      description: '新访客可先看近期开课与联系方式；已报名学员和教练可直接进入自己的工作区。',
+      title: '近期报名入口',
+      description: '近期活动与团课报名集中在这里；已报名学员请从 START HERE 的“我是已报名学员”进入。',
       activities: [
-        { title: '2026 好运跑步训练营', description: '近期课程已整理完成，可先查看班级与地点，再通过 Instagram 咨询名额。', action: '查看训练课程' },
-        { title: '已报名学员入口', description: '登录账号查看本周课表，完成训练后提交回馈，让教练更快调整安排。', action: '前往学员中心' },
-        { title: 'Instagram 咨询', description: '不确定适合哪个班级时，先把跑步经验、目标距离与可训练时间传给我们。', action: '私信好运跑班' },
+        { title: '好运跑班 4 周年活动', description: '近期 4 周年活动报名与详情，先通过 Instagram 私信确认名额与参加方式。', action: '活动报名' },
+        { title: '团课报名', description: '查看目前开放的团体课程，按地点、时间与训练目标选择适合自己的班级。', action: '查看团课' },
       ],
     },
     runnerPortal: {
@@ -845,12 +843,11 @@ export const dictionary = {
     },
     homeUpdates: {
       label: 'Recent updates',
-      title: 'Recent Updates and Entry Points',
-      description: 'New visitors can start with current classes and contact options. Registered students and coaches can jump directly to their workspace.',
+      title: 'Current Signup Entrances',
+      description: 'Use this area for the latest event and group class signups. Registered students can enter through “I am a registered student” in START HERE.',
       activities: [
-        { title: '2026 Good Luck Running Camp', description: 'Current classes are organized by schedule and location. Check the options, then ask us on Instagram about availability.', action: 'View classes' },
-        { title: 'Registered student entry', description: 'Log in to view this week’s plan and submit feedback after training so coaches can adjust faster.', action: 'Go to student center' },
-        { title: 'Instagram consultation', description: 'Not sure which class fits? Send us your running history, race goal, and available training time.', action: 'Message us' },
+        { title: 'Good Luck Running 4th Anniversary', description: 'Signup details for the latest anniversary activity. Message us on Instagram to confirm spots and how to join.', action: 'Sign up for event' },
+        { title: 'Group Class Signup', description: 'Browse current group classes and choose the right option by location, schedule, and training goal.', action: 'View group classes' },
       ],
     },
     runnerPortal: {

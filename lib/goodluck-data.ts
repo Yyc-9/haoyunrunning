@@ -59,22 +59,16 @@ export const brandIntro = {
 
 export const recentActivities = [
   {
-    title: '2026 好運跑步訓練營',
-    description: '4 月至 6 月班級開放報名中，涵蓋台北、新竹、竹北、板橋、三重與竹南。',
-    action: '查看班級',
-    href: '/courses',
-  },
-  {
-    title: '本週課表同步',
-    description: '已報名學員可登入帳戶查看本週訓練安排，完成後提交訓練感受給教練。',
-    action: '前往學員中心',
-    href: '/profile',
-  },
-  {
-    title: '聯絡好運跑班',
-    description: '想了解適合自己的班級，可以先透過 Instagram 與我們聯絡。',
-    action: 'Instagram',
+    title: '好運跑班 4 週年活動',
+    description: '近期 4 週年活動報名與詳情，先透過 Instagram 私訊確認名額與參加方式。',
+    action: '活動報名',
     href: 'https://www.instagram.com/nurture.running.team/',
+  },
+  {
+    title: '團課報名',
+    description: '查看目前開放的團體課程，依地點、時間與訓練目標選擇適合自己的班級。',
+    action: '查看團課',
+    href: '/courses',
   },
 ]
 
