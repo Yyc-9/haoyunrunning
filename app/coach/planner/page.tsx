@@ -78,6 +78,40 @@ const createEmptyRows = (label: string): PlannerRow[] => [
   { date: label, mon: '', tue: '', wed: '', thu: '', fri: '', sat: '', sun: '' },
 ]
 
+function parseWeekStart(weekStart: string) {
+  const [year, month, day] = weekStart.split('-').map(Number)
+  return Date.UTC(year, month - 1, day)
+}
+
+function toChineseNumber(value: number) {
+  const digits = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九']
+  if (value <= 10) return value === 10 ? '十' : digits[value]
+  if (value < 20) return `十${digits[value - 10]}`
+  if (value < 100) {
+    const tens = Math.floor(value / 10)
+    const ones = value % 10
+    return `${digits[tens]}十${ones ? digits[ones] : ''}`
+  }
+  return String(value)
+}
+
+function formatTrainingWeekLabel(weekNumber: number, language: 'zh-CN' | 'zh-TW' | 'en') {
+  if (language === 'en') return `Week ${weekNumber}`
+  return `第${toChineseNumber(weekNumber)}周`
+}
+
+function getTrainingWeekNumber(weekStart: string, groups: WeekGroup[]) {
+  if (groups.length === 0) return 1
+
+  const earliestWeekStart = groups.reduce((earliest, group) => (
+    group.weekStart < earliest ? group.weekStart : earliest
+  ), groups[0].weekStart)
+  const diffMs = parseWeekStart(weekStart) - parseWeekStart(earliestWeekStart)
+  const diffWeeks = Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000))
+
+  return Math.max(1, diffWeeks + 1)
+}
+
 function planToColumnKey(plan: TrainingPlan) {
   const index = getWeekdayIndex(plan.workout_date)
   return columns[index]?.key ?? 'mon'
@@ -157,7 +191,7 @@ export default function CoachPlannerPage() {
   const todayInfo = useMemo(() => getTodayInfo(now, language), [language, now])
   const baseWeekStart = todayInfo.weekStart
   const [activeWeekStart, setActiveWeekStart] = useState(baseWeekStart)
-  const [rows, setRows] = useState<PlannerRow[]>(createEmptyRows(formatCoachWeekTitle(baseWeekStart, language)))
+  const [rows, setRows] = useState<PlannerRow[]>(createEmptyRows(formatTrainingWeekLabel(1, language)))
   const [students, setStudents] = useState<BoundStudentRow[]>([])
   const [selectedStudentId, setSelectedStudentId] = useState('')
   const [savedPlans, setSavedPlans] = useState<TrainingPlan[]>([])
@@ -180,16 +214,9 @@ export default function CoachPlannerPage() {
   })[status]
   const activeWeekRangeLabel = formatWeekRange(activeWeekStart, language)
   const activeWeekStatusLabel = getLocalizedWeekStatusLabel(activeWeekStatus)
-  const plansInActiveRange = useMemo(
-    () => savedPlans.filter((plan) => plan.workout_date >= activeWeekStart && plan.workout_date <= activeRangeEnd),
-    [activeRangeEnd, activeWeekStart, savedPlans]
-  )
-  const exactActiveWeek = weekGroups.find((group) => group.weekStart === activeWeekStart)
-  const inferredActiveWeekNumber =
-    exactActiveWeek?.weekNumber ??
-    plansInActiveRange[0]?.week_number ??
-    (weekGroups.length > 0 ? Math.max(...weekGroups.filter((group) => group.weekStart < activeWeekStart).map((group) => group.weekNumber), 0) + 1 : 1)
-  const activeWeekLabel = formatCoachWeekTitle(activeWeekStart, language)
+  const activeTrainingWeekNumber = getTrainingWeekNumber(activeWeekStart, weekGroups)
+  const activeWeekLabel = formatTrainingWeekLabel(activeTrainingWeekNumber, language)
+  const activeDateWeekLabel = formatCoachWeekTitle(activeWeekStart, language)
   const isEditingNextWeek = activeWeekStart !== baseWeekStart
   const previousWeek = useMemo(() => {
     const previousWeekStart = addDays(activeWeekStart, -7)
@@ -258,7 +285,7 @@ export default function CoachPlannerPage() {
         const exact = grouped.find((group) => group.weekStart === activeWeekStart)
         const rangePlans = plans.filter((plan) => plan.workout_date >= activeWeekStart && plan.workout_date <= activeRangeEnd)
         const displayPlans = exact?.plans ?? rangePlans
-        const label = formatCoachWeekTitle(activeWeekStart, language)
+        const label = formatTrainingWeekLabel(getTrainingWeekNumber(activeWeekStart, grouped), language)
         setRows(displayPlans.length > 0 ? plansToRows(displayPlans, label) : createEmptyRows(label))
       } catch (err) {
         setError(err instanceof Error ? err.message : '读取课表失败。')
@@ -316,7 +343,7 @@ export default function CoachPlannerPage() {
 
     setIsCopyingPrevious(true)
     setRows(plansToRows(previousWeek.plans, activeWeekLabel))
-    setMessage(`${t.planner.copyPrevious}: ${formatCoachWeekTitle(previousWeek.weekStart, language)} → ${activeWeekLabel}`)
+    setMessage(`${t.planner.copyPrevious}: ${formatTrainingWeekLabel(getTrainingWeekNumber(previousWeek.weekStart, weekGroups), language)} → ${activeWeekLabel}`)
     setIsCopyingPrevious(false)
   }
 
@@ -325,7 +352,7 @@ export default function CoachPlannerPage() {
     setMessage('')
     const nextWeekStart = addDays(activeWeekStart, 7)
     const exactNextWeek = weekGroups.find((group) => group.weekStart === nextWeekStart)
-    const nextLabel = formatCoachWeekTitle(nextWeekStart, language)
+    const nextLabel = formatTrainingWeekLabel(getTrainingWeekNumber(nextWeekStart, weekGroups), language)
 
     setActiveWeekStart(nextWeekStart)
     setRows(exactNextWeek ? plansToRows(exactNextWeek.plans, nextLabel) : createEmptyRows(nextLabel))
@@ -371,7 +398,7 @@ export default function CoachPlannerPage() {
         method: 'POST',
         body: JSON.stringify({
           studentId: selectedStudentId,
-          weekNumber: inferredActiveWeekNumber,
+          weekNumber: activeTrainingWeekNumber,
           weekStart: activeWeekStart,
           workouts,
         }),
@@ -433,6 +460,7 @@ export default function CoachPlannerPage() {
                     {activeWeekStatusLabel}
                   </p>
                   <p className="mt-1 text-xl font-black text-apple-gray-900">{activeWeekLabel}</p>
+                  <p className="mt-1 text-sm font-semibold text-apple-gray-700">{activeDateWeekLabel}</p>
                   <p className="mt-1 text-sm text-apple-gray-600">
                     {activeWeekRangeLabel}
                   </p>
@@ -627,19 +655,20 @@ export default function CoachPlannerPage() {
               </div>
               <div className="max-h-[620px] space-y-4 overflow-y-auto rounded-3xl border border-black/10 bg-white/70 p-3 shadow-inner">
                 {historyWeeks.map((week) => {
-                  const historyRows = plansToRows(week.plans, formatCoachWeekTitle(week.weekStart, language))
+                  const historyWeekLabel = formatTrainingWeekLabel(getTrainingWeekNumber(week.weekStart, weekGroups), language)
+                  const historyRows = plansToRows(week.plans, historyWeekLabel)
                   const historyStatus = getLocalizedWeekStatusLabel(getWeekStatus(week.weekStart, todayInfo.todayIso))
 
                   return (
                     <details key={week.key} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/10" open={week === previousWeek}>
                       <summary className="cursor-pointer text-base font-black text-apple-gray-900">
                         <span className="inline-flex flex-wrap items-center gap-2">
-                          {formatCoachWeekTitle(week.weekStart, language)}
+                          {historyWeekLabel}
                           <span className="rounded-full bg-apple-gray-100 px-3 py-1 text-xs font-bold text-apple-gray-700">
                             {historyStatus}
                           </span>
                           <span className="text-sm font-semibold text-apple-gray-500">
-                            {formatWeekRange(week.weekStart, language)}
+                            {formatCoachWeekTitle(week.weekStart, language)} · {formatWeekRange(week.weekStart, language)}
                           </span>
                         </span>
                       </summary>
