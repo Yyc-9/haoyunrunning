@@ -82,30 +82,31 @@ function localizeCoach(coach: CoachDetail, language: string): CoachDetail {
   }
 }
 
+const trainingDescriptions: Record<string, string> = {
+  動態熱身與跑姿檢測: '透過動態熱身啟動身體，觀察跑姿細節，讓教練掌握當天狀態與需要調整的重點。',
+  動態熱身與技術跑: '先用熱身和技術跑喚醒節奏感，建立更穩定的步頻、擺臂和身體控制。',
+  基礎有氧訓練: '用穩定強度建立底層耐力，讓身體逐步適應規律跑量。',
+  呼吸與節奏控制: '練習用呼吸、步頻和體感控制速度，避免一開始過快造成後段失速。',
+  肌力與穩定性訓練: '透過核心、臀腿和下肢穩定練習，提升跑步支撐能力，降低受傷風險。',
+  跑後放鬆與恢復: '用伸展、放鬆和恢復提醒整理訓練後的肌肉張力，幫助身體進入下一次訓練。',
+  訓練回報與調整: '根據學員每週回報的里程、RPE、疲勞和疼痛情況，幫助教練調整訓練安排。',
+  間歇訓練與配速調控: '用分段高強度訓練提升速度能力，並學會控制每一組的配速和恢復時間。',
+  間歇訓練: '透過短距離或固定時間的重複訓練刺激速度，同時保留足夠恢復來維持動作品質。',
+  節奏跑與維持速度: '在接近比賽感的強度下維持穩定輸出，訓練身體適應長時間的速度壓力。',
+  節奏跑與配速訓練: '建立清楚的配速感，讓跑者知道不同距離和強度下該如何穩定分配體力。',
+  長距離耐力建立: '循序增加時間與距離，打好半馬、全馬或長距離目標基礎。',
+  長距離耐力訓練: '透過較長時間的有氧累積提升耐力，練習補給、節奏和後段穩定度。',
+  賽事策略與心理調整: '把目標賽事拆成配速、補給和心理節奏，降低比賽當天的不確定感。',
+  恢復與防傷指導: '依照訓練負荷安排恢復方式，提醒常見疼痛風險和需要提早處理的訊號。',
+  跑姿與技術調整: '透過動作提示和技術跑，修正落地、重心、擺臂與轉換效率。',
+}
+
 function getTrainingDescription(title: string, language: string) {
-  const descriptions = [
-    '用穩定強度建立底層耐力，讓身體逐步適應規律跑量。',
-    '透過技術跑與動作觀察，調整落地、擺臂與身體控制。',
-    '以短距離重複訓練提升速度能力，同時學會掌握恢復節奏。',
-    '建立配速感與持續輸出能力，讓比賽或長跑更穩定。',
-    '循序增加時間與距離，打好半馬、全馬或長距離目標基礎。',
-    '整理肌肉張力與訓練感受，降低累積疲勞與受傷風險。',
-  ]
+  const description =
+    trainingDescriptions[title] ||
+    '依照課程目標安排當日訓練內容，讓跑者在安全節奏中完成有效累積。'
 
-  const index =
-    title.includes('跑姿') || title.includes('技術')
-      ? 1
-      : title.includes('間歇')
-        ? 2
-        : title.includes('節奏') || title.includes('配速')
-          ? 3
-          : title.includes('長距離') || title.includes('耐力')
-            ? 4
-            : title.includes('放鬆') || title.includes('恢復') || title.includes('防傷')
-              ? 5
-              : 0
-
-  return localizeText(descriptions[index], language)
+  return localizeText(description, language)
 }
 
 export default function CourseDetailClient({ course }: CourseDetailClientProps) {

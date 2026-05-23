@@ -1,7 +1,4 @@
 'use client'
-
-import { useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/app/providers'
 import TrainingLogPreview from '@/components/TrainingLogPreview'
 import { motion } from 'framer-motion'
@@ -32,19 +29,63 @@ function QuickLink({ icon: Icon, label, href }: { icon: React.ElementType; label
 
 export default function ProfilePage() {
   const { isLoggedIn, isLoading, user } = useAuth()
-  const router = useRouter()
 
-  useEffect(() => {
-    if (!isLoading && !isLoggedIn) {
-      router.push('/?auth=login')
-    }
-  }, [isLoading, isLoggedIn, router])
-
-  if (isLoading || !isLoggedIn || !user) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-apple-blue"></div>
-      </div>
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-gray-50 to-white pt-24">
+        <div className="text-center">
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-apple-blue" />
+          <p className="mt-4 text-sm font-semibold text-apple-gray-600">正在读取登录状态...</p>
+        </div>
+      </main>
+    )
+  }
+
+  if (!isLoggedIn || !user) {
+    return (
+      <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white pt-24">
+        <section className="container mx-auto max-w-4xl px-4 py-16">
+          <div className="apple-card overflow-hidden p-0">
+            <div className="grid gap-0 md:grid-cols-[1fr_0.8fr]">
+              <div className="p-8 md:p-10">
+                <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
+                  Student entry
+                </p>
+                <h1 className="text-3xl font-black leading-tight text-apple-gray-900 md:text-5xl">
+                  已报名学员请登录后查看课表与训练回馈
+                </h1>
+                <p className="mt-5 text-base leading-8 text-apple-gray-600">
+                  如果你已经报名课程，请使用报名邮箱登录。登录后可以查看教练同步的本周课表、提交训练回馈、更新目标和个人资料。
+                </p>
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                  <Link href="/?auth=login" className="apple-button-primary inline-flex items-center justify-center gap-2 px-6 py-3">
+                    登录学员账号
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <Link href="/student" className="apple-button-outline inline-flex items-center justify-center gap-2 px-6 py-3">
+                    前往学员看板
+                  </Link>
+                </div>
+              </div>
+              <div className="bg-apple-gray-950 p-8 text-white md:p-10">
+                <h2 className="text-xl font-black">登录后可以做什么？</h2>
+                <div className="mt-6 space-y-4">
+                  {[
+                    ['查看课表', '读取教练本周同步的训练安排。'],
+                    ['提交回馈', '填写里程、配速、RPE、疲劳和身体感受。'],
+                    ['同步目标', '让教练更清楚你的比赛目标和当前状态。'],
+                  ].map(([title, description]) => (
+                    <div key={title} className="rounded-2xl bg-white/10 p-4">
+                      <h3 className="font-bold">{title}</h3>
+                      <p className="mt-2 text-sm leading-6 text-white/70">{description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
     )
   }
 

@@ -110,6 +110,10 @@ const simplifiedPairs: Array<[string, string]> = [
   ['彈', '弹'],
   ['導', '导'],
   ['營', '营'],
+  ['補', '补'],
+  ['習', '习'],
+  ['階', '阶'],
+  ['鳥', '鸟'],
   ['馬', '马'],
   ['半馬', '半马'],
   ['全馬', '全马'],
@@ -154,6 +158,28 @@ const simplifiedPairs: Array<[string, string]> = [
   ['輕', '轻'],
   ['鬆', '松'],
   ['剛剛好', '刚刚好'],
+  ['穩', '稳'],
+  ['遠', '远'],
+  ['賽', '赛'],
+  ['華', '华'],
+  ['國', '国'],
+  ['級', '级'],
+  ['協', '协'],
+  ['師', '师'],
+  ['碩', '硕'],
+  ['賢', '贤'],
+  ['陞', '升'],
+  ['閔', '闵'],
+  ['戰', '战'],
+  ['術', '术'],
+  ['長', '长'],
+  ['們', '们'],
+  ['臺', '台'],
+  ['壓', '压'],
+  ['質', '质'],
+  ['幫', '帮'],
+  ['傷', '伤'],
+  ['訊號', '信号'],
 ]
 
 function toSimplified(value: string) {
@@ -391,7 +417,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     document.documentElement.lang = language
 
-    const converter = language === 'zh-CN' ? toSimplified : language === 'zh-TW' ? toTraditional : toEnglish
+    const converter = language === 'en' ? toEnglish : toSimplified
 
     let frame = window.requestAnimationFrame(() => {
       convertVisibleText(document.body, converter)
