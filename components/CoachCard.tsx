@@ -16,7 +16,7 @@ interface CoachCardProps {
   coach: Coach
   labels: {
     photo: string
-    photoPending: string
+    photoPending?: string
     specialties: string
     style: string
     achievements: string
@@ -40,7 +40,7 @@ export default function CoachCard({ coach, labels }: CoachCardProps) {
               <UserRound className="h-20 w-20 md:h-24 md:w-24" />
             </div>
           )}
-          <p className="mt-4 text-sm font-semibold text-apple-gray-500">{coach.imageUrl ? labels.photo : labels.photoPending}</p>
+          {coach.imageUrl && <p className="mt-4 text-sm font-semibold text-apple-gray-500">{labels.photo}</p>}
         </div>
       </div>
 

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { CalendarDays, ChevronRight, Clock, MapPin, Target, Users } from 'lucide-react'
+import { ChevronRight, Clock, MapPin, Target, Users } from 'lucide-react'
 import { allCourses } from '@/lib/goodluck-data'
 import CoursePaymentInfo from '@/components/CoursePaymentInfo'
 import CoursesTable from '@/components/CoursesTable'
@@ -65,8 +65,12 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
           <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">{t.courses.sectionLabel}</p>
           <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
             <div>
-              <h2 className="text-3xl font-black text-apple-gray-900 md:text-5xl">{t.courses.title}</h2>
-              <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">{t.courses.subtitle}</p>
+              <h2 className="text-3xl font-black text-apple-gray-900 md:text-5xl">
+                {preview ? t.courses.previewTitle : t.courses.title}
+              </h2>
+              <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
+                {preview ? t.courses.previewSubtitle : t.courses.subtitle}
+              </p>
             </div>
             <div className="flex flex-wrap gap-3">
               {preview && (
@@ -89,67 +93,33 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
         </motion.div>
 
         {preview ? (
-          <div className="grid gap-5 lg:grid-cols-2">
-            {courses.map((course) => (
-              <article key={course.slug} className="rounded-3xl border border-black/10 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
-              <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-                <div>
-                  <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-black px-3 py-1 text-xs font-bold text-white">
-                      {localeText(normalizeWeekday(course.weekday))}
-                    </span>
-                    <span className="rounded-full bg-apple-gray-100 px-3 py-1 text-xs font-bold text-apple-gray-700">
-                      {course.beginnerFriendly ? t.courses.beginnerYes : t.courses.beginnerNo}
-                    </span>
+          <div>
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+              {courses.map((course) => (
+                <article key={course.slug} className="rounded-3xl border border-black/10 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+                  <div className="mb-4 flex items-center gap-2 text-sm font-bold text-apple-gray-600">
+                    <MapPin className="h-4 w-4 text-apple-blue" />
+                    {localeText(course.city || course.location)}
                   </div>
-                  <Link href={`/courses/${course.slug}`} className="text-xl font-black leading-7 text-apple-gray-900 hover:text-apple-blue">
+                  <Link href={`/courses/${course.slug}`} className="block text-xl font-black leading-7 text-apple-gray-900 hover:text-apple-blue">
                     {localeText(course.name)}
                   </Link>
-                  <p className="mt-2 text-sm text-apple-gray-500">{localeText(course.groupTitle)}</p>
-                </div>
-                <Link href={`/courses/${course.slug}`} className="inline-flex shrink-0 items-center gap-1 text-sm font-bold text-apple-blue">
-                  {t.courses.viewDetail}
-                  <ChevronRight className="h-4 w-4" />
-                </Link>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl bg-apple-gray-100 p-4">
-                  <p className="mb-2 text-xs font-bold uppercase tracking-wide text-apple-gray-500">{t.courses.audienceGoal}</p>
-                  <p className="text-sm leading-6 text-apple-gray-700">{localeText(course.groupAudience)}</p>
-                  <p className="mt-2 text-xs font-semibold text-apple-gray-500">{t.courses.intensity}：{course.beginnerFriendly ? t.courses.beginnerYes : t.courses.beginnerNo}</p>
-                </div>
-
-                <div className="rounded-2xl bg-apple-gray-100 p-4">
-                  <p className="mb-2 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-apple-gray-500">
-                    <Target className="h-3.5 w-3.5" />
-                    {t.courses.trainingGoal}
+                  <p className="mt-3 min-h-12 text-sm leading-6 text-apple-gray-600">
+                    {localeText(course.targetAudience)}
                   </p>
-                  <p className="text-sm leading-6 text-apple-gray-700">{localeText(course.trainingGoal)}</p>
-                </div>
-
-                <div className="rounded-2xl bg-apple-gray-100 p-4">
-                  <p className="mb-2 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-apple-gray-500">
-                    <CalendarDays className="h-3.5 w-3.5" />
-                    {t.courses.timeLocation}
-                  </p>
-                  <p className="text-sm leading-6 text-apple-gray-700">{localeText(course.classTime)}</p>
-                  <p className="mt-2 inline-flex items-start gap-2 text-sm leading-6 text-apple-gray-700">
-                    <MapPin className="mt-1 h-3.5 w-3.5 shrink-0" />
-                    {localeText(course.location)}
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-apple-gray-500">{localeText(course.meetingPoint)}</p>
-                  <p className="mt-2 text-xs leading-5 text-apple-gray-500">{t.courses.period}：{localeText(course.period)}</p>
-                </div>
-
-                <div className="rounded-2xl bg-black p-4 text-white">
-                  <p className="mb-2 text-xs font-bold uppercase tracking-wide text-white/50">{t.courses.enrollment}</p>
-                  <p className="text-sm font-semibold leading-6">{t.courses.pricingConsult}</p>
-                  {preview && <p className="mt-2 text-xs leading-5 text-white/60">{localeText(course.feeNote)}</p>}
-                </div>
-              </div>
-            </article>
-          ))}
+                  <Link href={`/courses/${course.slug}`} className="mt-5 inline-flex items-center gap-2 rounded-full border border-black/10 px-4 py-2 text-sm font-bold text-apple-gray-900 transition hover:border-apple-blue/40 hover:text-apple-blue">
+                    {t.courses.viewDetail}
+                    <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </article>
+              ))}
+            </div>
+            <div className="mt-8 flex justify-center">
+              <Link href="/courses" className="apple-button-secondary inline-flex items-center gap-2 px-6 py-3">
+                {t.courses.viewAll}
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
         ) : (
           <CoursesTable />

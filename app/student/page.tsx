@@ -599,6 +599,56 @@ export default function StudentPage() {
     )
   }
 
+  if (!isLoggedIn || !user) {
+    return (
+      <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+        <section className="px-4 py-12 sm:px-6 lg:px-8">
+          <div className="container mx-auto max-w-4xl">
+            <div className="apple-card overflow-hidden p-0">
+              <div className="grid gap-0 md:grid-cols-[1fr_0.85fr]">
+                <div className="p-8 md:p-10">
+                  <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
+                    Student dashboard
+                  </p>
+                  <h1 className="text-3xl font-black leading-tight text-apple-gray-900 md:text-5xl">
+                    已报名学员请登录后查看课表并提交训练回馈
+                  </h1>
+                  <p className="mt-5 text-base leading-8 text-apple-gray-600">
+                    训练课表、训练数据、目标赛事和个人资料都会绑定到你的报名邮箱。登录后，教练同步的课表和你提交的训练回馈才会正确保存。
+                  </p>
+                  <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                    <Link href="/?auth=login" className="apple-button-primary inline-flex items-center justify-center gap-2 px-6 py-3">
+                      登录学员账号
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                    <Link href="/courses" className="apple-button-outline inline-flex items-center justify-center gap-2 px-6 py-3">
+                      查看课程
+                    </Link>
+                  </div>
+                </div>
+                <div className="bg-apple-gray-950 p-8 text-white md:p-10">
+                  <h2 className="text-xl font-black">登录后开放</h2>
+                  <div className="mt-6 space-y-4">
+                    {[
+                      ['本周课表', '查看教练同步的训练安排和当日重点。'],
+                      ['训练回馈', '提交里程、配速、RPE、疲劳和身体感受。'],
+                      ['目标与资料', '维护比赛目标、联系方式和训练沟通资料。'],
+                    ].map(([title, description]) => (
+                      <div key={title} className="rounded-2xl bg-white/10 p-4">
+                        <h3 className="font-bold">{title}</h3>
+                        <p className="mt-2 text-sm leading-6 text-white/70">{description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    )
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
       <section className="px-4 py-10 sm:px-6 lg:px-8">
