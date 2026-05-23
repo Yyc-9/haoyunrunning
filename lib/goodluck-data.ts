@@ -303,22 +303,63 @@ export const coachProfiles = {
     achievements: ['丹鳳高中田徑教練', 'NIKE RUN CLUB PACER', 'NIKE FAST42 臺灣北區助教', '國立體育大學陸上運動技術學系'],
     certifications: ['教育部學校專任運動教練證', '亞洲核心訓練師', '中華民國田徑協會 C 級教練', '中華民國田徑協會 C 級裁判'],
   },
+  xiaoHe: {
+    name: '小赫助教',
+    role: '好運跑班助教',
+    bio: '好運跑班助教，協助課堂示範、動作觀察與團練節奏維持。',
+    specialties: ['課堂協助', '動作觀察', '團練陪跑'],
+    style: '在課堂中即時協助學員理解訓練內容，讓團練執行更順暢。',
+    achievements: ['好運跑班課程助教'],
+  },
+  zhongLiChen: {
+    name: '鍾立宸助教',
+    nickname: '立宸助教',
+    role: '好運跑班助教',
+    imageUrl: '/coaches/zhong-li-chen.jpg',
+    bio: '好運跑班助教，協助教練照看課堂安全、訓練動線與學員執行狀態。',
+    specialties: ['課堂協助', '團練陪跑', '訓練動線維持'],
+    style: '用穩定陪伴與即時提醒，幫助學員把課表內容確實完成。',
+    achievements: ['好運跑班課程助教'],
+  },
+  zhengYiQun: {
+    name: '鄭以群助教',
+    nickname: '以群助教',
+    role: '好運跑班助教',
+    bio: '好運跑班助教，協助團練分組、訓練執行與學員回饋觀察。',
+    specialties: ['團練協助', '訓練執行觀察', '課堂節奏維持'],
+    style: '協助教練掌握不同程度跑者的課堂狀態，讓訓練更有秩序。',
+    achievements: ['好運跑班課程助教'],
+  },
+  yongXin: {
+    name: '詠馨助教',
+    role: '好運跑班助教',
+    bio: '好運跑班助教，協助課堂示範、團練陪跑與學員狀態觀察。',
+    specialties: ['課堂協助', '團練陪跑', '學員狀態觀察'],
+    style: '用清楚提醒與陪伴協助跑者完成當日訓練。',
+    achievements: ['好運跑班課程助教'],
+  },
 } satisfies Record<string, Coach>
 
 function getCourseCoaches(course: Course): Coach[] {
   if (course.coaches?.length) return course.coaches
   if (course.coach) return [course.coach]
 
-  if (course.name.includes('PB')) {
-    return [coachProfiles.chenShengQi, coachProfiles.zhouXianFeng, coachProfiles.yangShengHao]
+  const coachesBySlug: Record<string, Coach[]> = {
+    'zhubei-night-run-monday': [coachProfiles.liuChengEn, coachProfiles.chenYiTing, coachProfiles.luoPeiCi],
+    'taipei-pb-tuesday': [coachProfiles.chenShengQi, coachProfiles.wuWeiQiao, coachProfiles.wuPeiCi, coachProfiles.yongXin],
+    'hsinchu-beginner-tuesday': [coachProfiles.chenYiTing],
+    'hsinchu-morning-run-wednesday': [coachProfiles.chenShengQi, coachProfiles.liuChengEn, coachProfiles.xiaoHe],
+    'taipei-night-run-wednesday': [coachProfiles.wuWeiQiao],
+    'banqiao-beginner-wednesday': [coachProfiles.yangShengHao],
+    'zhubei-night-run-wednesday': [coachProfiles.chenShengQi, coachProfiles.liuChengEn, coachProfiles.chenYiTing, coachProfiles.zhouXianFeng, coachProfiles.zhengYiQun],
+    'hsinchu-night-run-thursday': [coachProfiles.liuChengEn, coachProfiles.xiaoHe, coachProfiles.zhongLiChen],
+    'zhunan-beginner-thursday': [coachProfiles.zhouXianFeng, coachProfiles.yangShengHao],
+    'sanchong-beginner-thursday': [coachProfiles.laiXinHong],
+    'taipei-morning-run-saturday': [coachProfiles.luoMinYao],
   }
 
-  if (course.name.includes('初心') || course.name.includes('初階') || course.name.includes('初阶')) {
-    return [coachProfiles.wuPeiCi, coachProfiles.chenYiTing, coachProfiles.laiXinHong]
-  }
-
-  if (course.location.includes('新竹') || course.location.includes('竹北') || course.location.includes('竹南')) {
-    return [coachProfiles.liuChengEn, coachProfiles.luoPeiCi, coachProfiles.wuWeiQiao]
+  if (coachesBySlug[course.slug]) {
+    return coachesBySlug[course.slug]
   }
 
   return [coachProfiles.chenShengQi, coachProfiles.luoMinYao, coachProfiles.zhouXianFeng]
