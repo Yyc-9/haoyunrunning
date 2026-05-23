@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { ArrowLeft, CalendarClock, Instagram, PartyPopper, Sparkles } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
+import LeadCollectionForm from '@/components/LeadCollectionForm'
 
 export default function AnniversaryPageClient() {
   const { t } = useLanguage()
@@ -39,7 +40,7 @@ export default function AnniversaryPageClient() {
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                   <Link href="/courses" className="apple-button-primary inline-flex items-center justify-center gap-2 px-6 py-3">
                     <CalendarClock className="h-5 w-5" />
-                    {t.anniversary.primaryCta}
+                    {t.anniversary.formCta}
                   </Link>
                   <a
                     href="https://www.instagram.com/nurture.running.team/"
@@ -79,6 +80,30 @@ export default function AnniversaryPageClient() {
                 ))}
               </div>
             </aside>
+          </div>
+
+          <div className="mt-10 grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+            <section className="apple-card p-7">
+              <p className="text-sm font-semibold uppercase tracking-wide text-apple-blue">
+                {t.anniversary.formLabel}
+              </p>
+              <h2 className="mt-3 text-3xl font-black text-apple-gray-900">
+                {t.anniversary.formTitle}
+              </h2>
+              <p className="mt-4 leading-7 text-apple-gray-600">
+                {t.anniversary.formDescription}
+              </p>
+            </section>
+
+            <LeadCollectionForm
+              source="anniversary_4th"
+              labels={t.leadForm}
+              selectField={{
+                name: 'companionCount',
+                label: t.anniversary.companionLabel,
+                options: t.anniversary.companionOptions,
+              }}
+            />
           </div>
         </div>
       </section>

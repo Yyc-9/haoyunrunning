@@ -66,9 +66,9 @@ export const recentActivities = [
   },
   {
     title: '團課報名',
-    description: '查看目前開放的團體課程，依地點、時間與訓練目標選擇適合自己的班級。',
-    action: '查看團課',
-    href: '/courses',
+    description: '先留下團課報名意向，讓我們依照地點、時間與訓練目標協助確認適合班級。',
+    action: '填寫團課報名',
+    href: '/group-signup',
   },
 ]
 

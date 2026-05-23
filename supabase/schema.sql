@@ -109,6 +109,27 @@ create table public.coach_invites (
   created_at timestamptz not null default now()
 );
 
+create table public.signup_leads (
+  id uuid primary key default gen_random_uuid(),
+  source text not null check (source in ('anniversary_4th', 'group_class')),
+  name text not null,
+  phone text default '',
+  email text default '',
+  instagram text default '',
+  preferred_course text default '',
+  running_experience text default '',
+  goal text default '',
+  companion_count text default '',
+  notes text default '',
+  status text not null default 'new',
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index signup_leads_source_created_at_idx
+on public.signup_leads (source, created_at desc);
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -129,6 +150,10 @@ for each row execute function public.set_updated_at();
 
 create trigger shop_orders_set_updated_at
 before update on public.shop_orders
+for each row execute function public.set_updated_at();
+
+create trigger signup_leads_set_updated_at
+before update on public.signup_leads
 for each row execute function public.set_updated_at();
 
 create or replace function public.handle_new_user()
@@ -188,6 +213,7 @@ alter table public.feedback_attachments enable row level security;
 alter table public.shop_orders enable row level security;
 alter table public.shop_order_items enable row level security;
 alter table public.coach_invites enable row level security;
+alter table public.signup_leads enable row level security;
 
 create policy "profiles_select_own_or_coach_or_admin"
 on public.profiles for select
@@ -344,6 +370,19 @@ using (
   and used_by is null
   and (expires_at is null or expires_at > now())
 );
+
+create policy "signup_leads_admin_select"
+on public.signup_leads for select
+using (public.is_admin(auth.uid()));
+
+create policy "signup_leads_admin_update"
+on public.signup_leads for update
+using (public.is_admin(auth.uid()))
+with check (public.is_admin(auth.uid()));
+
+create policy "signup_leads_admin_delete"
+on public.signup_leads for delete
+using (public.is_admin(auth.uid()));
 
 insert into storage.buckets (id, name, public)
 values ('training-feedback', 'training-feedback', false)
