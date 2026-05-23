@@ -417,7 +417,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     document.documentElement.lang = language
 
-    const converter = language === 'en' ? toEnglish : toSimplified
+    const converter = language === 'en' ? toEnglish : language === 'zh-TW' ? toTraditional : toSimplified
 
     let frame = window.requestAnimationFrame(() => {
       convertVisibleText(document.body, converter)

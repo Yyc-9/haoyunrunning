@@ -6,7 +6,7 @@ export const languages = [
 
 export type Language = (typeof languages)[number]['code']
 
-export const defaultLanguage: Language = 'zh-CN'
+export const defaultLanguage: Language = 'zh-TW'
 
 export const dictionary = {
   'zh-TW': {
