@@ -1,10 +1,13 @@
 export type Coach = {
   name: string
+  nickname?: string
   role: string
   bio: string
+  imageUrl?: string
   specialties: string[]
   style: string
   achievements: string[]
+  certifications?: string[]
 }
 
 export type CourseGroup = {
@@ -198,6 +201,129 @@ export const weeklySchedulePreview = [
   },
 ]
 
+export const coachProfiles = {
+  chenShengQi: {
+    name: '總教練 陳盛琦',
+    nickname: '琦琦教練',
+    role: '好運跑班創始人兼總教練',
+    imageUrl: '/coaches/chen-sheng-qi.jpg',
+    bio: '好運跑班創始人兼總教練，曾任寶礦力路跑進階訓練課程教練、MIZUNO REBELLION 馬拉松訓練營總教練、NIKE RUN CLUB 大中華區與北京總教練。',
+    specialties: ['企業跑班課程規劃', '中、高階跑者週期訓練規劃', '1 對 1 中、高階線上訓練規劃', '初階跑者建立運動習慣'],
+    style: '以完整週期規劃串起團練、線上課表與賽事目標，重視跑者長期穩定進步。',
+    achievements: ['我型我速萬金石 2023-2026 教練', 'NIKE FAST42 臺灣北區教練', '國立體育大學陸上運動技術學系'],
+    certifications: ['教育部學校專任運動教練證', '中華民國田徑協會 C 級教練', '中華民國田徑協會 C 級裁判', 'DR ACADEMY 功能性運動表現專家 L1'],
+  },
+  liuChengEn: {
+    name: '劉丞恩教練',
+    nickname: '恩恩教練',
+    role: '企業跑班與初中高階跑者訓練',
+    bio: '曾任 NIKE NRC PACER、好運跑班教練、台灣應用材料跑班教練、寶礦力路跑初階訓練課程教練，並長期投入學校田徑與企業跑班教學。',
+    specialties: ['企業跑班', '初、中、高階跑者訓練', '競技運動員訓練', '幼兒體能運動', '1 對 1 教學'],
+    style: '兼顧基礎動作、訓練紀律與個別化調整，能陪跑者從入門走到進階。',
+    achievements: ['NIKE NRC PACER', 'YYSPORTS 跑步教練', '國立台灣體育大學競技運動學系'],
+    certifications: ['中華民國田徑協會 C 級教練', '中華民國田徑協會 C 級裁判', '中華民國健身運動協會運動按摩技術人員'],
+  },
+  wuPeiCi: {
+    name: '吳珮慈教練',
+    role: '初階跑者與跑者肌力體能訓練',
+    imageUrl: '/coaches/wu-pei-ci.jpg',
+    bio: '好運跑班教練，曾任寶礦力路跑初階訓練課程教練、長榮懂跑步訓練營教練、MIZUNO REBELLION 馬拉松訓練營教練。',
+    specialties: ['企業跑班', '初階跑者訓練', '1 對 1 初階跑者訓練', '跑者肌力體能訓練'],
+    style: '用清楚、安全的訓練步驟協助新手建立跑步習慣與基礎肌力。',
+    achievements: ['我型我速萬金石 2024-2026 教練', '博仲法律事務所跑步社教練', '天主教輔仁大學體育系碩士班'],
+    certifications: ['中華民國田徑協會 C 級教練', '中華民國田徑協會 C 級裁判', '中華民國體適能健身 C 級指導員證', 'DR ACADEMY 功能性運動表現專家 L1'],
+  },
+  chenYiTing: {
+    name: '陳怡婷教練',
+    nickname: '扁扁教練',
+    role: '初階跑者、特殊族群與肌力訓練',
+    imageUrl: '/coaches/chen-yi-ting.jpg',
+    bio: '好運跑班教練，具伊甸松山視障中心視多障運動課教師、臺師大體適能與適應體育 TA 經歷。',
+    specialties: ['初階跑者訓練', '特殊族群功能性訓練', '肌力訓練'],
+    style: '細膩觀察身體狀態，用功能性訓練與肌力基礎降低跑步風險。',
+    achievements: ['伊甸松山視障中心視多障運動課教師', '國立臺灣師範大學運動與科學學系碩士'],
+    certifications: ['中華民國田徑協會 C 級教練', '中華民國田徑協會 C 級裁判', 'C 級健身體適能教練', '國民體適能檢測員', '丙級運動防護員'],
+  },
+  wuWeiQiao: {
+    name: '鄔惟喬教練',
+    role: '跑班教練與馬拉松訓練營助教',
+    imageUrl: '/coaches/wu-wei-qiao.jpg',
+    bio: '曾任森林跑站助教、好運跑班教練、MIZUNO REBELLION 馬拉松訓練營助教，出身台北市立大學陸上競技系。',
+    specialties: ['跑步基礎訓練', '團練協助', '跑者體能建立'],
+    style: '用穩定陪伴與動作提醒，幫助跑者在團練裡逐步累積。',
+    achievements: ['森林跑站助教', 'MIZUNO REBELLION 馬拉松訓練營助教', '台北市立大學陸上競技系'],
+    certifications: ['中華民國初級田徑專任教練證', '中華民國 C 級田徑裁判證', '中華民國 C 級田徑教練證', '體適能 C 級指導員'],
+  },
+  luoPeiCi: {
+    name: '羅珮慈教練',
+    role: '初中階跑者週期訓練規劃',
+    bio: 'GarminRun 跑步教練與好運跑班教練，具國立臺灣師範大學體育學系背景。',
+    specialties: ['初、中階跑者週期訓練規劃', '跑步基礎能力建立', '配速與訓練節奏引導'],
+    style: '把週期訓練拆成清楚可執行的步驟，協助跑者穩定完成課表。',
+    achievements: ['GarminRun 跑步教練', '國立臺灣師範大學體育學系'],
+    certifications: ['中華民國田徑 C 級教練', '中華民國田徑 C 級裁判'],
+  },
+  laiXinHong: {
+    name: '賴信宏教練',
+    nickname: '小黑教練',
+    role: '初階跑姿建立與企業跑班規劃',
+    imageUrl: '/coaches/lai-xin-hong.jpg',
+    bio: '好運跑班教練，具輔仁大學體育學系碩士班與臺北市立大學陸上運動技術學系背景。',
+    specialties: ['初階跑者跑姿建立', '企業跑班課程規劃', '社團跑班課程規劃'],
+    style: '重視跑姿細節與課程結構，讓初階跑者在安全節奏裡建立自信。',
+    achievements: ['輔仁大學體育學系碩士班', '臺北市立大學陸上運動技術學系'],
+    certifications: ['中華民國田徑專任教練證照', '中華民國田徑協會 B 級教練證', 'IBMA-BASIC 個人伸展教練證'],
+  },
+  zhouXianFeng: {
+    name: '周賢峰教練',
+    role: '初階跑者習慣建立與競技跑者經驗分享',
+    imageUrl: '/coaches/zhou-xian-feng.jpg',
+    bio: '好運跑班教練，曾任長榮懂跑步訓練營助教、MIZUNO REBELLION 馬拉松訓練營教練，具豐富路跑與場地賽經驗。',
+    specialties: ['初階跑者建立運動習慣', '半程馬拉松訓練', '賽事配速經驗分享'],
+    style: '把選手經驗轉化為一般跑者可吸收的訓練提醒，陪學員穩定養成習慣。',
+    achievements: ['2023 Garmin Run 亞洲系列賽臺北站半程馬拉松冠軍', '2023 臺南古都國際半程馬拉松亞軍', '成都世大運半程馬拉松國手', '半程馬拉松 1:06:58，全程馬拉松 2:31:24'],
+    certifications: ['中華民國田徑 C 級教練', '中華民國田徑 C 級裁判'],
+  },
+  yangShengHao: {
+    name: '楊陞豪教練',
+    role: '初階跑姿建立與社團課程規劃',
+    bio: '長庚路跑社教練與好運跑班教練，具國立體育大學陸上運動技術學系背景。',
+    specialties: ['初階跑者跑姿建立', '企業跑班課程規劃', '社團課程規劃'],
+    style: '以跑姿基礎和團練節奏建立訓練秩序，幫助跑者穩定累積。',
+    achievements: ['2026 萬金石馬拉松 10K 總 2', '2026 台南國際古都馬拉松 10K 總 3', '2025 台中國際馬拉松半程馬拉松第一名', '2024 全國田徑錦標賽男子 1500M 第一名'],
+    certifications: ['中華民國田徑 C 級教練', '中華民國田徑 C 級裁判'],
+  },
+  luoMinYao: {
+    name: '羅閔耀教練',
+    nickname: 'CC教練',
+    role: '跑步生理學、戰術與個別化訓練',
+    bio: '好運跑班教練，曾任丹鳳高中、八里國中、金山高中田徑教練，以及 NIKE RUN CLUB PACER、NIKE FAST42 臺灣北區助教。',
+    specialties: ['跑步生理學與訓練原則', '跑步訓練技巧與戰術', '個別化訓練計畫', '運動員合作與帶領'],
+    style: '以訓練原理為基礎，結合戰術和個別化安排，讓跑者清楚知道每堂課目的。',
+    achievements: ['丹鳳高中田徑教練', 'NIKE RUN CLUB PACER', 'NIKE FAST42 臺灣北區助教', '國立體育大學陸上運動技術學系'],
+    certifications: ['教育部學校專任運動教練證', '亞洲核心訓練師', '中華民國田徑協會 C 級教練', '中華民國田徑協會 C 級裁判'],
+  },
+} satisfies Record<string, Coach>
+
+function getCourseCoaches(course: Course): Coach[] {
+  if (course.coaches?.length) return course.coaches
+  if (course.coach) return [course.coach]
+
+  if (course.name.includes('PB')) {
+    return [coachProfiles.chenShengQi, coachProfiles.zhouXianFeng, coachProfiles.yangShengHao]
+  }
+
+  if (course.name.includes('初心') || course.name.includes('初階') || course.name.includes('初阶')) {
+    return [coachProfiles.wuPeiCi, coachProfiles.chenYiTing, coachProfiles.laiXinHong]
+  }
+
+  if (course.location.includes('新竹') || course.location.includes('竹北') || course.location.includes('竹南')) {
+    return [coachProfiles.liuChengEn, coachProfiles.luoPeiCi, coachProfiles.wuWeiQiao]
+  }
+
+  return [coachProfiles.chenShengQi, coachProfiles.luoMinYao, coachProfiles.zhouXianFeng]
+}
+
 export function courseSlug(course: Course) {
   return course.slug
 }
@@ -297,41 +423,21 @@ function getDefaultFaq(): Array<{ question: string; answer: string }> {
 
 function getDefaultCoach(course: Course): Coach {
   if (course.name.includes('PB')) {
-    return {
-      name: '張育豪 教練',
-      role: '本課程教練',
-      bio: '熟悉跑步與肌力訓練，擅長協助跑者建立穩定訓練節奏，依照不同程度調整訓練內容。',
-      specialties: ['耐力訓練', '跑姿調整', '馬拉松備賽'],
-      style: '穩定陪跑、重視回饋、循序漸進',
-      achievements: ['全馬 PB 3:02:15', '長期帶領跑者完成半馬與全馬目標'],
-    }
+    return coachProfiles.chenShengQi
   }
 
   if (course.name.includes('初心') || course.name.includes('初階')) {
-    return {
-      name: '好運基礎教練組',
-      role: '新手跑姿與基礎體能專項',
-      bio: '專注幫助新手建立安全跑步習慣，從跑姿、肌力、呼吸節奏到訓練負荷逐步打底。',
-      specialties: ['跑姿矯正', '基礎體能建立', '新手引導'],
-      style: '耐心教學、安全第一、循序漸進',
-      achievements: ['100+ 新手成功建立跑步習慣', '幫助新手完成首個半馬'],
-    }
+    return coachProfiles.wuPeiCi
   }
 
-  return {
-    name: '好運跑班教練組',
-    role: '耐力訓練與賽事備賽專項',
-    bio: '以週期化訓練安排團練課表，結合課後回饋調整強度，讓跑者穩定累積跑量並減少傷痛風險。',
-    specialties: ['週期化訓練', '團練管理', '賽事備賽'],
-    style: '穩定陪跑、重視回饋、科學調整',
-    achievements: ['帶領 50+ 學員完成馬拉松', '平均 PB 突破率 92%'],
-  }
+  return coachProfiles.chenShengQi
 }
 
 export const allCourses = courseGroups.flatMap((group) =>
   group.courses.map((course) => {
     const slug = courseSlug(course)
-    const coach = course.coach || course.coaches?.[0] || getDefaultCoach(course)
+    const coaches = getCourseCoaches(course)
+    const coach = coaches[0] || getDefaultCoach(course)
     const classTime =
       course.classTime ||
       course.time ||
@@ -377,7 +483,7 @@ export const allCourses = courseGroups.flatMap((group) =>
       faq: course.faq || getDefaultFaq(),
       instagramUrl: course.instagramUrl || 'https://www.instagram.com/nurture.running.team/',
       coach,
-      coaches: course.coaches || [coach],
+      coaches,
     }
   })
 )

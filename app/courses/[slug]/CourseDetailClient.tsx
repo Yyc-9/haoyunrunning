@@ -17,6 +17,7 @@ import FAQItem from '@/components/FAQItem'
 import EnrollmentStep from '@/components/EnrollmentStep'
 
 type CourseDetail = (typeof allCourses)[number]
+type CoachDetail = CourseDetail['coach']
 
 type CourseDetailClientProps = {
   course: CourseDetail | null
@@ -39,9 +40,47 @@ function localizeText(text: string, language: string) {
       .replaceAll('集合點', '集合点')
       .replaceAll('報名', '报名')
       .replaceAll('後', '后')
+      .replaceAll('總', '总')
+      .replaceAll('練', '练')
+      .replaceAll('創', '创')
+      .replaceAll('師', '师')
+      .replaceAll('經', '经')
+      .replaceAll('歷', '历')
+      .replaceAll('證', '证')
+      .replaceAll('專', '专')
+      .replaceAll('體', '体')
+      .replaceAll('學', '学')
+      .replaceAll('臺', '台')
+      .replaceAll('灣', '湾')
+      .replaceAll('規劃', '规划')
+      .replaceAll('穩定', '稳定')
+      .replaceAll('進步', '进步')
+      .replaceAll('與', '与')
+      .replaceAll('賽事', '赛事')
+      .replaceAll('國', '国')
+      .replaceAll('級', '级')
+      .replaceAll('協會', '协会')
+      .replaceAll('專任', '专任')
+      .replaceAll('運動', '运动')
+      .replaceAll('訓', '训')
+      .replaceAll('教練', '教练')
   }
 
   return text
+}
+
+function localizeCoach(coach: CoachDetail, language: string): CoachDetail {
+  return {
+    ...coach,
+    name: localizeText(coach.name, language),
+    nickname: coach.nickname ? localizeText(coach.nickname, language) : undefined,
+    role: localizeText(coach.role, language),
+    bio: localizeText(coach.bio, language),
+    specialties: coach.specialties.map((item) => localizeText(item, language)),
+    style: localizeText(coach.style, language),
+    achievements: coach.achievements.map((item) => localizeText(item, language)),
+    certifications: coach.certifications?.map((item) => localizeText(item, language)),
+  }
 }
 
 function getTrainingDescription(title: string, language: string) {
@@ -99,6 +138,7 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
 
   const text = (value: string) => localizeText(value, language)
   const instagramUrl = course.instagramUrl || 'https://www.instagram.com/nurture.running.team/'
+  const courseCoaches = course.coaches.map((coach) => localizeCoach(coach, language))
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
@@ -177,16 +217,22 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
 
             <motion.section initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }}>
               <h2 className="mb-6 text-2xl font-black text-apple-gray-900">{t.courseDetail.coachIntroduction}</h2>
-              <CoachCard
-                coach={course.coach}
-                labels={{
-                  photo: t.courseDetail.coachPhotoPlaceholder,
-                  photoPending: t.courseDetail.coachPhotoPending,
-                  specialties: t.courseDetail.coachSpecialties,
-                  style: t.courseDetail.coachStyle,
-                  achievements: t.courseDetail.coachAchievements,
-                }}
-              />
+              <div className="space-y-6">
+                {courseCoaches.map((coach) => (
+                  <CoachCard
+                    key={coach.name}
+                    coach={coach}
+                    labels={{
+                      photo: t.courseDetail.coachPhotoPlaceholder,
+                      photoPending: t.courseDetail.coachPhotoPending,
+                      specialties: t.courseDetail.coachSpecialties,
+                      style: t.courseDetail.coachStyle,
+                      achievements: t.courseDetail.coachAchievements,
+                      certifications: t.courseDetail.coachCertifications,
+                    }}
+                  />
+                ))}
+              </div>
             </motion.section>
 
             <motion.section initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }}>
