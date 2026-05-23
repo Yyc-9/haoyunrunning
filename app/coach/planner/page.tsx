@@ -13,8 +13,8 @@ import {
   formatWeekSwitchLabel,
   getTodayInfo,
   getWeekStatus,
-  getWeekStatusLabel,
   getWeekdayIndex,
+  type WeekStatus,
 } from '@/lib/week-dates'
 
 const columns = [
@@ -172,8 +172,14 @@ export default function CoachPlannerPage() {
   const weekGroups = useMemo(() => groupPlansByWeek(savedPlans), [savedPlans])
   const activeRangeEnd = useMemo(() => addDays(activeWeekStart, 6), [activeWeekStart])
   const activeWeekStatus = getWeekStatus(activeWeekStart, todayInfo.todayIso)
+  const getLocalizedWeekStatusLabel = (status: WeekStatus) => ({
+    this: t.schedule.thisWeek,
+    next: t.schedule.nextWeek,
+    past: t.schedule.pastWeek,
+    future: t.schedule.futureWeek,
+  })[status]
   const activeWeekRangeLabel = formatWeekRange(activeWeekStart, language)
-  const activeWeekStatusLabel = getWeekStatusLabel(activeWeekStatus, language)
+  const activeWeekStatusLabel = getLocalizedWeekStatusLabel(activeWeekStatus)
   const plansInActiveRange = useMemo(
     () => savedPlans.filter((plan) => plan.workout_date >= activeWeekStart && plan.workout_date <= activeRangeEnd),
     [activeRangeEnd, activeWeekStart, savedPlans]
@@ -505,9 +511,9 @@ export default function CoachPlannerPage() {
 
           <div className="mb-5 flex flex-wrap gap-2 rounded-3xl bg-white p-3 shadow-sm ring-1 ring-black/10">
             {[
-              { label: language === 'en' ? 'Previous week' : language === 'zh-TW' ? '上一週' : '上一周', weekStart: addDays(baseWeekStart, -7) },
-              { label: getWeekStatusLabel('this', language), weekStart: baseWeekStart },
-              { label: getWeekStatusLabel('next', language), weekStart: addDays(baseWeekStart, 7) },
+              { label: t.schedule.previousWeek, weekStart: addDays(baseWeekStart, -7) },
+              { label: t.schedule.thisWeek, weekStart: baseWeekStart },
+              { label: t.schedule.nextWeek, weekStart: addDays(baseWeekStart, 7) },
             ].map((item) => (
               <button
                 key={item.weekStart}
@@ -622,7 +628,7 @@ export default function CoachPlannerPage() {
               <div className="max-h-[620px] space-y-4 overflow-y-auto rounded-3xl border border-black/10 bg-white/70 p-3 shadow-inner">
                 {historyWeeks.map((week) => {
                   const historyRows = plansToRows(week.plans, formatCoachWeekTitle(week.weekStart, language))
-                  const historyStatus = getWeekStatusLabel(getWeekStatus(week.weekStart, todayInfo.todayIso), language)
+                  const historyStatus = getLocalizedWeekStatusLabel(getWeekStatus(week.weekStart, todayInfo.todayIso))
 
                   return (
                     <details key={week.key} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/10" open={week === previousWeek}>
