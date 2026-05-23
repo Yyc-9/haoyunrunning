@@ -62,7 +62,7 @@ export const recentActivities = [
     title: '好運跑班 4 週年活動',
     description: '近期 4 週年活動報名與詳情，先透過 Instagram 私訊確認名額與參加方式。',
     action: '活動報名',
-    href: 'https://www.instagram.com/nurture.running.team/',
+    href: '/anniversary',
   },
   {
     title: '團課報名',
