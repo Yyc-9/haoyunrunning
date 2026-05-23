@@ -18,7 +18,7 @@ export default function Navigation() {
   const [isLanguageOpen, setIsLanguageOpen] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
-  const { isLoggedIn, logout } = useAuth()
+  const { isLoggedIn, isLoading, logout } = useAuth()
   const { language, setLanguage, t } = useLanguage()
   const searchParams = useSearchParams()
 
@@ -194,7 +194,9 @@ export default function Navigation() {
             {/* Auth Buttons */}
             <div className="hidden md:flex items-center space-x-4 justify-self-end">
               {languageSwitcher}
-              {isLoggedIn ? (
+              {isLoading ? (
+                <div className="h-9 w-28 animate-pulse rounded-full bg-white/70 ring-1 ring-black/10" />
+              ) : isLoggedIn ? (
                 <motion.div
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -326,7 +328,9 @@ export default function Navigation() {
                       </button>
                     ))}
                   </div>
-                  {isLoggedIn ? (
+                  {isLoading ? (
+                    <div className="h-11 w-full animate-pulse rounded-full bg-apple-gray-200" />
+                  ) : isLoggedIn ? (
                     <>
                       <Link href="/profile" className="block">
                         <motion.button

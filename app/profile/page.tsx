@@ -31,16 +31,16 @@ function QuickLink({ icon: Icon, label, href }: { icon: React.ElementType; label
 }
 
 export default function ProfilePage() {
-  const { isLoggedIn, user } = useAuth()
+  const { isLoggedIn, isLoading, user } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!isLoggedIn) {
+    if (!isLoading && !isLoggedIn) {
       router.push('/?auth=login')
     }
-  }, [isLoggedIn, router])
+  }, [isLoading, isLoggedIn, router])
 
-  if (!isLoggedIn || !user) {
+  if (isLoading || !isLoggedIn || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-apple-blue"></div>

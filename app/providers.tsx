@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 
 export interface User {
@@ -51,6 +52,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       pb: data.pb || '',
       avatar: data.avatar_url || undefined,
       role: data.role,
+    }
+
+    setUser(nextUser)
+    return nextUser
+  }, [])
+
+  const applyAuthUser = useCallback((authUser: SupabaseUser, fallbackRole?: User['role']) => {
+    const nextUser: User = {
+      id: authUser.id,
+      name:
+        (authUser.user_metadata?.name as string | undefined) ||
+        authUser.email?.split('@')[0] ||
+        '好運學員',
+      email: authUser.email ?? '',
+      phone: '',
+      gender: 'other',
+      pb: '',
+      role: fallbackRole || 'student',
     }
 
     setUser(nextUser)
@@ -136,11 +155,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const {
-        data: { user: authUser },
-      } = await supabase.auth.getUser()
+        data: { session },
+      } = await supabase.auth.getSession()
 
-      if (authUser && mounted) {
-        await loadProfile(authUser.id, authUser.email ?? '')
+      if (session?.user && mounted) {
+        const savedRole =
+          typeof window !== 'undefined'
+            ? (window.localStorage.getItem('goodluck-user-role') as User['role'] | null)
+            : null
+
+        applyAuthUser(session.user, savedRole || undefined)
+        await loadProfile(session.user.id, session.user.email ?? '')
       }
 
       if (mounted) setIsLoading(false)
@@ -160,21 +185,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!mounted) return
 
       if (session?.user) {
-        setUser({
-          id: session.user.id,
-          name:
-            (session.user.user_metadata?.name as string | undefined) ||
-            session.user.email?.split('@')[0] ||
-            '好運學員',
-          email: session.user.email ?? '',
-          phone: '',
-          gender: 'other',
-          pb: '',
-          role:
-            (typeof window !== 'undefined'
-              ? (window.localStorage.getItem('goodluck-user-role') as User['role'] | null)
-              : null) || 'student',
-        })
+        const savedRole =
+          typeof window !== 'undefined'
+            ? (window.localStorage.getItem('goodluck-user-role') as User['role'] | null)
+            : null
+
+        applyAuthUser(session.user, savedRole || undefined)
 
         setTimeout(() => {
           loadProfile(session.user.id, session.user.email ?? '')
@@ -188,7 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false
       subscription.unsubscribe()
     }
-  }, [loadProfile])
+  }, [applyAuthUser, loadProfile])
 
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true)
@@ -205,18 +221,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error
 
       if (data.user) {
-        setUser({
-          id: data.user.id,
-          name:
-            (data.user.user_metadata?.name as string | undefined) ||
-            data.user.email?.split('@')[0] ||
-            '好運學員',
-          email: data.user.email ?? email,
-          phone: '',
-          gender: 'other',
-          pb: '',
-          role: 'student',
-        })
+        applyAuthUser(data.user)
         await loadProfile(data.user.id, data.user.email ?? email)
       }
     } catch (error) {
@@ -225,7 +230,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }, [loadProfile])
+  }, [applyAuthUser, loadProfile])
 
   const logout = useCallback(() => {
     if (supabase) {
