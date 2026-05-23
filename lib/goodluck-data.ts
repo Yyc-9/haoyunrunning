@@ -65,9 +65,9 @@ export const recentActivities = [
     href: '/anniversary',
   },
   {
-    title: '團課報名',
-    description: '先留下團課報名意向，讓我們依照地點、時間與訓練目標協助確認適合班級。',
-    action: '填寫團課報名',
+    title: '團練報名',
+    description: '先留下團練報名意向，讓我們依照地點、時間與訓練目標協助確認適合班級。',
+    action: '填寫團練報名',
     href: '/group-signup',
   },
 ]

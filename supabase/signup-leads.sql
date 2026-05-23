@@ -1,4 +1,4 @@
--- Signup lead collection table for anniversary activities and group class interest forms.
+-- Signup lead collection table for anniversary activities and group training interest forms.
 -- Run this file in Supabase SQL Editor before using /anniversary or /group-signup forms.
 
 create table if not exists public.signup_leads (
