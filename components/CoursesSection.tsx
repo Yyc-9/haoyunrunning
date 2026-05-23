@@ -88,12 +88,6 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
           </div>
         </motion.div>
 
-        {!preview && (
-          <div className="mb-8">
-            <CoursePaymentInfo />
-          </div>
-        )}
-
         {preview ? (
           <div className="grid gap-5 lg:grid-cols-2">
             {courses.map((course) => (
@@ -162,16 +156,22 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
         )}
 
         {!preview && (
-          <div className="mt-8 rounded-3xl bg-apple-gray-100 p-6">
-            <h3 className="text-xl font-black text-apple-gray-900">{t.courses.signupNotesTitle}</h3>
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {t.courses.signupNotes.map((note) => (
-                <p key={note} className="rounded-2xl bg-white p-4 text-sm leading-6 text-apple-gray-600">
-                  {note}
-                </p>
-              ))}
+          <>
+            <div className="mt-8">
+              <CoursePaymentInfo />
             </div>
-          </div>
+
+            <div className="mt-8 rounded-3xl bg-apple-gray-100 p-6">
+              <h3 className="text-xl font-black text-apple-gray-900">{t.courses.signupNotesTitle}</h3>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {t.courses.signupNotes.map((note) => (
+                  <p key={note} className="rounded-2xl bg-white p-4 text-sm leading-6 text-apple-gray-600">
+                    {note}
+                  </p>
+                ))}
+              </div>
+            </div>
+          </>
         )}
 
         <div className="mt-8 grid gap-4 md:grid-cols-3">
