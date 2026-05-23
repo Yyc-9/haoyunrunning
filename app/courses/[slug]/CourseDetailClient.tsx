@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { motion } from 'framer-motion'
 import {
   ArrowLeft,
   ChevronRight,
@@ -143,26 +142,29 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
       <div className="sticky top-24 z-40 border-b border-black/5 bg-white/85 backdrop-blur-md">
-        <div className="container mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+        <div className="container mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4 sm:px-6 lg:px-8 md:flex-row md:items-center md:justify-between">
           <Link href="/courses" className="inline-flex items-center gap-2 text-sm font-bold text-apple-gray-700 transition-colors hover:text-apple-blue">
             <ArrowLeft className="h-4 w-4" />
             {t.courseDetail.backToCourses}
           </Link>
+          <p className="truncate text-sm font-black text-apple-gray-900 md:max-w-2xl">
+            {text(course.title)}
+          </p>
         </div>
       </div>
 
-      <section className="overflow-hidden border-b border-black/5 bg-apple-gray-950 px-4 py-12 text-white sm:px-6 lg:px-8 lg:py-16">
+      <section className="overflow-hidden border-b border-black/5 bg-apple-gray-950 px-4 py-8 text-white sm:px-6 lg:px-8 lg:py-10">
         <div className="container mx-auto max-w-7xl">
-          <div className="grid gap-8 lg:grid-cols-[1fr_380px] lg:items-end">
-            <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          <div className="grid gap-6 lg:grid-cols-[1fr_320px] lg:items-end">
+            <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-apple-blue">{t.courseDetail.heroLabel}</p>
-              <h1 className="mt-4 max-w-4xl text-4xl font-black leading-tight md:text-6xl">
+              <h1 className="mt-3 max-w-4xl text-3xl font-black leading-tight md:text-5xl">
                 {text(course.title)}
               </h1>
-              <p className="mt-5 max-w-2xl text-lg leading-8 text-white/75">
+              <p className="mt-4 max-w-2xl text-base leading-7 text-white/75 md:text-lg">
                 {text(course.slogan)}
               </p>
-              <div className="mt-8 flex flex-wrap gap-3">
+              <div className="mt-6 flex flex-wrap gap-3">
                 {[
                   [t.courseDetail.city, course.city],
                   [t.courseDetail.courseWeekday, course.weekday],
@@ -176,46 +178,43 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
                   </span>
                 ))}
               </div>
-            </motion.div>
+            </div>
 
-            <motion.a
+            <a
               href={instagramUrl}
               target="_blank"
               rel="noreferrer"
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
               className="apple-button-primary inline-flex w-full items-center justify-center gap-2 px-6 py-3 lg:w-auto"
             >
               <Instagram className="h-5 w-5" />
               {t.courseDetail.instagramSignup}
-            </motion.a>
+            </a>
           </div>
         </div>
       </section>
 
-      <div className="px-4 py-12 sm:px-6 lg:px-8">
+      <div className="px-4 py-10 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-7xl">
-          <div className="space-y-16">
-            <motion.section initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }}>
+          <div className="space-y-10">
+            <section>
               <h2 className="mb-6 text-2xl font-black text-apple-gray-900">{t.courseDetail.trainingItems}</h2>
               <div className="grid gap-4 md:grid-cols-2">
                 {course.trainingItems.map((item) => (
                   <TrainingItemCard key={item} title={text(item)} description={getTrainingDescription(item, language)} />
                 ))}
               </div>
-            </motion.section>
+            </section>
 
-            <motion.section initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }}>
+            <section>
               <h2 className="mb-6 text-2xl font-black text-apple-gray-900">{t.courseDetail.whatYouWillGet}</h2>
               <div className="apple-card grid gap-4 p-6 md:grid-cols-2 md:p-8">
                 {course.benefits.map((benefit) => (
                   <BenefitItem key={benefit} text={text(benefit)} />
                 ))}
               </div>
-            </motion.section>
+            </section>
 
-            <motion.section initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }}>
+            <section>
               <h2 className="mb-6 text-2xl font-black text-apple-gray-900">{t.courseDetail.coachIntroduction}</h2>
               <div className="space-y-6">
                 {courseCoaches.map((coach) => (
@@ -233,32 +232,32 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
                   />
                 ))}
               </div>
-            </motion.section>
+            </section>
 
-            <motion.section initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }}>
+            <section>
               <div className="grid gap-6 md:grid-cols-2">
                 <SuitabilityCard type="suitable" title={t.courseDetail.suitableFor} items={course.suitableFor.map(text)} />
                 <SuitabilityCard type="notSuitable" title={t.courseDetail.notSuitableFor} items={course.notSuitableFor.map(text)} />
               </div>
-            </motion.section>
+            </section>
 
-            <motion.section initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }}>
+            <section>
               <h2 className="mb-6 text-2xl font-black text-apple-gray-900">{t.courseDetail.howToJoin}</h2>
               <div className="apple-card p-6 md:p-8">
                 {t.courseDetail.enrollmentSteps.map((step, index) => (
                   <EnrollmentStep key={step.title} number={index + 1} title={step.title} description={step.description} />
                 ))}
               </div>
-            </motion.section>
+            </section>
 
-            <motion.section initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }}>
+            <section>
               <h2 className="mb-6 text-2xl font-black text-apple-gray-900">{t.courseDetail.faqs}</h2>
               <div className="apple-card p-6 md:p-8">
                 {course.faq.map((item) => (
                   <FAQItem key={item.question} question={text(item.question)} answer={text(item.answer)} />
                 ))}
               </div>
-            </motion.section>
+            </section>
           </div>
         </div>
       </div>
