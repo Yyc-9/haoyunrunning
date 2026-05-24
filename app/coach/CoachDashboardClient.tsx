@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import CoachAccessPanel from '@/components/CoachAccessPanel'
+import CoachSubNav from '@/components/CoachSubNav'
 import { useLanguage } from '@/app/language-context'
 import { getStudentDisplayEmail, getStudentDisplayName, hasStudentName } from '@/lib/student-display'
 
@@ -347,6 +348,8 @@ export default function CoachDashboardClient() {
     <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
       <section className="px-4 py-10 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-7xl">
+          <CoachSubNav />
+
           <div className="mb-8 grid gap-6 lg:grid-cols-[1fr_360px] lg:items-end">
             <div>
               <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">

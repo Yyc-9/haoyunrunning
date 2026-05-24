@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
-import { ArrowLeft, CalendarPlus, ChevronDown, ChevronUp, Copy, Download, Loader2, Save, UserRoundPlus } from 'lucide-react'
+import { CalendarPlus, ChevronDown, ChevronUp, Copy, Download, Loader2, Save, UserRoundPlus } from 'lucide-react'
+import CoachSubNav from '@/components/CoachSubNav'
 import { supabase } from '@/lib/supabase'
 import { useLanguage } from '@/app/language-context'
 import { getStudentDisplayEmail, getStudentDisplayName } from '@/lib/student-display'
@@ -474,10 +474,7 @@ export default function CoachPlannerPage() {
     <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
       <section className="px-4 py-10 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-7xl">
-          <Link href="/coach" className="mb-8 inline-flex items-center gap-2 text-sm font-bold text-apple-gray-700">
-            <ArrowLeft className="h-4 w-4" />
-            {t.planner.back}
-          </Link>
+          <CoachSubNav />
 
           <div className="mb-8 grid gap-6 lg:grid-cols-[1fr_390px] lg:items-end">
             <div>

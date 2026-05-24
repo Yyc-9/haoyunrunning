@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, CalendarDays, Mail, MessageSquareText, NotebookPen, Search, UsersRound } from 'lucide-react'
+import { CalendarDays, Mail, MessageSquareText, NotebookPen, Search, UsersRound } from 'lucide-react'
 import CoachAccessPanel from '@/components/CoachAccessPanel'
+import CoachSubNav from '@/components/CoachSubNav'
 import { supabase } from '@/lib/supabase'
 import { getStudentDisplayEmail, getStudentDisplayName, hasStudentName } from '@/lib/student-display'
 
@@ -112,10 +113,7 @@ export default function CoachStudentsClient() {
     <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
       <section className="px-4 py-10 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-7xl">
-          <Link href="/coach" className="mb-8 inline-flex items-center gap-2 text-sm font-bold text-apple-gray-700">
-            <ArrowLeft className="h-4 w-4" />
-            回教练工作台
-          </Link>
+          <CoachSubNav />
 
           <div className="mb-8 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
             <div>
