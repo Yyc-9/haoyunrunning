@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { UserRound } from 'lucide-react'
 
 interface Coach {
@@ -30,9 +31,11 @@ export default function CoachCard({ coach, labels }: CoachCardProps) {
       <div className="flex flex-shrink-0 items-center justify-center bg-gradient-to-br from-apple-gray-100 to-white p-8 md:min-h-72 md:w-64">
         <div className="flex flex-col items-center justify-center">
           {coach.imageUrl ? (
-            <img
+            <Image
               src={coach.imageUrl}
               alt={coach.name}
+              width={192}
+              height={192}
               className="h-40 w-40 rounded-full object-cover object-center ring-8 ring-white md:h-48 md:w-48"
             />
           ) : (

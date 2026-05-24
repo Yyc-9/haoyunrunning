@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import './globals.css'
 import NavigationWrapper from '@/components/NavigationWrapper'
 import Footer from '@/components/Footer'
@@ -7,8 +6,6 @@ import { AuthProvider } from './providers'
 import { ToastProvider } from './toast-provider'
 import { CartProvider } from './cart-provider'
 import { LanguageProvider } from './language-context'
-
-const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: '好運跑班 - 科学训练，跑出好运',
@@ -22,7 +19,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-TW" className="scroll-smooth">
-      <body className={`${inter.className} min-h-screen bg-white text-black`}>
+      <body className="min-h-screen bg-white text-black">
         <LanguageProvider>
           <AuthProvider>
             <CartProvider>

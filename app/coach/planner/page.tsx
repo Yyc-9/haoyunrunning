@@ -323,7 +323,7 @@ export default function CoachPlannerPage() {
     }
 
     loadPlans()
-  }, [activeRangeEnd, activeWeekLabel, activeWeekStart, baseWeekStart, selectedStudentId])
+  }, [activeRangeEnd, activeWeekLabel, activeWeekStart, baseWeekStart, language, selectedStudentId])
 
   useEffect(() => {
     setRows((current) => current.map((row) => ({ ...row, date: activeWeekLabel })))

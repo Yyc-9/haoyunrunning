@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, CalendarDays, Mail, MessageSquareText, NotebookPen, Search, Target, UsersRound } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Mail, MessageSquareText, NotebookPen, Search, UsersRound } from 'lucide-react'
 import CoachAccessPanel from '@/components/CoachAccessPanel'
 import { supabase } from '@/lib/supabase'
 import { getStudentDisplayEmail, getStudentDisplayName, hasStudentName } from '@/lib/student-display'

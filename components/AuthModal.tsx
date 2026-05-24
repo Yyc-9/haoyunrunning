@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, User, Mail, Phone, Lock, Calendar, Award, Eye, EyeOff, ChevronRight } from 'lucide-react'
+import { X, User, Mail, Phone, Lock, Award, Eye, EyeOff, ChevronRight } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '@/app/providers'
 import { useLanguage } from '@/app/language-context'

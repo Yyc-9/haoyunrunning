@@ -130,7 +130,7 @@ export default function Navigation() {
             >
               <div className="relative h-10 w-10 overflow-hidden rounded-full border border-black/10 bg-white shadow-sm">
                 <Image
-                  src="/goodluck-logo.svg"
+                  src="/goodluck-logo-nav.jpg"
                   alt="好運跑班 Logo"
                   fill
                   sizes="40px"

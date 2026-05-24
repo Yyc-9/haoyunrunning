@@ -31,7 +31,9 @@ export const paymentProviders: Record<PaymentProvider, { enabled: boolean; secre
   },
 }
 
-export function createCheckoutSession(_draft: CheckoutDraft): CheckoutSessionResult {
+export function createCheckoutSession(draft: CheckoutDraft): CheckoutSessionResult {
+  void draft
+
   return {
     status: 'coming_soon',
     message: 'Payment providers are not connected yet.',

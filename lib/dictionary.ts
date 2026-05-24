@@ -236,7 +236,7 @@ export const dictionary = {
       contactHint: '請至少填寫電話、Email 或 Instagram 其中一種聯絡方式。',
     },
     payment: {
-      label: 'Payment placeholder',
+      label: 'Payment options',
       title: '課程付款',
       subtitle: '這是付款功能的預留頁。已確認報名的學員可以先整理課程、姓名與聯絡資料，實際付款仍以 Instagram 確認為準。',
       courseLabel: '課程選擇',
@@ -666,7 +666,7 @@ export const dictionary = {
       contactHint: '请至少填写电话、Email 或 Instagram 其中一种联系方式。',
     },
     payment: {
-      label: 'Payment placeholder',
+      label: 'Payment options',
       title: '课程付款',
       subtitle: '这是付款功能的预留页。已确认报名的学员可以先整理课程、姓名与联系资料，实际付款仍以 Instagram 确认为准。',
       courseLabel: '课程选择',
@@ -1096,9 +1096,9 @@ export const dictionary = {
       contactHint: 'Please provide at least one contact method: phone, email, or Instagram.',
     },
     payment: {
-      label: 'Payment placeholder',
+      label: 'Payment options',
       title: 'Course Payment',
-      subtitle: 'This is a placeholder for the future payment flow. Confirmed students can organize course, name, and contact details here; actual payment should still be confirmed on Instagram.',
+      subtitle: 'Confirmed students can organize course, name, and contact details here. Actual payment should still be confirmed on Instagram before any transfer.',
       courseLabel: 'Course',
       coursePlaceholder: 'Select your confirmed course',
       nameLabel: 'Name',

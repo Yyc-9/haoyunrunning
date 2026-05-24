@@ -51,6 +51,25 @@ type BoundStudentRow = {
   } | null
 }
 
+type FeedbackProfile = {
+  name: string | null
+  email: string | null
+  program: string | null
+}
+
+type TrainingFeedbackRow = {
+  id: string
+  created_at: string
+  distance_km: number | null
+  pace_text: string | null
+  average_heart_rate: number | null
+  rpe: number | null
+  feeling: string | null
+  status: FeedbackItem['status']
+  profiles: FeedbackProfile | FeedbackProfile[] | null
+  training_plans: { target: string | null } | Array<{ target: string | null }> | null
+}
+
 type RiskLevel = 'high' | 'medium' | 'low'
 
 type RiskAssessment = {
@@ -147,6 +166,12 @@ const quickLinks = [
     title: '课表面板',
     description: '编辑周课表并写入 training_plans，同步到学员端。',
   },
+  {
+    href: '/coach/signups',
+    icon: ClipboardList,
+    title: '报名资料',
+    description: '查看 4 周年活动与团练报名资料，筛选来源、更新状态并导出名单。',
+  },
 ]
 
 const coachNotes = [
@@ -195,18 +220,20 @@ async function fetchCoachStudents() {
   return payload.students ?? []
 }
 
-const formatFeedback = (item: any): FeedbackItem => {
+const formatFeedback = (item: TrainingFeedbackRow): FeedbackItem => {
+  const profile = Array.isArray(item.profiles) ? item.profiles[0] : item.profiles
+  const trainingPlan = Array.isArray(item.training_plans) ? item.training_plans[0] : item.training_plans
   const feeling = item.feeling || '尚未填写感受。'
   const rpe = item.rpe ?? '-'
   const status = item.status as FeedbackItem['status']
 
   return {
     id: item.id,
-    student: getStudentDisplayName(item.profiles) || '已登录学员',
-    studentEmail: getStudentDisplayEmail(item.profiles),
-    studentHasName: hasStudentName(item.profiles),
-    program: item.profiles?.program || '尚未分班',
-    workout: item.training_plans?.target || '自主训练回馈',
+    student: getStudentDisplayName(profile) || '已登录学员',
+    studentEmail: getStudentDisplayEmail(profile),
+    studentHasName: hasStudentName(profile),
+    program: profile?.program || '尚未分班',
+    workout: trainingPlan?.target || '自主训练回馈',
     submittedAt: new Date(item.created_at).toLocaleString('zh-CN', {
       month: 'numeric',
       day: 'numeric',

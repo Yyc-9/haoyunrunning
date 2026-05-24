@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { ChevronDown, ChevronRight, MapPin, Target, Users } from 'lucide-react'
+import { ChevronDown, ChevronRight, MapPin, Target } from 'lucide-react'
 import { allCourses } from '@/lib/goodluck-data'
 import { useLanguage } from '@/app/language-context'
 
@@ -13,10 +13,8 @@ function normalizeWeekday(weekday: string) {
 }
 
 type LevelFilter = 'all' | 'beginner' | 'advanced' | 'elite'
-type CourseWithExpandedState = (typeof allCourses)[0] & { expanded?: boolean }
-
 export default function CoursesTable() {
-  const { language, t } = useLanguage()
+  const { language } = useLanguage()
   const [levelFilter, setLevelFilter] = useState<LevelFilter>('all')
   const [cityFilter, setCityFilter] = useState<string>('all')
   const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set())

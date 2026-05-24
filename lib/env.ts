@@ -22,6 +22,11 @@ export interface EnvConfig {
   debugMode: boolean
 }
 
+function getNodeEnv(value: string | undefined): EnvConfig['nodeEnv'] {
+  if (value === 'production' || value === 'test') return value
+  return 'development'
+}
+
 /**
  * 从环境变量加载配置
  */
@@ -29,12 +34,6 @@ export function loadEnvConfig(): EnvConfig {
   const requiredEnvs = [
     'NEXT_PUBLIC_SITE_URL',
     'NEXT_PUBLIC_APP_NAME',
-  ]
-
-  const optionalEnvs = [
-    'NEXT_PUBLIC_SUPABASE_URL',
-    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-    'SUPABASE_SERVICE_ROLE_KEY',
   ]
 
   // 检查必需环境变量
@@ -51,7 +50,7 @@ export function loadEnvConfig(): EnvConfig {
   const allowedFileTypes = fileTypesStr.split(',').map(t => t.trim())
 
   const config: EnvConfig = {
-    nodeEnv: (process.env.NODE_ENV as any) || 'development',
+    nodeEnv: getNodeEnv(process.env.NODE_ENV),
     siteUrl: process.env.NEXT_PUBLIC_SITE_URL!,
     appName: process.env.NEXT_PUBLIC_APP_NAME || '好運跑班',
     maxFileSize: parseInt(process.env.NEXT_PUBLIC_MAX_FILE_SIZE || '10', 10),

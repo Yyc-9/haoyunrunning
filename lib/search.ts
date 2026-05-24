@@ -4,7 +4,7 @@
 
 export interface SearchOptions {
   query: string
-  filters: Record<string, string | number | boolean>
+  filters: Record<string, string | number | boolean | Array<string | number | boolean>>
   sortBy: 'relevance' | 'price-low' | 'price-high' | 'rating' | 'newest'
   limit: number
   offset: number
@@ -19,7 +19,7 @@ export interface SearchResult<T> {
 /**
  * 简单的搜索引擎实现
  */
-export class SearchEngine<T extends Record<string, any>> {
+export class SearchEngine<T extends Record<string, unknown>> {
   private items: T[]
   private searchableFields: (keyof T)[]
 
@@ -51,9 +51,9 @@ export class SearchEngine<T extends Record<string, any>> {
         results = results.filter(item => {
           const itemValue = item[key as keyof T]
           if (Array.isArray(value)) {
-            return value.includes(itemValue)
+            return value.some((filterValue) => String(filterValue) === String(itemValue))
           }
-          return itemValue === value
+          return String(itemValue) === String(value)
         })
       })
     }
@@ -120,15 +120,15 @@ export class SearchEngine<T extends Record<string, any>> {
 
     switch (sortBy) {
       case 'price-low':
-        return sorted.sort((a, b) => (a.price || 0) - (b.price || 0))
+        return sorted.sort((a, b) => Number(a.price ?? 0) - Number(b.price ?? 0))
       case 'price-high':
-        return sorted.sort((a, b) => (b.price || 0) - (a.price || 0))
+        return sorted.sort((a, b) => Number(b.price ?? 0) - Number(a.price ?? 0))
       case 'rating':
-        return sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0))
+        return sorted.sort((a, b) => Number(b.rating ?? 0) - Number(a.rating ?? 0))
       case 'newest':
         return sorted.sort((a, b) => {
-          const dateA = new Date(a.createdAt || 0).getTime()
-          const dateB = new Date(b.createdAt || 0).getTime()
+          const dateA = new Date(String(a.createdAt ?? 0)).getTime()
+          const dateB = new Date(String(b.createdAt ?? 0)).getTime()
           return dateB - dateA
         })
       case 'relevance':
@@ -172,7 +172,7 @@ export function fuzzyMatch(query: string, text: string): number {
 /**
  * 生成搜索索引
  */
-export function createSearchIndex<T extends Record<string, any>>(
+export function createSearchIndex<T extends Record<string, unknown>>(
   items: T[],
   fields: (keyof T)[]
 ): Map<string, T[]> {

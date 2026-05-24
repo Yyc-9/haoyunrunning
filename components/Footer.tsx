@@ -33,7 +33,7 @@ export default function Footer() {
             <div className="mb-6 flex items-center space-x-3">
               <div className="relative h-14 w-14 overflow-hidden rounded-full border border-black/10 bg-white shadow-sm">
                 <Image
-                  src="/goodluck-logo.svg"
+                  src="/goodluck-logo-nav.jpg"
                   alt={`${t.common.brand} Logo`}
                   fill
                   sizes="56px"

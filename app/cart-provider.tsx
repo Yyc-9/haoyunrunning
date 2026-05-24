@@ -122,12 +122,18 @@ export function calculateDiscount(total: number, couponCode: string): number {
   return 0
 }
 
-export function calculateTotal(subtotal: number, options = {}) {
+type CalculateTotalOptions = {
+  shippingThreshold?: number
+  taxRate?: number
+  couponCode?: string
+}
+
+export function calculateTotal(subtotal: number, options: CalculateTotalOptions = {}) {
   const {
     shippingThreshold = 299,
     taxRate = 0,
     couponCode = '',
-  } = options as Record<string, any>
+  } = options
 
   const shipping = calculateShipping(subtotal, shippingThreshold)
   const tax = calculateTax(subtotal + shipping, taxRate)
