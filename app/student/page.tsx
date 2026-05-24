@@ -509,21 +509,45 @@ export default function StudentPage() {
     setIsSavingSettings(true)
 
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session?.access_token) {
+        throw new Error('请先重新登录后再保存资料。')
+      }
+
+      const response = await fetch('/api/account/me', {
+        method: 'PATCH',
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
           name: profileForm.name.trim() || user.name,
           phone: profileForm.phone.trim(),
           pb: profileForm.pb.trim(),
-        })
-        .eq('id', user.id)
+        }),
+      })
 
-      if (error) throw error
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string
+        profile?: {
+          name?: string | null
+          phone?: string | null
+          pb?: string | null
+        }
+      }
+
+      if (!response.ok || !payload.profile) {
+        throw new Error(payload.error || '保存失败，请稍后再试。')
+      }
 
       updateUser({
-        name: profileForm.name.trim() || user.name,
-        phone: profileForm.phone.trim(),
-        pb: profileForm.pb.trim(),
+        name: payload.profile.name || profileForm.name.trim() || user.name,
+        phone: payload.profile.phone || '',
+        pb: payload.profile.pb || '',
       })
       setSettingsMessage('资料已更新。')
       window.setTimeout(() => setIsSettingsOpen(false), 500)

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 
+const noStoreHeaders = {
+  'Cache-Control': 'no-store',
+}
+
 type CoachStudentRow = {
   id: string
   active: boolean
@@ -47,7 +51,7 @@ export async function GET(request: NextRequest) {
   const studentIds = rows.map((row) => row.student_id)
 
   if (studentIds.length === 0) {
-    return NextResponse.json({ students: [] })
+    return NextResponse.json({ students: [] }, { headers: noStoreHeaders })
   }
 
   const { data: profiles, error: profilesError } = await supabaseAdmin
@@ -88,5 +92,5 @@ export async function GET(request: NextRequest) {
     recentFeedback: feedbackByStudent.get(row.student_id) ?? [],
   }))
 
-  return NextResponse.json({ students })
+  return NextResponse.json({ students }, { headers: noStoreHeaders })
 }

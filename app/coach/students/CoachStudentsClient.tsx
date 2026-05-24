@@ -48,6 +48,7 @@ async function fetchCoachStudents() {
   }
 
   const response = await fetch('/api/coach/students', {
+    cache: 'no-store',
     headers: {
       Authorization: `Bearer ${session.access_token}`,
     },
