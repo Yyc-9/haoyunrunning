@@ -206,7 +206,7 @@ export default function Navigation() {
                     <User className="h-4 w-4 text-apple-gray-700" />
                   </div>
                   <Link
-                    href="/profile"
+                    href="/student"
                     className="text-sm font-semibold text-apple-gray-950 transition-colors duration-200 hover:text-apple-blue"
                   >
                     {t.common.myAccount}
@@ -332,7 +332,7 @@ export default function Navigation() {
                     <div className="h-11 w-full animate-pulse rounded-full bg-apple-gray-200" />
                   ) : isLoggedIn ? (
                     <>
-                      <Link href="/profile" className="block">
+                      <Link href="/student" className="block">
                         <motion.button
                           whileTap={{ scale: 0.95 }}
                           className="w-full apple-button-outline"

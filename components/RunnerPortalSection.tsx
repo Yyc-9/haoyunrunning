@@ -45,7 +45,7 @@ export default function RunnerPortalSection() {
             </div>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link href="/profile" className="apple-button-primary text-center">
+              <Link href="/student" className="apple-button-primary text-center">
                 {t.runnerPortal.studentCenter}
               </Link>
               <Link href="/courses" className="apple-button-outline text-center">

@@ -60,14 +60,14 @@ export const brandIntro = {
 export const recentActivities = [
   {
     title: '好運跑班 4 週年活動',
-    description: '近期 4 週年活動報名與詳情，先透過 Instagram 私訊確認名額與參加方式。',
+    description: '留下 4 週年活動參加意向，方便我們掌握現場人數與後續聯絡。',
     action: '活動報名',
     href: '/anniversary',
   },
   {
     title: '團練報名',
-    description: '先留下團練報名意向，讓我們依照地點、時間與訓練目標協助確認適合班級。',
-    action: '填寫團練報名',
+    description: '每週六開放式團練意向登記，方便教練掌握現場人數。',
+    action: '填寫團練意向',
     href: '/group-signup',
   },
 ]

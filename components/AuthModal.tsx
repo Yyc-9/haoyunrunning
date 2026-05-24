@@ -74,8 +74,8 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
         password: formData.password,
       })
 
-      setSuccessMessage('帳戶已建立，正在前往個人中心。')
-      router.push('/profile')
+      setSuccessMessage('帳戶已建立，正在前往學員看板。')
+      router.push('/student')
       onClose()
     } catch (error) {
       const message = error instanceof Error ? error.message : '操作失敗，請稍後再試。'
