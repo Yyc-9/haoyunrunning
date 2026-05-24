@@ -9,7 +9,6 @@ import { useLanguage } from '@/app/language-context'
 const images = [
   '/20250605[好運]三周年慶-7089.jpg',
   '/20250605[好運]三周年慶-7096.jpg',
-  '/20241106[好運]教練拍-13.jpg',
   '/LINE_ALBUM_四週年手機桌布_260515_1.jpg',
 ]
 
