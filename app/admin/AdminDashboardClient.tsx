@@ -177,6 +177,12 @@ export default function AdminDashboardClient() {
   const [message, setMessage] = useState('')
   const [updatingId, setUpdatingId] = useState('')
   const [selectedCoachByStudent, setSelectedCoachByStudent] = useState<Record<string, string>>({})
+  const [studentQuery, setStudentQuery] = useState('')
+  const [coachQuery, setCoachQuery] = useState('')
+  const [orderQuery, setOrderQuery] = useState('')
+  const [studentPlanFilter, setStudentPlanFilter] = useState<'all' | 'enabled' | 'missing'>('all')
+  const [coachRoleFilter, setCoachRoleFilter] = useState<'all' | 'coach' | 'student' | 'admin'>('all')
+  const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | PaymentOrderStatus>('all')
 
   const loadDashboard = useCallback(async () => {
     setIsLoading(true)
@@ -200,6 +206,58 @@ export default function AdminDashboardClient() {
     () => data?.orders.filter((order) => order.status === 'pending_review') ?? [],
     [data]
   )
+  const filteredStudents = useMemo(() => {
+    const text = studentQuery.trim().toLowerCase()
+
+    return (data?.students ?? []).filter((student) => {
+      if (studentPlanFilter === 'enabled' && !student.planEnabled) return false
+      if (studentPlanFilter === 'missing' && student.planEnabled) return false
+      if (!text) return true
+
+      return [
+        student.name,
+        student.email,
+        student.boundCoachNames,
+        student.program,
+        student.paymentCourse,
+        student.paymentStatus,
+      ]
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(text))
+    })
+  }, [data?.students, studentPlanFilter, studentQuery])
+  const filteredCoaches = useMemo(() => {
+    const text = coachQuery.trim().toLowerCase()
+
+    return (data?.coaches ?? []).filter((coach) => {
+      if (coachRoleFilter !== 'all' && coach.role !== coachRoleFilter) return false
+      if (!text) return true
+
+      return [coach.name, coach.email, coach.role, coach.courses]
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(text))
+    })
+  }, [coachQuery, coachRoleFilter, data?.coaches])
+  const filteredOrders = useMemo(() => {
+    const text = orderQuery.trim().toLowerCase()
+
+    return (data?.orders ?? []).filter((order) => {
+      if (orderStatusFilter !== 'all' && order.status !== orderStatusFilter) return false
+      if (!text) return true
+
+      return [
+        order.studentName,
+        order.email,
+        order.courseName,
+        order.amountText,
+        order.transferLastFive,
+        order.notes,
+        order.reviewNote ?? '',
+      ]
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(text))
+    })
+  }, [data?.orders, orderQuery, orderStatusFilter])
 
   async function runAction(id: string, action: Record<string, unknown>) {
     setUpdatingId(id)
@@ -346,8 +404,29 @@ export default function AdminDashboardClient() {
           {activeTab === 'students' && data ? (
             <section className="apple-card overflow-hidden">
               <div className="border-b border-black/10 p-5">
-                <h2 className="text-xl font-black text-apple-gray-900">学员管理</h2>
-                <p className="mt-1 text-sm text-apple-gray-600">显示所有学员、绑定教练、付款状态、课表状态与最近训练回馈。</p>
+                <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+                  <div>
+                    <h2 className="text-xl font-black text-apple-gray-900">学员管理</h2>
+                    <p className="mt-1 text-sm text-apple-gray-600">显示所有学员、绑定教练、付款状态、课表状态与最近训练回馈。</p>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-[minmax(220px,1fr)_160px] lg:w-[520px]">
+                    <input
+                      value={studentQuery}
+                      onChange={(event) => setStudentQuery(event.target.value)}
+                      placeholder="搜索姓名、邮箱、教练或课程"
+                      className="apple-input"
+                    />
+                    <select
+                      value={studentPlanFilter}
+                      onChange={(event) => setStudentPlanFilter(event.target.value as typeof studentPlanFilter)}
+                      className="apple-input"
+                    >
+                      <option value="all">全部课表</option>
+                      <option value="enabled">已开通</option>
+                      <option value="missing">未开通</option>
+                    </select>
+                  </div>
+                </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[1180px] text-left text-sm">
@@ -359,7 +438,7 @@ export default function AdminDashboardClient() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/10">
-                    {data.students.map((student) => (
+                    {filteredStudents.map((student) => (
                       <tr key={student.id}>
                         <td className="px-4 py-4 font-bold text-apple-gray-900">{student.name}</td>
                         <td className="px-4 py-4 text-apple-gray-600">{student.email || '-'}</td>
@@ -414,14 +493,41 @@ export default function AdminDashboardClient() {
                   </tbody>
                 </table>
               </div>
+              {filteredStudents.length === 0 ? (
+                <div className="p-8 text-center text-sm font-semibold text-apple-gray-500">
+                  没有符合条件的学员。
+                </div>
+              ) : null}
             </section>
           ) : null}
 
           {activeTab === 'coaches' && data ? (
             <section className="apple-card overflow-hidden">
               <div className="border-b border-black/10 p-5">
-                <h2 className="text-xl font-black text-apple-gray-900">教练管理</h2>
-                <p className="mt-1 text-sm text-apple-gray-600">管理员可以授予或取消教练权限；admin 角色不会在这里被降级。</p>
+                <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+                  <div>
+                    <h2 className="text-xl font-black text-apple-gray-900">教练管理</h2>
+                    <p className="mt-1 text-sm text-apple-gray-600">管理员可以授予或取消教练权限；admin 角色不会在这里被降级。</p>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-[minmax(220px,1fr)_150px] lg:w-[500px]">
+                    <input
+                      value={coachQuery}
+                      onChange={(event) => setCoachQuery(event.target.value)}
+                      placeholder="搜索姓名、邮箱或课程"
+                      className="apple-input"
+                    />
+                    <select
+                      value={coachRoleFilter}
+                      onChange={(event) => setCoachRoleFilter(event.target.value as typeof coachRoleFilter)}
+                      className="apple-input"
+                    >
+                      <option value="all">全部角色</option>
+                      <option value="coach">教练</option>
+                      <option value="student">普通学员</option>
+                      <option value="admin">管理员</option>
+                    </select>
+                  </div>
+                </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[960px] text-left text-sm">
@@ -433,7 +539,7 @@ export default function AdminDashboardClient() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/10">
-                    {data.coaches.map((coach) => (
+                    {filteredCoaches.map((coach) => (
                       <tr key={coach.id}>
                         <td className="px-4 py-4 font-bold text-apple-gray-900">{coach.name}</td>
                         <td className="px-4 py-4 text-apple-gray-600">{coach.email || '-'}</td>
@@ -460,14 +566,41 @@ export default function AdminDashboardClient() {
                   </tbody>
                 </table>
               </div>
+              {filteredCoaches.length === 0 ? (
+                <div className="p-8 text-center text-sm font-semibold text-apple-gray-500">
+                  没有符合条件的账号。
+                </div>
+              ) : null}
             </section>
           ) : null}
 
           {activeTab === 'orders' && data ? (
             <section className="grid gap-4">
+              <div className="apple-card p-5">
+                <div className="grid gap-3 md:grid-cols-[1fr_220px]">
+                  <input
+                    value={orderQuery}
+                    onChange={(event) => setOrderQuery(event.target.value)}
+                    placeholder="搜索姓名、邮箱、课程、后五码或备注"
+                    className="apple-input"
+                  />
+                  <select
+                    value={orderStatusFilter}
+                    onChange={(event) => setOrderStatusFilter(event.target.value as typeof orderStatusFilter)}
+                    className="apple-input"
+                  >
+                    <option value="all">全部状态</option>
+                    {Object.entries(statusLabels).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               {data.orders.length === 0 ? (
                 <div className="apple-card p-10 text-center text-apple-gray-600">暂无课程付款订单。</div>
-              ) : data.orders.map((order) => (
+              ) : filteredOrders.length === 0 ? (
+                <div className="apple-card p-10 text-center text-apple-gray-600">没有符合条件的订单。</div>
+              ) : filteredOrders.map((order) => (
                 <article key={order.id} className="apple-card p-5">
                   <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
                     <div>

@@ -386,6 +386,30 @@ export async function PATCH(request: NextRequest) {
       return json({ error: '请选择学员和教练。' }, { status: 400 })
     }
 
+    if (studentId === coachId) {
+      return json({ error: '不能把同一个账号同时作为学员和教练绑定。' }, { status: 400 })
+    }
+
+    const { data: relatedProfiles, error: relatedProfilesError } = await supabaseAdmin!
+      .from('profiles')
+      .select('id, role')
+      .in('id', [studentId, coachId])
+
+    if (relatedProfilesError) {
+      return json({ error: relatedProfilesError.message }, { status: 500 })
+    }
+
+    const studentProfile = relatedProfiles?.find((profile) => profile.id === studentId)
+    const coachProfile = relatedProfiles?.find((profile) => profile.id === coachId)
+
+    if (!studentProfile || studentProfile.role !== 'student') {
+      return json({ error: '请选择普通学员账号作为绑定学员。' }, { status: 400 })
+    }
+
+    if (!coachProfile || !['coach', 'admin'].includes(coachProfile.role)) {
+      return json({ error: '请选择已启用教练权限的账号。' }, { status: 400 })
+    }
+
     const { data, error } = await supabaseAdmin!
       .from('coach_students')
       .upsert({ student_id: studentId, coach_id: coachId, active: true }, { onConflict: 'coach_id,student_id' })
