@@ -128,6 +128,8 @@ export async function getMyStudentAccess() {
   const payload = (await response.json().catch(() => ({}))) as {
     state?: StudentAccessState
     canAccessTraining?: boolean
+    coachBound?: boolean
+    coachName?: string
     error?: string
   }
 
@@ -138,6 +140,8 @@ export async function getMyStudentAccess() {
   return {
     state: payload.state ?? 'legacy_open',
     canAccessTraining: payload.canAccessTraining ?? true,
+    coachBound: payload.coachBound ?? false,
+    coachName: payload.coachName ?? '',
   }
 }
 

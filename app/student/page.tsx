@@ -92,6 +92,8 @@ export default function StudentPage() {
   const [studentRaces, setStudentRaces] = useState<StudentRace[]>([])
   const [studentAccessState, setStudentAccessState] = useState<StudentAccessState>('legacy_open')
   const [canAccessTraining, setCanAccessTraining] = useState(true)
+  const [coachBound, setCoachBound] = useState(false)
+  const [boundCoachName, setBoundCoachName] = useState('')
   const [dataError, setDataError] = useState('')
   const [isLoadingData, setIsLoadingData] = useState(false)
   const [selectedRaceId, setSelectedRaceId] = useState(worldRaceCatalog[0].id)
@@ -145,6 +147,7 @@ export default function StudentPage() {
   const currentProgram = user?.role === 'coach' ? '教练账号' : '好运跑班学员'
   const currentGoal = user?.pb ? `目前 PB：${user.pb}` : '等待教练同步目标'
   const isCoach = user?.role === 'coach' || user?.role === 'admin'
+  const coachStatusText = boundCoachName || (coachBound || latestPlan ? '已绑定' : '待绑定')
   const selectedCatalogRace = worldRaceCatalog.find((race) => race.id === selectedRaceId) ?? worldRaceCatalog[0]
   const isCustomRace = selectedRaceId === 'custom'
   const submittedPlanIds = new Set(
@@ -254,6 +257,8 @@ export default function StudentPage() {
 
         setStudentAccessState(access.state)
         setCanAccessTraining(access.canAccessTraining)
+        setCoachBound(access.coachBound ?? false)
+        setBoundCoachName(access.coachName ?? '')
 
         if (!access.canAccessTraining) {
           setPlans([])
@@ -1010,7 +1015,9 @@ export default function StudentPage() {
                       {t.schedule.unsyncedThisWeekPlan}
                     </h2>
                     <p className="mt-3 leading-7 text-apple-gray-600">
-                      如已报名但看不到资料，请用报名邮箱登录，并联系教练确认账号绑定。你仍然可以提交自主训练回馈。
+                      {coachBound
+                        ? '教练已绑定，课表尚未同步。请等待教练派发本周课表，你仍然可以提交自主训练回馈。'
+                        : '如已报名但看不到资料，请用报名邮箱登录，并联系教练确认账号绑定。你仍然可以提交自主训练回馈。'}
                     </p>
                     <a href="#feedback" className="mt-5 inline-flex rounded-full bg-black px-5 py-2 text-sm font-bold text-white">
                       提交自主训练回馈
@@ -1022,7 +1029,7 @@ export default function StudentPage() {
                   {[
                     { icon: Route, label: '训练类型', value: todayPlan ? t.schedule.todaysWorkout : latestPlan?.target ? '本周训练' : '自主回馈' },
                     { icon: Timer, label: t.schedule.dateRange, value: formatWeekRange(todayInfo.weekStart, language) },
-                    { icon: CalendarDays, label: '教练', value: latestPlan ? '已绑定' : '待绑定' },
+                    { icon: CalendarDays, label: '教练', value: coachStatusText },
                   ].map((item) => (
                     <div key={item.label} className="rounded-2xl border border-black/10 bg-white p-4">
                       <item.icon className="mb-3 h-5 w-5 text-apple-gray-700" />

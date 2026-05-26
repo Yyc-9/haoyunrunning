@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthedUser } from '@/lib/supabase-server'
-import { canAccessTrainingContent, getStudentAccessState } from '@/lib/student-access'
+import { canAccessTrainingContent, getStudentAccessSummary } from '@/lib/student-access'
 
 export async function GET(request: NextRequest) {
   const user = await getAuthedUser(request.headers.get('authorization'))
@@ -9,11 +9,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const state = await getStudentAccessState(user.id, user.email)
+    const summary = await getStudentAccessSummary(user.id, user.email)
 
     return NextResponse.json({
-      state,
-      canAccessTraining: canAccessTrainingContent(state),
+      ...summary,
+      canAccessTraining: canAccessTrainingContent(summary.state),
     })
   } catch (error) {
     return NextResponse.json(
