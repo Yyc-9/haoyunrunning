@@ -65,7 +65,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
         return
       }
 
-      await register({
+      const result = await register({
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
@@ -74,11 +74,20 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
         password: formData.password,
       })
 
-      setSuccessMessage('帳戶已建立，正在前往學員看板。')
+      if (result.needsEmailConfirmation) {
+        setSuccessMessage(t.auth.emailConfirmationRequired)
+        setFormData((current) => ({ ...current, password: '' }))
+        return
+      }
+
+      setSuccessMessage(t.auth.registerSuccess)
       router.push('/student')
       onClose()
     } catch (error) {
-      const message = error instanceof Error ? error.message : '操作失敗，請稍後再試。'
+      const rawMessage = error instanceof Error ? error.message : ''
+      const message = rawMessage.toLowerCase().includes('email not confirmed')
+        ? t.auth.emailNotConfirmed
+        : rawMessage || t.auth.actionFailed
       setErrorMessage(message)
     } finally {
       setIsSubmitting(false)

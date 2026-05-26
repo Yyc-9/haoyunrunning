@@ -21,7 +21,7 @@ export interface AuthContextType {
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => void
-  register: (data: Omit<User, 'id'> & { password: string }) => Promise<void>
+  register: (data: Omit<User, 'id'> & { password: string }) => Promise<{ needsEmailConfirmation: boolean }>
   updateUser: (data: Partial<User>) => void
   refreshUser: () => Promise<User | null>
 }
@@ -254,7 +254,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         options: {
           data: {
             name: userData.name,
+            phone: userData.phone,
+            pb: userData.pb,
+            role: 'student',
           },
+          emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/student?auth=login` : undefined,
         },
       })
 
@@ -266,7 +270,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (!signUpData.session) {
-        throw new Error('帳戶已建立。請先到信箱完成驗證，再回來登入。')
+        return { needsEmailConfirmation: true }
       }
 
       const { error: profileError } = await supabase
@@ -295,6 +299,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
 
       await loadProfile(authUser.id, userData.email)
+      return { needsEmailConfirmation: false }
     } catch (error) {
       console.error('Register error:', error)
       throw error

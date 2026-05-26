@@ -3,9 +3,14 @@
 import Link from 'next/link'
 import {
   ArrowLeft,
+  CalendarDays,
   ChevronRight,
+  Clock,
   CreditCard,
   Instagram,
+  MapPin,
+  Navigation,
+  Route,
 } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
 import type { allCourses } from '@/lib/goodluck-data'
@@ -158,7 +163,7 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
 
       <section className="overflow-hidden border-b border-black/5 bg-apple-gray-950 px-4 py-8 text-white sm:px-6 lg:px-8 lg:py-10">
         <div className="container mx-auto max-w-7xl">
-          <div className="grid gap-6 lg:grid-cols-[1fr_320px] lg:items-end">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-stretch">
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-apple-blue">{t.courseDetail.heroLabel}</p>
               <h1 className="mt-3 max-w-4xl text-3xl font-black leading-tight md:text-5xl">
@@ -183,23 +188,81 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
-              <Link
-                href={paymentHref}
-                className="apple-button-primary inline-flex w-full items-center justify-center gap-2 px-6 py-3 lg:w-auto"
-              >
-                <CreditCard className="h-5 w-5" />
-                {t.courseDetail.siteSignup}
-              </Link>
-              <a
-                href={instagramUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-bold text-white transition hover:bg-white/15 lg:w-auto"
-              >
-                <Instagram className="h-5 w-5" />
-                {t.courseDetail.contactInstagram}
-              </a>
+            <div className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-3 shadow-2xl shadow-black/30 backdrop-blur">
+              <div className="relative overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#111] p-5">
+                <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,.09)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.09)_1px,transparent_1px)] [background-size:28px_28px]" />
+                <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-apple-blue/30 blur-3xl" />
+                <div className="relative">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-bold uppercase text-white/45">{t.courseDetail.courseLocation}</p>
+                      <h2 className="mt-2 text-3xl font-black leading-none text-white">{text(course.city)}</h2>
+                      <p className="mt-3 flex items-start gap-2 text-sm leading-6 text-white/70">
+                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-apple-blue" />
+                        {text(course.meetingPoint)}
+                      </p>
+                    </div>
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white text-apple-gray-950">
+                      <Navigation className="h-6 w-6" />
+                    </div>
+                  </div>
+
+                  <div className="my-6 rounded-3xl border border-white/10 bg-black/30 p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-400 text-xs font-black text-apple-gray-950">
+                        GO
+                      </div>
+                      <div className="h-px flex-1 bg-gradient-to-r from-emerald-400 via-white/50 to-apple-blue" />
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-apple-blue text-xs font-black text-white">
+                        RUN
+                      </div>
+                    </div>
+                    <div className="mt-4 flex items-center gap-2 text-sm font-bold text-white">
+                      <Route className="h-4 w-4 text-apple-blue" />
+                      {text(course.focus)}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                    {[
+                      [CalendarDays, t.courseDetail.courseWeekday, course.weekday],
+                      [Clock, t.courseDetail.classTime, course.time],
+                      [Route, t.courseDetail.coursePeriod, course.period],
+                    ].map(([Icon, label, value]) => {
+                      const CardIcon = Icon as typeof CalendarDays
+
+                      return (
+                        <div key={`${label}-${value}`} className="rounded-2xl border border-white/10 bg-white/10 p-3">
+                          <div className="flex items-center gap-2 text-xs font-bold text-white/45">
+                            <CardIcon className="h-4 w-4" />
+                            {label as string}
+                          </div>
+                          <p className="mt-2 text-sm font-black leading-5 text-white">{text(value as string)}</p>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  <div className="mt-5 flex flex-col gap-3">
+                    <Link
+                      href={paymentHref}
+                      className="apple-button-primary inline-flex w-full items-center justify-center gap-2 px-6 py-3"
+                    >
+                      <CreditCard className="h-5 w-5" />
+                      {t.courseDetail.siteSignup}
+                    </Link>
+                    <a
+                      href={instagramUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-bold text-white transition hover:bg-white/15"
+                    >
+                      <Instagram className="h-5 w-5" />
+                      {t.courseDetail.contactInstagram}
+                    </a>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

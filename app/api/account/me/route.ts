@@ -60,6 +60,9 @@ export async function GET(request: NextRequest) {
         (user.user_metadata?.name as string | undefined) ||
         user.email?.split('@')[0] ||
         '好運跑者',
+      phone: (user.user_metadata?.phone as string | undefined) ?? '',
+      pb: (user.user_metadata?.pb as string | undefined) ?? '',
+      role: (user.user_metadata?.role as string | undefined) ?? 'student',
     })
     .select('*')
     .single()
