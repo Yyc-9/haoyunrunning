@@ -6,6 +6,7 @@ import { AuthProvider } from './providers'
 import { ToastProvider } from './toast-provider'
 import { CartProvider } from './cart-provider'
 import { LanguageProvider } from './language-context'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 export const metadata: Metadata = {
   title: '好運跑班 - 科学训练，跑出好运',
@@ -39,6 +40,7 @@ export default function RootLayout({
             </CartProvider>
           </AuthProvider>
         </LanguageProvider>
+        <SpeedInsights />
       </body>
     </html>
   )
