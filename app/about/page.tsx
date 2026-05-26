@@ -40,7 +40,7 @@ export default function AboutPage() {
                 我們想讓更多人，
                 <span className="block">真正愛上跑步。</span>
               </h1>
-              <p className="text-xl leading-9 text-apple-gray-600">
+              <p className="text-lg leading-8 text-apple-gray-600 md:text-xl md:leading-9">
                 好運跑班面向台灣所有跑者。你可以是第一次想規律跑步的人，也可以是正在追逐 PB 的跑者；可以為 5000m、10000m 準備，也可以把目標放在半馬、全馬。重要的不是你現在跑得多快，而是你願意開始理解自己的身體，並且一步一步跑向更穩定的自己。
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -60,7 +60,7 @@ export default function AboutPage() {
 
             <div className="overflow-hidden rounded-3xl border border-apple-gray-200 bg-apple-gray-100">
               <div
-                className="min-h-[520px] bg-cover bg-center"
+                className="min-h-[320px] bg-cover bg-center sm:min-h-[420px] lg:min-h-[520px]"
                 style={{ backgroundImage: 'url("/LINE_ALBUM_四週年手機桌布_260515_1.jpg")' }}
               />
             </div>
@@ -103,7 +103,7 @@ export default function AboutPage() {
               <h2 className="mb-6 text-3xl font-bold text-apple-gray-900 md:text-4xl">
                 不同程度的跑者，都可以在這裡找到自己的節奏。
               </h2>
-              <p className="text-lg leading-8 text-apple-gray-600">
+              <p className="text-base leading-8 text-apple-gray-600 md:text-lg">
                 我們不把跑者分成「會跑」或「不會跑」。每個人都有自己的起點，也有自己的目標。好運跑班希望做的是，讓你知道今天為什麼這樣跑，這週為什麼這樣練，下一個階段又要怎麼調整。
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
@@ -118,7 +118,7 @@ export default function AboutPage() {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-apple-gray-200 bg-apple-gray-50 p-8">
+            <div className="rounded-3xl border border-apple-gray-200 bg-apple-gray-50 p-5 sm:p-8">
               <div className="space-y-6">
                 {[
                   {
@@ -137,7 +137,7 @@ export default function AboutPage() {
                     description: '學員回報訓練感受，教練依照狀態調整，讓進步不是孤單發生。',
                   },
                 ].map((item) => (
-                  <div key={item.title} className="flex gap-4 rounded-2xl bg-white p-5">
+                  <div key={item.title} className="flex gap-4 rounded-2xl bg-white p-4 sm:p-5">
                     <item.icon className="mt-1 h-6 w-6 flex-shrink-0 text-apple-blue" />
                     <div>
                       <h3 className="mb-2 font-bold text-apple-gray-900">{item.title}</h3>

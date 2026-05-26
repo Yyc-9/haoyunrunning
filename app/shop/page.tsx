@@ -137,12 +137,12 @@ export default function ShopPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-white">
-      <div className="relative h-96 overflow-hidden bg-black">
+      <div className="relative h-[22rem] overflow-hidden bg-black sm:h-96">
         <div className="absolute inset-0 bg-cover bg-center opacity-75" style={{ backgroundImage: 'url("/20250605[好運]三周年慶-7096.jpg")' }} />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/15 to-black/25" />
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="relative z-10 flex h-full flex-col items-center justify-center px-4 text-white">
-          <h1 className="mb-4 text-center text-5xl font-bold">好运商店</h1>
-          <p className="max-w-2xl text-center text-xl leading-8 text-white/85">跑班装备与训练补给，先把真正会用上的东西整理好。</p>
+          <h1 className="mb-4 text-center text-4xl font-bold sm:text-5xl">好运商店</h1>
+          <p className="max-w-2xl text-center text-lg leading-8 text-white/85 sm:text-xl">跑班装备与训练补给，先把真正会用上的东西整理好。</p>
         </motion.div>
       </div>
 
@@ -183,7 +183,7 @@ export default function ShopPage() {
             ))}
           </div>
 
-          <select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} className="apple-input w-auto min-w-48 py-2 text-sm">
+          <select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} className="apple-input w-full py-2 text-sm md:w-auto md:min-w-48">
             <option value="relevance">相关度</option>
             <option value="price-low">价格：低到高</option>
             <option value="price-high">价格：高到低</option>
@@ -210,7 +210,7 @@ export default function ShopPage() {
                         <Package className="h-16 w-16 text-apple-gray-400" />
                       </div>
                     )}
-                    <div className="absolute left-3 top-3 flex gap-2">
+                    <div className="absolute left-3 top-3 flex flex-wrap gap-2 pr-3">
                       {product.tags.map((tag) => <span key={tag} className="rounded-full bg-black/80 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">{tag}</span>)}
                     </div>
                   </div>

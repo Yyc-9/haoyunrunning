@@ -87,7 +87,7 @@ export default function HeroSection() {
             initial={{ opacity: 0 }}
             animate={{
               opacity: index === currentImageIndex ? 1 : 0,
-              scale: index === currentImageIndex ? 1 : 1.04,
+              scale: 1,
             }}
             transition={{ duration: 1.1, ease: 'easeOut' }}
             className="absolute inset-0 bg-cover bg-center"

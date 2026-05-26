@@ -29,7 +29,7 @@ type SelectField = {
 }
 
 type LeadCollectionFormProps = {
-  source: 'anniversary_4th' | 'group_class'
+  source: 'anniversary_4th' | 'group_class' | 'course_payment'
   labels: LeadFormLabels
   selectField?: SelectField
 }

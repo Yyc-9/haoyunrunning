@@ -30,12 +30,14 @@ import { useLanguage } from '@/app/language-context'
 import {
   addMyStudentRace,
   getMyStudentRaces,
+  getMyStudentAccess,
   getMyTrainingFeedback,
   getMyTrainingPlans,
   removeMyStudentRace,
   supabase,
   submitTrainingFeedback,
   type StudentRace,
+  type StudentAccessState,
   type TrainingFeedback,
   type TrainingPlan,
 } from '@/lib/supabase'
@@ -88,6 +90,8 @@ export default function StudentPage() {
   const [plans, setPlans] = useState<TrainingPlan[]>([])
   const [recentFeedback, setRecentFeedback] = useState<TrainingFeedback[]>([])
   const [studentRaces, setStudentRaces] = useState<StudentRace[]>([])
+  const [studentAccessState, setStudentAccessState] = useState<StudentAccessState>('legacy_open')
+  const [canAccessTraining, setCanAccessTraining] = useState(true)
   const [dataError, setDataError] = useState('')
   const [isLoadingData, setIsLoadingData] = useState(false)
   const [selectedRaceId, setSelectedRaceId] = useState(worldRaceCatalog[0].id)
@@ -245,6 +249,19 @@ export default function StudentPage() {
       setDataError('')
 
       try {
+        const access = await getMyStudentAccess()
+        if (!isActive) return
+
+        setStudentAccessState(access.state)
+        setCanAccessTraining(access.canAccessTraining)
+
+        if (!access.canAccessTraining) {
+          setPlans([])
+          setRecentFeedback([])
+          setStudentRaces([])
+          return
+        }
+
         const [planData, feedbackData, raceData] = await Promise.all([
           getMyTrainingPlans(user.id),
           getMyTrainingFeedback(user.id),
@@ -665,6 +682,58 @@ export default function StudentPage() {
                     ))}
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    )
+  }
+
+  if (!canAccessTraining) {
+    const waitingText = studentAccessState === 'rejected'
+      ? '你的报名资料需要补充或重新核对，请联系好运跑班协助处理。'
+      : '你的报名资料正在等待人工核对，课表将在核准后开通，请耐心等待。'
+
+    return (
+      <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+        <section className="px-4 py-12 sm:px-6 lg:px-8">
+          <div className="container mx-auto max-w-4xl">
+            <div className="apple-card p-8 md:p-10">
+              <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
+                Enrollment review
+              </p>
+              <h1 className="text-3xl font-black leading-tight text-apple-gray-900 md:text-5xl">
+                课表等待开通
+              </h1>
+              <p className="mt-5 text-lg leading-8 text-apple-gray-600">
+                {waitingText}
+              </p>
+              <div className="mt-8 grid gap-4 md:grid-cols-3">
+                {[
+                  ['当前状态', studentAccessState === 'pending_review' ? '待人工核对' : studentAccessState === 'pending_transfer' ? '待汇款 / 待后五码' : '需补充资料'],
+                  ['课表访问', '核准后开通'],
+                  ['训练回馈', '核准后可提交'],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-2xl bg-apple-gray-100 p-4">
+                    <p className="text-xs font-semibold text-apple-gray-500">{label}</p>
+                    <p className="mt-2 font-bold text-apple-gray-900">{value}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Link href="/payment" className="apple-button-primary inline-flex items-center justify-center gap-2 px-6 py-3">
+                  查看付款资料
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <a
+                  href="https://www.instagram.com/nurture.running.team/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="apple-button-outline inline-flex items-center justify-center gap-2 px-6 py-3"
+                >
+                  联系好运跑班
+                </a>
               </div>
             </div>
           </div>

@@ -12,6 +12,13 @@ function normalizeWeekday(weekday: string) {
   return weekday.replace('週', '周')
 }
 
+function getMobileCourseName(name: string) {
+  return name
+    .replace(/^2026\s*/, '')
+    .replace(/^好運跑步訓練營\s*X\s*/, '')
+    .replace(/^好运跑步训练营\s*X\s*/, '')
+}
+
 type LevelFilter = 'all' | 'beginner' | 'advanced' | 'elite'
 export default function CoursesTable() {
   const { language } = useLanguage()
@@ -213,8 +220,112 @@ export default function CoursesTable() {
         </div>
       </div>
 
-      {/* 课程表格 */}
-      <div className="overflow-x-auto rounded-2xl border border-apple-gray-200 bg-white">
+      {/* 手机课程卡片 */}
+      <div className="courses-mobile-list space-y-4 md:hidden">
+        {Array.from(groupedCourses.entries()).map(([weekday, coursesInWeek]) => (
+          <section key={weekday} className="space-y-3">
+            <h3 className="rounded-2xl bg-apple-gray-100 px-4 py-3 text-sm font-black text-apple-gray-800">
+              {localeText(weekday)}
+            </h3>
+            {coursesInWeek.map((course) => {
+              const isExpanded = expandedCourses.has(course.slug)
+              const level = getLevelBadge(course)
+
+              return (
+                <article key={course.slug} className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => toggleExpanded(course.slug)}
+                    className="flex w-full items-start justify-between gap-3 text-left"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap gap-2">
+                        <span className="rounded-full bg-apple-blue/10 px-3 py-1 text-xs font-bold text-apple-blue">
+                          {localeText(course.weekday)}
+                        </span>
+                        <span className="rounded-full bg-apple-gray-100 px-3 py-1 text-xs font-bold text-apple-gray-700">
+                          {localeText(course.location)}
+                        </span>
+                      </div>
+                      <h4 className="mt-3 text-base font-black leading-6 text-apple-gray-900">
+                        {localeText(getMobileCourseName(course.name))}
+                      </h4>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getLevelColor(level)}`}>
+                          {getLevelLabel(level)}
+                        </span>
+                        <span className="rounded-full bg-apple-gray-100 px-3 py-1 text-xs font-semibold text-apple-gray-700">
+                          {localeText(course.period)}
+                        </span>
+                      </div>
+                    </div>
+                    <ChevronDown
+                      className={`mt-1 h-5 w-5 shrink-0 text-apple-gray-400 transition-transform ${
+                        isExpanded ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+
+                  <div className="mt-4 space-y-3 text-sm leading-6 text-apple-gray-600">
+                    <p className="flex gap-2">
+                      <Target className="mt-1 h-4 w-4 shrink-0 text-apple-gray-500" />
+                      <span>{localeText(course.trainingGoal)}</span>
+                    </p>
+                    <p className="flex gap-2">
+                      <MapPin className="mt-1 h-4 w-4 shrink-0 text-apple-gray-500" />
+                      <span>{localeText(course.meetingPoint)}</span>
+                    </p>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="mt-4 space-y-4 rounded-2xl bg-apple-gray-50 p-4">
+                      <div>
+                        <h5 className="mb-1 text-xs font-bold uppercase tracking-wide text-apple-gray-500">上课时间</h5>
+                        <p className="text-sm leading-6 text-apple-gray-700">{localeText(course.classTime)}</p>
+                      </div>
+                      <div>
+                        <h5 className="mb-1 text-xs font-bold uppercase tracking-wide text-apple-gray-500">适合对象</h5>
+                        <p className="text-sm leading-6 text-apple-gray-700">{localeText(course.groupAudience)}</p>
+                      </div>
+                      <div>
+                        <h5 className="mb-1 text-xs font-bold uppercase tracking-wide text-apple-gray-500">训练方向</h5>
+                        <p className="text-sm leading-6 text-apple-gray-700">
+                          {localeText(
+                            Array.isArray(course.trainingGoals)
+                              ? course.trainingGoals.join(' / ')
+                              : course.trainingGoal
+                          )}
+                        </p>
+                      </div>
+                      <div className="grid gap-2">
+                        <Link
+                          href={`/courses/${course.slug}`}
+                          className="inline-flex items-center justify-center gap-2 rounded-full bg-apple-blue px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600"
+                        >
+                          查看完整课程
+                          <ChevronRight className="h-4 w-4" />
+                        </Link>
+                        <a
+                          href="https://www.instagram.com/nurture.running.team/"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center justify-center gap-2 rounded-full border border-apple-blue px-4 py-2.5 text-sm font-semibold text-apple-blue transition-colors hover:bg-apple-blue/10"
+                        >
+                          Instagram 咨询
+                          <ChevronRight className="h-4 w-4" />
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </article>
+              )
+            })}
+          </section>
+        ))}
+      </div>
+
+      {/* 桌面课程表格 */}
+      <div className="courses-desktop-table hidden overflow-x-auto rounded-2xl border border-apple-gray-200 bg-white md:block">
         <div className="flex flex-col">
           {/* 表头 */}
           <div className="grid grid-cols-7 border-b border-apple-gray-200 bg-apple-gray-50">

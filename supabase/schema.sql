@@ -83,7 +83,12 @@ create table public.shop_orders (
   email text default '',
   fulfillment_note text default '',
   item_count integer not null default 0,
-  status text not null default 'new',
+  status text not null default 'pending_transfer' check (status in ('pending_transfer', 'pending_review', 'approved', 'rejected')),
+  transfer_last_five text default '',
+  payment_submitted_at timestamptz,
+  reminder_sent_at timestamptz,
+  reviewed_at timestamptz,
+  review_note text default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -111,7 +116,7 @@ create table public.coach_invites (
 
 create table public.signup_leads (
   id uuid primary key default gen_random_uuid(),
-  source text not null check (source in ('anniversary_4th', 'group_class')),
+  source text not null check (source in ('anniversary_4th', 'group_class', 'course_payment')),
   name text not null,
   phone text default '',
   email text default '',
@@ -120,8 +125,13 @@ create table public.signup_leads (
   running_experience text default '',
   goal text default '',
   companion_count text default '',
+  amount_text text default '',
   notes text default '',
-  status text not null default 'new',
+  status text not null default 'pending_transfer' check (status in ('pending_transfer', 'pending_review', 'approved', 'rejected')),
+  transfer_last_five text default '',
+  payment_submitted_at timestamptz,
+  reviewed_at timestamptz,
+  review_note text default '',
   payload jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

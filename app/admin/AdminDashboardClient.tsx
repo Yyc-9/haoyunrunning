@@ -258,6 +258,9 @@ export default function AdminDashboardClient() {
               <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
                 第一阶段后台用于查看并管理学员、教练权限和课程报名付款订单。
               </p>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-apple-gray-500">
+                订单审核仅限管理员；后五码只用于人工对账参考，不作为真实支付验证，也不收集完整银行卡、身份证或信用卡资料。
+              </p>
             </div>
 
             <button type="button" onClick={loadDashboard} className="apple-button-outline inline-flex items-center justify-center gap-2 px-5 py-3">
@@ -331,7 +334,7 @@ export default function AdminDashboardClient() {
                     {pendingOrders.slice(0, 4).map((order) => (
                       <div key={order.id} className="rounded-2xl bg-apple-gray-100 p-4">
                         <p className="font-bold text-apple-gray-900">{order.studentName}</p>
-                        <p className="mt-1 text-sm text-apple-gray-600">{order.courseName || '未填写课程'} · 后五码 {order.transferLastFive || '-'}</p>
+                        <p className="mt-1 text-sm text-apple-gray-600">{order.courseName || '未填写课程'} · 后五码（人工对账）{order.transferLastFive || '-'}</p>
                       </div>
                     ))}
                   </div>
@@ -502,7 +505,7 @@ export default function AdminDashboardClient() {
                     {[
                       ['报名课程', order.courseName],
                       ['应付金额', order.amountText],
-                      ['银行后五码', order.transferLastFive],
+                      ['后五码（人工对账参考）', order.transferLastFive],
                       ['备注', order.notes || order.reviewNote || '暂无备注'],
                     ].map(([label, value]) => (
                       <div key={label} className="rounded-2xl bg-apple-gray-100 p-4">

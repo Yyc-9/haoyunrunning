@@ -70,10 +70,10 @@ export default function Toast({
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 50, scale: 0.9 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50"
+          className="fixed bottom-5 left-1/2 z-50 w-[calc(100vw-2rem)] -translate-x-1/2 sm:bottom-8 sm:w-auto"
         >
           <div
-            className={`${config.bg} ${config.border} backdrop-blur-glass border rounded-3xl px-6 py-4 flex items-center space-x-3 shadow-lg min-w-[300px] max-w-md`}
+            className={`${config.bg} ${config.border} backdrop-blur-glass flex w-full items-center gap-3 rounded-3xl border px-4 py-4 shadow-lg sm:min-w-[300px] sm:max-w-md sm:px-6`}
           >
             <div className={`${config.iconColor}`}>
               <Icon className="h-6 w-6" />

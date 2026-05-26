@@ -2,7 +2,9 @@
 
 import Link from 'next/link'
 import { CreditCard, Instagram, ShieldCheck } from 'lucide-react'
+import { useState } from 'react'
 import { useLanguage } from '@/app/language-context'
+import BankTransferInfo from '@/components/BankTransferInfo'
 
 type CoursePaymentInfoProps = {
   compact?: boolean
@@ -10,6 +12,7 @@ type CoursePaymentInfoProps = {
 
 export default function CoursePaymentInfo({ compact = false }: CoursePaymentInfoProps) {
   const { t } = useLanguage()
+  const [showBankInfo, setShowBankInfo] = useState(false)
 
   return (
     <section className={compact ? 'rounded-3xl border border-black/10 bg-white p-5' : 'rounded-3xl border border-black/10 bg-apple-gray-50 p-6 md:p-8'}>
@@ -39,15 +42,25 @@ export default function CoursePaymentInfo({ compact = false }: CoursePaymentInfo
             <Instagram className="h-4 w-4" />
             {t.coursePayment.instagramCta}
           </a>
-          <Link
-            href="/payment"
+          <button
+            type="button"
+            onClick={() => setShowBankInfo(true)}
             className="inline-flex items-center justify-center gap-2 rounded-full border border-black/15 bg-white px-5 py-2.5 text-sm font-bold text-apple-gray-800 shadow-sm transition hover:border-apple-blue/40 hover:text-apple-blue"
           >
             <CreditCard className="h-4 w-4" />
+            {t.coursePayment.confirmCta}
+          </button>
+          <Link href="/payment" className="inline-flex items-center justify-center px-2 py-2.5 text-sm font-bold text-apple-gray-500 transition hover:text-apple-blue">
             {t.coursePayment.paymentCta}
           </Link>
         </div>
       </div>
+
+      {showBankInfo ? (
+        <div className="mt-6">
+          <BankTransferInfo labels={t.payment.bankTransfer} />
+        </div>
+      ) : null}
     </section>
   )
 }

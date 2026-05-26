@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import NavigationWrapper from '@/components/NavigationWrapper'
 import Footer from '@/components/Footer'
@@ -10,6 +10,12 @@ import { LanguageProvider } from './language-context'
 export const metadata: Metadata = {
   title: '好運跑班 - 科学训练，跑出好运',
   description: '专业跑步训练平台，提供科学训练方案和个性化指导',
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
 }
 
 export default function RootLayout({

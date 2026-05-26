@@ -77,6 +77,7 @@ export interface TrainingFeedback {
 
 export type StudentRaceStatus = 'accepted' | 'planned' | 'completed'
 export type StudentRaceSource = 'catalog' | 'custom'
+export type StudentAccessState = 'approved' | 'pending_transfer' | 'pending_review' | 'rejected' | 'legacy_open'
 
 export interface StudentRace {
   id: string
@@ -103,6 +104,41 @@ export interface StudentRaceInsert {
   status?: StudentRaceStatus
   source?: StudentRaceSource
   notes?: string
+}
+
+export async function getMyStudentAccess() {
+  if (!supabase) {
+    return { state: 'legacy_open' as StudentAccessState, canAccessTraining: true }
+  }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  if (!session?.access_token) {
+    return { state: 'legacy_open' as StudentAccessState, canAccessTraining: true }
+  }
+
+  const response = await fetch('/api/student/access', {
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  })
+
+  const payload = (await response.json().catch(() => ({}))) as {
+    state?: StudentAccessState
+    canAccessTraining?: boolean
+    error?: string
+  }
+
+  if (!response.ok) {
+    throw new Error(payload.error || '读取报名状态失败，请稍后再试。')
+  }
+
+  return {
+    state: payload.state ?? 'legacy_open',
+    canAccessTraining: payload.canAccessTraining ?? true,
+  }
 }
 
 export async function getCurrentProfile() {

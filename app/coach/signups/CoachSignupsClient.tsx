@@ -1,14 +1,15 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Download, Filter, Inbox, RefreshCw, Search } from 'lucide-react'
+import { CheckCircle2, Download, Filter, Inbox, RefreshCw, RotateCcw, Search } from 'lucide-react'
 import CoachAccessPanel from '@/components/CoachAccessPanel'
 import CoachSubNav from '@/components/CoachSubNav'
+import { paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
 import { supabase } from '@/lib/supabase'
 
 type SignupLead = {
   id: string
-  source: 'anniversary_4th' | 'group_class'
+  source: 'anniversary_4th' | 'group_class' | 'course_payment'
   name: string
   phone: string
   email: string
@@ -17,28 +18,28 @@ type SignupLead = {
   running_experience: string
   goal: string
   companion_count: string
+  amount_text: string
+  transfer_last_five: string
   notes: string
-  status: 'new' | 'contacted' | 'confirmed' | 'closed'
+  status: PaymentOrderStatus
   created_at: string
+  payment_submitted_at?: string | null
+  review_note?: string | null
 }
 
 const sourceLabels: Record<SignupLead['source'], string> = {
   anniversary_4th: '4 周年活动',
   group_class: '团练报名',
+  course_payment: '课程付款',
 }
 
-const statusLabels: Record<SignupLead['status'], string> = {
-  new: '新资料',
-  contacted: '已联系',
-  confirmed: '已确认',
-  closed: '已关闭',
-}
+const statusLabels = paymentOrderStatusLabels['zh-CN']
 
 const statusTone: Record<SignupLead['status'], string> = {
-  new: 'bg-blue-50 text-blue-700',
-  contacted: 'bg-amber-50 text-amber-700',
-  confirmed: 'bg-emerald-50 text-emerald-700',
-  closed: 'bg-apple-gray-100 text-apple-gray-600',
+  pending_transfer: 'bg-amber-50 text-amber-700',
+  pending_review: 'bg-blue-50 text-blue-700',
+  approved: 'bg-emerald-50 text-emerald-700',
+  rejected: 'bg-red-50 text-red-700',
 }
 
 function formatDate(value: string) {
@@ -89,7 +90,7 @@ async function fetchSignupLeads() {
   return payload.leads ?? []
 }
 
-async function updateLeadStatus(id: string, status: SignupLead['status']) {
+async function updateLeadStatus(id: string, status: SignupLead['status'], reviewNote = '') {
   const token = await getAccessToken()
   if (!token) {
     throw new Error('请先登入教练或管理员账号。')
@@ -101,19 +102,20 @@ async function updateLeadStatus(id: string, status: SignupLead['status']) {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ id, status }),
+    body: JSON.stringify({ id, status, reviewNote }),
   })
 
   const payload = (await response.json().catch(() => ({}))) as {
     error?: string
     lead?: SignupLead
+    emailMessage?: string
   }
 
   if (!response.ok || !payload.lead) {
     throw new Error(payload.error || '更新报名状态失败。')
   }
 
-  return payload.lead
+  return { lead: payload.lead, emailMessage: payload.emailMessage }
 }
 
 export default function CoachSignupsClient() {
@@ -123,6 +125,7 @@ export default function CoachSignupsClient() {
   const [query, setQuery] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
   const [updatingId, setUpdatingId] = useState('')
 
   const loadLeads = useCallback(async () => {
@@ -179,19 +182,39 @@ export default function CoachSignupsClient() {
       total: leads.length,
       anniversary: leads.filter((lead) => lead.source === 'anniversary_4th').length,
       group: leads.filter((lead) => lead.source === 'group_class').length,
-      confirmed: leads.filter((lead) => lead.status === 'confirmed').length,
+      coursePayment: leads.filter((lead) => lead.source === 'course_payment').length,
+      approved: leads.filter((lead) => lead.status === 'approved').length,
     }
   }, [leads])
 
   async function handleStatusChange(id: string, nextStatus: SignupLead['status']) {
     setUpdatingId(id)
     setError('')
+    setMessage('')
 
     try {
-      const updatedLead = await updateLeadStatus(id, nextStatus)
+      const { lead: updatedLead, emailMessage } = await updateLeadStatus(id, nextStatus)
       setLeads((current) => current.map((lead) => (lead.id === id ? updatedLead : lead)))
+      if (emailMessage) setMessage(emailMessage)
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : '更新报名状态失败。')
+    } finally {
+      setUpdatingId('')
+    }
+  }
+
+  async function reviewPayment(id: string, nextStatus: Extract<PaymentOrderStatus, 'approved' | 'rejected'>) {
+    setUpdatingId(id)
+    setError('')
+    setMessage('')
+
+    try {
+      const reviewNote = nextStatus === 'approved' ? '付款核对通过，课表已开通。' : '付款核对未通过或需补充资料。'
+      const { lead: updatedLead, emailMessage } = await updateLeadStatus(id, nextStatus, reviewNote)
+      setLeads((current) => current.map((lead) => (lead.id === id ? updatedLead : lead)))
+      setMessage(emailMessage || reviewNote)
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : '更新审核状态失败。')
     } finally {
       setUpdatingId('')
     }
@@ -206,6 +229,8 @@ export default function CoachSignupsClient() {
       'Email',
       'Instagram',
       '想报名的团练',
+      '汇款金额',
+      '后五码',
       '同行人数',
       '跑步经验',
       '目标',
@@ -221,6 +246,8 @@ export default function CoachSignupsClient() {
       lead.email,
       lead.instagram,
       lead.preferred_course,
+      lead.amount_text,
+      lead.transfer_last_five,
       lead.companion_count,
       lead.running_experience,
       lead.goal,
@@ -256,6 +283,9 @@ export default function CoachSignupsClient() {
               <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
                 集中查看 4 周年活动与团练报名表单，筛选来源、更新跟进状态，并导出 CSV 名单。
               </p>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-apple-gray-500">
+                付款核对仅供教练或管理员人工对账；后五码只是转账资料参考，不代表系统已完成真实支付验证。
+              </p>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -277,12 +307,13 @@ export default function CoachSignupsClient() {
 
           <CoachAccessPanel />
 
-          <div className="mt-8 grid gap-4 md:grid-cols-4">
+          <div className="mt-8 grid gap-4 md:grid-cols-5">
             {[
               ['全部资料', stats.total],
               ['4 周年活动', stats.anniversary],
               ['团练报名', stats.group],
-              ['已确认', stats.confirmed],
+              ['课程付款', stats.coursePayment],
+              ['已核准', stats.approved],
             ].map(([label, value]) => (
               <div key={label} className="apple-card p-5">
                 <p className="text-sm text-apple-gray-500">{label}</p>
@@ -309,6 +340,7 @@ export default function CoachSignupsClient() {
                   <option value="all">全部来源</option>
                   <option value="anniversary_4th">4 周年活动</option>
                   <option value="group_class">团练报名</option>
+                  <option value="course_payment">课程付款</option>
                 </select>
               </label>
 
@@ -326,6 +358,11 @@ export default function CoachSignupsClient() {
           {error ? (
             <div className="mt-6 rounded-2xl bg-red-50 px-5 py-4 text-sm font-semibold text-red-600">
               {error}
+            </div>
+          ) : null}
+          {message ? (
+            <div className="mt-6 rounded-2xl bg-emerald-50 px-5 py-4 text-sm font-semibold text-emerald-700">
+              {message}
             </div>
           ) : null}
 
@@ -377,9 +414,49 @@ export default function CoachSignupsClient() {
                       </select>
                     </div>
 
+                    {lead.source === 'course_payment' ? (
+                      <div className="mt-4 rounded-3xl border border-apple-blue/15 bg-apple-blue/5 p-4">
+                        <div className="mb-4 grid gap-3 md:grid-cols-4">
+                          {[
+                            ['报名课程', lead.preferred_course],
+                            ['应付金额', lead.amount_text],
+                            ['后五码（人工对账参考）', lead.transfer_last_five],
+                            ['提交时间', formatDate(lead.payment_submitted_at || lead.created_at)],
+                          ].map(([label, value]) => (
+                            <div key={label} className="rounded-2xl bg-white p-3">
+                              <p className="text-xs font-semibold text-apple-gray-500">{label}</p>
+                              <p className="mt-1 break-words text-sm font-bold text-apple-gray-900">{value || '-'}</p>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex flex-col gap-3 sm:flex-row">
+                          <button
+                            type="button"
+                            disabled={updatingId === lead.id || lead.status === 'approved'}
+                            onClick={() => reviewPayment(lead.id, 'approved')}
+                            className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                            核准通过
+                          </button>
+                          <button
+                            type="button"
+                            disabled={updatingId === lead.id || lead.status === 'rejected'}
+                            onClick={() => reviewPayment(lead.id, 'rejected')}
+                            className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-white px-5 py-2.5 text-sm font-bold text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <RotateCcw className="h-4 w-4" />
+                            退回 / 标记异常
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+
                     <div className="mt-5 grid gap-3 md:grid-cols-2">
                       {[
                         ['想报名', lead.preferred_course || lead.companion_count],
+                        ['汇款金额', lead.amount_text],
+                        ['后五码（人工对账参考）', lead.transfer_last_five],
                         ['跑步经验', lead.running_experience],
                         ['目标', lead.goal],
                         ['备注', lead.notes],

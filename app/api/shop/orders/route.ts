@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       email,
       fulfillment_note: fulfillmentNote,
       item_count: items.reduce((sum, item) => sum + item.quantity, 0),
-      status: 'new',
+      status: 'pending_transfer',
     })
     .select('*')
     .single()

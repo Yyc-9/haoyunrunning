@@ -18,6 +18,14 @@
     font-feature-settings: "ss01", "ss02", "cv01", "cv02", "cv03";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  img,
+  video,
+  canvas,
+  svg {
+    max-width: 100%;
   }
 }
 
@@ -76,5 +84,54 @@
 
   .apple-slider {
     @apply h-2 bg-apple-gray-200 rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-apple-blue [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 [&::-webkit-slider-thumb]:hover:scale-110;
+  }
+}
+
+@media (max-width: 640px) {
+  .container {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .apple-card {
+    border-radius: 1.25rem;
+  }
+
+  .apple-button-primary,
+  .apple-button-secondary,
+  .apple-button-outline {
+    width: 100%;
+    min-height: 2.75rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .apple-chip {
+    max-width: 100%;
+    padding-left: 0.85rem;
+    padding-right: 0.85rem;
+    white-space: normal;
+  }
+
+  .apple-input {
+    min-width: 0;
+    font-size: 16px;
+  }
+
+  body {
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+}
+
+@media (max-width: 767px) {
+  .courses-mobile-list {
+    display: block;
+  }
+
+  .courses-desktop-table {
+    display: none;
   }
 }

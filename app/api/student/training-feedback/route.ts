@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
+import { canAccessTrainingContent, getStudentAccessState } from '@/lib/student-access'
 
 type FeedbackBody = {
   training_plan_id?: string | null
@@ -38,6 +39,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: '请先登录学员账号。' }, { status: 401 })
   }
 
+  const accessState = await getStudentAccessState(user.id, user.email)
+  if (!canAccessTrainingContent(accessState)) {
+    return NextResponse.json({
+      feedback: [],
+      count: 0,
+      accessState,
+      message: '你的报名资料正在等待人工核对，课表将在核准后开通，请耐心等待。',
+    })
+  }
+
   const { data: feedback, error } = await supabaseAdmin
     .from('training_feedback')
     .select('*')
@@ -63,6 +74,14 @@ export async function POST(request: NextRequest) {
   const user = await getStudent(request)
   if (!user) {
     return NextResponse.json({ error: '请先登录学员账号。' }, { status: 401 })
+  }
+
+  const accessState = await getStudentAccessState(user.id, user.email)
+  if (!canAccessTrainingContent(accessState)) {
+    return NextResponse.json(
+      { error: '你的报名资料正在等待人工核对，课表将在核准后开通，请耐心等待。', accessState },
+      { status: 403 }
+    )
   }
 
   const body = (await request.json().catch(() => ({}))) as FeedbackBody

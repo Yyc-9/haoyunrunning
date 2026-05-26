@@ -20,7 +20,7 @@ export default function CoachSubNav() {
   const pathname = usePathname()
 
   return (
-    <nav aria-label="教练端内部导航" className="mb-8 overflow-x-auto">
+    <nav aria-label="教练端内部导航" className="mb-8 -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
       <div className="flex min-w-max gap-2 rounded-3xl bg-white/85 p-2 shadow-sm ring-1 ring-black/10 backdrop-blur">
         {coachNavItems.map((item) => {
           const active = isActivePath(pathname, item.href)

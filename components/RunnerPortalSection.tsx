@@ -15,12 +15,12 @@ export default function RunnerPortalSection() {
   ]
 
   return (
-    <section className="py-20 bg-white">
+    <section className="overflow-hidden bg-white py-20">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
           >
@@ -55,13 +55,13 @@ export default function RunnerPortalSection() {
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
             className="rounded-3xl border border-apple-gray-200 bg-apple-gray-50 p-6 md:p-8"
           >
-            <div className="mb-6 flex items-center justify-between">
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm text-apple-gray-500">{t.runnerPortal.statusLabel}</p>
                 <h3 className="text-2xl font-bold text-apple-gray-900">{t.runnerPortal.statusTitle}</h3>

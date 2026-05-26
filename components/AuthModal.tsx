@@ -113,15 +113,15 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
           />
 
           {/* Modal */}
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative bg-white rounded-3xl w-full max-w-md overflow-hidden"
+              className="relative max-h-[calc(100vh-1.5rem)] w-full max-w-md overflow-y-auto rounded-3xl bg-white"
             >
               {/* Header */}
-              <div className="p-6 border-b border-apple-gray-200">
+              <div className="border-b border-apple-gray-200 p-4 sm:p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="h-10 w-10 rounded-full bg-gradient-to-br from-apple-blue to-apple-orange flex items-center justify-center">
@@ -174,7 +174,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
               </div>
 
               {/* Form */}
-              <form onSubmit={handleSubmit} className="p-6">
+              <form onSubmit={handleSubmit} className="p-4 sm:p-6">
                 <div className="space-y-4">
                   {activeMode === 'register' && (
                     <>

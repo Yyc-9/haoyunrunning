@@ -116,7 +116,7 @@ export default function Navigation() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div
             className={clsx(
-              'relative flex items-center justify-between rounded-full border px-4 text-apple-gray-950 shadow-lg backdrop-blur-2xl transition-all duration-300 sm:px-6',
+              'relative flex min-w-0 items-center justify-between rounded-full border px-3 text-apple-gray-950 shadow-lg backdrop-blur-2xl transition-all duration-300 sm:px-6',
               isScrolled
                 ? 'border-transparent bg-transparent py-0 shadow-none'
                 : 'border-black/10 bg-white/94 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.18)] ring-1 ring-white/70'
@@ -126,7 +126,7 @@ export default function Navigation() {
             <motion.div
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="flex items-center space-x-2 justify-self-start"
+              className="flex min-w-0 items-center space-x-2 justify-self-start"
             >
               <div className="relative h-10 w-10 overflow-hidden rounded-full border border-black/10 bg-white shadow-sm">
                 <Image
@@ -138,7 +138,7 @@ export default function Navigation() {
                   priority
                 />
               </div>
-              <span className="text-xl font-bold tracking-tight text-apple-gray-950">{t.common.brand}</span>
+              <span className="max-w-[9rem] truncate text-lg font-bold tracking-tight text-apple-gray-950 sm:max-w-none sm:text-xl">{t.common.brand}</span>
             </motion.div>
 
             {/* Desktop Navigation */}
@@ -276,7 +276,7 @@ export default function Navigation() {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-x-0 top-16 z-40 md:hidden bg-white/95 backdrop-blur-glass border-b border-apple-gray-200"
+            className="fixed inset-x-0 top-16 z-40 max-h-[calc(100vh-4rem)] overflow-y-auto border-b border-apple-gray-200 bg-white/95 backdrop-blur-glass md:hidden"
           >
             <div className="container mx-auto px-4 py-6">
               <div className="space-y-4">
