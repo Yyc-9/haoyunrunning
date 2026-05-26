@@ -266,7 +266,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const authUser = signUpData.user
       if (!authUser) {
-        throw new Error('註冊失敗，請稍後再試。')
+        return { needsEmailConfirmation: true }
       }
 
       if (!signUpData.session) {
