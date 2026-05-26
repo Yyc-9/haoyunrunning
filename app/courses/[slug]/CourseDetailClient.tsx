@@ -4,6 +4,7 @@ import Link from 'next/link'
 import {
   ArrowLeft,
   ChevronRight,
+  CreditCard,
   Instagram,
 } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
@@ -138,6 +139,7 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
 
   const text = (value: string) => localizeText(value, language)
   const instagramUrl = course.instagramUrl || 'https://www.instagram.com/nurture.running.team/'
+  const paymentHref = `/payment?course=${encodeURIComponent(course.slug)}`
   const courseCoaches = course.coaches.map((coach) => localizeCoach(coach, language))
 
   return (
@@ -181,15 +183,24 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
               </div>
             </div>
 
-            <a
-              href={instagramUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="apple-button-primary inline-flex w-full items-center justify-center gap-2 px-6 py-3 lg:w-auto"
-            >
-              <Instagram className="h-5 w-5" />
-              {t.courseDetail.instagramSignup}
-            </a>
+            <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
+              <Link
+                href={paymentHref}
+                className="apple-button-primary inline-flex w-full items-center justify-center gap-2 px-6 py-3 lg:w-auto"
+              >
+                <CreditCard className="h-5 w-5" />
+                {t.courseDetail.siteSignup}
+              </Link>
+              <a
+                href={instagramUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-bold text-white transition hover:bg-white/15 lg:w-auto"
+              >
+                <Instagram className="h-5 w-5" />
+                {t.courseDetail.contactInstagram}
+              </a>
+            </div>
           </div>
         </div>
       </section>

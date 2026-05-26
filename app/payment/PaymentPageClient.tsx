@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Instagram, LockKeyhole, Send } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
@@ -40,6 +40,19 @@ export default function PaymentPageClient() {
   const [isConfirmingTransfer, setIsConfirmingTransfer] = useState(false)
   const [error, setError] = useState('')
   const [isSuccess, setIsSuccess] = useState(false)
+
+  useEffect(() => {
+    const courseSlug = new URLSearchParams(window.location.search).get('course')
+    if (!courseSlug) return
+
+    const selectedCourse = allCourses.find((course) => course.slug === courseSlug)
+    if (!selectedCourse) return
+
+    setForm((current) => ({
+      ...current,
+      course: localizeText(selectedCourse.title, language),
+    }))
+  }, [language])
 
   function updateField(field: keyof typeof form, value: string) {
     setForm((current) => ({ ...current, [field]: value }))
