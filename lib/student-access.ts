@@ -40,21 +40,27 @@ export async function getStudentAccessState(userId: string, email?: string | nul
     records.push(...(paymentLeads ?? []))
   }
 
-  let shopOrderQuery = supabaseAdmin
+  const { data: userOrders, error: userOrderError } = await supabaseAdmin
     .from('shop_orders')
     .select('status, created_at')
+    .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(5)
 
-  if (normalizedEmail) {
-    shopOrderQuery = shopOrderQuery.or(`user_id.eq.${userId},email.ilike.${normalizedEmail}`)
-  } else {
-    shopOrderQuery = shopOrderQuery.eq('user_id', userId)
-  }
+  if (userOrderError) throw userOrderError
+  records.push(...(userOrders ?? []))
 
-  const { data: shopOrders, error: orderError } = await shopOrderQuery
-  if (orderError) throw orderError
-  records.push(...(shopOrders ?? []))
+  if (normalizedEmail) {
+    const { data: emailOrders, error: emailOrderError } = await supabaseAdmin
+      .from('shop_orders')
+      .select('status, created_at')
+      .ilike('email', normalizedEmail)
+      .order('created_at', { ascending: false })
+      .limit(5)
+
+    if (emailOrderError) throw emailOrderError
+    records.push(...(emailOrders ?? []))
+  }
 
   const latest = newestStatus(records)
   const status = normalizeStatus(latest?.status)
