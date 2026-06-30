@@ -1,5 +1,4 @@
 import TestimonialsSection from '@/components/TestimonialsSection'
-import TestimonialComments from '@/components/TestimonialComments'
 
 export const metadata = {
   title: '上期学员回顾 - 好运跑班',
@@ -18,12 +17,11 @@ export default function TestimonialsPage() {
             上期学员回顾
           </h1>
           <p className="mx-auto max-w-3xl text-lg leading-8 text-apple-gray-600">
-            这里展示已经通过后台筛选并手动发布的结营学员回顾。新的回顾内容只在每期课程结束后定向邀请提交。
+            来自上期课程学员的真实回顾，记录他们在训练过程中的改变、突破与收获。
           </p>
         </div>
       </section>
       <TestimonialsSection />
-      <TestimonialComments />
     </main>
   )
 }

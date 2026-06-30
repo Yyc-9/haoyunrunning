@@ -4,6 +4,9 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 
 export interface CartItem {
   id: string
+  productId: string
+  variantId?: string
+  size?: string
   name: string
   price: number
   quantity: number
@@ -33,7 +36,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     try {
       const parsed = JSON.parse(savedCart) as CartItem[]
       if (Array.isArray(parsed)) {
-        setItems(parsed.filter((item) => item.id && item.name && item.quantity > 0))
+        setItems(
+          parsed
+            .filter((item) => item.id && item.name && item.quantity > 0)
+            .map((item) => ({
+              ...item,
+              productId: item.productId || item.id.split('-')[0] || item.id,
+            }))
+        )
       }
     } catch {
       window.localStorage.removeItem('goodluck-cart')

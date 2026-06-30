@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
+import { getCartProductId } from '@/lib/shop-products'
 
 type OrderItemInput = {
   id?: string
+  productId?: string
+  variantId?: string
+  size?: string
   name?: string
   price?: number
   quantity?: number
@@ -17,14 +21,30 @@ type OrderBody = {
   items?: OrderItemInput[]
 }
 
-function cleanText(value: string | undefined) {
-  return value?.trim() ?? ''
+type TransferBody = {
+  orderId?: string
+  transferLastFive?: string
+}
+
+function cleanText(value: unknown) {
+  return typeof value === 'string' ? value.trim() : ''
 }
 
 function createOrderNumber() {
   const stamp = new Date().toISOString().replace(/\D/g, '').slice(0, 14)
   const suffix = Math.random().toString(36).slice(2, 6).toUpperCase()
   return `HY${stamp}${suffix}`
+}
+
+function isSetupError(error: { code?: string; message?: string } | null | undefined) {
+  if (!error) return false
+
+  return (
+    error.code === '42883' ||
+    error.code === '42P01' ||
+    error.code === '42703' ||
+    /schema cache|does not exist|function .* does not exist|column .* does not exist/i.test(error.message ?? '')
+  )
 }
 
 export async function POST(request: NextRequest) {
@@ -40,13 +60,12 @@ export async function POST(request: NextRequest) {
   const fulfillmentNote = cleanText(body.fulfillmentNote)
   const items = (body.items ?? [])
     .map((item) => ({
-      product_id: cleanText(item.id),
-      name: cleanText(item.name),
-      price: typeof item.price === 'number' && Number.isFinite(item.price) ? item.price : 0,
+      productId: cleanText(item.productId) || getCartProductId(cleanText(item.id)),
+      variantId: cleanText(item.variantId),
+      size: cleanText(item.size),
       quantity: Number.isInteger(item.quantity) && item.quantity! > 0 ? item.quantity! : 0,
-      image: cleanText(item.image),
     }))
-    .filter((item) => item.product_id && item.name && item.quantity > 0)
+    .filter((item) => item.productId && item.quantity > 0)
 
   if (!customerName || !contact) {
     return NextResponse.json({ error: '请填写姓名和联系方式。' }, { status: 400 })
@@ -56,40 +75,73 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '购物车没有可提交的商品。' }, { status: 400 })
   }
 
-  const { data: order, error: orderError } = await supabaseAdmin
-    .from('shop_orders')
-    .insert({
-      order_number: createOrderNumber(),
-      user_id: user?.id ?? null,
-      customer_name: customerName,
-      contact,
-      email,
-      fulfillment_note: fulfillmentNote,
-      item_count: items.reduce((sum, item) => sum + item.quantity, 0),
-      status: 'pending_transfer',
-    })
-    .select('*')
-    .single()
+  const { data, error } = await supabaseAdmin.rpc('create_shop_order_with_stock', {
+    p_order_number: createOrderNumber(),
+    p_user_id: user?.id ?? null,
+    p_customer_name: customerName,
+    p_contact: contact,
+    p_email: email,
+    p_fulfillment_note: fulfillmentNote,
+    p_items: items,
+  })
 
-  if (orderError || !order) {
-    return NextResponse.json({ error: orderError?.message || '订单提交失败。' }, { status: 500 })
+  if (error || !data) {
+    if (isSetupError(error)) {
+      return NextResponse.json(
+        { error: '商城数据库尚未完成升级，请先执行 supabase/shop-orders.sql。' },
+        { status: 500 }
+      )
+    }
+
+    const message = error?.message || '订单提交失败。'
+    return NextResponse.json({ error: message }, { status: /库存不足/.test(message) ? 409 : 500 })
   }
 
-  const { error: itemsError } = await supabaseAdmin
-    .from('shop_order_items')
-    .insert(items.map((item) => ({ ...item, order_id: order.id })))
+  return NextResponse.json({
+    order: data,
+  })
+}
 
-  if (itemsError) {
-    await supabaseAdmin.from('shop_orders').delete().eq('id', order.id)
-    return NextResponse.json({ error: itemsError.message }, { status: 500 })
+export async function PATCH(request: NextRequest) {
+  if (!supabaseAdmin) {
+    return NextResponse.json({ error: 'Supabase 尚未设置。' }, { status: 500 })
+  }
+
+  const body = (await request.json().catch(() => ({}))) as TransferBody
+  const orderId = cleanText(body.orderId)
+  const transferLastFive = cleanText(body.transferLastFive)
+
+  if (!orderId) {
+    return NextResponse.json({ error: '缺少订单 ID。' }, { status: 400 })
+  }
+
+  if (!/^\d{5}$/.test(transferLastFive)) {
+    return NextResponse.json({ error: '银行账号后五码必须是 5 位数字。' }, { status: 400 })
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('shop_orders')
+    .update({
+      transfer_last_five: transferLastFive,
+      payment_submitted_at: new Date().toISOString(),
+      status: 'pending_review',
+    })
+    .eq('id', orderId)
+    .in('status', ['pending_transfer', 'pending_review'])
+    .select('id, order_number, status, transfer_last_five, payment_submitted_at')
+    .single()
+
+  if (error || !data) {
+    return NextResponse.json({ error: error?.message || '订单付款资料更新失败。' }, { status: 500 })
   }
 
   return NextResponse.json({
     order: {
-      id: order.id,
-      orderNumber: order.order_number,
-      itemCount: order.item_count,
-      status: order.status,
+      id: data.id,
+      orderNumber: data.order_number,
+      status: data.status,
+      transferLastFive: data.transfer_last_five,
+      paymentSubmittedAt: data.payment_submitted_at,
     },
   })
 }

@@ -60,12 +60,12 @@ export type BankTransferDetails = {
 }
 
 export const bankTransferDetails: BankTransferDetails = {
-  accountName: process.env.NEXT_PUBLIC_BANK_ACCOUNT_NAME || '好運跑班（待補正式戶名）',
-  bankName: process.env.NEXT_PUBLIC_BANK_NAME || '待補銀行名稱',
-  bankCode: process.env.NEXT_PUBLIC_BANK_CODE || '待補銀行代碼',
-  accountNumber: process.env.NEXT_PUBLIC_BANK_ACCOUNT_NUMBER || '待補匯款帳號',
-  amountNote: process.env.NEXT_PUBLIC_PAYMENT_AMOUNT_NOTE || '請依 Instagram 確認的課程費用與名額為準。',
-  paymentMemo: process.env.NEXT_PUBLIC_PAYMENT_MEMO || '請備註：報名姓名 + 課程名稱，方便核對。',
+  accountName: '系统分配付款通道',
+  bankName: '后台保密',
+  bankCode: '后台保密',
+  accountNumber: '不会在买家端显示完整收款户头',
+  amountNote: '请依订单金额或客服确认为准。',
+  paymentMemo: '请备注订单编号或报名姓名，付款后提交转出账户后五码。',
 }
 
 export const paymentProviders: Record<PaymentProvider, { enabled: boolean; secretEnv: string }> = {

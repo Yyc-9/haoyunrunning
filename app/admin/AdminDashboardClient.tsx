@@ -14,6 +14,7 @@ import {
   RotateCcw,
   Settings,
   ShieldCheck,
+  Landmark,
   UserCog,
   UsersRound,
 } from 'lucide-react'
@@ -21,21 +22,26 @@ import { supabase } from '@/lib/supabase'
 
 type PaymentOrderStatus = 'pending_transfer' | 'pending_review' | 'approved' | 'rejected'
 
-type AdminTab = 'overview' | 'students' | 'coaches' | 'orders' | 'refunds' | 'products' | 'events' | 'settings'
+type AdminTab = 'overview' | 'students' | 'coaches' | 'orders' | 'products' | 'paymentAccounts' | 'refunds' | 'events' | 'settings'
 
 type AdminDashboardPayload = {
   admin: { id: string; email: string; name: string; role: string }
-  overview: {
+ overview: {
     studentCount: number
     coachCount: number
     pendingOrderCount: number
     approvedOrderCount: number
     unopenedPlanCount: number
     recentFeedbackCount: number
+    productCount: number
+    lowStockCount: number
+    paymentAccountCount: number
   }
   students: AdminStudent[]
   coaches: AdminCoach[]
   orders: AdminOrder[]
+  products: AdminProduct[]
+  paymentAccounts: PaymentAccount[]
   coachOptions: Array<{ id: string; name: string; email: string }>
 }
 
@@ -66,6 +72,8 @@ type AdminCoach = {
 
 type AdminOrder = {
   id: string
+  orderKind: 'course' | 'shop'
+  orderNumber: string
   studentName: string
   email: string
   courseName: string
@@ -75,12 +83,41 @@ type AdminOrder = {
   submittedAt: string
   notes: string
   reviewNote: string | null
+  paymentReference: string
+  paymentChannelLabel: string
+  assignedAccount: string
+  inventoryReserved: boolean
+  items: string[]
+}
+
+type AdminProduct = {
+  id: string
+  name: string
+  category: string
+  price: number
+  priceLabel: string
+  image: string
+  stockQuantity: number
+  active: boolean
+}
+
+type PaymentAccount = {
+  id: string
+  label: string
+  account_name: string
+  bank_name: string
+  bank_code: string
+  account_number: string
+  active: boolean
+  weight: number
+  last_assigned_at: string | null
+  created_at: string
 }
 
 const statusLabels: Record<PaymentOrderStatus, string> = {
   pending_transfer: '待汇款 / 待填写后五码',
   pending_review: '已提交后五码，待人工核对',
-  approved: '已核准，课表已开通',
+  approved: '已核准 / 已完成',
   rejected: '核对未通过或需补充资料',
 }
 
@@ -96,8 +133,9 @@ const tabs: Array<{ id: AdminTab; label: string; icon: typeof LayoutDashboard; r
   { id: 'students', label: '学员管理', icon: UsersRound, ready: true },
   { id: 'coaches', label: '教练管理', icon: UserCog, ready: true },
   { id: 'orders', label: '订单审核', icon: ClipboardList, ready: true },
+  { id: 'products', label: '商城商品', icon: Boxes, ready: true },
+  { id: 'paymentAccounts', label: '收款户头', icon: Landmark, ready: true },
   { id: 'refunds', label: '退款申请', icon: RotateCcw, ready: false },
-  { id: 'products', label: '商城商品', icon: Boxes, ready: false },
   { id: 'events', label: '活动报名', icon: CreditCard, ready: false },
   { id: 'settings', label: '系统设置', icon: Settings, ready: false },
 ]
@@ -183,6 +221,15 @@ export default function AdminDashboardClient() {
   const [studentPlanFilter, setStudentPlanFilter] = useState<'all' | 'enabled' | 'missing'>('all')
   const [coachRoleFilter, setCoachRoleFilter] = useState<'all' | 'coach' | 'student' | 'admin'>('all')
   const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | PaymentOrderStatus>('all')
+  const [productStockEdits, setProductStockEdits] = useState<Record<string, string>>({})
+  const [accountForm, setAccountForm] = useState({
+    label: '',
+    accountName: '',
+    bankName: '',
+    bankCode: '',
+    accountNumber: '',
+    weight: '1',
+  })
 
   const loadDashboard = useCallback(async () => {
     setIsLoading(true)
@@ -201,6 +248,20 @@ export default function AdminDashboardClient() {
   useEffect(() => {
     loadDashboard()
   }, [loadDashboard])
+
+  useEffect(() => {
+    if (!data?.products) return
+
+    setProductStockEdits((current) => {
+      const next = { ...current }
+      data.products.forEach((product) => {
+        if (next[product.id] === undefined) {
+          next[product.id] = String(product.stockQuantity)
+        }
+      })
+      return next
+    })
+  }, [data?.products])
 
   const pendingOrders = useMemo(
     () => data?.orders.filter((order) => order.status === 'pending_review') ?? [],
@@ -246,11 +307,17 @@ export default function AdminDashboardClient() {
       if (!text) return true
 
       return [
+        order.orderKind,
+        order.orderNumber,
         order.studentName,
         order.email,
         order.courseName,
         order.amountText,
         order.transferLastFive,
+        order.paymentReference,
+        order.paymentChannelLabel,
+        order.assignedAccount,
+        order.items.join(' '),
         order.notes,
         order.reviewNote ?? '',
       ]
@@ -268,10 +335,43 @@ export default function AdminDashboardClient() {
       const nextMessage = await adminAction(action)
       setMessage(nextMessage)
       await loadDashboard()
+      return true
     } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : '操作失败。')
+      return false
     } finally {
       setUpdatingId('')
+    }
+  }
+
+  async function saveProductStock(product: AdminProduct) {
+    await runAction(`product-${product.id}`, {
+      action: 'update_product_stock',
+      productId: product.id,
+      stockQuantity: Number(productStockEdits[product.id] ?? product.stockQuantity),
+      active: product.active,
+    })
+  }
+
+  async function createPaymentAccount() {
+    const created = await runAction('create-payment-account', {
+      action: 'create_payment_account',
+      label: accountForm.label,
+      accountName: accountForm.accountName,
+      bankName: accountForm.bankName,
+      bankCode: accountForm.bankCode,
+      accountNumber: accountForm.accountNumber,
+      weight: Number(accountForm.weight || 1),
+    })
+    if (created) {
+      setAccountForm({
+        label: '',
+        accountName: '',
+        bankName: '',
+        bankCode: '',
+        accountNumber: '',
+        weight: '1',
+      })
     }
   }
 
@@ -314,10 +414,10 @@ export default function AdminDashboardClient() {
               </p>
               <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">管理员后台</h1>
               <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
-                第一阶段后台用于查看并管理学员、教练权限和课程报名付款订单。
+                管理商城订单、库存与收款户头；课程和教练资料先保留在后台，后续再整理权限模型。
               </p>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-apple-gray-500">
-                订单审核仅限管理员；后五码只用于人工对账参考，不作为真实支付验证，也不收集完整银行卡、身份证或信用卡资料。
+                订单审核仅限超级管理员；买家端不会显示完整收款户头，后五码只用于人工对账参考。
               </p>
             </div>
 
@@ -366,12 +466,12 @@ export default function AdminDashboardClient() {
             <section className="space-y-8">
               <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
                 {[
-                  ['学员总数', data.overview.studentCount],
-                  ['教练总数', data.overview.coachCount],
                   ['待核对订单', data.overview.pendingOrderCount],
                   ['已核准订单', data.overview.approvedOrderCount],
-                  ['未开通课表', data.overview.unopenedPlanCount],
-                  ['最近回馈', data.overview.recentFeedbackCount],
+                  ['商城商品', data.overview.productCount],
+                  ['低库存商品', data.overview.lowStockCount],
+                  ['收款户头', data.overview.paymentAccountCount],
+                  ['学员总数', data.overview.studentCount],
                 ].map(([label, value]) => (
                   <div key={label} className="apple-card p-5">
                     <p className="text-sm text-apple-gray-500">{label}</p>
@@ -386,13 +486,15 @@ export default function AdminDashboardClient() {
                   <h2 className="text-xl font-black text-apple-gray-900">待核对订单</h2>
                 </div>
                 {pendingOrders.length === 0 ? (
-                  <p className="text-sm text-apple-gray-600">暂无待核对课程付款订单。</p>
+                  <p className="text-sm text-apple-gray-600">暂无待核对订单。</p>
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2">
                     {pendingOrders.slice(0, 4).map((order) => (
                       <div key={order.id} className="rounded-2xl bg-apple-gray-100 p-4">
                         <p className="font-bold text-apple-gray-900">{order.studentName}</p>
-                        <p className="mt-1 text-sm text-apple-gray-600">{order.courseName || '未填写课程'} · 后五码（人工对账）{order.transferLastFive || '-'}</p>
+                        <p className="mt-1 text-sm text-apple-gray-600">
+                          {order.orderKind === 'shop' ? order.orderNumber : order.courseName || '未填写课程'} · 后五码 {order.transferLastFive || '-'}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -578,12 +680,12 @@ export default function AdminDashboardClient() {
             <section className="grid gap-4">
               <div className="apple-card p-5">
                 <div className="grid gap-3 md:grid-cols-[1fr_220px]">
-                  <input
-                    value={orderQuery}
-                    onChange={(event) => setOrderQuery(event.target.value)}
-                    placeholder="搜索姓名、邮箱、课程、后五码或备注"
-                    className="apple-input"
-                  />
+	                  <input
+	                    value={orderQuery}
+	                    onChange={(event) => setOrderQuery(event.target.value)}
+	                    placeholder="搜索姓名、邮箱、订单编号、后五码、付款通道或商品"
+	                    className="apple-input"
+	                  />
                   <select
                     value={orderStatusFilter}
                     onChange={(event) => setOrderStatusFilter(event.target.value as typeof orderStatusFilter)}
@@ -596,28 +698,35 @@ export default function AdminDashboardClient() {
                   </select>
                 </div>
               </div>
-              {data.orders.length === 0 ? (
-                <div className="apple-card p-10 text-center text-apple-gray-600">暂无课程付款订单。</div>
+	              {data.orders.length === 0 ? (
+	                <div className="apple-card p-10 text-center text-apple-gray-600">暂无订单。</div>
               ) : filteredOrders.length === 0 ? (
                 <div className="apple-card p-10 text-center text-apple-gray-600">没有符合条件的订单。</div>
               ) : filteredOrders.map((order) => (
                 <article key={order.id} className="apple-card p-5">
                   <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
                     <div>
-                      <div className="mb-3 flex flex-wrap items-center gap-2">
-                        <span className={`rounded-full px-3 py-1 text-xs font-bold ${statusTone[order.status]}`}>
-                          {statusLabels[order.status]}
-                        </span>
-                        <span className="text-xs font-semibold text-apple-gray-500">{formatDate(order.submittedAt)}</span>
-                      </div>
-                      <h2 className="text-2xl font-black text-apple-gray-900">{order.studentName}</h2>
-                      <p className="mt-2 text-sm text-apple-gray-600">{order.email || '未填写邮箱'}</p>
+	                      <div className="mb-3 flex flex-wrap items-center gap-2">
+	                        <span className="rounded-full bg-black px-3 py-1 text-xs font-bold text-white">
+	                          {order.orderKind === 'shop' ? '商城' : '课程'}
+	                        </span>
+	                        <span className={`rounded-full px-3 py-1 text-xs font-bold ${statusTone[order.status]}`}>
+	                          {statusLabels[order.status]}
+	                        </span>
+	                        {order.inventoryReserved ? (
+	                          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">库存已保留</span>
+	                        ) : null}
+	                        <span className="text-xs font-semibold text-apple-gray-500">{formatDate(order.submittedAt)}</span>
+	                      </div>
+	                      <h2 className="text-2xl font-black text-apple-gray-900">{order.studentName}</h2>
+	                      <p className="mt-2 text-sm text-apple-gray-600">{order.email || '未填写邮箱'}</p>
+	                      {order.orderNumber ? <p className="mt-1 text-sm font-semibold text-apple-gray-500">{order.orderNumber}</p> : null}
                     </div>
                     <div className="flex flex-col gap-3 sm:flex-row">
                       <button
                         type="button"
                         disabled={updatingId === order.id || order.status === 'approved'}
-                        onClick={() => runAction(order.id, { action: 'review_order', orderId: order.id, status: 'approved' })}
+	                        onClick={() => runAction(order.id, { action: 'review_order', orderId: order.id, orderKind: order.orderKind, status: 'approved' })}
                         className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <CheckCircle2 className="h-4 w-4" />
@@ -626,7 +735,7 @@ export default function AdminDashboardClient() {
                       <button
                         type="button"
                         disabled={updatingId === order.id || order.status === 'rejected'}
-                        onClick={() => runAction(order.id, { action: 'review_order', orderId: order.id, status: 'rejected' })}
+	                        onClick={() => runAction(order.id, { action: 'review_order', orderId: order.id, orderKind: order.orderKind, status: 'rejected' })}
                         className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-white px-5 py-2.5 text-sm font-bold text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <RotateCcw className="h-4 w-4" />
@@ -634,25 +743,178 @@ export default function AdminDashboardClient() {
                       </button>
                     </div>
                   </div>
-                  <div className="mt-5 grid gap-3 md:grid-cols-4">
-                    {[
-                      ['报名课程', order.courseName],
-                      ['应付金额', order.amountText],
-                      ['后五码（人工对账参考）', order.transferLastFive],
-                      ['备注', order.notes || order.reviewNote || '暂无备注'],
-                    ].map(([label, value]) => (
-                      <div key={label} className="rounded-2xl bg-apple-gray-100 p-4">
-                        <p className="text-xs font-semibold text-apple-gray-500">{label}</p>
-                        <p className="mt-2 break-words text-sm font-bold text-apple-gray-900">{value || '-'}</p>
-                      </div>
-                    ))}
-                  </div>
-                </article>
+	                  <div className="mt-5 grid gap-3 md:grid-cols-3">
+	                    {[
+	                      [order.orderKind === 'shop' ? '商城订单' : '报名课程', order.courseName],
+	                      ['应付金额', order.amountText],
+	                      ['后五码（人工对账参考）', order.transferLastFive],
+	                      ['付款代号', order.paymentReference],
+	                      ['付款通道', order.paymentChannelLabel || '-'],
+	                      ['分配户头（仅后台）', order.assignedAccount || '-'],
+	                    ].map(([label, value]) => (
+	                      <div key={label} className="rounded-2xl bg-apple-gray-100 p-4">
+	                        <p className="text-xs font-semibold text-apple-gray-500">{label}</p>
+	                        <p className="mt-2 break-words text-sm font-bold text-apple-gray-900">{value || '-'}</p>
+	                      </div>
+	                    ))}
+	                  </div>
+	                  {order.items.length > 0 || order.notes || order.reviewNote ? (
+	                    <div className="mt-3 rounded-2xl bg-white p-4 ring-1 ring-black/10">
+	                      {order.items.length > 0 ? (
+	                        <p className="text-sm leading-6 text-apple-gray-700">商品：{order.items.join('、')}</p>
+	                      ) : null}
+	                      <p className="mt-1 text-sm leading-6 text-apple-gray-600">备注：{order.notes || order.reviewNote || '暂无备注'}</p>
+	                    </div>
+	                  ) : null}
+	                </article>
               ))}
-            </section>
-          ) : null}
+	            </section>
+	          ) : null}
 
-          {!tabs.find((tab) => tab.id === activeTab)?.ready ? (
+	          {activeTab === 'products' && data ? (
+	            <section className="apple-card overflow-hidden">
+	              <div className="border-b border-black/10 p-5">
+	                <h2 className="text-xl font-black text-apple-gray-900">商城商品</h2>
+	                <p className="mt-1 text-sm text-apple-gray-600">库存会在买家提交订单时立即扣除；订单被标记异常时会退回库存。</p>
+	              </div>
+	              {data.products.length === 0 ? (
+	                <div className="p-10 text-center text-sm font-semibold text-apple-gray-500">
+	                  尚未读取到商品资料。请先执行商城 SQL 迁移。
+	                </div>
+	              ) : (
+	                <div className="overflow-x-auto">
+	                  <table className="w-full min-w-[860px] text-left text-sm">
+	                    <thead className="bg-apple-gray-100 text-apple-gray-600">
+	                      <tr>
+	                        {['商品', '分类', '价格', '状态', '库存', '操作'].map((header) => (
+	                          <th key={header} className="px-4 py-3 font-bold">{header}</th>
+	                        ))}
+	                      </tr>
+	                    </thead>
+	                    <tbody className="divide-y divide-black/10">
+	                      {data.products.map((product) => (
+	                        <tr key={product.id}>
+	                          <td className="px-4 py-4">
+	                            <p className="font-bold text-apple-gray-900">{product.name}</p>
+	                            <p className="mt-1 text-xs text-apple-gray-500">ID {product.id}</p>
+	                          </td>
+	                          <td className="px-4 py-4 text-apple-gray-600">{product.category || '-'}</td>
+	                          <td className="px-4 py-4 font-semibold text-apple-gray-800">
+	                            {product.price > 0 ? `NT$${(product.price / 100).toFixed(0)}` : product.priceLabel}
+	                          </td>
+	                          <td className="px-4 py-4">
+	                            <span className={`rounded-full px-3 py-1 text-xs font-bold ${product.active ? 'bg-emerald-50 text-emerald-700' : 'bg-apple-gray-100 text-apple-gray-500'}`}>
+	                              {product.active ? '上架中' : '已下架'}
+	                            </span>
+	                          </td>
+	                          <td className="px-4 py-4">
+	                            <input
+	                              value={productStockEdits[product.id] ?? String(product.stockQuantity)}
+	                              onChange={(event) => setProductStockEdits((current) => ({ ...current, [product.id]: event.target.value.replace(/\D/g, '') }))}
+	                              className="apple-input w-28 py-2 text-sm"
+	                              inputMode="numeric"
+	                            />
+	                          </td>
+	                          <td className="px-4 py-4">
+	                            <button
+	                              type="button"
+	                              disabled={updatingId === `product-${product.id}`}
+	                              onClick={() => saveProductStock(product)}
+	                              className="rounded-full bg-black px-4 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+	                            >
+	                              保存库存
+	                            </button>
+	                          </td>
+	                        </tr>
+	                      ))}
+	                    </tbody>
+	                  </table>
+	                </div>
+	              )}
+	            </section>
+	          ) : null}
+
+	          {activeTab === 'paymentAccounts' && data ? (
+	            <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+	              <div className="apple-card p-5">
+	                <h2 className="text-xl font-black text-apple-gray-900">新增收款户头</h2>
+	                <p className="mt-1 text-sm leading-6 text-apple-gray-600">这些资料只在管理员后台显示。买家下单时只会看到付款通道名和付款代号。</p>
+	                <div className="mt-5 grid gap-3">
+	                  {[
+	                    ['label', '通道名称，例如 A 户头'],
+	                    ['accountName', '户名'],
+	                    ['bankName', '银行名称'],
+	                    ['bankCode', '银行代码，可留空'],
+	                    ['accountNumber', '收款账号'],
+	                    ['weight', '分配权重'],
+	                  ].map(([field, placeholder]) => (
+	                    <input
+	                      key={field}
+	                      value={accountForm[field as keyof typeof accountForm]}
+	                      onChange={(event) => setAccountForm((current) => ({ ...current, [field]: field === 'weight' ? event.target.value.replace(/\D/g, '') : event.target.value }))}
+	                      placeholder={placeholder}
+	                      inputMode={field === 'weight' ? 'numeric' : undefined}
+	                      className="apple-input"
+	                    />
+	                  ))}
+	                </div>
+	                <button
+	                  type="button"
+	                  onClick={createPaymentAccount}
+	                  disabled={updatingId === 'create-payment-account'}
+	                  className="apple-button-primary mt-4 w-full gap-2 disabled:cursor-not-allowed disabled:opacity-50"
+	                >
+	                  <CreditCard className="h-4 w-4" />
+	                  新增户头
+	                </button>
+	              </div>
+
+	              <div className="apple-card overflow-hidden">
+	                <div className="border-b border-black/10 p-5">
+	                  <h2 className="text-xl font-black text-apple-gray-900">收款户头池</h2>
+	                  <p className="mt-1 text-sm text-apple-gray-600">活跃户头会被新商城订单随机分配。</p>
+	                </div>
+	                {data.paymentAccounts.length === 0 ? (
+	                  <div className="p-10 text-center text-sm font-semibold text-apple-gray-500">
+	                    还没有收款户头。
+	                  </div>
+	                ) : (
+	                  <div className="divide-y divide-black/10">
+	                    {data.paymentAccounts.map((account) => (
+	                      <article key={account.id} className="p-5">
+	                        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+	                          <div>
+	                            <div className="mb-2 flex flex-wrap items-center gap-2">
+	                              <span className={`rounded-full px-3 py-1 text-xs font-bold ${account.active ? 'bg-emerald-50 text-emerald-700' : 'bg-apple-gray-100 text-apple-gray-500'}`}>
+	                                {account.active ? '启用中' : '已停用'}
+	                              </span>
+	                              <span className="rounded-full bg-apple-gray-100 px-3 py-1 text-xs font-bold text-apple-gray-600">权重 {account.weight}</span>
+	                            </div>
+	                            <h3 className="text-lg font-black text-apple-gray-900">{account.label}</h3>
+	                            <p className="mt-2 text-sm leading-6 text-apple-gray-600">
+	                              {account.bank_name}{account.bank_code ? ` (${account.bank_code})` : ''} · {account.account_name}
+	                            </p>
+	                            <p className="mt-1 break-all text-sm font-bold text-apple-gray-900">{account.account_number}</p>
+	                            <p className="mt-1 text-xs text-apple-gray-500">最近分配：{formatDate(account.last_assigned_at)}</p>
+	                          </div>
+	                          <button
+	                            type="button"
+	                            disabled={updatingId === `account-${account.id}`}
+	                            onClick={() => runAction(`account-${account.id}`, { action: 'toggle_payment_account', accountId: account.id, active: !account.active })}
+	                            className="rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-bold text-apple-gray-800 transition hover:bg-apple-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+	                          >
+	                            {account.active ? '停用' : '启用'}
+	                          </button>
+	                        </div>
+	                      </article>
+	                    ))}
+	                  </div>
+	                )}
+	              </div>
+	            </section>
+	          ) : null}
+
+	          {!tabs.find((tab) => tab.id === activeTab)?.ready ? (
             <section className="apple-card p-10 text-center">
               <Settings className="mx-auto h-10 w-10 text-apple-gray-400" />
               <h2 className="mt-4 text-2xl font-black text-apple-gray-900">后续阶段开放</h2>

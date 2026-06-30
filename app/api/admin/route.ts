@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminProfile } from '@/lib/admin-auth'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
+import { shopProductFromRow, type ShopProductRow } from '@/lib/shop-products'
 
 type PaymentOrderStatus = 'pending_transfer' | 'pending_review' | 'approved' | 'rejected'
 
@@ -40,11 +41,60 @@ type SignupLeadRow = {
   payment_submitted_at: string | null
 }
 
+type ShopOrderRow = {
+  id: string
+  order_number: string
+  customer_name: string
+  contact: string
+  email: string | null
+  fulfillment_note: string | null
+  item_count: number
+  status: string
+  transfer_last_five: string | null
+  payment_submitted_at: string | null
+  reviewed_at: string | null
+  review_note: string | null
+  subtotal: number | null
+  total_amount: number | null
+  payment_reference: string | null
+  payment_account_id: string | null
+  payment_account_label: string | null
+  inventory_reserved: boolean | null
+  created_at: string
+}
+
+type ShopOrderItemRow = {
+  order_id: string
+  product_id: string
+  name: string
+  quantity: number
+  price: number
+  variant_id: string | null
+  size: string | null
+}
+
+type PaymentAccountRow = {
+  id: string
+  label: string
+  account_name: string
+  bank_name: string
+  bank_code: string
+  account_number: string
+  active: boolean
+  weight: number
+  last_assigned_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 type AdminPatchBody =
   | { action?: 'set_coach_role'; userId?: string; enabled?: boolean }
-  | { action?: 'review_order'; orderId?: string; status?: PaymentOrderStatus; reviewNote?: string }
+  | { action?: 'review_order'; orderId?: string; orderKind?: 'course' | 'shop'; status?: PaymentOrderStatus; reviewNote?: string }
   | { action?: 'bind_student'; studentId?: string; coachId?: string }
   | { action?: 'unbind_student'; bindingId?: string }
+  | { action?: 'update_product_stock'; productId?: string; stockQuantity?: number; active?: boolean }
+  | { action?: 'create_payment_account'; label?: string; accountName?: string; bankName?: string; bankCode?: string; accountNumber?: string; weight?: number }
+  | { action?: 'toggle_payment_account'; accountId?: string; active?: boolean }
 
 const noStoreHeaders = {
   'Cache-Control': 'no-store',
@@ -66,6 +116,21 @@ function cleanText(value: unknown) {
 
 function isPaymentOrderStatus(value: string): value is PaymentOrderStatus {
   return paymentOrderStatuses.has(value)
+}
+
+function isOptionalSchemaError(error: { code?: string; message?: string } | null) {
+  if (!error) return false
+
+  return (
+    error.code === '42P01' ||
+    error.code === '42703' ||
+    /schema cache|does not exist|column .* does not exist/i.test(error.message ?? '')
+  )
+}
+
+function formatAmount(value: number | null | undefined) {
+  if (!value) return '待确认'
+  return `NT$${(value / 100).toFixed(0)}`
 }
 
 async function sendOptionalEnrollmentEmail(input: { to: string; studentName: string; courseName: string }) {
@@ -134,6 +199,20 @@ function firstByKey<T extends Record<string, unknown>>(rows: T[], key: keyof T) 
   return map
 }
 
+async function getProductStock(productId: string) {
+  const { data, error } = await supabaseAdmin!
+    .from('shop_products')
+    .select('stock_quantity')
+    .eq('id', productId)
+    .single()
+
+  if (error || !data) {
+    throw new Error(error?.message || `找不到商品 ${productId}。`)
+  }
+
+  return Number(data.stock_quantity ?? 0)
+}
+
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request)
   if (auth.error) return auth.error
@@ -144,6 +223,10 @@ export async function GET(request: NextRequest) {
     ordersResult,
     plansResult,
     feedbackResult,
+    shopProductsResult,
+    shopOrdersResult,
+    shopOrderItemsResult,
+    paymentAccountsResult,
   ] = await Promise.all([
     supabaseAdmin!
       .from('profiles')
@@ -169,6 +252,24 @@ export async function GET(request: NextRequest) {
       .select('student_id, created_at')
       .order('created_at', { ascending: false })
       .limit(1000),
+    supabaseAdmin!
+      .from('shop_products')
+      .select('id, name, category, price, price_label, image, rating, reviews, tags, variants, sizes, stock_quantity, active')
+      .order('category', { ascending: true })
+      .order('name', { ascending: true }),
+    supabaseAdmin!
+      .from('shop_orders')
+      .select('id, order_number, customer_name, contact, email, fulfillment_note, item_count, status, transfer_last_five, payment_submitted_at, reviewed_at, review_note, subtotal, total_amount, payment_reference, payment_account_id, payment_account_label, inventory_reserved, created_at')
+      .order('created_at', { ascending: false })
+      .limit(500),
+    supabaseAdmin!
+      .from('shop_order_items')
+      .select('order_id, product_id, name, quantity, price, variant_id, size')
+      .limit(2000),
+    supabaseAdmin!
+      .from('shop_payment_accounts')
+      .select('id, label, account_name, bank_name, bank_code, account_number, active, weight, last_assigned_at, created_at, updated_at')
+      .order('created_at', { ascending: false }),
   ])
 
   const firstError = [
@@ -177,6 +278,10 @@ export async function GET(request: NextRequest) {
     ordersResult.error,
     plansResult.error,
     feedbackResult.error,
+    isOptionalSchemaError(shopProductsResult.error) ? null : shopProductsResult.error,
+    isOptionalSchemaError(shopOrdersResult.error) ? null : shopOrdersResult.error,
+    isOptionalSchemaError(shopOrderItemsResult.error) ? null : shopOrderItemsResult.error,
+    isOptionalSchemaError(paymentAccountsResult.error) ? null : paymentAccountsResult.error,
   ].find(Boolean)
 
   if (firstError) {
@@ -188,9 +293,18 @@ export async function GET(request: NextRequest) {
   const orders = (ordersResult.data ?? []) as SignupLeadRow[]
   const plans = plansResult.data ?? []
   const feedback = feedbackResult.data ?? []
+  const shopProducts = shopProductsResult.error ? [] : ((shopProductsResult.data ?? []) as ShopProductRow[]).map(shopProductFromRow)
+  const shopOrders = shopOrdersResult.error ? [] : (shopOrdersResult.data ?? []) as ShopOrderRow[]
+  const shopOrderItems = shopOrderItemsResult.error ? [] : (shopOrderItemsResult.data ?? []) as ShopOrderItemRow[]
+  const paymentAccounts = paymentAccountsResult.error ? [] : (paymentAccountsResult.data ?? []) as PaymentAccountRow[]
   const coursePaymentOrders = orders.filter((order) => order.source === 'course_payment')
 
   const profilesById = new Map(profiles.map((profile) => [profile.id, profile]))
+  const paymentAccountsById = new Map(paymentAccounts.map((account) => [account.id, account]))
+  const shopItemsByOrder = new Map<string, ShopOrderItemRow[]>()
+  shopOrderItems.forEach((item) => {
+    shopItemsByOrder.set(item.order_id, [...(shopItemsByOrder.get(item.order_id) ?? []), item])
+  })
   const latestOrderByEmail = firstByKey(
     coursePaymentOrders.filter((order) => order.email).map((order) => ({
       ...order,
@@ -259,18 +373,59 @@ export async function GET(request: NextRequest) {
     }
   })
 
-  const dashboardOrders = coursePaymentOrders.map((order) => ({
+  const courseDashboardOrders = coursePaymentOrders.map((order) => ({
     id: order.id,
+    orderKind: 'course' as const,
+    orderNumber: '',
     studentName: order.name,
     email: order.email,
     courseName: order.preferred_course,
     amountText: order.amount_text,
     transferLastFive: order.transfer_last_five,
-      status: isPaymentOrderStatus(order.status) ? order.status : 'pending_review',
+    status: isPaymentOrderStatus(order.status) ? order.status : 'pending_review',
     submittedAt: order.payment_submitted_at || order.created_at,
     notes: order.notes,
     reviewNote: order.review_note,
+    paymentReference: '',
+    paymentChannelLabel: '',
+    assignedAccount: '',
+    inventoryReserved: false,
+    items: [] as string[],
   }))
+
+  const shopDashboardOrders = shopOrders.map((order) => {
+    const account = order.payment_account_id ? paymentAccountsById.get(order.payment_account_id) : null
+    const orderItems = shopItemsByOrder.get(order.id) ?? []
+
+    return {
+      id: order.id,
+      orderKind: 'shop' as const,
+      orderNumber: order.order_number,
+      studentName: order.customer_name,
+      email: order.email || '',
+      courseName: order.order_number,
+      amountText: formatAmount(order.total_amount),
+      transferLastFive: order.transfer_last_five || '',
+      status: isPaymentOrderStatus(order.status) ? order.status : 'pending_transfer',
+      submittedAt: order.payment_submitted_at || order.created_at,
+      notes: order.fulfillment_note || '',
+      reviewNote: order.review_note,
+      paymentReference: order.payment_reference || order.order_number,
+      paymentChannelLabel: order.payment_account_label || account?.label || '',
+      assignedAccount: account
+        ? `${account.label}｜${account.bank_name}${account.bank_code ? `(${account.bank_code})` : ''}｜${account.account_name}｜${account.account_number}`
+        : '未分配收款户头',
+      inventoryReserved: order.inventory_reserved ?? true,
+      items: orderItems.map((item) => {
+        const option = [item.variant_id, item.size ? `尺码 ${item.size}` : ''].filter(Boolean).join(' / ')
+        return `${item.name}${option ? ` - ${option}` : ''} x ${item.quantity}`
+      }),
+    }
+  })
+
+  const dashboardOrders = [...courseDashboardOrders, ...shopDashboardOrders].sort((a, b) =>
+    String(b.submittedAt ?? '').localeCompare(String(a.submittedAt ?? ''))
+  )
 
   const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
   const overview = {
@@ -280,6 +435,9 @@ export async function GET(request: NextRequest) {
     approvedOrderCount: dashboardOrders.filter((order) => order.status === 'approved').length,
     unopenedPlanCount: students.filter((student) => !student.planEnabled).length,
     recentFeedbackCount: feedback.filter((item) => new Date(item.created_at).getTime() >= sevenDaysAgo).length,
+    productCount: shopProducts.length,
+    lowStockCount: shopProducts.filter((product) => product.stockQuantity <= 3).length,
+    paymentAccountCount: paymentAccounts.filter((account) => account.active).length,
   }
 
   return json({
@@ -288,6 +446,8 @@ export async function GET(request: NextRequest) {
     students,
     coaches,
     orders: dashboardOrders,
+    products: shopProducts,
+    paymentAccounts,
     coachOptions: coaches
       .filter((coach) => coach.coachEnabled)
       .map((coach) => ({ id: coach.id, name: coach.name, email: coach.email })),
@@ -338,6 +498,7 @@ export async function PATCH(request: NextRequest) {
 
   if (body.action === 'review_order') {
     const orderId = cleanText(body.orderId)
+    const orderKind = cleanText(body.orderKind) || 'course'
     const status = cleanText(body.status)
     const reviewNote = cleanText(body.reviewNote)
 
@@ -349,7 +510,87 @@ export async function PATCH(request: NextRequest) {
       return json({ error: '订单状态无效。' }, { status: 400 })
     }
 
-    const finalReviewNote = reviewNote || (status === 'approved' ? '付款核对通过，课表已开通。' : '付款核对异常，请补充资料。')
+    const finalReviewNote = reviewNote || (status === 'approved' ? '付款核对通过，订单已核准。' : '付款核对异常，请补充资料。')
+
+    if (orderKind === 'shop') {
+      const { data: currentOrder, error: currentOrderError } = await supabaseAdmin!
+        .from('shop_orders')
+        .select('id, status, inventory_reserved')
+        .eq('id', orderId)
+        .single()
+
+      if (currentOrderError || !currentOrder) {
+        return json({ error: currentOrderError?.message || '找不到商城订单。' }, { status: 404 })
+      }
+
+      const { data: orderItems, error: itemsError } = await supabaseAdmin!
+        .from('shop_order_items')
+        .select('product_id, quantity')
+        .eq('order_id', orderId)
+
+      if (itemsError) {
+        return json({ error: itemsError.message }, { status: 500 })
+      }
+
+      if (status === 'rejected' && currentOrder.inventory_reserved) {
+        try {
+          for (const item of orderItems ?? []) {
+            const currentStock = await getProductStock(item.product_id)
+            const { error: stockError } = await supabaseAdmin!
+              .from('shop_products')
+              .update({ stock_quantity: currentStock + item.quantity })
+              .eq('id', item.product_id)
+
+            if (stockError) {
+              return json({ error: stockError.message }, { status: 500 })
+            }
+          }
+        } catch (stockReadError) {
+          return json({ error: stockReadError instanceof Error ? stockReadError.message : '库存读取失败。' }, { status: 500 })
+        }
+      }
+
+      if (status === 'approved' && !currentOrder.inventory_reserved) {
+        try {
+          for (const item of orderItems ?? []) {
+            const currentStock = await getProductStock(item.product_id)
+            if (currentStock < item.quantity) {
+              return json({ error: `库存不足，无法重新核准商品 ${item.product_id}。` }, { status: 409 })
+            }
+
+            const { error: stockError } = await supabaseAdmin!
+              .from('shop_products')
+              .update({ stock_quantity: currentStock - item.quantity })
+              .eq('id', item.product_id)
+
+            if (stockError) {
+              return json({ error: stockError.message }, { status: 500 })
+            }
+          }
+        } catch (stockReadError) {
+          return json({ error: stockReadError instanceof Error ? stockReadError.message : '库存读取失败。' }, { status: 500 })
+        }
+      }
+
+      const { data: order, error } = await supabaseAdmin!
+        .from('shop_orders')
+        .update({
+          status,
+          reviewed_at: new Date().toISOString(),
+          review_note: finalReviewNote,
+          inventory_reserved: status === 'approved',
+        })
+        .eq('id', orderId)
+        .select('*')
+        .single()
+
+      if (error || !order) {
+        return json({ error: error?.message || '商城订单更新失败。' }, { status: 500 })
+      }
+
+      return json({ order, message: finalReviewNote })
+    }
+
     const { data: order, error } = await supabaseAdmin!
       .from('signup_leads')
       .update({
@@ -376,6 +617,95 @@ export async function PATCH(request: NextRequest) {
     }
 
     return json({ order, message: emailMessage || finalReviewNote })
+  }
+
+  if (body.action === 'update_product_stock') {
+    const productId = cleanText(body.productId)
+    const stockQuantity = Number(body.stockQuantity)
+    const active = body.active === true
+
+    if (!productId) {
+      return json({ error: '缺少商品 ID。' }, { status: 400 })
+    }
+
+    if (!Number.isInteger(stockQuantity) || stockQuantity < 0) {
+      return json({ error: '库存数量必须是 0 或正整数。' }, { status: 400 })
+    }
+
+    const { data: product, error } = await supabaseAdmin!
+      .from('shop_products')
+      .update({
+        stock_quantity: stockQuantity,
+        active,
+      })
+      .eq('id', productId)
+      .select('*')
+      .single()
+
+    if (error || !product) {
+      return json({ error: error?.message || '更新库存失败。' }, { status: 500 })
+    }
+
+    return json({ product, message: '商品库存已更新。' })
+  }
+
+  if (body.action === 'create_payment_account') {
+    const label = cleanText(body.label)
+    const accountName = cleanText(body.accountName)
+    const bankName = cleanText(body.bankName)
+    const bankCode = cleanText(body.bankCode)
+    const accountNumber = cleanText(body.accountNumber)
+    const weight = Number(body.weight ?? 1)
+
+    if (!label || !accountName || !bankName || !accountNumber) {
+      return json({ error: '请填写通道名称、户名、银行名称和收款账号。' }, { status: 400 })
+    }
+
+    if (!Number.isInteger(weight) || weight < 1) {
+      return json({ error: '权重必须是正整数。' }, { status: 400 })
+    }
+
+    const { data: account, error } = await supabaseAdmin!
+      .from('shop_payment_accounts')
+      .insert({
+        label,
+        account_name: accountName,
+        bank_name: bankName,
+        bank_code: bankCode,
+        account_number: accountNumber,
+        weight,
+        active: true,
+      })
+      .select('*')
+      .single()
+
+    if (error || !account) {
+      return json({ error: error?.message || '新增收款户头失败。' }, { status: 500 })
+    }
+
+    return json({ account, message: '收款户头已新增。' })
+  }
+
+  if (body.action === 'toggle_payment_account') {
+    const accountId = cleanText(body.accountId)
+    const active = body.active === true
+
+    if (!accountId) {
+      return json({ error: '缺少收款户头 ID。' }, { status: 400 })
+    }
+
+    const { data: account, error } = await supabaseAdmin!
+      .from('shop_payment_accounts')
+      .update({ active })
+      .eq('id', accountId)
+      .select('*')
+      .single()
+
+    if (error || !account) {
+      return json({ error: error?.message || '更新收款户头失败。' }, { status: 500 })
+    }
+
+    return json({ account, message: active ? '收款户头已启用。' : '收款户头已停用。' })
   }
 
   if (body.action === 'bind_student') {

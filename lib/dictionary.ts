@@ -80,7 +80,7 @@ export const dictionary = {
     homeUpdates: {
       label: 'Recent updates',
       title: '近期報名入口',
-      description: '這裡只放目前需要報名或留下資料的入口：4 週年活動與團練報名。',
+      description: '活動與團練資訊整理在這裡，方便你快速完成報名。',
       activities: [
         { title: '好運跑班 4 週年活動', description: '留下 4 週年活動參加意向，方便我們掌握現場人數與後續聯絡。', action: '活動意向登記' },
         { title: '團練報名', description: '每週六開放式團練意向登記，方便教練掌握現場人數。', action: '填寫團練意向' },
@@ -553,7 +553,7 @@ export const dictionary = {
     homeUpdates: {
       label: 'Recent updates',
       title: '近期报名入口',
-      description: '这里只放目前需要报名或留下资料的入口：4 周年活动与团练报名。',
+      description: '活动与团练信息整理在这里，方便你快速完成报名。',
       activities: [
         { title: '好运跑班 4 周年活动', description: '留下 4 周年活动参加意向，方便我们掌握现场人数与后续联系。', action: '活动意向登记' },
         { title: '团练报名', description: '每周六开放式团练意向登记，方便教练掌握现场人数。', action: '填写团练意向' },
@@ -1026,7 +1026,7 @@ export const dictionary = {
     homeUpdates: {
       label: 'Recent updates',
       title: 'Current Signup Entrances',
-      description: 'This area is only for current signup forms: the 4th anniversary activity and group training signup.',
+      description: 'Activity and group training links are collected here for quick signup.',
       activities: [
         { title: 'Good Luck Running 4th Anniversary', description: 'Share your 4th anniversary activity interest so we can estimate attendance and keep in touch.', action: 'Share activity interest' },
         { title: 'Group Training Signup', description: 'Saturday open group training interest form, so coaches can estimate attendance.', action: 'Share group interest' },

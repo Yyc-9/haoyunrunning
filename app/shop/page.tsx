@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CreditCard, Package, Search, Shield, ShoppingBag, Star, Truck } from 'lucide-react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
@@ -10,104 +10,54 @@ import Image from 'next/image'
 import { useCart } from '@/app/cart-provider'
 import { SearchEngine } from '@/lib/search'
 import { useToast } from '@/app/toast-provider'
-
-type ProductVariant = {
-  id: string
-  name: string
-  image: string
-}
-
-type Product = {
-  id: string
-  name: string
-  category: string
-  price: number
-  priceLabel: string
-  image: string
-  rating: number
-  reviews: number
-  tags: string[]
-  variants?: ProductVariant[]
-  sizes?: string[]
-}
-
-const products: Product[] = [
-  {
-    id: '1',
-    name: '好运竞速跑步背心',
-    category: '跑者服饰',
-    price: 0,
-    priceLabel: '私信咨询',
-    image: '/goodluck-running-vest.jpg',
-    rating: 5,
-    reviews: 0,
-    tags: ['团队装备'],
-    sizes: ['XS', 'S', 'M', 'L', 'XL'],
-    variants: [
-      { id: 'purple-white', name: '紫电白', image: '/goodluck-running-vest.jpg' },
-      { id: 'black-blue', name: '曜黑蓝', image: '/goodluck-running-vest-black.jpg' },
-    ],
-  },
-  {
-    id: '2',
-    name: '好运跑步 T 恤',
-    category: '跑者服饰',
-    price: 0,
-    priceLabel: '私信咨询',
-    image: '/goodluck-running-tee.jpg',
-    rating: 5,
-    reviews: 0,
-    tags: ['团队装备'],
-    sizes: ['XS', 'S', 'M', 'L', 'XL'],
-  },
-  {
-    id: '3',
-    name: '好运跑步帽',
-    category: '跑者配件',
-    price: 0,
-    priceLabel: '私信咨询',
-    image: '',
-    rating: 5,
-    reviews: 0,
-    tags: ['日常训练'],
-    sizes: ['S/M', 'L/XL'],
-  },
-  {
-    id: '4',
-    name: '好运毛巾衣',
-    category: '跑者服饰',
-    price: 0,
-    priceLabel: '私信咨询',
-    image: '',
-    rating: 5,
-    reviews: 0,
-    tags: ['赛后恢复'],
-    sizes: ['S', 'M', 'L', 'XL'],
-  },
-  {
-    id: '5',
-    name: 'CALBOMB 蜂蜜柠檬能量胶',
-    category: '运动补给',
-    price: 0,
-    priceLabel: '私信咨询',
-    image: '/calbomb-energy-gel.png',
-    rating: 5,
-    reviews: 0,
-    tags: ['训练补给', '无添加认证'],
-  },
-]
+import { defaultShopProducts, type ProductVariant, type ShopProduct } from '@/lib/shop-products'
 
 export default function ShopPage() {
-  const { addItem } = useCart()
+  const { addItem, items } = useCart()
   const { showToast } = useToast()
+  const [products, setProducts] = useState<ShopProduct[]>(defaultShopProducts)
   const [query, setQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
   const [sortBy, setSortBy] = useState<'relevance' | 'price-low' | 'price-high' | 'rating'>('relevance')
   const [currentPage, setCurrentPage] = useState(0)
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({})
   const [selectedSizes, setSelectedSizes] = useState<Record<string, string>>({})
+  const [productsError, setProductsError] = useState('')
 
-  const engine = useMemo(() => new SearchEngine(products, ['name', 'category']), [])
+  useEffect(() => {
+    let isActive = true
+
+    async function loadProducts() {
+      try {
+        const response = await fetch('/api/shop/products', { cache: 'no-store' })
+        const payload = (await response.json().catch(() => ({}))) as {
+          products?: ShopProduct[]
+          error?: string
+        }
+
+        if (!response.ok) {
+          throw new Error(payload.error || '商品库存读取失败。')
+        }
+
+        if (isActive && payload.products) {
+          setProducts(payload.products)
+          setProductsError('')
+        }
+      } catch (error) {
+        if (isActive) {
+          setProductsError(error instanceof Error ? error.message : '商品库存读取失败。')
+        }
+      }
+    }
+
+    loadProducts()
+
+    return () => {
+      isActive = false
+    }
+  }, [])
+
+  const engine = useMemo(() => new SearchEngine(products, ['name', 'category']), [products])
 
   const results = useMemo(() => {
     return engine.search({
@@ -122,17 +72,30 @@ export default function ShopPage() {
   const suggestions = useMemo(() => (query ? engine.getSuggestions(query, 5) : []), [query, engine])
   const categories = useMemo(() => engine.getFilterOptions('category'), [engine])
 
-  const handleAddToCart = (product: Product, variant?: ProductVariant, size?: string) => {
+  const handleAddToCart = (product: ShopProduct, variant?: ProductVariant, size?: string) => {
+    const cartQuantity = items
+      .filter((item) => item.productId === product.id)
+      .reduce((sum, item) => sum + item.quantity, 0)
+
+    if (cartQuantity >= product.stockQuantity) {
+      showToast(`${product.name} 库存不足`, 'error')
+      return false
+    }
+
     const optionName = [variant?.name, size ? `尺码 ${size}` : ''].filter(Boolean).join(' / ')
     const displayName = optionName ? `${product.name} - ${optionName}` : product.name
 
     addItem({
-      id: [product.id, variant?.id, size].filter(Boolean).join('-'),
+      id: [product.id, variant?.id, size].filter(Boolean).join(':'),
+      productId: product.id,
+      variantId: variant?.id,
+      size,
       name: displayName,
       price: product.price,
       image: variant?.image ?? product.image,
     })
     showToast(`${displayName} 已加入购物车`, 'success')
+    return true
   }
 
   return (
@@ -192,6 +155,11 @@ export default function ShopPage() {
         </div>
 
         <p className="mb-6 text-gray-600">共 {results.total} 件商品 {query && `（搜索“${query}”）`}</p>
+        {productsError ? (
+          <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+            {productsError} 当前先显示本地商品资料。
+          </div>
+        ) : null}
 
         {results.items.length > 0 ? (
           <motion.div initial="hidden" animate="visible" className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -199,6 +167,11 @@ export default function ShopPage() {
               const selectedVariant = product.variants?.find((variant) => variant.id === selectedVariants[product.id]) ?? product.variants?.[0]
               const selectedSize = selectedSizes[product.id] ?? product.sizes?.[0]
               const productImage = selectedVariant?.image ?? product.image
+              const cartQuantity = items
+                .filter((item) => item.productId === product.id)
+                .reduce((sum, item) => sum + item.quantity, 0)
+              const remainingStock = Math.max(0, product.stockQuantity - cartQuantity)
+              const isSoldOut = product.stockQuantity <= 0 || remainingStock <= 0
 
               return (
                 <motion.div key={product.id} className="apple-card group overflow-hidden">
@@ -212,6 +185,9 @@ export default function ShopPage() {
                     )}
                     <div className="absolute left-3 top-3 flex flex-wrap gap-2 pr-3">
                       {product.tags.map((tag) => <span key={tag} className="rounded-full bg-black/80 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">{tag}</span>)}
+                    </div>
+                    <div className="absolute right-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-black text-apple-gray-900 shadow-sm">
+                      {isSoldOut ? '售完' : `库存 ${remainingStock}`}
                     </div>
                   </div>
 
@@ -250,17 +226,38 @@ export default function ShopPage() {
 
                     <div className="mb-4 flex items-baseline gap-2">
                       <span className="text-2xl font-bold text-gray-900">{product.price > 0 ? `NT$${(product.price / 100).toFixed(0)}` : product.priceLabel}</span>
+                      {cartQuantity > 0 ? <span className="text-xs font-semibold text-apple-gray-500">购物车中 {cartQuantity}</span> : null}
                     </div>
 
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <button onClick={() => handleAddToCart(product, selectedVariant, selectedSize)} className="apple-button-secondary gap-2 px-4 py-2.5 text-sm">
+                      <button
+                        type="button"
+                        disabled={isSoldOut}
+                        onClick={() => handleAddToCart(product, selectedVariant, selectedSize)}
+                        className="apple-button-secondary gap-2 px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                      >
                         <ShoppingBag className="h-4 w-4" />
-                        加入购物车
+                        {isSoldOut ? '库存不足' : '加入购物车'}
                       </button>
-                      <Link href="/checkout" onClick={() => handleAddToCart(product, selectedVariant, selectedSize)} className="apple-button-primary gap-2 px-4 py-2.5 text-sm">
-                        <CreditCard className="h-4 w-4" />
-                        前往结账
-                      </Link>
+                      {isSoldOut ? (
+                        <button type="button" disabled className="apple-button-primary gap-2 px-4 py-2.5 text-sm opacity-50">
+                          <CreditCard className="h-4 w-4" />
+                          前往结账
+                        </button>
+                      ) : (
+                        <Link
+                          href="/checkout"
+                          onClick={(event) => {
+                            if (!handleAddToCart(product, selectedVariant, selectedSize)) {
+                              event.preventDefault()
+                            }
+                          }}
+                          className="apple-button-primary gap-2 px-4 py-2.5 text-sm"
+                        >
+                          <CreditCard className="h-4 w-4" />
+                          前往结账
+                        </Link>
+                      )}
                     </div>
                   </div>
                 </motion.div>
