@@ -34,7 +34,7 @@ export default function AboutPage() {
           <div className="grid gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
             <div>
               <p className="mb-4 text-sm font-semibold uppercase tracking-wide text-apple-blue">
-                About Good Luck Running
+                關於好運跑班
               </p>
               <h1 className="mb-6 text-4xl font-black leading-tight text-apple-gray-900 md:text-6xl">
                 我們想讓更多人，
@@ -72,7 +72,7 @@ export default function AboutPage() {
         <div className="container mx-auto">
           <div className="mb-12 max-w-3xl">
             <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
-              Our belief
+              我們相信
             </p>
             <h2 className="text-3xl font-bold text-apple-gray-900 md:text-4xl">
               好運不是偶然，是一次次被好好安排的訓練。
@@ -98,7 +98,7 @@ export default function AboutPage() {
           <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
             <div>
               <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
-                Who we train
+                適合對象
               </p>
               <h2 className="mb-6 text-3xl font-bold text-apple-gray-900 md:text-4xl">
                 不同程度的跑者，都可以在這裡找到自己的節奏。
@@ -133,7 +133,7 @@ export default function AboutPage() {
                   },
                   {
                     icon: UsersRound,
-                    title: '教練與社群支持',
+                    title: '教練與社群支援',
                     description: '學員回報訓練感受，教練依照狀態調整，讓進步不是孤單發生。',
                   },
                 ].map((item) => (

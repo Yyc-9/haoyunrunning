@@ -91,7 +91,7 @@ export function Select({ label, error, hint, options, ...props }: SelectProps) {
           ${error ? 'border-red-500 focus:ring-red-500' : ''}
         `}
       >
-        <option value="">请选择</option>
+        <option value="">請選擇</option>
         {options.map(opt => (
           <option key={opt.value} value={opt.value}>
             {opt.label}

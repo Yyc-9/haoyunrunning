@@ -1,8 +1,8 @@
 import CoachStudentsClient from './CoachStudentsClient'
 
 export const metadata = {
-  title: '学员列表 - 好运跑班教练端',
-  description: '查看好运跑班学员周數、目标、最近回馈与训练风险。',
+  title: '學員列表 - 好運跑班教練端',
+  description: '查看好運跑班學員周數、目標、最近回饋與訓練風險。',
 }
 
 export default function CoachStudentsPage() {

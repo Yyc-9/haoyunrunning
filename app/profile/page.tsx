@@ -35,7 +35,7 @@ export default function ProfilePage() {
       <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-gray-50 to-white pt-24">
         <div className="text-center">
           <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-apple-blue" />
-          <p className="mt-4 text-sm font-semibold text-apple-gray-600">正在读取登录状态...</p>
+          <p className="mt-4 text-sm font-semibold text-apple-gray-600">正在讀取登入狀態...</p>
         </div>
       </main>
     )
@@ -52,28 +52,28 @@ export default function ProfilePage() {
                   Student entry
                 </p>
                 <h1 className="text-3xl font-black leading-tight text-apple-gray-900 md:text-5xl">
-                  已报名学员请登录后查看课表与训练回馈
+                  已報名學員請登入後查看課表與訓練回饋
                 </h1>
                 <p className="mt-5 text-base leading-8 text-apple-gray-600">
-                  如果你已经报名课程，请使用报名邮箱登录。登录后可以查看教练同步的本周课表、提交训练回馈、更新目标和个人资料。
+                  如果你已經報名課程，請使用報名信箱登入。登入後可以查看教練同步的本週課表、提交訓練回饋、更新目標和個人資料。
                 </p>
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                   <Link href="/?auth=login" className="apple-button-primary inline-flex items-center justify-center gap-2 px-6 py-3">
-                    登录学员账号
+                    登入學員帳號
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                   <Link href="/student" className="apple-button-outline inline-flex items-center justify-center gap-2 px-6 py-3">
-                    前往学员看板
+                    前往學員看板
                   </Link>
                 </div>
               </div>
               <div className="bg-apple-gray-950 p-8 text-white md:p-10">
-                <h2 className="text-xl font-black">登录后可以做什么？</h2>
+                <h2 className="text-xl font-black">登入後可以做什么？</h2>
                 <div className="mt-6 space-y-4">
                   {[
-                    ['查看课表', '读取教练本周同步的训练安排。'],
-                    ['提交回馈', '填写里程、配速、RPE、疲劳和身体感受。'],
-                    ['同步目标', '让教练更清楚你的比赛目标和当前状态。'],
+                    ['查看課表', '讀取教練本週同步的訓練安排。'],
+                    ['提交回饋', '填寫里程、配速、RPE、疲勞和身體感受。'],
+                    ['同步目標', '讓教練更清楚你的比賽目標和目前狀態。'],
                   ].map(([title, description]) => (
                     <div key={title} className="rounded-2xl bg-white/10 p-4">
                       <h3 className="font-bold">{title}</h3>
@@ -109,15 +109,15 @@ export default function ProfilePage() {
                   Coach account
                 </p>
                 <h1 className="text-2xl font-bold text-apple-gray-900 md:text-3xl">
-                  {user.name || '好运教练'}
+                  {user.name || '好運教練'}
                 </h1>
                 <p className="mt-1 text-apple-gray-500">{user.email}</p>
                 <div className="mt-3 inline-flex items-center rounded-full bg-green-50 px-3 py-1 text-sm font-bold text-green-700">
-                  教练权限已启用
+                  教練權限已啟用
                 </div>
               </div>
               <Link href="/coach" className="apple-button-primary gap-2">
-                进入教练工作台
+                進入教練工作台
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
@@ -128,14 +128,14 @@ export default function ProfilePage() {
               {
                 href: '/coach/students',
                 icon: UsersRound,
-                title: '学员管理',
-                description: '查看已绑定学员、最近回馈和训练进度。',
+                title: '學員管理',
+                description: '查看已綁定學員、最近回饋和訓練进度。',
               },
               {
                 href: '/coach/planner',
                 icon: NotebookPen,
-                title: '课表面板',
-                description: '保存后写入 training_plans，并同步给学员端查看。',
+                title: '課表面板',
+                description: '儲存後写入 training_plans，並同步给學員端查看。',
               },
             ].map((item) => (
               <Link key={item.href} href={item.href} className="apple-card block p-6">
@@ -156,13 +156,13 @@ export default function ProfilePage() {
           >
             <div className="mb-6 flex items-center gap-3">
               <ClipboardList className="h-6 w-6 text-apple-gray-700" />
-              <h2 className="text-xl font-bold text-apple-gray-900">教练工作台处理逻辑</h2>
+              <h2 className="text-xl font-bold text-apple-gray-900">教練工作台處理逻辑</h2>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
               {[
-                ['高风险优先', 'RPE 很高或出现胸闷、头晕、明显疼痛等红旗描述，优先联系。'],
-                ['中风险降量', '疲劳、恢复差或 RPE 偏高时，下次训练先降量观察。'],
-                ['低风险观察', '回馈稳定时维持计划，继续看趋势。'],
+                ['高風險優先', 'RPE 很高或出現胸悶、頭暈、明顯疼痛等紅旗描述，優先聯絡。'],
+                ['中風險降量', '疲勞、恢復差或 RPE 偏高时，下次訓練先降量觀察。'],
+                ['低風險觀察', '回饋稳定时维持计划，繼續看趨勢。'],
               ].map(([title, description]) => (
                 <div key={title} className="rounded-3xl bg-apple-gray-100 p-5">
                   <h3 className="font-bold text-apple-gray-900">{title}</h3>
@@ -179,7 +179,7 @@ export default function ProfilePage() {
   return (
     <main className="pt-24 min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <div className="container mx-auto px-4 py-12 max-w-6xl">
-        {/* 用户信息卡片 */}
+        {/* 用户資訊卡片 */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -191,7 +191,7 @@ export default function ProfilePage() {
             </div>
             <div className="flex-1">
               <h1 className="text-2xl md:text-3xl font-bold text-apple-gray-900">
-                {user.name || '好运学员'}
+                {user.name || '好運學員'}
               </h1>
               <p className="text-apple-gray-500 mt-1">{user.email}</p>
               {user.pb && (
@@ -203,30 +203,30 @@ export default function ProfilePage() {
             </div>
             <Link href="/student#feedback" className="apple-button-primary flex items-center space-x-2">
               <Calendar className="h-4 w-4" />
-              <span>提交今日回馈</span>
+              <span>提交今日回饋</span>
             </Link>
             <Link href="/student?settings=1" className="apple-button-outline flex items-center space-x-2">
               <Settings className="h-4 w-4" />
-              <span>编辑资料</span>
+              <span>编辑資料</span>
             </Link>
           </div>
 
           {/* 快捷入口 */}
           <div className="grid grid-cols-4 gap-2 md:gap-4 mt-8 pt-6 border-t border-apple-gray-200">
-            <QuickLink icon={TrendingUp} label="训练数据" href="/student#training-data" />
-            <QuickLink icon={Calendar} label="训练计划" href="/student#training-plan" />
-            <QuickLink icon={Target} label="我的目标" href="/student#goals" />
-            <QuickLink icon={Settings} label="设置" href="/student?settings=1" />
+            <QuickLink icon={TrendingUp} label="訓練資料" href="/student#training-data" />
+            <QuickLink icon={Calendar} label="訓練计划" href="/student#training-plan" />
+            <QuickLink icon={Target} label="我的目標" href="/student#goals" />
+            <QuickLink icon={Settings} label="設定" href="/student?settings=1" />
           </div>
         </motion.div>
 
-        {/* 训练日志 */}
+        {/* 訓練日志 */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <h2 className="text-xl font-bold mb-4 text-apple-gray-900">训练日志</h2>
+          <h2 className="text-xl font-bold mb-4 text-apple-gray-900">訓練日志</h2>
           <TrainingLogPreview />
         </motion.div>
       </div>

@@ -15,7 +15,7 @@ export default function EnrollmentStep({ number, title, description }: Enrollmen
         {number}
       </div>
 
-      {/* 内容 */}
+      {/* 內容 */}
       <div>
         <h3 className="font-bold text-apple-gray-900 md:text-lg">{title}</h3>
         <p className="mt-2 text-sm leading-6 text-apple-gray-600">{description}</p>

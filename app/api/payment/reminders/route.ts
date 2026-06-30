@@ -27,7 +27,7 @@ async function isAuthorized(request: NextRequest) {
 
 async function handleReminderCheck(request: NextRequest) {
   if (!(await isAuthorized(request))) {
-    return NextResponse.json({ error: '需要教练、管理员权限，或有效 CRON_SECRET。' }, { status: 401 })
+    return NextResponse.json({ error: '需要教練、管理員權限，或有效 CRON_SECRET。' }, { status: 401 })
   }
 
   const dryRun = request.nextUrl.searchParams.get('dryRun') === '1'
@@ -37,13 +37,13 @@ async function handleReminderCheck(request: NextRequest) {
 
     return NextResponse.json({
       ...result,
-      todo: 'TODO: 接入 Vercel Cron 或 Supabase 定时任务后，定时调用此 API。当前可手动触发。',
+      todo: 'TODO: 接入 Vercel Cron 或 Supabase 定时任务後，定时调用此 API。目前可手动触发。',
     })
   } catch (error) {
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : '检查待汇款提醒失败。',
-        todo: '请确认已执行 supabase/payment-order-statuses.sql，尤其是 reminder_sent_at 字段。',
+        error: error instanceof Error ? error.message : '检查待匯款提醒失敗。',
+        todo: '請確認已执行 supabase/payment-order-statuses.sql，尤其是 reminder_sent_at 字段。',
       },
       { status: 500 }
     )

@@ -49,7 +49,7 @@ function isSetupError(error: { code?: string; message?: string } | null | undefi
 
 export async function POST(request: NextRequest) {
   if (!supabaseAdmin) {
-    return NextResponse.json({ error: 'Supabase 尚未设置。' }, { status: 500 })
+    return NextResponse.json({ error: 'Supabase 尚未設定。' }, { status: 500 })
   }
 
   const user = await getAuthedUser(request.headers.get('authorization')).catch(() => null)
@@ -68,11 +68,11 @@ export async function POST(request: NextRequest) {
     .filter((item) => item.productId && item.quantity > 0)
 
   if (!customerName || !contact) {
-    return NextResponse.json({ error: '请填写姓名和联系方式。' }, { status: 400 })
+    return NextResponse.json({ error: '請填寫姓名和聯絡方式。' }, { status: 400 })
   }
 
   if (items.length === 0) {
-    return NextResponse.json({ error: '购物车没有可提交的商品。' }, { status: 400 })
+    return NextResponse.json({ error: '購物車沒有可提交的商品。' }, { status: 400 })
   }
 
   const { data, error } = await supabaseAdmin.rpc('create_shop_order_with_stock', {
@@ -88,13 +88,13 @@ export async function POST(request: NextRequest) {
   if (error || !data) {
     if (isSetupError(error)) {
       return NextResponse.json(
-        { error: '商城数据库尚未完成升级，请先执行 supabase/shop-orders.sql。' },
+        { error: '商城資料库尚未完成升級，請先執行 supabase/shop-orders.sql。' },
         { status: 500 }
       )
     }
 
-    const message = error?.message || '订单提交失败。'
-    return NextResponse.json({ error: message }, { status: /库存不足/.test(message) ? 409 : 500 })
+    const message = error?.message || '訂單提交失敗。'
+    return NextResponse.json({ error: message }, { status: /庫存不足/.test(message) ? 409 : 500 })
   }
 
   return NextResponse.json({
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   if (!supabaseAdmin) {
-    return NextResponse.json({ error: 'Supabase 尚未设置。' }, { status: 500 })
+    return NextResponse.json({ error: 'Supabase 尚未設定。' }, { status: 500 })
   }
 
   const body = (await request.json().catch(() => ({}))) as TransferBody
@@ -112,11 +112,11 @@ export async function PATCH(request: NextRequest) {
   const transferLastFive = cleanText(body.transferLastFive)
 
   if (!orderId) {
-    return NextResponse.json({ error: '缺少订单 ID。' }, { status: 400 })
+    return NextResponse.json({ error: '缺少訂單 ID。' }, { status: 400 })
   }
 
   if (!/^\d{5}$/.test(transferLastFive)) {
-    return NextResponse.json({ error: '银行账号后五码必须是 5 位数字。' }, { status: 400 })
+    return NextResponse.json({ error: '銀行帳號後五碼必須是 5 位數字。' }, { status: 400 })
   }
 
   const { data, error } = await supabaseAdmin
@@ -132,7 +132,7 @@ export async function PATCH(request: NextRequest) {
     .single()
 
   if (error || !data) {
-    return NextResponse.json({ error: error?.message || '订单付款资料更新失败。' }, { status: 500 })
+    return NextResponse.json({ error: error?.message || '訂單付款資料更新失敗。' }, { status: 500 })
   }
 
   return NextResponse.json({

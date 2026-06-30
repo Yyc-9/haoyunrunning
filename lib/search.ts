@@ -1,5 +1,5 @@
 /**
- * 搜索和过滤工具
+ * 搜尋和过滤工具
  */
 
 export interface SearchOptions {
@@ -17,7 +17,7 @@ export interface SearchResult<T> {
 }
 
 /**
- * 简单的搜索引擎实现
+ * 簡單的搜尋引擎實現
  */
 export class SearchEngine<T extends Record<string, unknown>> {
   private items: T[]
@@ -29,12 +29,12 @@ export class SearchEngine<T extends Record<string, unknown>> {
   }
 
   /**
-   * 执行搜索
+   * 执行搜尋
    */
   search(options: Partial<SearchOptions> = {}): SearchResult<T> {
     let results = [...this.items]
 
-    // 文本搜索
+    // 文本搜尋
     if (options.query) {
       const query = options.query.toLowerCase()
       results = results.filter(item =>
@@ -90,7 +90,7 @@ export class SearchEngine<T extends Record<string, unknown>> {
   }
 
   /**
-   * 获取搜索建议
+   * 获取搜尋建議
    */
   getSuggestions(query: string, limit: number = 5): string[] {
     if (!query) return []
@@ -139,7 +139,7 @@ export class SearchEngine<T extends Record<string, unknown>> {
 }
 
 /**
- * 模糊搜索 (Fuzzy Search)
+ * 模糊搜尋 (Fuzzy Search)
  */
 export function fuzzyMatch(query: string, text: string): number {
   const queryLower = query.toLowerCase()
@@ -170,7 +170,7 @@ export function fuzzyMatch(query: string, text: string): number {
 }
 
 /**
- * 生成搜索索引
+ * 生成搜尋索引
  */
 export function createSearchIndex<T extends Record<string, unknown>>(
   items: T[],

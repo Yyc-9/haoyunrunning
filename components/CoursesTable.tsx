@@ -16,7 +16,7 @@ function getMobileCourseName(name: string) {
   return name
     .replace(/^2026\s*/, '')
     .replace(/^好運跑步訓練營\s*X\s*/, '')
-    .replace(/^好运跑步训练营\s*X\s*/, '')
+    .replace(/^好運跑步訓練营\s*X\s*/, '')
 }
 
 type LevelFilter = 'all' | 'beginner' | 'advanced' | 'elite'
@@ -29,16 +29,16 @@ export default function CoursesTable() {
   const localeText = (text: string) => {
     if (language === 'zh-TW') {
       return text
-        .replaceAll('好运', '好運')
-        .replaceAll('训练', '訓練')
-        .replaceAll('课程', '課程')
+        .replaceAll('好運', '好運')
+        .replaceAll('訓練', '訓練')
+        .replaceAll('課程', '課程')
         .replaceAll('周', '週')
-        .replaceAll('节奏', '節奏')
+        .replaceAll('節奏', '節奏')
         .replaceAll('旧生', '舊生')
-        .replaceAll('适合', '適合')
-        .replaceAll('请', '請')
-        .replaceAll('咨询', '諮詢')
-        .replaceAll('费用', '費用')
+        .replaceAll('適合', '適合')
+        .replaceAll('請', '請')
+        .replaceAll('諮詢', '諮詢')
+        .replaceAll('費用', '費用')
         .replaceAll('班', '班')
         .replaceAll('入门', '入門')
         .replaceAll('初心', '初心')
@@ -46,13 +46,13 @@ export default function CoursesTable() {
     }
     if (language === 'zh-CN') {
       return text
-        .replaceAll('好運', '好运')
-        .replaceAll('訓練', '训练')
-        .replaceAll('課程', '课程')
+        .replaceAll('好運', '好運')
+        .replaceAll('訓練', '訓練')
+        .replaceAll('課程', '課程')
         .replaceAll('週', '周')
-        .replaceAll('節奏', '节奏')
+        .replaceAll('節奏', '節奏')
         .replaceAll('舊生', '旧生')
-        .replaceAll('費用', '费用')
+        .replaceAll('費用', '費用')
     }
     return text
   }
@@ -72,11 +72,11 @@ export default function CoursesTable() {
       case 'beginner':
         return '新手'
       case 'advanced':
-        return '进阶'
+        return '進階'
       case 'elite':
         return '菁英'
       default:
-        return '进阶'
+        return '進階'
     }
   }
 
@@ -142,7 +142,7 @@ export default function CoursesTable() {
 
   return (
     <div className="space-y-8">
-      {/* 筛选 Pills */}
+      {/* 篩選 Pills */}
       <div className="space-y-4">
         <div>
           <h3 className="mb-3 text-sm font-semibold text-apple-gray-600">程度</h3>
@@ -175,7 +175,7 @@ export default function CoursesTable() {
                   : 'bg-green-100 text-green-800 hover:bg-green-200'
               }`}
             >
-              进阶
+              進階
             </button>
             <button
               onClick={() => setLevelFilter('elite')}
@@ -220,7 +220,7 @@ export default function CoursesTable() {
         </div>
       </div>
 
-      {/* 手机课程卡片 */}
+      {/* 手机課程卡片 */}
       <div className="courses-mobile-list space-y-4 md:hidden">
         {Array.from(groupedCourses.entries()).map(([weekday, coursesInWeek]) => (
           <section key={weekday} className="space-y-3">
@@ -284,11 +284,11 @@ export default function CoursesTable() {
                         <p className="text-sm leading-6 text-apple-gray-700">{localeText(course.classTime)}</p>
                       </div>
                       <div>
-                        <h5 className="mb-1 text-xs font-bold uppercase tracking-wide text-apple-gray-500">适合对象</h5>
+                        <h5 className="mb-1 text-xs font-bold uppercase tracking-wide text-apple-gray-500">適合对象</h5>
                         <p className="text-sm leading-6 text-apple-gray-700">{localeText(course.groupAudience)}</p>
                       </div>
                       <div>
-                        <h5 className="mb-1 text-xs font-bold uppercase tracking-wide text-apple-gray-500">训练方向</h5>
+                        <h5 className="mb-1 text-xs font-bold uppercase tracking-wide text-apple-gray-500">訓練方向</h5>
                         <p className="text-sm leading-6 text-apple-gray-700">
                           {localeText(
                             Array.isArray(course.trainingGoals)
@@ -302,7 +302,7 @@ export default function CoursesTable() {
                           href={`/courses/${course.slug}`}
                           className="inline-flex items-center justify-center gap-2 rounded-full bg-apple-blue px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600"
                         >
-                          查看完整课程
+                          查看完整課程
                           <ChevronRight className="h-4 w-4" />
                         </Link>
                         <a
@@ -311,7 +311,7 @@ export default function CoursesTable() {
                           rel="noreferrer"
                           className="inline-flex items-center justify-center gap-2 rounded-full border border-apple-blue px-4 py-2.5 text-sm font-semibold text-apple-blue transition-colors hover:bg-apple-blue/10"
                         >
-                          Instagram 咨询
+                          Instagram 諮詢
                           <ChevronRight className="h-4 w-4" />
                         </a>
                       </div>
@@ -324,21 +324,21 @@ export default function CoursesTable() {
         ))}
       </div>
 
-      {/* 桌面课程表格 */}
+      {/* 桌面課程表格 */}
       <div className="courses-desktop-table hidden overflow-x-auto rounded-2xl border border-apple-gray-200 bg-white md:block">
         <div className="flex flex-col">
           {/* 表头 */}
           <div className="grid grid-cols-7 border-b border-apple-gray-200 bg-apple-gray-50">
             <div className="border-r border-apple-gray-200 px-6 py-4 text-left text-sm font-semibold text-apple-gray-700">时间</div>
-            <div className="border-r border-apple-gray-200 px-6 py-4 text-left text-sm font-semibold text-apple-gray-700">班级名称</div>
-            <div className="border-r border-apple-gray-200 px-6 py-4 text-left text-sm font-semibold text-apple-gray-700">地点</div>
+            <div className="border-r border-apple-gray-200 px-6 py-4 text-left text-sm font-semibold text-apple-gray-700">班級名稱</div>
+            <div className="border-r border-apple-gray-200 px-6 py-4 text-left text-sm font-semibold text-apple-gray-700">地點</div>
             <div className="border-r border-apple-gray-200 px-6 py-4 text-left text-sm font-semibold text-apple-gray-700">程度</div>
-            <div className="border-r border-apple-gray-200 px-6 py-4 text-left text-sm font-semibold text-apple-gray-700">训练方向</div>
-            <div className="border-r border-apple-gray-200 px-6 py-4 text-left text-sm font-semibold text-apple-gray-700">课程周期</div>
+            <div className="border-r border-apple-gray-200 px-6 py-4 text-left text-sm font-semibold text-apple-gray-700">訓練方向</div>
+            <div className="border-r border-apple-gray-200 px-6 py-4 text-left text-sm font-semibold text-apple-gray-700">課程週期</div>
             <div className="px-6 py-4"></div>
           </div>
 
-          {/* 表格内容 */}
+          {/* 表格內容 */}
           {Array.from(groupedCourses.entries()).map(([weekday, coursesInWeek]) => (
             <div key={weekday}>
               {/* 星期分隔行 */}
@@ -346,7 +346,7 @@ export default function CoursesTable() {
                 <span className="text-sm font-bold text-apple-gray-700">{localeText(weekday)}</span>
               </div>
 
-              {/* 课程行 */}
+              {/* 課程行 */}
               {coursesInWeek.map((course) => {
                 const isExpanded = expandedCourses.has(course.slug)
                 const level = getLevelBadge(course)
@@ -388,28 +388,28 @@ export default function CoursesTable() {
                       </div>
                     </div>
 
-                    {/* 展开的内嵌面板 */}
+                    {/* 展开的內嵌面板 */}
                     {isExpanded && (
                       <div className="bg-apple-gray-50 px-6 py-4 border-t border-apple-gray-200">
                         <div className="space-y-4 rounded-xl bg-white p-4 border border-apple-gray-200">
                           <div className="grid gap-4 md:grid-cols-3">
                             <div>
                               <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-apple-gray-500">
-                                集合地点
+                                集合地點
                               </h4>
                               <p className="text-sm text-apple-gray-700">{localeText(course.meetingPoint)}</p>
                             </div>
 
                             <div>
                               <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-apple-gray-500">
-                                适合对象
+                                適合对象
                               </h4>
                               <p className="text-sm text-apple-gray-700">{localeText(course.groupAudience)}</p>
                             </div>
 
                             <div>
                               <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-apple-gray-500">
-                                训练方向
+                                訓練方向
                               </h4>
                               <p className="text-sm text-apple-gray-700">
                                 {localeText(
@@ -426,7 +426,7 @@ export default function CoursesTable() {
                               href={`/courses/${course.slug}`}
                               className="inline-flex items-center gap-2 rounded-lg bg-apple-blue px-4 py-2 text-sm font-semibold text-white hover:bg-blue-600 transition-colors"
                             >
-                              查看完整课程
+                              查看完整課程
                               <ChevronRight className="h-4 w-4" />
                             </Link>
                             <a
@@ -435,7 +435,7 @@ export default function CoursesTable() {
                               rel="noreferrer"
                               className="inline-flex items-center gap-2 rounded-lg border border-apple-blue px-4 py-2 text-sm font-semibold text-apple-blue hover:bg-apple-blue/10 transition-colors"
                             >
-                              Instagram 咨询
+                              Instagram 諮詢
                               <ChevronRight className="h-4 w-4" />
                             </a>
                           </div>
@@ -452,7 +452,7 @@ export default function CoursesTable() {
 
       {filteredCourses.length === 0 && (
         <div className="rounded-2xl border border-apple-gray-200 bg-apple-gray-50 p-8 text-center">
-          <p className="text-apple-gray-600">暂无符合筛选条件的课程</p>
+          <p className="text-apple-gray-600">暫無符合篩選條件的課程</p>
         </div>
       )}
     </div>

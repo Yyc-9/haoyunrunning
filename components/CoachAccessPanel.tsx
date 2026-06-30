@@ -104,7 +104,7 @@ export default function CoachAccessPanel({ compact = false, onStudentBound }: Co
         setError(t.coach.emailNotFound)
       } else if (message.includes('duplicate') || message.includes('already')) {
         setError(t.coach.alreadyBound)
-      } else if (message.includes('權限') || message.includes('权限')) {
+      } else if (message.includes('權限') || message.includes('權限')) {
         setError(t.coach.noPermission)
       } else {
         setError(message)

@@ -18,7 +18,7 @@ const shortWeekdayLabels: Record<Language, string[]> = {
 
 const statusLabels: Record<Language, Record<WeekStatus, string>> = {
   'zh-CN': {
-    this: '本周',
+    this: '本週',
     next: '下一周',
     past: '历史周',
     future: '未来周',

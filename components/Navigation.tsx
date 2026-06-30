@@ -50,8 +50,9 @@ export default function Navigation() {
   ]
 
   const currentLanguage = languages.find((item) => item.code === language) ?? languages[0]
+  const canSwitchLanguage = languages.length > 1
 
-  const languageSwitcher = (
+  const languageSwitcher = canSwitchLanguage ? (
     <div className="relative">
       <motion.button
         type="button"
@@ -98,7 +99,7 @@ export default function Navigation() {
         )}
       </AnimatePresence>
     </div>
-  )
+  ) : null
 
   return (
     <>
@@ -142,7 +143,7 @@ export default function Navigation() {
             </motion.div>
 
             {/* Desktop Navigation */}
-            <div className="absolute left-1/2 hidden -translate-x-1/2 items-center justify-center space-x-7 md:flex">
+            <div className="absolute left-1/2 hidden -translate-x-1/2 items-center justify-center space-x-7 lg:flex">
               {navItems.map((item) => {
                 const isExternal = item.href.startsWith('http')
                 const isHashLink = item.href.startsWith('#')
@@ -192,7 +193,7 @@ export default function Navigation() {
             </div>
 
             {/* Auth Buttons */}
-            <div className="hidden md:flex items-center space-x-4 justify-self-end">
+            <div className="hidden items-center space-x-4 justify-self-end lg:flex">
               {languageSwitcher}
               {isLoading ? (
                 <div className="h-9 w-28 animate-pulse rounded-full bg-white/70 ring-1 ring-black/10" />
@@ -252,18 +253,45 @@ export default function Navigation() {
               )}
             </div>
 
-            {/* Mobile Menu Button */}
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="justify-self-end rounded-full p-2 transition-colors duration-200 hover:bg-apple-gray-100 md:hidden"
-            >
-              {isMenuOpen ? (
-                <X className="h-6 w-6 text-apple-gray-700" />
+            {/* Compact Auth + Menu */}
+            <div className="flex items-center gap-2 justify-self-end lg:hidden">
+              {isLoading ? (
+                <div className="h-10 w-20 animate-pulse rounded-full bg-apple-gray-100 ring-1 ring-black/10" />
+              ) : isLoggedIn ? (
+                <Link
+                  href="/student"
+                  className="inline-flex h-10 items-center justify-center rounded-full border border-black/10 bg-white px-4 text-sm font-bold text-apple-gray-950 shadow-sm transition-colors duration-200 hover:text-apple-blue"
+                >
+                  {t.common.myAccount}
+                </Link>
               ) : (
-                <Menu className="h-6 w-6 text-apple-gray-700" />
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    setAuthMode('login')
+                    setIsAuthModalOpen(true)
+                    setIsMenuOpen(false)
+                  }}
+                  className="inline-flex h-10 items-center justify-center rounded-full border border-black/10 bg-white px-4 text-sm font-bold text-apple-gray-950 shadow-sm transition-colors duration-200 hover:text-apple-blue"
+                >
+                  <LogIn className="mr-1.5 h-4 w-4" />
+                  {t.common.login}
+                </motion.button>
               )}
-            </motion.button>
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-apple-gray-700 shadow-sm transition-colors duration-200 hover:bg-apple-gray-100"
+                aria-label={isMenuOpen ? '關閉選單' : '開啟選單'}
+              >
+                {isMenuOpen ? (
+                  <X className="h-5 w-5" />
+                ) : (
+                  <Menu className="h-5 w-5" />
+                )}
+              </motion.button>
+            </div>
           </div>
         </div>
       </motion.nav>
@@ -276,7 +304,7 @@ export default function Navigation() {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-x-0 top-16 z-40 max-h-[calc(100vh-4rem)] overflow-y-auto border-b border-apple-gray-200 bg-white/95 backdrop-blur-glass md:hidden"
+            className="fixed inset-x-0 top-20 z-40 max-h-[calc(100vh-5rem)] overflow-y-auto border-b border-apple-gray-200 bg-white/95 backdrop-blur-glass lg:hidden"
           >
             <div className="container mx-auto px-4 py-6">
               <div className="space-y-4">
@@ -311,23 +339,25 @@ export default function Navigation() {
                   )
                 })}
                 <div className="pt-6 border-t border-apple-gray-200 space-y-3">
-                  <div className="flex items-center justify-center gap-2 rounded-2xl bg-apple-gray-100 p-1">
-                    {languages.map((item) => (
-                      <button
-                        key={item.code}
-                        type="button"
-                        onClick={() => setLanguage(item.code)}
-                        className={clsx(
-                          'flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-200',
-                          language === item.code
-                            ? 'bg-white text-apple-blue shadow-sm'
-                            : 'text-apple-gray-600 hover:text-apple-gray-900'
-                        )}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
+                  {canSwitchLanguage && (
+                    <div className="flex items-center justify-center gap-2 rounded-2xl bg-apple-gray-100 p-1">
+                      {languages.map((item) => (
+                        <button
+                          key={item.code}
+                          type="button"
+                          onClick={() => setLanguage(item.code)}
+                          className={clsx(
+                            'flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-200',
+                            language === item.code
+                              ? 'bg-white text-apple-blue shadow-sm'
+                              : 'text-apple-gray-600 hover:text-apple-gray-900'
+                          )}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   {isLoading ? (
                     <div className="h-11 w-full animate-pulse rounded-full bg-apple-gray-200" />
                   ) : isLoggedIn ? (

@@ -183,7 +183,7 @@ function groupPlansByWeek(plans: TrainingPlan[]) {
 
 async function authedFetch(path: string, init?: RequestInit) {
   if (!supabase) {
-    throw new Error('Supabase 尚未设置。')
+    throw new Error('Supabase 尚未設定。')
   }
 
   const {
@@ -191,7 +191,7 @@ async function authedFetch(path: string, init?: RequestInit) {
   } = await supabase.auth.getSession()
 
   if (!session?.access_token) {
-    throw new Error('请先登录教练账号。')
+    throw new Error('請先登入教練帳號。')
   }
 
   const response = await fetch(path, {
@@ -206,7 +206,7 @@ async function authedFetch(path: string, init?: RequestInit) {
 
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) {
-    throw new Error(payload.error || '操作失败，请稍后再试。')
+    throw new Error(payload.error || '操作失敗，請稍後再試。')
   }
 
   return payload
@@ -283,7 +283,7 @@ export default function CoachPlannerPage() {
         setStudents(studentRows)
         setSelectedStudentId((current) => current || studentRows.find((row) => row.student)?.student?.id || '')
       } catch (err) {
-        setError(err instanceof Error ? err.message : '读取学员失败。')
+        setError(err instanceof Error ? err.message : '讀取學員失敗。')
       } finally {
         setIsLoadingStudents(false)
       }
@@ -315,7 +315,7 @@ export default function CoachPlannerPage() {
         const label = formatTrainingWeekLabel(getTrainingWeekNumber(activeWeekStart, grouped), language)
         setRows(displayPlans.length > 0 ? plansToRows(displayPlans, label) : createEmptyRows(label))
       } catch (err) {
-        setError(err instanceof Error ? err.message : '读取课表失败。')
+        setError(err instanceof Error ? err.message : '讀取課表失敗。')
         setSavedPlans([])
         setRows(createEmptyRows(activeWeekLabel))
       } finally {
@@ -468,7 +468,7 @@ export default function CoachPlannerPage() {
     const safeWeekLabel = exportWeekLabel.replace(/[\\/:*?"<>|]+/g, '-')
 
     downloadCsvFile(`${safeStudentName}_${safeWeekLabel}_training_plan.csv`, csvRows)
-    setMessage(`${language === 'en' ? 'CSV exported' : language === 'zh-TW' ? 'CSV 已匯出' : 'CSV 已导出'}：${exportWeekLabel}`)
+    setMessage(`${language === 'en' ? 'CSV exported' : language === 'zh-TW' ? 'CSV 已匯出' : 'CSV 已匯出'}：${exportWeekLabel}`)
   }
 
   return (
@@ -584,7 +584,7 @@ export default function CoachPlannerPage() {
                 className="apple-button-secondary gap-2 px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Download className="h-4 w-4" />
-                {language === 'en' ? 'Export CSV' : language === 'zh-TW' ? '匯出 CSV' : '导出 CSV'}
+                {language === 'en' ? 'Export CSV' : language === 'zh-TW' ? '匯出 CSV' : '匯出 CSV'}
               </button>
             </div>
             <button

@@ -24,12 +24,12 @@ function isIsoDate(value: string | undefined) {
 
 async function getCoachContext(authorization: string | null) {
   if (!supabaseAdmin) {
-    return { error: NextResponse.json({ error: 'Supabase 尚未设置。' }, { status: 500 }) }
+    return { error: NextResponse.json({ error: 'Supabase 尚未設定。' }, { status: 500 }) }
   }
 
   const user = await getAuthedUser(authorization)
   if (!user) {
-    return { error: NextResponse.json({ error: '请先登录教练账号。' }, { status: 401 }) }
+    return { error: NextResponse.json({ error: '請先登入教練帳號。' }, { status: 401 }) }
   }
 
   const { data: coachProfile, error: coachError } = await supabaseAdmin
@@ -43,7 +43,7 @@ async function getCoachContext(authorization: string | null) {
   }
 
   if (!['coach', 'admin'].includes(coachProfile.role)) {
-    return { error: NextResponse.json({ error: '目前账号尚未取得教练权限。' }, { status: 403 }) }
+    return { error: NextResponse.json({ error: '目前帳號尚未取得教練權限。' }, { status: 403 }) }
   }
 
   return { user, coachProfile }
@@ -65,7 +65,7 @@ async function verifyStudentAccess(coachId: string, studentId: string, isAdmin: 
   }
 
   if (!binding) {
-    return NextResponse.json({ error: '只能查看或派发已绑定学员的课表。' }, { status: 403 })
+    return NextResponse.json({ error: '只能查看或派發已綁定學員的課表。' }, { status: 403 })
   }
 
   return null
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
 
   const studentId = request.nextUrl.searchParams.get('studentId')?.trim()
   if (!studentId) {
-    return NextResponse.json({ error: '请选择要查看课表的学员。' }, { status: 400 })
+    return NextResponse.json({ error: '請選擇要查看課表的學員。' }, { status: 400 })
   }
 
   const accessError = await verifyStudentAccess(
@@ -114,15 +114,15 @@ export async function POST(request: NextRequest) {
   const workouts = body.workouts ?? []
 
   if (!studentId) {
-    return NextResponse.json({ error: '请选择要派发课表的学员。' }, { status: 400 })
+    return NextResponse.json({ error: '請選擇要派發課表的學員。' }, { status: 400 })
   }
 
   if (!Number.isInteger(weekNumber) || weekNumber < 1) {
-    return NextResponse.json({ error: '请填写有效周数。' }, { status: 400 })
+    return NextResponse.json({ error: '請填寫有效周数。' }, { status: 400 })
   }
 
   if (!isIsoDate(weekStart)) {
-    return NextResponse.json({ error: '请填写有效的周起始日期。' }, { status: 400 })
+    return NextResponse.json({ error: '請填寫有效的周起始日期。' }, { status: 400 })
   }
 
   const accessError = await verifyStudentAccess(
@@ -140,16 +140,16 @@ export async function POST(request: NextRequest) {
       week_number: weekNumber,
       week_start: weekStart,
       workout_date: isIsoDate(workout.workoutDate) ? workout.workoutDate : weekStart,
-      day_label: workout.dayLabel?.trim() || '训练日',
-      title: workout.title?.trim() || '训练课表',
-      target: workout.target?.trim() || workout.title?.trim() || '按教练安排完成训练',
+      day_label: workout.dayLabel?.trim() || '訓練日',
+      title: workout.title?.trim() || '訓練課表',
+      target: workout.target?.trim() || workout.title?.trim() || '按教練安排完成訓練',
       pace: workout.pace?.trim() || '',
       note: workout.note?.trim() || '',
       sort_order: workout.sortOrder ?? index,
     }))
 
   if (cleanedWorkouts.length === 0) {
-    return NextResponse.json({ error: '请至少填写一项训练内容。' }, { status: 400 })
+    return NextResponse.json({ error: '請至少填寫一项訓練內容。' }, { status: 400 })
   }
 
   const { data: deletedPlans, error: deleteError } = await supabaseAdmin!

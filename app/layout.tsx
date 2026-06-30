@@ -9,8 +9,8 @@ import { LanguageProvider } from './language-context'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 
 export const metadata: Metadata = {
-  title: '好運跑班 - 科学训练，跑出好运',
-  description: '专业跑步训练平台，提供科学训练方案和个性化指导',
+  title: '好運跑班 - 科學訓練，跑出好運',
+  description: '專業跑步訓練平台，提供科學訓練方案與個人化指導',
 }
 
 export const viewport: Viewport = {

@@ -129,7 +129,7 @@ function isOptionalSchemaError(error: { code?: string; message?: string } | null
 }
 
 function formatAmount(value: number | null | undefined) {
-  if (!value) return '待确认'
+  if (!value) return '待確認'
   return `NT$${(value / 100).toFixed(0)}`
 }
 
@@ -142,7 +142,7 @@ async function sendOptionalEnrollmentEmail(input: { to: string; studentName: str
       to: input.to,
       courseName: input.courseName,
     })
-    return '邮件服务尚未配置，已完成核准但未发送邮件。'
+    return '郵件服務尚未設定，已完成核准但未發送郵件。'
   }
 
   const response = await fetch('https://api.resend.com/emails', {
@@ -154,8 +154,8 @@ async function sendOptionalEnrollmentEmail(input: { to: string; studentName: str
     body: JSON.stringify({
       from,
       to: input.to,
-      subject: '好运跑班课表已开通',
-      text: `${input.studentName || '同学'}你好：你的 ${input.courseName || '已报名课程'} 报名付款已经核准，课表已开通。`,
+      subject: '好運跑班課表已開通',
+      text: `${input.studentName || '同學'}你好：你的 ${input.courseName || '已報名課程'} 報名付款已經核准，課表已開通。`,
     }),
   })
 
@@ -164,25 +164,25 @@ async function sendOptionalEnrollmentEmail(input: { to: string; studentName: str
       status: response.status,
       detail: await response.text().catch(() => ''),
     })
-    return '核准已完成，但邮件发送失败，请稍后检查邮件服务配置。'
+    return '核准已完成，但郵件發送失敗，請稍後检查郵件服務設定。'
   }
 
-  return '核准已完成，并已发送课表开通邮件。'
+  return '核准已完成，並已發送課表開通郵件。'
 }
 
 async function requireAdmin(request: NextRequest) {
   if (!supabaseAdmin) {
-    return { error: json({ error: 'Supabase 尚未设置。' }, { status: 500 }) }
+    return { error: json({ error: 'Supabase 尚未設定。' }, { status: 500 }) }
   }
 
   const user = await getAuthedUser(request.headers.get('authorization'))
   if (!user) {
-    return { error: json({ error: '请先登录管理员账号。' }, { status: 401 }) }
+    return { error: json({ error: '請先登入管理員帳號。' }, { status: 401 }) }
   }
 
   const adminProfile = await getAdminProfile(user)
   if (!adminProfile) {
-    return { error: json({ error: '目前账号没有管理员权限。' }, { status: 403 }) }
+    return { error: json({ error: '目前帳號沒有管理員權限。' }, { status: 403 }) }
   }
 
   return { user, adminProfile }
@@ -335,10 +335,10 @@ export async function GET(request: NextRequest) {
 
     return {
       id: student.id,
-      name: student.name || student.email || '未填写姓名',
+      name: student.name || student.email || '未填寫姓名',
       email: student.email,
       program: student.program || latestOrder?.preferred_course || '',
-      paymentStatus: latestOrder?.status ?? '暂无订单',
+      paymentStatus: latestOrder?.status ?? '暫無訂單',
       paymentCourse: latestOrder?.preferred_course ?? '',
       planEnabled: studentsWithPlans.has(student.id) || latestOrder?.status === 'approved',
       lastFeedbackAt: latestFeedbackByStudent.get(student.id)?.created_at ?? null,
@@ -346,7 +346,7 @@ export async function GET(request: NextRequest) {
       bindings: studentBindings.map((binding) => ({
         id: binding.id,
         coachId: binding.coach_id,
-        coachName: profilesById.get(binding.coach_id)?.name || profilesById.get(binding.coach_id)?.email || '未知教练',
+        coachName: profilesById.get(binding.coach_id)?.name || profilesById.get(binding.coach_id)?.email || '未知教練',
         coachEmail: profilesById.get(binding.coach_id)?.email || '',
       })),
       boundCoachNames: boundCoaches.map((coach) => coach.name || coach.email).join('、'),
@@ -363,7 +363,7 @@ export async function GET(request: NextRequest) {
 
     return {
       id: coach.id,
-      name: coach.name || coach.email || '未填写姓名',
+      name: coach.name || coach.email || '未填寫姓名',
       email: coach.email,
       role: coach.role,
       coachEnabled: coach.role === 'coach' || coach.role === 'admin',
@@ -414,10 +414,10 @@ export async function GET(request: NextRequest) {
       paymentChannelLabel: order.payment_account_label || account?.label || '',
       assignedAccount: account
         ? `${account.label}｜${account.bank_name}${account.bank_code ? `(${account.bank_code})` : ''}｜${account.account_name}｜${account.account_number}`
-        : '未分配收款户头',
+        : '未分配收款戶頭',
       inventoryReserved: order.inventory_reserved ?? true,
       items: orderItems.map((item) => {
-        const option = [item.variant_id, item.size ? `尺码 ${item.size}` : ''].filter(Boolean).join(' / ')
+        const option = [item.variant_id, item.size ? `尺碼 ${item.size}` : ''].filter(Boolean).join(' / ')
         return `${item.name}${option ? ` - ${option}` : ''} x ${item.quantity}`
       }),
     }
@@ -479,7 +479,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (target.role === 'admin') {
-      return json({ error: '管理员角色不能在这里被改为普通教练或学员。' }, { status: 400 })
+      return json({ error: '管理員角色不能在這裡被改为普通教練或學員。' }, { status: 400 })
     }
 
     const { data: profile, error } = await supabaseAdmin!
@@ -490,10 +490,10 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (error || !profile) {
-      return json({ error: error?.message || '更新教练权限失败。' }, { status: 500 })
+      return json({ error: error?.message || '更新教練權限失敗。' }, { status: 500 })
     }
 
-    return json({ profile, message: enabled ? '已授予教练权限。' : '已取消教练权限。' })
+    return json({ profile, message: enabled ? '已授予教練權限。' : '已取消教練權限。' })
   }
 
   if (body.action === 'review_order') {
@@ -503,14 +503,14 @@ export async function PATCH(request: NextRequest) {
     const reviewNote = cleanText(body.reviewNote)
 
     if (!orderId) {
-      return json({ error: '缺少订单 ID。' }, { status: 400 })
+      return json({ error: '缺少訂單 ID。' }, { status: 400 })
     }
 
     if (!isPaymentOrderStatus(status) || !['approved', 'rejected'].includes(status)) {
-      return json({ error: '订单状态无效。' }, { status: 400 })
+      return json({ error: '訂單狀態無效。' }, { status: 400 })
     }
 
-    const finalReviewNote = reviewNote || (status === 'approved' ? '付款核对通过，订单已核准。' : '付款核对异常，请补充资料。')
+    const finalReviewNote = reviewNote || (status === 'approved' ? '付款核對透過，訂單已核准。' : '付款核對異常，請補充資料。')
 
     if (orderKind === 'shop') {
       const { data: currentOrder, error: currentOrderError } = await supabaseAdmin!
@@ -520,7 +520,7 @@ export async function PATCH(request: NextRequest) {
         .single()
 
       if (currentOrderError || !currentOrder) {
-        return json({ error: currentOrderError?.message || '找不到商城订单。' }, { status: 404 })
+        return json({ error: currentOrderError?.message || '找不到商城訂單。' }, { status: 404 })
       }
 
       const { data: orderItems, error: itemsError } = await supabaseAdmin!
@@ -546,7 +546,7 @@ export async function PATCH(request: NextRequest) {
             }
           }
         } catch (stockReadError) {
-          return json({ error: stockReadError instanceof Error ? stockReadError.message : '库存读取失败。' }, { status: 500 })
+          return json({ error: stockReadError instanceof Error ? stockReadError.message : '庫存讀取失敗。' }, { status: 500 })
         }
       }
 
@@ -555,7 +555,7 @@ export async function PATCH(request: NextRequest) {
           for (const item of orderItems ?? []) {
             const currentStock = await getProductStock(item.product_id)
             if (currentStock < item.quantity) {
-              return json({ error: `库存不足，无法重新核准商品 ${item.product_id}。` }, { status: 409 })
+              return json({ error: `庫存不足，無法重新核准商品 ${item.product_id}。` }, { status: 409 })
             }
 
             const { error: stockError } = await supabaseAdmin!
@@ -568,7 +568,7 @@ export async function PATCH(request: NextRequest) {
             }
           }
         } catch (stockReadError) {
-          return json({ error: stockReadError instanceof Error ? stockReadError.message : '库存读取失败。' }, { status: 500 })
+          return json({ error: stockReadError instanceof Error ? stockReadError.message : '庫存讀取失敗。' }, { status: 500 })
         }
       }
 
@@ -585,7 +585,7 @@ export async function PATCH(request: NextRequest) {
         .single()
 
       if (error || !order) {
-        return json({ error: error?.message || '商城订单更新失败。' }, { status: 500 })
+        return json({ error: error?.message || '商城訂單更新失敗。' }, { status: 500 })
       }
 
       return json({ order, message: finalReviewNote })
@@ -604,7 +604,7 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (error || !order) {
-      return json({ error: error?.message || '订单更新失败。' }, { status: 500 })
+      return json({ error: error?.message || '訂單更新失敗。' }, { status: 500 })
     }
 
     let emailMessage = ''
@@ -629,7 +629,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (!Number.isInteger(stockQuantity) || stockQuantity < 0) {
-      return json({ error: '库存数量必须是 0 或正整数。' }, { status: 400 })
+      return json({ error: '庫存數量必須是 0 或正整數。' }, { status: 400 })
     }
 
     const { data: product, error } = await supabaseAdmin!
@@ -643,10 +643,10 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (error || !product) {
-      return json({ error: error?.message || '更新库存失败。' }, { status: 500 })
+      return json({ error: error?.message || '更新庫存失敗。' }, { status: 500 })
     }
 
-    return json({ product, message: '商品库存已更新。' })
+    return json({ product, message: '商品庫存已更新。' })
   }
 
   if (body.action === 'create_payment_account') {
@@ -658,11 +658,11 @@ export async function PATCH(request: NextRequest) {
     const weight = Number(body.weight ?? 1)
 
     if (!label || !accountName || !bankName || !accountNumber) {
-      return json({ error: '请填写通道名称、户名、银行名称和收款账号。' }, { status: 400 })
+      return json({ error: '請填寫通道名稱、户名、銀行名稱和收款帳號。' }, { status: 400 })
     }
 
     if (!Number.isInteger(weight) || weight < 1) {
-      return json({ error: '权重必须是正整数。' }, { status: 400 })
+      return json({ error: '权重必須是正整數。' }, { status: 400 })
     }
 
     const { data: account, error } = await supabaseAdmin!
@@ -680,10 +680,10 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (error || !account) {
-      return json({ error: error?.message || '新增收款户头失败。' }, { status: 500 })
+      return json({ error: error?.message || '新增收款戶頭失敗。' }, { status: 500 })
     }
 
-    return json({ account, message: '收款户头已新增。' })
+    return json({ account, message: '收款戶頭已新增。' })
   }
 
   if (body.action === 'toggle_payment_account') {
@@ -691,7 +691,7 @@ export async function PATCH(request: NextRequest) {
     const active = body.active === true
 
     if (!accountId) {
-      return json({ error: '缺少收款户头 ID。' }, { status: 400 })
+      return json({ error: '缺少收款戶頭 ID。' }, { status: 400 })
     }
 
     const { data: account, error } = await supabaseAdmin!
@@ -702,10 +702,10 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (error || !account) {
-      return json({ error: error?.message || '更新收款户头失败。' }, { status: 500 })
+      return json({ error: error?.message || '更新收款戶頭失敗。' }, { status: 500 })
     }
 
-    return json({ account, message: active ? '收款户头已启用。' : '收款户头已停用。' })
+    return json({ account, message: active ? '收款戶頭已啟用。' : '收款戶頭已停用。' })
   }
 
   if (body.action === 'bind_student') {
@@ -713,11 +713,11 @@ export async function PATCH(request: NextRequest) {
     const coachId = cleanText(body.coachId)
 
     if (!studentId || !coachId) {
-      return json({ error: '请选择学员和教练。' }, { status: 400 })
+      return json({ error: '請選擇學員和教練。' }, { status: 400 })
     }
 
     if (studentId === coachId) {
-      return json({ error: '不能把同一个账号同时作为学员和教练绑定。' }, { status: 400 })
+      return json({ error: '不能把同一個帳號同时作為學員和教練綁定。' }, { status: 400 })
     }
 
     const { data: relatedProfiles, error: relatedProfilesError } = await supabaseAdmin!
@@ -733,11 +733,11 @@ export async function PATCH(request: NextRequest) {
     const coachProfile = relatedProfiles?.find((profile) => profile.id === coachId)
 
     if (!studentProfile || studentProfile.role !== 'student') {
-      return json({ error: '请选择普通学员账号作为绑定学员。' }, { status: 400 })
+      return json({ error: '請選擇普通學員帳號作為綁定學員。' }, { status: 400 })
     }
 
     if (!coachProfile || !['coach', 'admin'].includes(coachProfile.role)) {
-      return json({ error: '请选择已启用教练权限的账号。' }, { status: 400 })
+      return json({ error: '請選擇已啟用教練權限的帳號。' }, { status: 400 })
     }
 
     const { data, error } = await supabaseAdmin!
@@ -747,17 +747,17 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (error || !data) {
-      return json({ error: error?.message || '绑定失败。' }, { status: 500 })
+      return json({ error: error?.message || '綁定失敗。' }, { status: 500 })
     }
 
-    return json({ binding: data, message: '学员与教练已绑定。' })
+    return json({ binding: data, message: '學員與教練已綁定。' })
   }
 
   if (body.action === 'unbind_student') {
     const bindingId = cleanText(body.bindingId)
 
     if (!bindingId) {
-      return json({ error: '缺少绑定 ID。' }, { status: 400 })
+      return json({ error: '缺少綁定 ID。' }, { status: 400 })
     }
 
     const { data, error } = await supabaseAdmin!
@@ -768,11 +768,11 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (error || !data) {
-      return json({ error: error?.message || '解绑失败。' }, { status: 500 })
+      return json({ error: error?.message || '解绑失敗。' }, { status: 500 })
     }
 
-    return json({ binding: data, message: '绑定关系已取消。' })
+    return json({ binding: data, message: '綁定關係已取消。' })
   }
 
-  return json({ error: '未知的管理员操作。' }, { status: 400 })
+  return json({ error: '未知的管理員操作。' }, { status: 400 })
 }

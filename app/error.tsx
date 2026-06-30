@@ -25,10 +25,10 @@ export default function Error({ error, reset }: ErrorProps) {
         {/* Message */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-apple-gray-900 mb-4">
-            出现了一点问题
+            出現了一点问题
           </h2>
           <p className="text-lg text-apple-gray-600 mb-8">
-            我们遇到了一个意外错误。请稍后重试，或者返回首页。
+            我們遇到了一個意外錯誤。請稍後重試，或者返回首頁。
           </p>
         </div>
 
@@ -39,11 +39,11 @@ export default function Error({ error, reset }: ErrorProps) {
             className="apple-button-primary inline-flex items-center justify-center px-8 py-3 hover:scale-105 active:scale-95 transition-transform duration-200"
           >
             <RefreshCw className="h-5 w-5 mr-2" />
-            重新尝试
+            重新尝試
           </button>
           <Link href="/" className="apple-button-outline inline-flex items-center justify-center px-8 py-3 hover:scale-105 active:scale-95 transition-transform duration-200">
             <Home className="h-5 w-5 mr-2" />
-            返回首页
+            返回首頁
           </Link>
         </div>
 
@@ -54,7 +54,7 @@ export default function Error({ error, reset }: ErrorProps) {
               onClick={() => setShowDetails(!showDetails)}
               className="text-sm text-apple-blue hover:underline mb-4"
             >
-              {showDetails ? '隐藏' : '显示'}详细信息
+              {showDetails ? '隐藏' : '顯示'}详细資訊
             </button>
             {showDetails && (
               <div className="bg-apple-gray-100 p-4 rounded-xl text-left">
@@ -63,7 +63,7 @@ export default function Error({ error, reset }: ErrorProps) {
                 </p>
                 {error.digest && (
                   <p className="text-xs text-apple-gray-500 mt-2">
-                    错误 ID: {error.digest}
+                    錯誤 ID: {error.digest}
                   </p>
                 )}
               </div>
@@ -73,7 +73,7 @@ export default function Error({ error, reset }: ErrorProps) {
 
         {/* Support Message */}
         <p className="text-sm text-apple-gray-500 mt-12">
-          需要帮助？请<a href="mailto:support@example.com" className="text-apple-blue hover:underline">联系客服</a>
+          需要幫助？請<a href="mailto:support@example.com" className="text-apple-blue hover:underline">聯絡客服</a>
         </p>
       </div>
     </div>

@@ -134,7 +134,7 @@ export async function getMyStudentAccess() {
   }
 
   if (!response.ok) {
-    throw new Error(payload.error || '读取报名状态失败，请稍后再试。')
+    throw new Error(payload.error || '讀取報名狀態失敗，請稍後再試。')
   }
 
   return {
@@ -193,7 +193,7 @@ export async function submitTrainingFeedback(input: TrainingFeedbackInsert) {
     }
 
     if (!response.ok || !payload.feedback) {
-      throw new Error(payload.error || '提交训练回馈失败，请稍后再试。')
+      throw new Error(payload.error || '提交訓練回饋失敗，請稍後再試。')
     }
 
     return payload.feedback
@@ -235,7 +235,7 @@ export async function getMyTrainingPlans(studentId: string) {
     }
 
     if (!response.ok) {
-      throw new Error(payload.error || '读取课表失败，请稍后再试。')
+      throw new Error(payload.error || '讀取課表失敗，請稍後再試。')
     }
 
     return payload.plans ?? []
@@ -277,7 +277,7 @@ export async function getMyTrainingFeedback(studentId: string) {
     }
 
     if (!response.ok) {
-      throw new Error(payload.error || '读取最近回馈失败，请稍后再试。')
+      throw new Error(payload.error || '讀取最近回饋失敗，請稍後再試。')
     }
 
     return payload.feedback ?? []

@@ -43,7 +43,7 @@ class ApiClient {
         data,
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : '请求失败'
+      const message = error instanceof Error ? error.message : '請求失敗'
       console.error('API Error:', message)
       return {
         success: false,

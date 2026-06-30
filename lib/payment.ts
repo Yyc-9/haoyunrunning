@@ -19,10 +19,10 @@ export const paymentOrderStatusLabels = {
     rejected: '核對未通過或需補充資料',
   },
   'zh-CN': {
-    pending_transfer: '待汇款 / 待填写后五码',
-    pending_review: '已提交后五码，待人工核对',
-    approved: '已核准，课表已开通',
-    rejected: '核对未通过或需补充资料',
+    pending_transfer: '待匯款 / 待填寫後五碼',
+    pending_review: '已提交後五碼，待人工核對',
+    approved: '已核准，課表已開通',
+    rejected: '核對未透過或需補充資料',
   },
   en: {
     pending_transfer: 'Awaiting transfer / last five digits',
@@ -60,12 +60,12 @@ export type BankTransferDetails = {
 }
 
 export const bankTransferDetails: BankTransferDetails = {
-  accountName: '系统分配付款通道',
-  bankName: '后台保密',
-  bankCode: '后台保密',
-  accountNumber: '不会在买家端显示完整收款户头',
-  amountNote: '请依订单金额或客服确认为准。',
-  paymentMemo: '请备注订单编号或报名姓名，付款后提交转出账户后五码。',
+  accountName: '系統分配付款通道',
+  bankName: '後台保密',
+  bankCode: '後台保密',
+  accountNumber: '不會在買家端顯示完整收款戶頭',
+  amountNote: '請依訂單金額或客服確認为准。',
+  paymentMemo: '請备注訂單編號或報名姓名，付款後提交转出帳戶後五碼。',
 }
 
 export const paymentProviders: Record<PaymentProvider, { enabled: boolean; secretEnv: string }> = {

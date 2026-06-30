@@ -28,26 +28,26 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
   const localeText = (text: string) => {
     if (language === 'zh-TW') {
       return text
-        .replaceAll('好运', '好運')
-        .replaceAll('训练', '訓練')
-        .replaceAll('课程', '課程')
+        .replaceAll('好運', '好運')
+        .replaceAll('訓練', '訓練')
+        .replaceAll('課程', '課程')
         .replaceAll('周', '週')
-        .replaceAll('节奏', '節奏')
+        .replaceAll('節奏', '節奏')
         .replaceAll('旧生', '舊生')
-        .replaceAll('适合', '適合')
-        .replaceAll('请', '請')
-        .replaceAll('咨询', '諮詢')
-        .replaceAll('费用', '費用')
+        .replaceAll('適合', '適合')
+        .replaceAll('請', '請')
+        .replaceAll('諮詢', '諮詢')
+        .replaceAll('費用', '費用')
     }
     if (language === 'zh-CN') {
       return text
-        .replaceAll('好運', '好运')
-        .replaceAll('訓練', '训练')
-        .replaceAll('課程', '课程')
+        .replaceAll('好運', '好運')
+        .replaceAll('訓練', '訓練')
+        .replaceAll('課程', '課程')
         .replaceAll('週', '周')
-        .replaceAll('節奏', '节奏')
+        .replaceAll('節奏', '節奏')
         .replaceAll('舊生', '旧生')
-        .replaceAll('費用', '费用')
+        .replaceAll('費用', '費用')
     }
     return text
   }

@@ -9,10 +9,10 @@ import { allCourses } from '@/lib/goodluck-data'
 function localizeCourseTitle(title: string, language: string) {
   if (language === 'zh-CN') {
     return title
-      .replaceAll('好運', '好运')
-      .replaceAll('訓練', '训练')
+      .replaceAll('好運', '好運')
+      .replaceAll('訓練', '訓練')
       .replaceAll('週', '周')
-      .replaceAll('課程', '课程')
+      .replaceAll('課程', '課程')
       .replaceAll('補習班', '补习班')
   }
 

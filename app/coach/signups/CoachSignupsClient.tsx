@@ -28,9 +28,9 @@ type SignupLead = {
 }
 
 const sourceLabels: Record<SignupLead['source'], string> = {
-  anniversary_4th: '4 周年活动',
-  group_class: '团练报名',
-  course_payment: '课程付款',
+  anniversary_4th: '4 週年活動',
+  group_class: '團練報名',
+  course_payment: '課程付款',
 }
 
 const statusLabels = paymentOrderStatusLabels['zh-CN']
@@ -69,7 +69,7 @@ async function getAccessToken() {
 async function fetchSignupLeads() {
   const token = await getAccessToken()
   if (!token) {
-    throw new Error('请先登入教练或管理员账号。')
+    throw new Error('請先登入教練或管理員帳號。')
   }
 
   const response = await fetch('/api/signup-leads', {
@@ -84,7 +84,7 @@ async function fetchSignupLeads() {
   }
 
   if (!response.ok) {
-    throw new Error(payload.error || '读取报名资料失败。')
+    throw new Error(payload.error || '讀取報名資料失敗。')
   }
 
   return payload.leads ?? []
@@ -93,7 +93,7 @@ async function fetchSignupLeads() {
 async function updateLeadStatus(id: string, status: SignupLead['status'], reviewNote = '') {
   const token = await getAccessToken()
   if (!token) {
-    throw new Error('请先登入教练或管理员账号。')
+    throw new Error('請先登入教練或管理員帳號。')
   }
 
   const response = await fetch('/api/signup-leads', {
@@ -112,7 +112,7 @@ async function updateLeadStatus(id: string, status: SignupLead['status'], review
   }
 
   if (!response.ok || !payload.lead) {
-    throw new Error(payload.error || '更新报名状态失败。')
+    throw new Error(payload.error || '更新報名狀態失敗。')
   }
 
   return { lead: payload.lead, emailMessage: payload.emailMessage }
@@ -131,7 +131,7 @@ export default function CoachSignupsClient() {
   const loadLeads = useCallback(async () => {
     if (!supabase) {
       setIsLoading(false)
-      setError('Supabase 尚未设置。')
+      setError('Supabase 尚未設定。')
       return
     }
 
@@ -142,7 +142,7 @@ export default function CoachSignupsClient() {
       setLeads(await fetchSignupLeads())
     } catch (loadError) {
       setLeads([])
-      setError(loadError instanceof Error ? loadError.message : '读取报名资料失败。')
+      setError(loadError instanceof Error ? loadError.message : '讀取報名資料失敗。')
     } finally {
       setIsLoading(false)
     }
@@ -197,7 +197,7 @@ export default function CoachSignupsClient() {
       setLeads((current) => current.map((lead) => (lead.id === id ? updatedLead : lead)))
       if (emailMessage) setMessage(emailMessage)
     } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : '更新报名状态失败。')
+      setError(updateError instanceof Error ? updateError.message : '更新報名狀態失敗。')
     } finally {
       setUpdatingId('')
     }
@@ -209,12 +209,12 @@ export default function CoachSignupsClient() {
     setMessage('')
 
     try {
-      const reviewNote = nextStatus === 'approved' ? '付款核对通过，课表已开通。' : '付款核对未通过或需补充资料。'
+      const reviewNote = nextStatus === 'approved' ? '付款核對透過，課表已開通。' : '付款核對未透過或需補充資料。'
       const { lead: updatedLead, emailMessage } = await updateLeadStatus(id, nextStatus, reviewNote)
       setLeads((current) => current.map((lead) => (lead.id === id ? updatedLead : lead)))
       setMessage(emailMessage || reviewNote)
     } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : '更新审核状态失败。')
+      setError(updateError instanceof Error ? updateError.message : '更新审核狀態失敗。')
     } finally {
       setUpdatingId('')
     }
@@ -222,18 +222,18 @@ export default function CoachSignupsClient() {
 
   function exportCsv() {
     const headers = [
-      '来源',
-      '状态',
+      '來源',
+      '狀態',
       '姓名',
-      '电话',
+      '電話',
       'Email',
       'Instagram',
-      '想报名的团练',
-      '汇款金额',
-      '后五码',
+      '想報名的團練',
+      '匯款金額',
+      '後五碼',
       '同行人数',
       '跑步经验',
-      '目标',
+      '目標',
       '备注',
       '提交时间',
     ]
@@ -277,21 +277,21 @@ export default function CoachSignupsClient() {
           <div className="mb-8 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
             <div>
               <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
-                Signup leads
+                報名名單
               </p>
-              <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">报名资料看板</h1>
+              <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">報名資料看板</h1>
               <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
-                集中查看 4 周年活动与团练报名表单，筛选来源、更新跟进状态，并导出 CSV 名单。
+                集中查看 4 週年活動與團練報名表單，篩選來源、更新跟進狀態，並匯出 CSV 名單。
               </p>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-apple-gray-500">
-                付款核对仅供教练或管理员人工对账；后五码只是转账资料参考，不代表系统已完成真实支付验证。
+                付款核對僅供教練或管理員人工對帳；後五碼只是轉帳資料參考，不代表系統已完成真實支付驗證。
               </p>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">
               <button type="button" onClick={loadLeads} className="apple-button-outline inline-flex items-center justify-center gap-2 px-5 py-3">
                 <RefreshCw className="h-4 w-4" />
-                刷新
+                重新整理
               </button>
               <button
                 type="button"
@@ -300,7 +300,7 @@ export default function CoachSignupsClient() {
                 className="apple-button-primary inline-flex items-center justify-center gap-2 px-5 py-3 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Download className="h-4 w-4" />
-                导出 CSV
+                匯出 CSV
               </button>
             </div>
           </div>
@@ -309,10 +309,10 @@ export default function CoachSignupsClient() {
 
           <div className="mt-8 grid gap-4 md:grid-cols-5">
             {[
-              ['全部资料', stats.total],
-              ['4 周年活动', stats.anniversary],
-              ['团练报名', stats.group],
-              ['课程付款', stats.coursePayment],
+              ['全部資料', stats.total],
+              ['4 週年活動', stats.anniversary],
+              ['團練報名', stats.group],
+              ['課程付款', stats.coursePayment],
               ['已核准', stats.approved],
             ].map(([label, value]) => (
               <div key={label} className="apple-card p-5">
@@ -329,7 +329,7 @@ export default function CoachSignupsClient() {
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="搜索姓名、电话、IG、目标或备注"
+                  placeholder="搜尋姓名、電話、IG、目標或备注"
                   className="apple-input pl-11"
                 />
               </div>
@@ -337,15 +337,15 @@ export default function CoachSignupsClient() {
               <label className="relative block">
                 <Filter className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-apple-gray-400" />
                 <select value={source} onChange={(event) => setSource(event.target.value as typeof source)} className="apple-input pl-11">
-                  <option value="all">全部来源</option>
-                  <option value="anniversary_4th">4 周年活动</option>
-                  <option value="group_class">团练报名</option>
-                  <option value="course_payment">课程付款</option>
+                  <option value="all">全部來源</option>
+                  <option value="anniversary_4th">4 週年活動</option>
+                  <option value="group_class">團練報名</option>
+                  <option value="course_payment">課程付款</option>
                 </select>
               </label>
 
               <select value={status} onChange={(event) => setStatus(event.target.value as typeof status)} className="apple-input">
-                <option value="all">全部状态</option>
+                <option value="all">全部狀態</option>
                 {Object.entries(statusLabels).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
@@ -368,12 +368,12 @@ export default function CoachSignupsClient() {
 
           <section className="mt-8">
             {isLoading ? (
-              <div className="apple-card p-10 text-center text-apple-gray-600">读取报名资料中...</div>
+              <div className="apple-card p-10 text-center text-apple-gray-600">讀取報名資料中...</div>
             ) : filteredLeads.length === 0 ? (
               <div className="apple-card p-10 text-center">
                 <Inbox className="mx-auto h-10 w-10 text-apple-gray-400" />
-                <p className="mt-4 text-lg font-bold text-apple-gray-900">还没有符合条件的资料</p>
-                <p className="mt-2 text-sm text-apple-gray-600">表单提交后会出现在这里。</p>
+                <p className="mt-4 text-lg font-bold text-apple-gray-900">還沒有符合條件的資料</p>
+                <p className="mt-2 text-sm text-apple-gray-600">表單提交後會出現在這裡。</p>
               </div>
             ) : (
               <div className="grid gap-4">
@@ -394,7 +394,7 @@ export default function CoachSignupsClient() {
                         </div>
                         <h2 className="text-2xl font-black text-apple-gray-900">{lead.name}</h2>
                         <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-apple-gray-600">
-                          {lead.phone ? <span>电话：{lead.phone}</span> : null}
+                          {lead.phone ? <span>電話：{lead.phone}</span> : null}
                           {lead.email ? <span>Email：{lead.email}</span> : null}
                           {lead.instagram ? <span>IG：{lead.instagram}</span> : null}
                         </div>
@@ -418,9 +418,9 @@ export default function CoachSignupsClient() {
                       <div className="mt-4 rounded-3xl border border-apple-blue/15 bg-apple-blue/5 p-4">
                         <div className="mb-4 grid gap-3 md:grid-cols-4">
                           {[
-                            ['报名课程', lead.preferred_course],
-                            ['应付金额', lead.amount_text],
-                            ['后五码（人工对账参考）', lead.transfer_last_five],
+                            ['報名課程', lead.preferred_course],
+                            ['应付金額', lead.amount_text],
+                            ['後五碼（人工對帳參考）', lead.transfer_last_five],
                             ['提交时间', formatDate(lead.payment_submitted_at || lead.created_at)],
                           ].map(([label, value]) => (
                             <div key={label} className="rounded-2xl bg-white p-3">
@@ -437,7 +437,7 @@ export default function CoachSignupsClient() {
                             className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             <CheckCircle2 className="h-4 w-4" />
-                            核准通过
+                            核准透過
                           </button>
                           <button
                             type="button"
@@ -446,7 +446,7 @@ export default function CoachSignupsClient() {
                             className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-white px-5 py-2.5 text-sm font-bold text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             <RotateCcw className="h-4 w-4" />
-                            退回 / 标记异常
+                            退回 / 標記異常
                           </button>
                         </div>
                       </div>
@@ -454,11 +454,11 @@ export default function CoachSignupsClient() {
 
                     <div className="mt-5 grid gap-3 md:grid-cols-2">
                       {[
-                        ['想报名', lead.preferred_course || lead.companion_count],
-                        ['汇款金额', lead.amount_text],
-                        ['后五码（人工对账参考）', lead.transfer_last_five],
+                        ['想報名', lead.preferred_course || lead.companion_count],
+                        ['匯款金額', lead.amount_text],
+                        ['後五碼（人工對帳參考）', lead.transfer_last_five],
                         ['跑步经验', lead.running_experience],
-                        ['目标', lead.goal],
+                        ['目標', lead.goal],
                         ['备注', lead.notes],
                       ]
                         .filter(([, value]) => value)

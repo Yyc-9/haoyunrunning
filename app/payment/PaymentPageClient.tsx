@@ -9,23 +9,12 @@ import PaymentOptions from '@/components/PaymentOptions'
 import PaymentNotice from '@/components/PaymentNotice'
 import BankTransferInfo from '@/components/BankTransferInfo'
 
-function localizeText(text: string, language: string) {
-  if (language === 'zh-CN') {
-    return text
-      .replaceAll('好運', '好运')
-      .replaceAll('訓練', '训练')
-      .replaceAll('課程', '课程')
-      .replaceAll('週', '周')
-      .replaceAll('節奏', '节奏')
-      .replaceAll('費用', '费用')
-      .replaceAll('諮詢', '咨询')
-  }
-
+function localizeText(text: string) {
   return text
 }
 
 export default function PaymentPageClient() {
-  const { language, t } = useLanguage()
+  const { t } = useLanguage()
   const [method, setMethod] = useState(1)
   const [isConfirmed, setIsConfirmed] = useState(false)
   const [form, setForm] = useState({
@@ -50,9 +39,9 @@ export default function PaymentPageClient() {
 
     setForm((current) => ({
       ...current,
-      course: localizeText(selectedCourse.title, language),
+      course: localizeText(selectedCourse.title),
     }))
-  }, [language])
+  }, [])
 
   function updateField(field: keyof typeof form, value: string) {
     setForm((current) => ({ ...current, [field]: value }))
@@ -210,8 +199,8 @@ export default function PaymentPageClient() {
                     >
                       <option value="">{t.payment.coursePlaceholder}</option>
                       {allCourses.map((course) => (
-                        <option key={course.slug} value={localizeText(course.title, language)}>
-                          {localizeText(course.title, language)}
+                        <option key={course.slug} value={localizeText(course.title)}>
+                          {localizeText(course.title)}
                         </option>
                       ))}
                     </select>

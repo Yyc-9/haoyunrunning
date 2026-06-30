@@ -31,12 +31,12 @@ async function getStudent(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   if (!supabaseAdmin) {
-    return NextResponse.json({ error: 'Supabase 尚未设置。' }, { status: 500 })
+    return NextResponse.json({ error: 'Supabase 尚未設定。' }, { status: 500 })
   }
 
   const user = await getStudent(request)
   if (!user) {
-    return NextResponse.json({ error: '请先登录学员账号。' }, { status: 401 })
+    return NextResponse.json({ error: '請先登入學員帳號。' }, { status: 401 })
   }
 
   const accessState = await getStudentAccessState(user.id, user.email)
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       feedback: [],
       count: 0,
       accessState,
-      message: '你的报名资料正在等待人工核对，课表将在核准后开通，请耐心等待。',
+      message: '你的報名資料正在等待人工核對，課表將在核准後開通，請耐心等待。',
     })
   }
 
@@ -68,18 +68,18 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   if (!supabaseAdmin) {
-    return NextResponse.json({ error: 'Supabase 尚未设置。' }, { status: 500 })
+    return NextResponse.json({ error: 'Supabase 尚未設定。' }, { status: 500 })
   }
 
   const user = await getStudent(request)
   if (!user) {
-    return NextResponse.json({ error: '请先登录学员账号。' }, { status: 401 })
+    return NextResponse.json({ error: '請先登入學員帳號。' }, { status: 401 })
   }
 
   const accessState = await getStudentAccessState(user.id, user.email)
   if (!canAccessTrainingContent(accessState)) {
     return NextResponse.json(
-      { error: '你的报名资料正在等待人工核对，课表将在核准后开通，请耐心等待。', accessState },
+      { error: '你的報名資料正在等待人工核對，課表將在核准後開通，請耐心等待。', accessState },
       { status: 403 }
     )
   }
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
   const rpe = cleanNumber(body.rpe)
 
   if (rpe !== null && (rpe < 1 || rpe > 10)) {
-    return NextResponse.json({ error: 'RPE 必须在 1 到 10 之间。' }, { status: 400 })
+    return NextResponse.json({ error: 'RPE 必須在 1 到 10 之间。' }, { status: 400 })
   }
 
   let coachId: string | null = null
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!plan || plan.student_id !== user.id) {
-      return NextResponse.json({ error: '这份课表不属于当前学员，不能提交回馈。' }, { status: 403 })
+      return NextResponse.json({ error: '这份課表不属于目前學員，不能提交回饋。' }, { status: 403 })
     }
 
     coachId = plan.coach_id

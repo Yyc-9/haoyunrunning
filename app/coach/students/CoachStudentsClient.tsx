@@ -44,7 +44,7 @@ async function fetchCoachStudents() {
   } = await supabase.auth.getSession()
 
   if (!session?.access_token) {
-    throw new Error('请先登入教练账号。')
+    throw new Error('請先登入教練帳號。')
   }
 
   const response = await fetch('/api/coach/students', {
@@ -60,7 +60,7 @@ async function fetchCoachStudents() {
   }
 
   if (!response.ok) {
-    throw new Error(payload.error || '读取学员失败，请稍后再试。')
+    throw new Error(payload.error || '讀取學員失敗，請稍後再試。')
   }
 
   return payload.students ?? []
@@ -85,7 +85,7 @@ export default function CoachStudentsClient() {
       const rows = await fetchCoachStudents()
       setStudents(rows)
     } catch (err) {
-      setError(err instanceof Error ? err.message : '读取学员失败，请稍后再试。')
+      setError(err instanceof Error ? err.message : '讀取學員失敗，請稍後再試。')
       setStudents([])
     } finally {
       setIsLoading(false)
@@ -119,11 +119,11 @@ export default function CoachStudentsClient() {
           <div className="mb-8 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
             <div>
               <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
-                Athletes
+                學員名單
               </p>
-              <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">学员列表</h1>
+              <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">學員列表</h1>
               <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
-                绑定完成后，这里会显示当前教练负责的学员，并提供课表派发与最近回馈入口。
+                綁定完成後，這裡會顯示目前教練負責的學員，並提供課表派發與最近回饋入口。
               </p>
             </div>
 
@@ -132,7 +132,7 @@ export default function CoachStudentsClient() {
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="搜索姓名、班级或目标"
+                placeholder="搜尋姓名、班級或目標"
                 className="apple-input pl-11"
               />
             </div>
@@ -144,12 +144,12 @@ export default function CoachStudentsClient() {
 
           {error && (
             <div className="mb-6 rounded-3xl bg-amber-50 p-4 text-sm leading-6 text-amber-800">
-目前无法读取学员绑定资料。请确认账号已启用教练权限。信息：{error}
+目前無法讀取學員綁定資料。請確認帳號已啟用教練權限。資訊：{error}
             </div>
           )}
 
           {isLoading ? (
-            <div className="apple-card p-8 text-center text-apple-gray-600">读取学员中...</div>
+            <div className="apple-card p-8 text-center text-apple-gray-600">讀取學員中...</div>
           ) : filteredStudents.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {filteredStudents.map((row) => {
@@ -165,19 +165,19 @@ export default function CoachStudentsClient() {
                         </h2>
                         <p className="mt-1 flex items-center gap-2 text-sm text-apple-gray-500">
                           <Mail className="h-4 w-4" />
-                          {hasStudentName(student) ? getStudentDisplayEmail(student) : '学员尚未设置姓名'}
+                          {hasStudentName(student) ? getStudentDisplayEmail(student) : '學員尚未設定姓名'}
                         </p>
                       </div>
                       <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">
-已绑定
+已綁定
                       </span>
                     </div>
 
                     <div className="space-y-3">
                       {[
-                        ['班级', student.program || '尚未填写'],
-                        ['目标', student.goal || '尚未填写'],
-                        ['PB', student.pb || '尚未填写'],
+                        ['班級', student.program || '尚未填寫'],
+                        ['目標', student.goal || '尚未填寫'],
+                        ['PB', student.pb || '尚未填寫'],
                       ].map(([label, value]) => (
                         <div key={label} className="rounded-2xl bg-apple-gray-100 p-4">
                           <p className="text-xs text-apple-gray-500">{label}</p>
@@ -189,7 +189,7 @@ export default function CoachStudentsClient() {
                     <div id={`feedback-${student.id}`} className="mt-5 rounded-2xl bg-apple-gray-100 p-4">
                       <div className="mb-3 flex items-center gap-2 text-sm font-bold text-apple-gray-900">
                         <MessageSquareText className="h-4 w-4" />
-                        最近回馈
+                        最近回饋
                       </div>
                       {row.recentFeedback && row.recentFeedback.length > 0 ? (
                         <div className="space-y-2">
@@ -203,13 +203,13 @@ export default function CoachStudentsClient() {
                                   RPE {feedback.rpe ?? '-'}
                                 </span>
                               </div>
-                              <p className="line-clamp-4 whitespace-pre-line leading-6">{feedback.feeling || '学员未填写文字感受。'}</p>
+                              <p className="line-clamp-4 whitespace-pre-line leading-6">{feedback.feeling || '學員未填寫文字感受。'}</p>
                             </div>
                           ))}
                         </div>
                       ) : (
                         <p className="text-sm leading-6 text-apple-gray-600">
-                          学员还没有提交训练回馈。可以提醒他完成训练后到学员中心填写 RPE、睡眠、疲劳与不适位置。
+                          學員還沒有提交訓練回饋。可以提醒他完成訓練後到學員中心填寫 RPE、睡眠、疲勞與不適位置。
                         </p>
                       )}
                     </div>
@@ -220,14 +220,14 @@ export default function CoachStudentsClient() {
                         className="apple-button-primary gap-2 px-4 py-2.5 text-sm"
                       >
                         <NotebookPen className="h-4 w-4" />
-                        下发课表
+                        下发課表
                       </Link>
                       <a
                         href={`#feedback-${student.id}`}
                         className="apple-button-secondary gap-2 px-4 py-2.5 text-sm"
                       >
                         <CalendarDays className="h-4 w-4" />
-                        查看回馈
+                        查看回饋
                       </a>
                     </div>
                   </article>
@@ -239,9 +239,9 @@ export default function CoachStudentsClient() {
               <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-black text-white">
                 <UsersRound className="h-8 w-8" />
               </div>
-              <h2 className="text-2xl font-black text-apple-gray-900">尚未绑定真实学员</h2>
+              <h2 className="text-2xl font-black text-apple-gray-900">尚未綁定真實學員</h2>
               <p className="mx-auto mt-4 max-w-2xl leading-7 text-apple-gray-600">
-                请先让学员注册账号，再用上方栏位输入对方邮箱。绑定成功后，这里会出现真实学员资料。
+                請先讓學員註冊帳號，再用上方欄位輸入對方信箱。綁定成功後，這裡會出現真實學員資料。
               </p>
             </div>
           )}

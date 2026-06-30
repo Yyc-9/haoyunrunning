@@ -1,8 +1,8 @@
 import TestimonialsSection from '@/components/TestimonialsSection'
 
 export const metadata = {
-  title: '上期学员回顾 - 好运跑班',
-  description: '查看好运跑班上期课程学员回顾。',
+  title: '上期學員回顧 - 好運跑班',
+  description: '查看好運跑班上期課程學員回顧。',
 }
 
 export default function TestimonialsPage() {
@@ -11,13 +11,13 @@ export default function TestimonialsPage() {
       <section className="px-4 pb-4 pt-16 sm:px-6 lg:px-8">
         <div className="container mx-auto text-center">
           <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
-            Previous camp review
+            上期回顧
           </p>
           <h1 className="mx-auto mb-5 max-w-4xl text-4xl font-black leading-tight text-apple-gray-900 md:text-6xl">
-            上期学员回顾
+            上期學員回顧
           </h1>
           <p className="mx-auto max-w-3xl text-lg leading-8 text-apple-gray-600">
-            来自上期课程学员的真实回顾，记录他们在训练过程中的改变、突破与收获。
+            來自上期課程學員的真實回顧，記錄他們在訓練過程中的改變、突破與收穫。
           </p>
         </div>
       </section>

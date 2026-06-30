@@ -12,14 +12,14 @@ export async function POST(request: NextRequest) {
 
   const user = await getAuthedUser(request.headers.get('authorization'))
   if (!user) {
-    return NextResponse.json({ error: '请先登录后再输入邀请码。' }, { status: 401 })
+    return NextResponse.json({ error: '請先登入後再輸入邀請碼。' }, { status: 401 })
   }
 
   const body = (await request.json().catch(() => ({}))) as RedeemInviteBody
   const code = body.code?.trim()
 
   if (!code) {
-    return NextResponse.json({ error: '请输入教练邀请码。' }, { status: 400 })
+    return NextResponse.json({ error: '請輸入教練邀請碼。' }, { status: 400 })
   }
 
   const { data: invite, error: inviteError } = await supabaseAdmin
@@ -33,15 +33,15 @@ export async function POST(request: NextRequest) {
   }
 
   if (!invite) {
-    return NextResponse.json({ error: '邀请码不存在。' }, { status: 404 })
+    return NextResponse.json({ error: '邀請碼不存在。' }, { status: 404 })
   }
 
   if (invite.used_by && invite.used_by !== user.id) {
-    return NextResponse.json({ error: '邀请码已被其他账号使用。' }, { status: 409 })
+    return NextResponse.json({ error: '邀請碼已被其他帳號使用。' }, { status: 409 })
   }
 
   if (invite.expires_at && new Date(invite.expires_at).getTime() < Date.now()) {
-    return NextResponse.json({ error: '邀请码已过期，请联系管理员重新建立。' }, { status: 410 })
+    return NextResponse.json({ error: '邀請碼已過期，請聯絡管理員重新建立。' }, { status: 410 })
   }
 
   const { data: profile, error: profileError } = await supabaseAdmin
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
         name:
           (user.user_metadata?.name as string | undefined) ||
           user.email?.split('@')[0] ||
-          '好运教练',
+          '好運教練',
         role: 'coach',
       },
       { onConflict: 'id' }

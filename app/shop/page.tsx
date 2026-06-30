@@ -36,7 +36,7 @@ export default function ShopPage() {
         }
 
         if (!response.ok) {
-          throw new Error(payload.error || '商品库存读取失败。')
+          throw new Error(payload.error || '商品庫存讀取失敗。')
         }
 
         if (isActive && payload.products) {
@@ -45,7 +45,7 @@ export default function ShopPage() {
         }
       } catch (error) {
         if (isActive) {
-          setProductsError(error instanceof Error ? error.message : '商品库存读取失败。')
+          setProductsError(error instanceof Error ? error.message : '商品庫存讀取失敗。')
         }
       }
     }
@@ -78,11 +78,11 @@ export default function ShopPage() {
       .reduce((sum, item) => sum + item.quantity, 0)
 
     if (cartQuantity >= product.stockQuantity) {
-      showToast(`${product.name} 库存不足`, 'error')
+      showToast(`${product.name} 庫存不足`, 'error')
       return false
     }
 
-    const optionName = [variant?.name, size ? `尺码 ${size}` : ''].filter(Boolean).join(' / ')
+    const optionName = [variant?.name, size ? `尺寸 ${size}` : ''].filter(Boolean).join(' / ')
     const displayName = optionName ? `${product.name} - ${optionName}` : product.name
 
     addItem({
@@ -94,7 +94,7 @@ export default function ShopPage() {
       price: product.price,
       image: variant?.image ?? product.image,
     })
-    showToast(`${displayName} 已加入购物车`, 'success')
+    showToast(`${displayName} 已加入購物車`, 'success')
     return true
   }
 
@@ -104,8 +104,8 @@ export default function ShopPage() {
         <div className="absolute inset-0 bg-cover bg-center opacity-75" style={{ backgroundImage: 'url("/20250605[好運]三周年慶-7096.jpg")' }} />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/15 to-black/25" />
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="relative z-10 flex h-full flex-col items-center justify-center px-4 text-white">
-          <h1 className="mb-4 text-center text-4xl font-bold sm:text-5xl">好运商店</h1>
-          <p className="max-w-2xl text-center text-lg leading-8 text-white/85 sm:text-xl">跑班装备与训练补给，先把真正会用上的东西整理好。</p>
+          <h1 className="mb-4 text-center text-4xl font-bold sm:text-5xl">好運商店</h1>
+          <p className="max-w-2xl text-center text-lg leading-8 text-white/85 sm:text-xl">跑班裝備與訓練補給，先把真正會用上的東西整理好。</p>
         </motion.div>
       </div>
 
@@ -115,7 +115,7 @@ export default function ShopPage() {
             <Search className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
             <input
               type="text"
-              placeholder="搜索商品..."
+              placeholder="搜尋商品..."
               value={query}
               onChange={(event) => {
                 setQuery(event.target.value)
@@ -147,17 +147,17 @@ export default function ShopPage() {
           </div>
 
           <select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} className="apple-input w-full py-2 text-sm md:w-auto md:min-w-48">
-            <option value="relevance">相关度</option>
-            <option value="price-low">价格：低到高</option>
-            <option value="price-high">价格：高到低</option>
-            <option value="rating">推荐度：高到低</option>
+            <option value="relevance">相關度</option>
+            <option value="price-low">價格：低到高</option>
+            <option value="price-high">價格：高到低</option>
+            <option value="rating">推薦度：高到低</option>
           </select>
         </div>
 
-        <p className="mb-6 text-gray-600">共 {results.total} 件商品 {query && `（搜索“${query}”）`}</p>
+        <p className="mb-6 text-gray-600">共 {results.total} 件商品 {query && `（搜尋「${query}」）`}</p>
         {productsError ? (
           <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
-            {productsError} 当前先显示本地商品资料。
+            {productsError} 目前先顯示本地商品資料。
           </div>
         ) : null}
 
@@ -187,7 +187,7 @@ export default function ShopPage() {
                       {product.tags.map((tag) => <span key={tag} className="rounded-full bg-black/80 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">{tag}</span>)}
                     </div>
                     <div className="absolute right-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-black text-apple-gray-900 shadow-sm">
-                      {isSoldOut ? '售完' : `库存 ${remainingStock}`}
+                      {isSoldOut ? '售完' : `庫存 ${remainingStock}`}
                     </div>
                   </div>
 
@@ -210,7 +210,7 @@ export default function ShopPage() {
 
                     {product.sizes && (
                       <label className="mb-3 block">
-                        <span className="mb-2 block text-xs font-semibold text-gray-600">尺寸 / 尺码</span>
+                        <span className="mb-2 block text-xs font-semibold text-gray-600">尺寸</span>
                         <select value={selectedSize} onChange={(event) => setSelectedSizes((current) => ({ ...current, [product.id]: event.target.value }))} className="apple-input py-2 text-sm">
                           {product.sizes.map((size) => <option key={size} value={size}>{size}</option>)}
                         </select>
@@ -221,12 +221,12 @@ export default function ShopPage() {
                       <div className="flex text-amber-400">
                         {Array.from({ length: 5 }).map((_, index) => <Star key={index} className={`h-4 w-4 ${index < Math.floor(product.rating) ? 'fill-current' : ''}`} />)}
                       </div>
-                      <span className="text-sm text-gray-600">{product.reviews > 0 ? `${product.rating} (${product.reviews})` : '好运推荐'}</span>
+                      <span className="text-sm text-gray-600">{product.reviews > 0 ? `${product.rating} (${product.reviews})` : '好運推薦'}</span>
                     </div>
 
                     <div className="mb-4 flex items-baseline gap-2">
                       <span className="text-2xl font-bold text-gray-900">{product.price > 0 ? `NT$${(product.price / 100).toFixed(0)}` : product.priceLabel}</span>
-                      {cartQuantity > 0 ? <span className="text-xs font-semibold text-apple-gray-500">购物车中 {cartQuantity}</span> : null}
+                      {cartQuantity > 0 ? <span className="text-xs font-semibold text-apple-gray-500">購物車中 {cartQuantity}</span> : null}
                     </div>
 
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -237,12 +237,12 @@ export default function ShopPage() {
                         className="apple-button-secondary gap-2 px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <ShoppingBag className="h-4 w-4" />
-                        {isSoldOut ? '库存不足' : '加入购物车'}
+                        {isSoldOut ? '庫存不足' : '加入購物車'}
                       </button>
                       {isSoldOut ? (
                         <button type="button" disabled className="apple-button-primary gap-2 px-4 py-2.5 text-sm opacity-50">
                           <CreditCard className="h-4 w-4" />
-                          前往结账
+                          前往結帳
                         </button>
                       ) : (
                         <Link
@@ -255,7 +255,7 @@ export default function ShopPage() {
                           className="apple-button-primary gap-2 px-4 py-2.5 text-sm"
                         >
                           <CreditCard className="h-4 w-4" />
-                          前往结账
+                          前往結帳
                         </Link>
                       )}
                     </div>
@@ -267,8 +267,8 @@ export default function ShopPage() {
         ) : (
           <div className="py-12 text-center">
             <Package className="mx-auto mb-4 h-16 w-16 text-gray-300" />
-            <p className="mb-4 text-lg text-gray-500">未找到匹配的商品</p>
-            <button onClick={() => { setQuery(''); setSelectedCategory('') }} className="apple-button-primary px-6 py-2">清除筛选</button>
+            <p className="mb-4 text-lg text-gray-500">未找到符合的商品</p>
+            <button onClick={() => { setQuery(''); setSelectedCategory('') }} className="apple-button-primary px-6 py-2">清除篩選</button>
           </div>
         )}
       </div>
@@ -277,9 +277,9 @@ export default function ShopPage() {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
             {[
-              { icon: Truck, title: '跑班自取 / 配送', description: '依商品与课程活动安排' },
-              { icon: Shield, title: '实用优先', description: '只整理跑者真正会用到的装备' },
-              { icon: Package, title: '补给支援', description: '训练与赛事前后都能补上' },
+              { icon: Truck, title: '跑班自取 / 配送', description: '依商品與課程活動安排' },
+              { icon: Shield, title: '實用優先', description: '只整理跑者真正會用到的裝備' },
+              { icon: Package, title: '補給支援', description: '訓練與賽事前後都能補上' },
             ].map((item) => (
               <div key={item.title} className="text-center">
                 <item.icon className="mx-auto mb-4 h-12 w-12 text-black" />

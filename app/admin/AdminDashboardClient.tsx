@@ -115,10 +115,10 @@ type PaymentAccount = {
 }
 
 const statusLabels: Record<PaymentOrderStatus, string> = {
-  pending_transfer: '待汇款 / 待填写后五码',
-  pending_review: '已提交后五码，待人工核对',
+  pending_transfer: '待匯款 / 待填寫後五碼',
+  pending_review: '已提交後五碼，待人工核對',
   approved: '已核准 / 已完成',
-  rejected: '核对未通过或需补充资料',
+  rejected: '核對未透過或需補充資料',
 }
 
 const statusTone: Record<PaymentOrderStatus, string> = {
@@ -130,18 +130,18 @@ const statusTone: Record<PaymentOrderStatus, string> = {
 
 const tabs: Array<{ id: AdminTab; label: string; icon: typeof LayoutDashboard; ready: boolean }> = [
   { id: 'overview', label: '总览', icon: LayoutDashboard, ready: true },
-  { id: 'students', label: '学员管理', icon: UsersRound, ready: true },
-  { id: 'coaches', label: '教练管理', icon: UserCog, ready: true },
-  { id: 'orders', label: '订单审核', icon: ClipboardList, ready: true },
+  { id: 'students', label: '學員管理', icon: UsersRound, ready: true },
+  { id: 'coaches', label: '教練管理', icon: UserCog, ready: true },
+  { id: 'orders', label: '訂單审核', icon: ClipboardList, ready: true },
   { id: 'products', label: '商城商品', icon: Boxes, ready: true },
-  { id: 'paymentAccounts', label: '收款户头', icon: Landmark, ready: true },
-  { id: 'refunds', label: '退款申请', icon: RotateCcw, ready: false },
-  { id: 'events', label: '活动报名', icon: CreditCard, ready: false },
-  { id: 'settings', label: '系统设置', icon: Settings, ready: false },
+  { id: 'paymentAccounts', label: '收款戶頭', icon: Landmark, ready: true },
+  { id: 'refunds', label: '退款申請', icon: RotateCcw, ready: false },
+  { id: 'events', label: '活動報名', icon: CreditCard, ready: false },
+  { id: 'settings', label: '系統設定', icon: Settings, ready: false },
 ]
 
 function formatDate(value: string | null | undefined) {
-  if (!value) return '暂无数据'
+  if (!value) return '暫無資料'
 
   return new Intl.DateTimeFormat('zh-CN', {
     year: 'numeric',
@@ -165,7 +165,7 @@ async function getAccessToken() {
 async function fetchAdminDashboard() {
   const token = await getAccessToken()
   if (!token) {
-    throw new Error('请先登录管理员账号。')
+    throw new Error('請先登入管理員帳號。')
   }
 
   const response = await fetch('/api/admin', {
@@ -177,7 +177,7 @@ async function fetchAdminDashboard() {
 
   const payload = (await response.json().catch(() => ({}))) as AdminDashboardPayload & { error?: string }
   if (!response.ok) {
-    throw new Error(payload.error || '读取管理员后台失败。')
+    throw new Error(payload.error || '讀取管理員後台失敗。')
   }
 
   return payload
@@ -186,7 +186,7 @@ async function fetchAdminDashboard() {
 async function adminAction(body: Record<string, unknown>) {
   const token = await getAccessToken()
   if (!token) {
-    throw new Error('请先登录管理员账号。')
+    throw new Error('請先登入管理員帳號。')
   }
 
   const response = await fetch('/api/admin', {
@@ -201,7 +201,7 @@ async function adminAction(body: Record<string, unknown>) {
 
   const payload = (await response.json().catch(() => ({}))) as { error?: string; message?: string }
   if (!response.ok) {
-    throw new Error(payload.error || '操作失败。')
+    throw new Error(payload.error || '操作失敗。')
   }
 
   return payload.message || '操作已完成。'
@@ -239,7 +239,7 @@ export default function AdminDashboardClient() {
       setData(await fetchAdminDashboard())
     } catch (loadError) {
       setData(null)
-      setError(loadError instanceof Error ? loadError.message : '读取管理员后台失败。')
+      setError(loadError instanceof Error ? loadError.message : '讀取管理員後台失敗。')
     } finally {
       setIsLoading(false)
     }
@@ -337,7 +337,7 @@ export default function AdminDashboardClient() {
       await loadDashboard()
       return true
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : '操作失败。')
+      setError(actionError instanceof Error ? actionError.message : '操作失敗。')
       return false
     } finally {
       setUpdatingId('')
@@ -380,7 +380,7 @@ export default function AdminDashboardClient() {
       <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
         <div className="container mx-auto max-w-7xl px-4 py-16 text-center sm:px-6 lg:px-8">
           <Loader2 className="mx-auto h-8 w-8 animate-spin text-apple-gray-500" />
-          <p className="mt-4 font-semibold text-apple-gray-600">正在读取管理员后台...</p>
+          <p className="mt-4 font-semibold text-apple-gray-600">正在讀取管理員後台...</p>
         </div>
       </main>
     )
@@ -392,10 +392,10 @@ export default function AdminDashboardClient() {
         <section className="container mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 lg:px-8">
           <div className="apple-card p-8">
             <AlertTriangle className="mx-auto h-10 w-10 text-amber-500" />
-            <h1 className="mt-4 text-3xl font-black text-apple-gray-900">无法进入管理员后台</h1>
+            <h1 className="mt-4 text-3xl font-black text-apple-gray-900">無法進入管理員後台</h1>
             <p className="mt-3 leading-7 text-apple-gray-600">{error}</p>
             <Link href="/" className="apple-button-primary mt-6 inline-flex px-6 py-3">
-              返回首页
+              返回首頁
             </Link>
           </div>
         </section>
@@ -412,22 +412,22 @@ export default function AdminDashboardClient() {
               <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
                 Admin console
               </p>
-              <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">管理员后台</h1>
+              <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">管理員後台</h1>
               <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
-                管理商城订单、库存与收款户头；课程和教练资料先保留在后台，后续再整理权限模型。
+                管理商城訂單、庫存與收款戶頭；課程和教練資料先保留在後台，後續再整理權限模型。
               </p>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-apple-gray-500">
-                订单审核仅限超级管理员；买家端不会显示完整收款户头，后五码只用于人工对账参考。
+                訂單审核僅限超級管理員；買家端不會顯示完整收款戶頭，後五碼只用於人工對帳參考。
               </p>
             </div>
 
             <button type="button" onClick={loadDashboard} className="apple-button-outline inline-flex items-center justify-center gap-2 px-5 py-3">
               <RefreshCw className="h-4 w-4" />
-              刷新数据
+              重新整理資料
             </button>
           </div>
 
-          <nav aria-label="管理员后台导航" className="mb-8 overflow-x-auto">
+          <nav aria-label="管理員後台导航" className="mb-8 overflow-x-auto">
             <div className="flex min-w-max gap-2 rounded-3xl bg-white/85 p-2 shadow-sm ring-1 ring-black/10 backdrop-blur">
               {tabs.map((tab) => {
                 const Icon = tab.icon
@@ -466,12 +466,12 @@ export default function AdminDashboardClient() {
             <section className="space-y-8">
               <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
                 {[
-                  ['待核对订单', data.overview.pendingOrderCount],
-                  ['已核准订单', data.overview.approvedOrderCount],
+                  ['待核對訂單', data.overview.pendingOrderCount],
+                  ['已核准訂單', data.overview.approvedOrderCount],
                   ['商城商品', data.overview.productCount],
-                  ['低库存商品', data.overview.lowStockCount],
-                  ['收款户头', data.overview.paymentAccountCount],
-                  ['学员总数', data.overview.studentCount],
+                  ['低庫存商品', data.overview.lowStockCount],
+                  ['收款戶頭', data.overview.paymentAccountCount],
+                  ['學員总数', data.overview.studentCount],
                 ].map(([label, value]) => (
                   <div key={label} className="apple-card p-5">
                     <p className="text-sm text-apple-gray-500">{label}</p>
@@ -483,17 +483,17 @@ export default function AdminDashboardClient() {
               <div className="apple-card p-6">
                 <div className="mb-5 flex items-center gap-3">
                   <ShieldCheck className="h-5 w-5 text-emerald-600" />
-                  <h2 className="text-xl font-black text-apple-gray-900">待核对订单</h2>
+                  <h2 className="text-xl font-black text-apple-gray-900">待核對訂單</h2>
                 </div>
                 {pendingOrders.length === 0 ? (
-                  <p className="text-sm text-apple-gray-600">暂无待核对订单。</p>
+                  <p className="text-sm text-apple-gray-600">暫無待核對訂單。</p>
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2">
                     {pendingOrders.slice(0, 4).map((order) => (
                       <div key={order.id} className="rounded-2xl bg-apple-gray-100 p-4">
                         <p className="font-bold text-apple-gray-900">{order.studentName}</p>
                         <p className="mt-1 text-sm text-apple-gray-600">
-                          {order.orderKind === 'shop' ? order.orderNumber : order.courseName || '未填写课程'} · 后五码 {order.transferLastFive || '-'}
+                          {order.orderKind === 'shop' ? order.orderNumber : order.courseName || '未填寫課程'} · 後五碼 {order.transferLastFive || '-'}
                         </p>
                       </div>
                     ))}
@@ -508,14 +508,14 @@ export default function AdminDashboardClient() {
               <div className="border-b border-black/10 p-5">
                 <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
                   <div>
-                    <h2 className="text-xl font-black text-apple-gray-900">学员管理</h2>
-                    <p className="mt-1 text-sm text-apple-gray-600">显示所有学员、绑定教练、付款状态、课表状态与最近训练回馈。</p>
+                    <h2 className="text-xl font-black text-apple-gray-900">學員管理</h2>
+                    <p className="mt-1 text-sm text-apple-gray-600">顯示所有學員、綁定教練、付款狀態、課表狀態與最近訓練回饋。</p>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-[minmax(220px,1fr)_160px] lg:w-[520px]">
                     <input
                       value={studentQuery}
                       onChange={(event) => setStudentQuery(event.target.value)}
-                      placeholder="搜索姓名、邮箱、教练或课程"
+                      placeholder="搜尋姓名、信箱、教練或課程"
                       className="apple-input"
                     />
                     <select
@@ -523,9 +523,9 @@ export default function AdminDashboardClient() {
                       onChange={(event) => setStudentPlanFilter(event.target.value as typeof studentPlanFilter)}
                       className="apple-input"
                     >
-                      <option value="all">全部课表</option>
-                      <option value="enabled">已开通</option>
-                      <option value="missing">未开通</option>
+                      <option value="all">全部課表</option>
+                      <option value="enabled">已開通</option>
+                      <option value="missing">未開通</option>
                     </select>
                   </div>
                 </div>
@@ -534,7 +534,7 @@ export default function AdminDashboardClient() {
                 <table className="w-full min-w-[1180px] text-left text-sm">
                   <thead className="bg-apple-gray-100 text-apple-gray-600">
                     <tr>
-                      {['姓名', '邮箱', '绑定教练', '报名课程', '付款状态', '课表', '最近回馈', '创建时间', '绑定操作'].map((header) => (
+                      {['姓名', '信箱', '綁定教練', '報名課程', '付款狀態', '課表', '最近回饋', '建立时间', '綁定操作'].map((header) => (
                         <th key={header} className="px-4 py-3 font-bold">{header}</th>
                       ))}
                     </tr>
@@ -544,7 +544,7 @@ export default function AdminDashboardClient() {
                       <tr key={student.id}>
                         <td className="px-4 py-4 font-bold text-apple-gray-900">{student.name}</td>
                         <td className="px-4 py-4 text-apple-gray-600">{student.email || '-'}</td>
-                        <td className="px-4 py-4 text-apple-gray-700">{student.boundCoachNames || '尚未绑定'}</td>
+                        <td className="px-4 py-4 text-apple-gray-700">{student.boundCoachNames || '尚未綁定'}</td>
                         <td className="px-4 py-4 text-apple-gray-600">{student.program || student.paymentCourse || '-'}</td>
                         <td className="px-4 py-4">
                           <span className="rounded-full bg-apple-gray-100 px-3 py-1 text-xs font-bold text-apple-gray-700">
@@ -553,7 +553,7 @@ export default function AdminDashboardClient() {
                         </td>
                         <td className="px-4 py-4">
                           <span className={`rounded-full px-3 py-1 text-xs font-bold ${student.planEnabled ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
-                            {student.planEnabled ? '已开通' : '未开通'}
+                            {student.planEnabled ? '已開通' : '未開通'}
                           </span>
                         </td>
                         <td className="px-4 py-4 text-apple-gray-600">{formatDate(student.lastFeedbackAt)}</td>
@@ -565,7 +565,7 @@ export default function AdminDashboardClient() {
                               onChange={(event) => setSelectedCoachByStudent((current) => ({ ...current, [student.id]: event.target.value }))}
                               className="apple-input py-2 text-xs"
                             >
-                              <option value="">选择教练</option>
+                              <option value="">選擇教練</option>
                               {data.coachOptions.map((coach) => (
                                 <option key={coach.id} value={coach.id}>{coach.name || coach.email}</option>
                               ))}
@@ -576,7 +576,7 @@ export default function AdminDashboardClient() {
                               onClick={() => runAction(`bind-${student.id}`, { action: 'bind_student', studentId: student.id, coachId: selectedCoachByStudent[student.id] })}
                               className="rounded-full bg-black px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
                             >
-                              绑定
+                              綁定
                             </button>
                             {student.bindings[0] ? (
                               <button
@@ -597,7 +597,7 @@ export default function AdminDashboardClient() {
               </div>
               {filteredStudents.length === 0 ? (
                 <div className="p-8 text-center text-sm font-semibold text-apple-gray-500">
-                  没有符合条件的学员。
+                  沒有符合條件的學員。
                 </div>
               ) : null}
             </section>
@@ -608,14 +608,14 @@ export default function AdminDashboardClient() {
               <div className="border-b border-black/10 p-5">
                 <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
                   <div>
-                    <h2 className="text-xl font-black text-apple-gray-900">教练管理</h2>
-                    <p className="mt-1 text-sm text-apple-gray-600">管理员可以授予或取消教练权限；admin 角色不会在这里被降级。</p>
+                    <h2 className="text-xl font-black text-apple-gray-900">教練管理</h2>
+                    <p className="mt-1 text-sm text-apple-gray-600">管理員可以授予或取消教練權限；admin 角色不會在這裡被降級。</p>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-[minmax(220px,1fr)_150px] lg:w-[500px]">
                     <input
                       value={coachQuery}
                       onChange={(event) => setCoachQuery(event.target.value)}
-                      placeholder="搜索姓名、邮箱或课程"
+                      placeholder="搜尋姓名、信箱或課程"
                       className="apple-input"
                     />
                     <select
@@ -624,9 +624,9 @@ export default function AdminDashboardClient() {
                       className="apple-input"
                     >
                       <option value="all">全部角色</option>
-                      <option value="coach">教练</option>
-                      <option value="student">普通学员</option>
-                      <option value="admin">管理员</option>
+                      <option value="coach">教練</option>
+                      <option value="student">普通學員</option>
+                      <option value="admin">管理員</option>
                     </select>
                   </div>
                 </div>
@@ -635,7 +635,7 @@ export default function AdminDashboardClient() {
                 <table className="w-full min-w-[960px] text-left text-sm">
                   <thead className="bg-apple-gray-100 text-apple-gray-600">
                     <tr>
-                      {['姓名', '邮箱', '权限状态', '绑定学员数', '负责课程', '创建时间', '操作'].map((header) => (
+                      {['姓名', '信箱', '權限狀態', '綁定學員数', '負責課程', '建立时间', '操作'].map((header) => (
                         <th key={header} className="px-4 py-3 font-bold">{header}</th>
                       ))}
                     </tr>
@@ -647,11 +647,11 @@ export default function AdminDashboardClient() {
                         <td className="px-4 py-4 text-apple-gray-600">{coach.email || '-'}</td>
                         <td className="px-4 py-4">
                           <span className={`rounded-full px-3 py-1 text-xs font-bold ${coach.coachEnabled ? 'bg-emerald-50 text-emerald-700' : 'bg-apple-gray-100 text-apple-gray-600'}`}>
-                            {coach.role === 'admin' ? '管理员' : coach.coachEnabled ? '教练已启用' : '未启用'}
+                            {coach.role === 'admin' ? '管理員' : coach.coachEnabled ? '教練已啟用' : '未啟用'}
                           </span>
                         </td>
                         <td className="px-4 py-4 text-apple-gray-700">{coach.boundStudentCount}</td>
-                        <td className="px-4 py-4 text-apple-gray-600">{coach.courses || '暂无资料'}</td>
+                        <td className="px-4 py-4 text-apple-gray-600">{coach.courses || '暫無資料'}</td>
                         <td className="px-4 py-4 text-apple-gray-600">{formatDate(coach.createdAt)}</td>
                         <td className="px-4 py-4">
                           <button
@@ -660,7 +660,7 @@ export default function AdminDashboardClient() {
                             onClick={() => runAction(coach.id, { action: 'set_coach_role', userId: coach.id, enabled: !coach.coachEnabled })}
                             className="rounded-full bg-black px-4 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
                           >
-                            {coach.coachEnabled ? '取消教练权限' : '授予教练权限'}
+                            {coach.coachEnabled ? '取消教練權限' : '授予教練權限'}
                           </button>
                         </td>
                       </tr>
@@ -670,7 +670,7 @@ export default function AdminDashboardClient() {
               </div>
               {filteredCoaches.length === 0 ? (
                 <div className="p-8 text-center text-sm font-semibold text-apple-gray-500">
-                  没有符合条件的账号。
+                  沒有符合條件的帳號。
                 </div>
               ) : null}
             </section>
@@ -683,7 +683,7 @@ export default function AdminDashboardClient() {
 	                  <input
 	                    value={orderQuery}
 	                    onChange={(event) => setOrderQuery(event.target.value)}
-	                    placeholder="搜索姓名、邮箱、订单编号、后五码、付款通道或商品"
+	                    placeholder="搜尋姓名、信箱、訂單編號、後五碼、付款通道或商品"
 	                    className="apple-input"
 	                  />
                   <select
@@ -691,7 +691,7 @@ export default function AdminDashboardClient() {
                     onChange={(event) => setOrderStatusFilter(event.target.value as typeof orderStatusFilter)}
                     className="apple-input"
                   >
-                    <option value="all">全部状态</option>
+                    <option value="all">全部狀態</option>
                     {Object.entries(statusLabels).map(([value, label]) => (
                       <option key={value} value={value}>{label}</option>
                     ))}
@@ -699,27 +699,27 @@ export default function AdminDashboardClient() {
                 </div>
               </div>
 	              {data.orders.length === 0 ? (
-	                <div className="apple-card p-10 text-center text-apple-gray-600">暂无订单。</div>
+	                <div className="apple-card p-10 text-center text-apple-gray-600">暫無訂單。</div>
               ) : filteredOrders.length === 0 ? (
-                <div className="apple-card p-10 text-center text-apple-gray-600">没有符合条件的订单。</div>
+                <div className="apple-card p-10 text-center text-apple-gray-600">沒有符合條件的訂單。</div>
               ) : filteredOrders.map((order) => (
                 <article key={order.id} className="apple-card p-5">
                   <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
                     <div>
 	                      <div className="mb-3 flex flex-wrap items-center gap-2">
 	                        <span className="rounded-full bg-black px-3 py-1 text-xs font-bold text-white">
-	                          {order.orderKind === 'shop' ? '商城' : '课程'}
+	                          {order.orderKind === 'shop' ? '商城' : '課程'}
 	                        </span>
 	                        <span className={`rounded-full px-3 py-1 text-xs font-bold ${statusTone[order.status]}`}>
 	                          {statusLabels[order.status]}
 	                        </span>
 	                        {order.inventoryReserved ? (
-	                          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">库存已保留</span>
+	                          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">庫存已保留</span>
 	                        ) : null}
 	                        <span className="text-xs font-semibold text-apple-gray-500">{formatDate(order.submittedAt)}</span>
 	                      </div>
 	                      <h2 className="text-2xl font-black text-apple-gray-900">{order.studentName}</h2>
-	                      <p className="mt-2 text-sm text-apple-gray-600">{order.email || '未填写邮箱'}</p>
+	                      <p className="mt-2 text-sm text-apple-gray-600">{order.email || '未填寫信箱'}</p>
 	                      {order.orderNumber ? <p className="mt-1 text-sm font-semibold text-apple-gray-500">{order.orderNumber}</p> : null}
                     </div>
                     <div className="flex flex-col gap-3 sm:flex-row">
@@ -730,7 +730,7 @@ export default function AdminDashboardClient() {
                         className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <CheckCircle2 className="h-4 w-4" />
-                        核准通过
+                        核准透過
                       </button>
                       <button
                         type="button"
@@ -739,18 +739,18 @@ export default function AdminDashboardClient() {
                         className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-white px-5 py-2.5 text-sm font-bold text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <RotateCcw className="h-4 w-4" />
-                        标记异常
+                        標記異常
                       </button>
                     </div>
                   </div>
 	                  <div className="mt-5 grid gap-3 md:grid-cols-3">
 	                    {[
-	                      [order.orderKind === 'shop' ? '商城订单' : '报名课程', order.courseName],
-	                      ['应付金额', order.amountText],
-	                      ['后五码（人工对账参考）', order.transferLastFive],
+	                      [order.orderKind === 'shop' ? '商城訂單' : '報名課程', order.courseName],
+	                      ['应付金額', order.amountText],
+	                      ['後五碼（人工對帳參考）', order.transferLastFive],
 	                      ['付款代号', order.paymentReference],
 	                      ['付款通道', order.paymentChannelLabel || '-'],
-	                      ['分配户头（仅后台）', order.assignedAccount || '-'],
+	                      ['分配戶頭（僅後台）', order.assignedAccount || '-'],
 	                    ].map(([label, value]) => (
 	                      <div key={label} className="rounded-2xl bg-apple-gray-100 p-4">
 	                        <p className="text-xs font-semibold text-apple-gray-500">{label}</p>
@@ -763,7 +763,7 @@ export default function AdminDashboardClient() {
 	                      {order.items.length > 0 ? (
 	                        <p className="text-sm leading-6 text-apple-gray-700">商品：{order.items.join('、')}</p>
 	                      ) : null}
-	                      <p className="mt-1 text-sm leading-6 text-apple-gray-600">备注：{order.notes || order.reviewNote || '暂无备注'}</p>
+	                      <p className="mt-1 text-sm leading-6 text-apple-gray-600">备注：{order.notes || order.reviewNote || '暫無备注'}</p>
 	                    </div>
 	                  ) : null}
 	                </article>
@@ -775,18 +775,18 @@ export default function AdminDashboardClient() {
 	            <section className="apple-card overflow-hidden">
 	              <div className="border-b border-black/10 p-5">
 	                <h2 className="text-xl font-black text-apple-gray-900">商城商品</h2>
-	                <p className="mt-1 text-sm text-apple-gray-600">库存会在买家提交订单时立即扣除；订单被标记异常时会退回库存。</p>
+	                <p className="mt-1 text-sm text-apple-gray-600">庫存會在買家提交訂單时立即扣除；訂單被標記異常时會退回庫存。</p>
 	              </div>
 	              {data.products.length === 0 ? (
 	                <div className="p-10 text-center text-sm font-semibold text-apple-gray-500">
-	                  尚未读取到商品资料。请先执行商城 SQL 迁移。
+	                  尚未讀取到商品資料。請先執行商城 SQL 迁移。
 	                </div>
 	              ) : (
 	                <div className="overflow-x-auto">
 	                  <table className="w-full min-w-[860px] text-left text-sm">
 	                    <thead className="bg-apple-gray-100 text-apple-gray-600">
 	                      <tr>
-	                        {['商品', '分类', '价格', '状态', '库存', '操作'].map((header) => (
+	                        {['商品', '分类', '价格', '狀態', '庫存', '操作'].map((header) => (
 	                          <th key={header} className="px-4 py-3 font-bold">{header}</th>
 	                        ))}
 	                      </tr>
@@ -822,7 +822,7 @@ export default function AdminDashboardClient() {
 	                              onClick={() => saveProductStock(product)}
 	                              className="rounded-full bg-black px-4 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
 	                            >
-	                              保存库存
+	                              儲存庫存
 	                            </button>
 	                          </td>
 	                        </tr>
@@ -837,15 +837,15 @@ export default function AdminDashboardClient() {
 	          {activeTab === 'paymentAccounts' && data ? (
 	            <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
 	              <div className="apple-card p-5">
-	                <h2 className="text-xl font-black text-apple-gray-900">新增收款户头</h2>
-	                <p className="mt-1 text-sm leading-6 text-apple-gray-600">这些资料只在管理员后台显示。买家下单时只会看到付款通道名和付款代号。</p>
+	                <h2 className="text-xl font-black text-apple-gray-900">新增收款戶頭</h2>
+	                <p className="mt-1 text-sm leading-6 text-apple-gray-600">这些資料只在管理員後台顯示。買家下单时只會看到付款通道名和付款代号。</p>
 	                <div className="mt-5 grid gap-3">
 	                  {[
-	                    ['label', '通道名称，例如 A 户头'],
+	                    ['label', '通道名稱，例如 A 戶頭'],
 	                    ['accountName', '户名'],
-	                    ['bankName', '银行名称'],
-	                    ['bankCode', '银行代码，可留空'],
-	                    ['accountNumber', '收款账号'],
+	                    ['bankName', '銀行名稱'],
+	                    ['bankCode', '銀行代碼，可留空'],
+	                    ['accountNumber', '收款帳號'],
 	                    ['weight', '分配权重'],
 	                  ].map(([field, placeholder]) => (
 	                    <input
@@ -865,18 +865,18 @@ export default function AdminDashboardClient() {
 	                  className="apple-button-primary mt-4 w-full gap-2 disabled:cursor-not-allowed disabled:opacity-50"
 	                >
 	                  <CreditCard className="h-4 w-4" />
-	                  新增户头
+	                  新增戶頭
 	                </button>
 	              </div>
 
 	              <div className="apple-card overflow-hidden">
 	                <div className="border-b border-black/10 p-5">
-	                  <h2 className="text-xl font-black text-apple-gray-900">收款户头池</h2>
-	                  <p className="mt-1 text-sm text-apple-gray-600">活跃户头会被新商城订单随机分配。</p>
+	                  <h2 className="text-xl font-black text-apple-gray-900">收款戶頭池</h2>
+	                  <p className="mt-1 text-sm text-apple-gray-600">活跃戶頭會被新商城訂單随机分配。</p>
 	                </div>
 	                {data.paymentAccounts.length === 0 ? (
 	                  <div className="p-10 text-center text-sm font-semibold text-apple-gray-500">
-	                    还没有收款户头。
+	                    還沒有收款戶頭。
 	                  </div>
 	                ) : (
 	                  <div className="divide-y divide-black/10">
@@ -886,7 +886,7 @@ export default function AdminDashboardClient() {
 	                          <div>
 	                            <div className="mb-2 flex flex-wrap items-center gap-2">
 	                              <span className={`rounded-full px-3 py-1 text-xs font-bold ${account.active ? 'bg-emerald-50 text-emerald-700' : 'bg-apple-gray-100 text-apple-gray-500'}`}>
-	                                {account.active ? '启用中' : '已停用'}
+	                                {account.active ? '啟用中' : '已停用'}
 	                              </span>
 	                              <span className="rounded-full bg-apple-gray-100 px-3 py-1 text-xs font-bold text-apple-gray-600">权重 {account.weight}</span>
 	                            </div>
@@ -903,7 +903,7 @@ export default function AdminDashboardClient() {
 	                            onClick={() => runAction(`account-${account.id}`, { action: 'toggle_payment_account', accountId: account.id, active: !account.active })}
 	                            className="rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-bold text-apple-gray-800 transition hover:bg-apple-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
 	                          >
-	                            {account.active ? '停用' : '启用'}
+	                            {account.active ? '停用' : '啟用'}
 	                          </button>
 	                        </div>
 	                      </article>
@@ -917,8 +917,8 @@ export default function AdminDashboardClient() {
 	          {!tabs.find((tab) => tab.id === activeTab)?.ready ? (
             <section className="apple-card p-10 text-center">
               <Settings className="mx-auto h-10 w-10 text-apple-gray-400" />
-              <h2 className="mt-4 text-2xl font-black text-apple-gray-900">后续阶段开放</h2>
-              <p className="mt-2 text-apple-gray-600">这个入口已预留，第一阶段先保证管理员权限、学员、教练和订单审核可用。</p>
+              <h2 className="mt-4 text-2xl font-black text-apple-gray-900">後續阶段開放</h2>
+              <p className="mt-2 text-apple-gray-600">這個入口已预留，第一阶段先保证管理員權限、學員、教練和訂單审核可用。</p>
             </section>
           ) : null}
         </div>

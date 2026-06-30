@@ -21,39 +21,39 @@ export interface RegisterFormData {
 
 export function validateEmail(email: string): ValidationError | null {
   if (!email) {
-    return { field: 'email', message: '请输入邮箱' }
+    return { field: 'email', message: '請輸入信箱' }
   }
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(email)) {
-    return { field: 'email', message: '邮箱格式不正确' }
+    return { field: 'email', message: '信箱格式不正確' }
   }
   return null
 }
 
 export function validatePassword(password: string): ValidationError | null {
   if (!password) {
-    return { field: 'password', message: '请输入密码' }
+    return { field: 'password', message: '請輸入密碼' }
   }
   if (password.length < 6) {
-    return { field: 'password', message: '密码至少6个字符' }
+    return { field: 'password', message: '密碼至少6个字符' }
   }
   return null
 }
 
 export function validatePhone(phone: string): ValidationError | null {
   if (!phone) {
-    return { field: 'phone', message: '请输入手机号' }
+    return { field: 'phone', message: '請輸入手机号' }
   }
   const phoneRegex = /^1[3-9]\d{9}$/
   if (!phoneRegex.test(phone)) {
-    return { field: 'phone', message: '手机号格式不正确' }
+    return { field: 'phone', message: '手机号格式不正確' }
   }
   return null
 }
 
 export function validateName(name: string): ValidationError | null {
   if (!name) {
-    return { field: 'name', message: '请输入姓名' }
+    return { field: 'name', message: '請輸入姓名' }
   }
   if (name.length < 2) {
     return { field: 'name', message: '姓名至少2个字符' }
@@ -86,18 +86,18 @@ export function validateRegisterForm(data: RegisterFormData): ValidationError[] 
   if (phoneError) errors.push(phoneError)
 
   if (!data.gender) {
-    errors.push({ field: 'gender', message: '请选择性别' })
+    errors.push({ field: 'gender', message: '請選擇性别' })
   }
 
   if (!data.pb) {
-    errors.push({ field: 'pb', message: '请输入PB成绩' })
+    errors.push({ field: 'pb', message: '請輸入PB成績' })
   }
 
   const passwordError = validatePassword(data.password)
   if (passwordError) errors.push(passwordError)
 
   if (data.password !== data.confirmPassword) {
-    errors.push({ field: 'confirmPassword', message: '两次密码不一致' })
+    errors.push({ field: 'confirmPassword', message: '两次密碼不一致' })
   }
 
   return errors

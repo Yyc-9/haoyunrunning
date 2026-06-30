@@ -5,12 +5,12 @@ import { getTodayInfo } from '@/lib/week-dates'
 
 export async function GET(request: NextRequest) {
   if (!supabaseAdmin) {
-    return NextResponse.json({ error: 'Supabase 尚未设置。' }, { status: 500 })
+    return NextResponse.json({ error: 'Supabase 尚未設定。' }, { status: 500 })
   }
 
   const user = await getAuthedUser(request.headers.get('authorization'))
   if (!user) {
-    return NextResponse.json({ error: '请先登录学员账号。' }, { status: 401 })
+    return NextResponse.json({ error: '請先登入學員帳號。' }, { status: 401 })
   }
 
   const accessState = await getStudentAccessState(user.id, user.email)
@@ -20,13 +20,13 @@ export async function GET(request: NextRequest) {
       count: 0,
       weekStart: getTodayInfo().weekStart,
       accessState,
-      message: '你的报名资料正在等待人工核对，课表将在核准后开通，请耐心等待。',
+      message: '你的報名資料正在等待人工核對，課表將在核准後開通，請耐心等待。',
     })
   }
 
   const weekStart = request.nextUrl.searchParams.get('weekStart') ?? getTodayInfo().weekStart
   if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
-    return NextResponse.json({ error: '课表周参数格式错误。' }, { status: 400 })
+    return NextResponse.json({ error: '課表周参数格式錯誤。' }, { status: 400 })
   }
 
   const { data: plans, error } = await supabaseAdmin

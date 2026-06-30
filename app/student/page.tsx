@@ -71,7 +71,7 @@ const worldRaceCatalog: RaceCatalogItem[] = [
 ]
 
 function formatRaceDate(date: string | null) {
-  if (!date) return '日期待确认'
+  if (!date) return '日期待確認'
   return new Date(
     date + 'T00:00:00'
   ).toLocaleDateString('zh-CN', {
@@ -142,12 +142,12 @@ export default function StudentPage() {
     [currentWeekPlans, todayInfo.todayIso]
   )
   const latestPlan = todayPlan ?? currentWeekPlans[0]
-  const displayName = user?.name || '好运跑者'
+  const displayName = user?.name || '好運跑者'
   const currentWeek = latestPlan?.week_number
-  const currentProgram = user?.role === 'coach' ? '教练账号' : '好运跑班学员'
-  const currentGoal = user?.pb ? `目前 PB：${user.pb}` : '等待教练同步目标'
+  const currentProgram = user?.role === 'coach' ? '教練帳號' : '好運跑班學員'
+  const currentGoal = user?.pb ? `目前 PB：${user.pb}` : '等待教練同步目標'
   const isCoach = user?.role === 'coach' || user?.role === 'admin'
-  const coachStatusText = boundCoachName || (coachBound || latestPlan ? '已绑定' : '待绑定')
+  const coachStatusText = boundCoachName || (coachBound || latestPlan ? '已綁定' : '待綁定')
   const selectedCatalogRace = worldRaceCatalog.find((race) => race.id === selectedRaceId) ?? worldRaceCatalog[0]
   const isCustomRace = selectedRaceId === 'custom'
   const submittedPlanIds = new Set(
@@ -197,30 +197,30 @@ export default function StudentPage() {
   const hardShare = recentFeedback.length > 0 ? Math.max(0, 100 - aerobicShare - tempoShare) : 0
   const trainingStatus =
     recentFeedback.length === 0
-      ? '等待首次回馈'
+      ? '等待首次回饋'
       : averageRpe && averageRpe >= 8
-        ? '强度偏高'
+        ? '強度偏高'
         : completionRate >= 75
           ? '稳定推进'
-          : '建立节奏'
+          : '建立節奏'
   const recoveryHint =
     recentFeedback.length === 0
-      ? '先提交一次训练回馈'
+      ? '先提交一次訓練回饋'
       : averageRpe && averageRpe >= 8
-        ? '请和教练确认恢复'
+        ? '請和教練確認恢復'
         : averageHeartRate && averageHeartRate >= 170
-          ? '关注心率与睡眠'
+          ? '关注心率與睡眠'
           : '可以按计划推进'
   const loadZone =
-    trainingLoad === 0 ? '完成训练后提交回馈' : trainingLoad < 180 ? '轻负荷' : trainingLoad < 420 ? '适中负荷' : '高负荷'
+    trainingLoad === 0 ? '完成訓練後提交回饋' : trainingLoad < 180 ? '轻負荷' : trainingLoad < 420 ? '适中負荷' : '高負荷'
   const dashboardNav: Array<
     | { type: 'link'; href: string; icon: React.ElementType; label: string }
     | { type: 'button'; icon: React.ElementType; label: string }
   > = [
-    { type: 'link', href: '#training-data', icon: Gauge, label: '训练数据' },
-    { type: 'link', href: '#training-plan', icon: CalendarDays, label: '训练计划' },
-    { type: 'link', href: '#goals', icon: Trophy, label: '我的目标' },
-    { type: 'button', icon: Settings, label: '设置' },
+    { type: 'link', href: '#training-data', icon: Gauge, label: '訓練資料' },
+    { type: 'link', href: '#training-plan', icon: CalendarDays, label: '訓練计划' },
+    { type: 'link', href: '#goals', icon: Trophy, label: '我的目標' },
+    { type: 'button', icon: Settings, label: '設定' },
   ]
 
   const groupedPlans = useMemo(() => {
@@ -280,7 +280,7 @@ export default function StudentPage() {
       } catch (error) {
         console.error('Load student dashboard data error:', error)
         if (isActive) {
-          setDataError(error instanceof Error ? error.message : '读取学员资料失败。')
+          setDataError(error instanceof Error ? error.message : '讀取學員資料失敗。')
         }
       } finally {
         if (isActive) setIsLoadingData(false)
@@ -398,7 +398,7 @@ export default function StudentPage() {
     setRaceMessage('')
 
     if (!isLoggedIn || !user) {
-      setRaceError('请先登录，登录后才能保存赛事目标。')
+      setRaceError('請先登入，登入後才能儲存賽事目標。')
       return
     }
 
@@ -421,7 +421,7 @@ export default function StudentPage() {
         }
 
     if (!raceInput.race_name) {
-      setRaceError('请填写赛事名称。')
+      setRaceError('請填寫賽事名稱。')
       return
     }
 
@@ -432,19 +432,19 @@ export default function StudentPage() {
         student_id: user.id,
         ...raceInput,
         status: 'accepted',
-        notes: '学员已中签，加入目标赛事面板。',
+        notes: '學員已中签，加入目標賽事面板。',
       })
       setStudentRaces((current) =>
         [...current, savedRace].sort((a, b) =>
           (a.race_date || '9999-12-31').localeCompare(b.race_date || '9999-12-31')
         )
       )
-      setRaceMessage('已加入你的目标赛事面板。')
+      setRaceMessage('已加入你的目標賽事面板。')
       if (isCustomRace) {
         setCustomRace({ raceName: '', location: '', country: '', raceDate: '', distance: '' })
       }
     } catch (error) {
-      setRaceError(error instanceof Error ? error.message : '保存赛事失败，请稍后再试。')
+      setRaceError(error instanceof Error ? error.message : '儲存賽事失敗，請稍後再試。')
     } finally {
       setIsAddingRace(false)
     }
@@ -459,9 +459,9 @@ export default function StudentPage() {
     try {
       await removeMyStudentRace(raceId, user.id)
       setStudentRaces((current) => current.filter((race) => race.id !== raceId))
-      setRaceMessage('已从面板移除该赛事。')
+      setRaceMessage('已从面板移除该賽事。')
     } catch (error) {
-      setRaceError(error instanceof Error ? error.message : '移除赛事失败，请稍后再试。')
+      setRaceError(error instanceof Error ? error.message : '移除賽事失敗，請稍後再試。')
     }
   }
 
@@ -471,7 +471,7 @@ export default function StudentPage() {
     setSubmitted(false)
 
     if (!isLoggedIn || !user) {
-      setSubmitError('请先登入，登入后回馈才会同步到教练端。')
+      setSubmitError('請先登入，登入後回饋才會同步到教練端。')
       return
     }
 
@@ -479,13 +479,13 @@ export default function StudentPage() {
 
     try {
       const structuredFeeling = [
-        feedback.feeling.trim() ? `训练感受：${feedback.feeling.trim()}` : '',
-        `睡眠质量：${feedback.sleepQuality}`,
-        `疲劳程度：${feedback.fatigueLevel}`,
+        feedback.feeling.trim() ? `訓練感受：${feedback.feeling.trim()}` : '',
+        `睡眠質量：${feedback.sleepQuality}`,
+        `疲勞程度：${feedback.fatigueLevel}`,
         `是否完成原计划：${feedback.completedOriginalPlan}`,
-        feedback.painLocation.trim() ? `疼痛 / 不适位置：${feedback.painLocation.trim()}` : '疼痛 / 不适位置：无明显不适',
+        feedback.painLocation.trim() ? `疼痛 / 不適位置：${feedback.painLocation.trim()}` : '疼痛 / 不適位置：无明顯不適',
         feedback.note.trim() ? `备注：${feedback.note.trim()}` : '',
-        feedback.screenshotName ? `跑步截图：${feedback.screenshotName}` : '',
+        feedback.screenshotName ? `跑步截圖：${feedback.screenshotName}` : '',
       ]
         .filter(Boolean)
         .join('\n')
@@ -507,7 +507,7 @@ export default function StudentPage() {
       setRecentFeedback(feedbackData)
     } catch (error) {
       console.error('Submit training feedback error:', error)
-      setSubmitError(error instanceof Error ? error.message : '提交失败，请稍后再试。')
+      setSubmitError(error instanceof Error ? error.message : '提交失敗，請稍後再試。')
     } finally {
       setIsSubmitting(false)
     }
@@ -519,12 +519,12 @@ export default function StudentPage() {
     setSettingsError('')
 
     if (!isLoggedIn || !user) {
-      setSettingsError('请先登录，登录后才能保存资料。')
+      setSettingsError('請先登入，登入後才能儲存資料。')
       return
     }
 
     if (!supabase) {
-      setSettingsError('Supabase 尚未设置，暂时无法保存资料。')
+      setSettingsError('Supabase 尚未設定，暂时無法儲存資料。')
       return
     }
 
@@ -536,7 +536,7 @@ export default function StudentPage() {
       } = await supabase.auth.getSession()
 
       if (!session?.access_token) {
-        throw new Error('请先重新登录后再保存资料。')
+        throw new Error('請先重新登入後再儲存資料。')
       }
 
       const response = await fetch('/api/account/me', {
@@ -563,7 +563,7 @@ export default function StudentPage() {
       }
 
       if (!response.ok || !payload.profile) {
-        throw new Error(payload.error || '保存失败，请稍后再试。')
+        throw new Error(payload.error || '儲存失敗，請稍後再試。')
       }
 
       updateUser({
@@ -571,10 +571,10 @@ export default function StudentPage() {
         phone: payload.profile.phone || '',
         pb: payload.profile.pb || '',
       })
-      setSettingsMessage('资料已更新。')
+      setSettingsMessage('資料已更新。')
       window.setTimeout(() => setIsSettingsOpen(false), 500)
     } catch (error) {
-      setSettingsError(error instanceof Error ? error.message : '保存失败，请稍后再试。')
+      setSettingsError(error instanceof Error ? error.message : '儲存失敗，請稍後再試。')
     } finally {
       setIsSavingSettings(false)
     }
@@ -591,17 +591,17 @@ export default function StudentPage() {
                   Coach dashboard
                 </p>
                 <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">
-                  {displayName}，这里改为教练工作视角。
+                  {displayName}，這裡改为教練工作视角。
                 </h1>
                 <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
-                  你的账号已經启用教练权限，因此不再显示学员的训练感受表单。接下來的重點会放在学员状态、课表同步与回馈处理。
+                  你的帳號已經啟用教練權限，因此不再顯示學員的訓練感受表單。接下來的重點會放在學員狀態、課表同步與回饋處理。
                 </p>
               </div>
 
               <div className="apple-card p-5">
                 <p className="text-sm text-apple-gray-500">目前身份</p>
-                <p className="mt-1 text-xl font-bold text-apple-gray-900">好运跑班教练</p>
-                <p className="mt-1 text-sm text-apple-gray-600">可管理绑定学员与训练课表</p>
+                <p className="mt-1 text-xl font-bold text-apple-gray-900">好運跑班教練</p>
+                <p className="mt-1 text-sm text-apple-gray-600">可管理綁定學員與訓練課表</p>
               </div>
             </div>
 
@@ -610,20 +610,20 @@ export default function StudentPage() {
                 {
                   href: '/coach',
                   icon: ShieldCheck,
-                  title: '教练工作台',
-                  description: '集中查看学员回馈、权限状态与今日待处理事項。',
+                  title: '教練工作台',
+                  description: '集中查看學員回饋、權限狀態與今日待處理事項。',
                 },
                 {
                   href: '/coach/students',
                   icon: UsersRound,
-                  title: '学员状态',
-                  description: '绑定学员后，查看目标、PB、班级与后续回馈状态。',
+                  title: '學員狀態',
+                  description: '綁定學員後，查看目標、PB、班級與後續回饋狀態。',
                 },
                 {
                   href: '/coach/planner',
                   icon: NotebookPen,
-                  title: '课表面板',
-                  description: '进入课表面板，保存后写入 training_plans 并同步到学员端。',
+                  title: '課表面板',
+                  description: '進入課表面板，儲存後写入 training_plans 並同步到學員端。',
                 },
               ].map((item) => (
                 <Link key={item.href} href={item.href} className="apple-card block p-6">
@@ -633,7 +633,7 @@ export default function StudentPage() {
                   <h2 className="text-xl font-bold text-apple-gray-900">{item.title}</h2>
                   <p className="mt-3 leading-7 text-apple-gray-600">{item.description}</p>
                   <div className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-apple-gray-900">
-                    进入
+                    進入
                     <ArrowRight className="h-4 w-4" />
                   </div>
                 </Link>
@@ -654,31 +654,31 @@ export default function StudentPage() {
               <div className="grid gap-0 md:grid-cols-[1fr_0.85fr]">
                 <div className="p-8 md:p-10">
                   <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
-                    Student dashboard
+                    學員看板
                   </p>
                   <h1 className="text-3xl font-black leading-tight text-apple-gray-900 md:text-5xl">
-                    已报名学员请登录后查看课表并提交训练回馈
+                    已報名學員請登入後查看課表並提交訓練回饋
                   </h1>
                   <p className="mt-5 text-base leading-8 text-apple-gray-600">
-                    训练课表、训练数据、目标赛事和个人资料都会绑定到你的报名邮箱。登录后，教练同步的课表和你提交的训练回馈才会正确保存。
+                    訓練課表、訓練資料、目標賽事和個人資料都會綁定到你的報名信箱。登入後，教練同步的課表和你提交的訓練回饋才會正確儲存。
                   </p>
                   <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                     <Link href="/?auth=login" className="apple-button-primary inline-flex items-center justify-center gap-2 px-6 py-3">
-                      登录学员账号
+                      登入學員帳號
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                     <Link href="/courses" className="apple-button-outline inline-flex items-center justify-center gap-2 px-6 py-3">
-                      查看课程
+                      查看課程
                     </Link>
                   </div>
                 </div>
                 <div className="bg-apple-gray-950 p-8 text-white md:p-10">
-                  <h2 className="text-xl font-black">登录后开放</h2>
+                  <h2 className="text-xl font-black">登入後開放</h2>
                   <div className="mt-6 space-y-4">
                     {[
-                      ['本周课表', '查看教练同步的训练安排和当日重点。'],
-                      ['训练回馈', '提交里程、配速、RPE、疲劳和身体感受。'],
-                      ['目标与资料', '维护比赛目标、联系方式和训练沟通资料。'],
+                      ['本週課表', '查看教練同步的訓練安排和當日重點。'],
+                      ['訓練回饋', '提交里程、配速、RPE、疲勞和身體感受。'],
+                      ['目標與資料', '維護比賽目標、聯絡方式和訓練溝通資料。'],
                     ].map(([title, description]) => (
                       <div key={title} className="rounded-2xl bg-white/10 p-4">
                         <h3 className="font-bold">{title}</h3>
@@ -697,8 +697,8 @@ export default function StudentPage() {
 
   if (!canAccessTraining) {
     const waitingText = studentAccessState === 'rejected'
-      ? '你的报名资料需要补充或重新核对，请联系好运跑班协助处理。'
-      : '你的报名资料正在等待人工核对，课表将在核准后开通，请耐心等待。'
+      ? '你的報名資料需要補充或重新核對，請聯絡好運跑班協助處理。'
+      : '你的報名資料正在等待人工核對，課表將在核准後開通，請耐心等待。'
 
     return (
       <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
@@ -706,19 +706,19 @@ export default function StudentPage() {
           <div className="container mx-auto max-w-4xl">
             <div className="apple-card p-8 md:p-10">
               <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
-                Enrollment review
+                報名審核
               </p>
               <h1 className="text-3xl font-black leading-tight text-apple-gray-900 md:text-5xl">
-                课表等待开通
+                課表等待開通
               </h1>
               <p className="mt-5 text-lg leading-8 text-apple-gray-600">
                 {waitingText}
               </p>
               <div className="mt-8 grid gap-4 md:grid-cols-3">
                 {[
-                  ['当前状态', studentAccessState === 'pending_review' ? '待人工核对' : studentAccessState === 'pending_transfer' ? '待汇款 / 待后五码' : '需补充资料'],
-                  ['课表访问', '核准后开通'],
-                  ['训练回馈', '核准后可提交'],
+                  ['目前狀態', studentAccessState === 'pending_review' ? '待人工核對' : studentAccessState === 'pending_transfer' ? '待匯款 / 待後五碼' : '需補充資料'],
+                  ['課表訪問', '核准後開通'],
+                  ['訓練回饋', '核准後可提交'],
                 ].map(([label, value]) => (
                   <div key={label} className="rounded-2xl bg-apple-gray-100 p-4">
                     <p className="text-xs font-semibold text-apple-gray-500">{label}</p>
@@ -728,7 +728,7 @@ export default function StudentPage() {
               </div>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link href="/payment" className="apple-button-primary inline-flex items-center justify-center gap-2 px-6 py-3">
-                  查看付款资料
+                  查看付款資料
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <a
@@ -737,7 +737,7 @@ export default function StudentPage() {
                   rel="noreferrer"
                   className="apple-button-outline inline-flex items-center justify-center gap-2 px-6 py-3"
                 >
-                  联系好运跑班
+                  聯絡好運跑班
                 </a>
               </div>
             </div>
@@ -754,13 +754,13 @@ export default function StudentPage() {
           <div className="mb-8 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
             <div>
               <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
-                Student dashboard
+                學員看板
               </p>
               <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">
                 {displayName}，今天照顾好这一课。
               </h1>
               <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
-                课表、完成状态与训练感受都集中在这里。回报越清楚，教练越能帮你把下一周調得刚刚好。
+                課表、完成狀態與訓練感受都集中在這裡。回報越清楚，教練越能幫你把下一周調得刚刚好。
               </p>
             </div>
             <div className="apple-card p-5">
@@ -781,11 +781,11 @@ export default function StudentPage() {
 
           {dataError && (
             <div className="mb-6 rounded-3xl bg-amber-50 p-4 text-sm leading-6 text-amber-800">
-              目前真实资料读取失败，请稍后再试。信息：{dataError}
+              目前真實資料讀取失敗，請稍後再試。資訊：{dataError}
             </div>
           )}
 
-          <nav className="mb-6 grid gap-3 sm:grid-cols-4" aria-label="学员看板功能">
+          <nav className="mb-6 grid gap-3 sm:grid-cols-4" aria-label="學員看板功能">
             {dashboardNav.map((item) => (
               item.type === 'link' ? (
                 <a
@@ -825,13 +825,13 @@ export default function StudentPage() {
               <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
                 <div>
                   <p className="text-sm font-semibold text-apple-blue">Training data</p>
-                  <h2 className="mt-1 text-2xl font-black text-apple-gray-900">训练数据</h2>
+                  <h2 className="mt-1 text-2xl font-black text-apple-gray-900">訓練資料</h2>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-apple-gray-600">
-                    用训练负荷、完成率和体感趋势，快速判断这一周该推进、维持还是先恢复。
+                    用訓練負荷、完成率和体感趨勢，快速判断这一周该推进、维持還是先恢復。
                   </p>
                 </div>
                 <a href="#feedback" className="apple-button-secondary gap-2 px-5 py-2.5 text-sm">
-                  去回报
+                  去回報
                   <ArrowRight className="h-4 w-4" />
                 </a>
               </div>
@@ -840,7 +840,7 @@ export default function StudentPage() {
                 <div className="rounded-3xl bg-black p-5 text-white">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-sm text-white/60">当前训练状态</p>
+                      <p className="text-sm text-white/60">目前訓練狀態</p>
                       <h3 className="mt-2 text-3xl font-black">{trainingStatus}</h3>
                     </div>
                     <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-black">
@@ -850,7 +850,7 @@ export default function StudentPage() {
 
                   <div className="mt-6 grid grid-cols-3 gap-3">
                     {[
-                      { label: '负荷', value: trainingLoad || '-' },
+                      { label: '負荷', value: trainingLoad || '-' },
                       { label: '完成率', value: plans.length > 0 ? `${completionRate}%` : '-' },
                       { label: '平均 RPE', value: averageRpe ? averageRpe.toFixed(1) : '-' },
                     ].map((item) => (
@@ -862,17 +862,17 @@ export default function StudentPage() {
                   </div>
 
                   <div className="mt-5 rounded-2xl bg-white/10 p-4">
-                    <p className="text-xs text-white/55">当前状态</p>
+                    <p className="text-xs text-white/55">目前狀態</p>
                     <p className="mt-1 text-sm font-semibold leading-6">{recoveryHint}</p>
                   </div>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   {[
-                    { label: '近期里程', value: totalDistance > 0 ? `${totalDistance.toFixed(1)} km` : '先提交训练回馈', note: `最近 ${recentFeedback.length} 次回馈` },
-                    { label: '平均心率', value: averageHeartRate ? `${averageHeartRate}` : '回馈时可填写', note: '来自已填写记录' },
-                    { label: '课表完成', value: plans.length > 0 ? `${completedPlanCount}/${plans.length}` : '待同步', note: '按训练回馈匹配课表' },
-                    { label: '强度指数', value: intensityScore ? `${intensityScore}` : '提交 RPE 后生成', note: '由 RPE 换算' },
+                    { label: '近期里程', value: totalDistance > 0 ? `${totalDistance.toFixed(1)} km` : '先提交訓練回饋', note: `最近 ${recentFeedback.length} 次回饋` },
+                    { label: '平均心率', value: averageHeartRate ? `${averageHeartRate}` : '回饋時可填寫', note: '來自已填寫記錄' },
+                    { label: '課表完成', value: plans.length > 0 ? `${completedPlanCount}/${plans.length}` : '待同步', note: '按訓練回饋匹配課表' },
+                    { label: '強度指数', value: intensityScore ? `${intensityScore}` : '提交 RPE 後生成', note: '由 RPE 换算' },
                   ].map((item) => (
                     <div key={item.label} className="rounded-2xl border border-black/10 bg-white p-4">
                       <p className="text-xs font-semibold text-apple-gray-500">{item.label}</p>
@@ -887,8 +887,8 @@ export default function StudentPage() {
                 <div className="rounded-3xl border border-black/10 bg-white p-5">
                   <div className="mb-5 flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-bold text-apple-gray-900">近 7 次训练负荷</p>
-                      <p className="mt-1 text-xs text-apple-gray-500">里程 × RPE，用来观察疲劳趋势</p>
+                      <p className="text-sm font-bold text-apple-gray-900">近 7 次訓練負荷</p>
+                      <p className="mt-1 text-xs text-apple-gray-500">里程 × RPE，用来觀察疲勞趨勢</p>
                     </div>
                     <span className="rounded-full bg-apple-gray-100 px-3 py-1 text-xs font-bold text-apple-gray-600">
                       {recentLoadItems.length || 0} 次
@@ -912,20 +912,20 @@ export default function StudentPage() {
                     </div>
                   ) : (
                     <div className="rounded-2xl border border-dashed border-black/15 bg-apple-gray-100 p-6 text-center">
-                      <p className="font-bold text-apple-gray-900">还没有负荷趋势</p>
-                      <p className="mt-2 text-sm text-apple-gray-600">提交训练回馈后，这里会自动生成趋势。</p>
+                      <p className="font-bold text-apple-gray-900">還沒有負荷趨勢</p>
+                      <p className="mt-2 text-sm text-apple-gray-600">提交訓練回饋後，這裡會自動生成趨勢。</p>
                     </div>
                   )}
                 </div>
 
                 <div className="space-y-4">
                   <div className="rounded-3xl border border-black/10 bg-white p-5">
-                    <p className="text-sm font-bold text-apple-gray-900">强度分布</p>
+                    <p className="text-sm font-bold text-apple-gray-900">強度分布</p>
                     <div className="mt-4 space-y-3">
                       {[
-                        { label: '轻松 / 恢复', value: aerobicShare, color: 'bg-green-500' },
-                        { label: '节奏 / 稳态', value: tempoShare, color: 'bg-apple-blue' },
-                        { label: '高强度', value: hardShare, color: 'bg-apple-orange' },
+                        { label: '輕鬆 / 恢復', value: aerobicShare, color: 'bg-green-500' },
+                        { label: '節奏 / 稳态', value: tempoShare, color: 'bg-apple-blue' },
+                        { label: '高強度', value: hardShare, color: 'bg-apple-orange' },
                       ].map((item) => (
                         <div key={item.label}>
                           <div className="mb-1 flex justify-between text-xs font-semibold text-apple-gray-600">
@@ -943,7 +943,7 @@ export default function StudentPage() {
                   <div className="rounded-3xl bg-apple-gray-100 p-5">
                     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center xl:flex-col xl:items-start">
                       <div>
-                        <p className="text-sm font-bold text-apple-gray-900">最近一次回馈</p>
+                        <p className="text-sm font-bold text-apple-gray-900">最近一次回饋</p>
                         <p className="mt-1 text-sm leading-6 text-apple-gray-600">
                           {latestFeedback
                             ? `${new Date(latestFeedback.created_at).toLocaleString('zh-CN', {
@@ -952,11 +952,11 @@ export default function StudentPage() {
                                 hour: '2-digit',
                                 minute: '2-digit',
                               })} · ${latestFeedback.distance_km ?? '-'} km · RPE ${latestFeedback.rpe ?? '-'}`
-                            : '还没有训练回馈，完成一次训练后从下方提交即可。'}
+                            : '還沒有訓練回饋，完成一次訓練後从下方提交即可。'}
                         </p>
                       </div>
                       <span className="inline-flex w-fit rounded-full bg-white px-3 py-1 text-xs font-bold text-apple-gray-700">
-                        {latestFeedback?.status === 'reviewed' ? '教练已看' : latestFeedback ? '等待教练查看' : '待开始'}
+                        {latestFeedback?.status === 'reviewed' ? '教練已看' : latestFeedback ? '等待教練查看' : '待開始'}
                       </span>
                     </div>
                     {latestFeedback?.feeling && (
@@ -1000,36 +1000,36 @@ export default function StudentPage() {
                     <p className="text-sm font-bold opacity-80">{latestPlan.workout_date}</p>
                     <p className="mt-2 text-2xl font-black">{latestPlan.target}</p>
                     <p className={`mt-2 ${todayPlan ? 'text-white/80' : 'text-apple-gray-600'}`}>
-                      {latestPlan.pace || '配速由教练视状态调整'}
+                      {latestPlan.pace || '配速由教練视狀態調整'}
                     </p>
                     <p className={`mt-4 rounded-2xl p-4 text-sm leading-6 ${todayPlan ? 'bg-white/10 text-white/85' : 'bg-white text-apple-gray-600'}`}>
-                      {latestPlan.note || '完成后请回报 RPE、实际里程、心率与感受。'}
+                      {latestPlan.note || '完成後請回報 RPE、實際里程、心率與感受。'}
                     </p>
                   </div>
                 ) : (
                   <div className="rounded-3xl bg-apple-gray-100 p-6">
                     <p className="text-sm font-semibold text-apple-blue">
-                      {isLoadingData ? '同步中' : '尚未同步课表'}
+                      {isLoadingData ? '同步中' : '尚未同步課表'}
                     </p>
                     <h2 className="mt-2 text-2xl font-black text-apple-gray-900">
                       {t.schedule.unsyncedThisWeekPlan}
                     </h2>
                     <p className="mt-3 leading-7 text-apple-gray-600">
                       {coachBound
-                        ? '教练已绑定，课表尚未同步。请等待教练派发本周课表，你仍然可以提交自主训练回馈。'
-                        : '如已报名但看不到资料，请用报名邮箱登录，并联系教练确认账号绑定。你仍然可以提交自主训练回馈。'}
+                        ? '教練已綁定，課表尚未同步。請等待教練派發本週課表，你仍然可以提交自主訓練回饋。'
+                        : '如已報名但看不到資料，請用報名信箱登入，並聯絡教練確認帳號綁定。你仍然可以提交自主訓練回饋。'}
                     </p>
                     <a href="#feedback" className="mt-5 inline-flex rounded-full bg-black px-5 py-2 text-sm font-bold text-white">
-                      提交自主训练回馈
+                      提交自主訓練回饋
                     </a>
                   </div>
                 )}
 
                 <div className="mt-6 grid gap-3 sm:grid-cols-3">
                   {[
-                    { icon: Route, label: '训练类型', value: todayPlan ? t.schedule.todaysWorkout : latestPlan?.target ? '本周训练' : '自主回馈' },
+                    { icon: Route, label: '訓練類型', value: todayPlan ? t.schedule.todaysWorkout : latestPlan?.target ? '本週訓練' : '自主回饋' },
                     { icon: Timer, label: t.schedule.dateRange, value: formatWeekRange(todayInfo.weekStart, language) },
-                    { icon: CalendarDays, label: '教练', value: coachStatusText },
+                    { icon: CalendarDays, label: '教練', value: coachStatusText },
                   ].map((item) => (
                     <div key={item.label} className="rounded-2xl border border-black/10 bg-white p-4">
                       <item.icon className="mb-3 h-5 w-5 text-apple-gray-700" />
@@ -1045,9 +1045,9 @@ export default function StudentPage() {
                 <div className="mb-6 flex items-start justify-between gap-4">
                   <div>
                     <p className="text-sm font-semibold text-apple-blue">Global race goals</p>
-                    <h2 className="mt-1 text-2xl font-black text-apple-gray-900">我的目标赛事</h2>
+                    <h2 className="mt-1 text-2xl font-black text-apple-gray-900">我的目標賽事</h2>
                     <p className="mt-2 text-sm leading-6 text-apple-gray-600">
-                      中签后把赛事加入面板，教练之后可以围绕目标比赛调整训练节奏。
+                      中签後把賽事加入面板，教練之後可以围绕目標比賽調整訓練節奏。
                     </p>
                   </div>
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-black text-white">
@@ -1068,15 +1068,15 @@ export default function StudentPage() {
                                 {race.location}{race.country ? ', ' + race.country : ''}
                               </span>
                               <span>{formatRaceDate(race.race_date)}</span>
-                              <span>{race.distance || '距离待确认'}</span>
+                              <span>{race.distance || '距离待確認'}</span>
                             </p>
                           </div>
                           <button
                             type="button"
                             onClick={() => handleRemoveRace(race.id)}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white text-apple-gray-600 transition hover:bg-red-50 hover:text-red-600"
-                            aria-label="移除赛事"
-                            title="移除赛事"
+                            aria-label="移除賽事"
+                            title="移除賽事"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -1090,15 +1090,15 @@ export default function StudentPage() {
                 ) : (
                   <div className="mb-6 rounded-3xl border border-dashed border-black/15 bg-white p-6 text-center">
                     <Globe2 className="mx-auto mb-3 h-8 w-8 text-apple-gray-400" />
-                    <p className="font-bold text-apple-gray-900">还没有目标赛事</p>
-                    <p className="mt-2 text-sm leading-6 text-apple-gray-600">选择一个全球赛事，或手动输入你已中签的比赛。</p>
+                    <p className="font-bold text-apple-gray-900">還沒有目標賽事</p>
+                    <p className="mt-2 text-sm leading-6 text-apple-gray-600">選擇一個全球賽事，或手动輸入你已中签的比賽。</p>
                   </div>
                 )}
 
                 <div className="rounded-3xl bg-apple-gray-100 p-4">
                   <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
                     <label className="block">
-                      <span className="mb-2 block text-sm font-semibold text-apple-gray-700">选择赛事</span>
+                      <span className="mb-2 block text-sm font-semibold text-apple-gray-700">選擇賽事</span>
                       <select
                         value={selectedRaceId}
                         onChange={(event) => {
@@ -1113,7 +1113,7 @@ export default function StudentPage() {
                             {race.raceName} · {race.location}
                           </option>
                         ))}
-                        <option value="custom">自定义其他赛事</option>
+                        <option value="custom">自定义其他賽事</option>
                       </select>
                     </label>
 
@@ -1130,7 +1130,7 @@ export default function StudentPage() {
 
                   {isCustomRace ? (
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      <input value={customRace.raceName} onChange={(event) => updateCustomRace('raceName', event.target.value)} placeholder="赛事名称" className="apple-input bg-white" />
+                      <input value={customRace.raceName} onChange={(event) => updateCustomRace('raceName', event.target.value)} placeholder="賽事名稱" className="apple-input bg-white" />
                       <input value={customRace.distance} onChange={(event) => updateCustomRace('distance', event.target.value)} placeholder="距离" className="apple-input bg-white" />
                       <input value={customRace.location} onChange={(event) => updateCustomRace('location', event.target.value)} placeholder="城市" className="apple-input bg-white" />
                       <input value={customRace.country} onChange={(event) => updateCustomRace('country', event.target.value)} placeholder="国家 / 地区" className="apple-input bg-white" />
@@ -1168,7 +1168,7 @@ export default function StudentPage() {
                               type="button"
                               onClick={() => scrollPlanTrack(group.week, 'left')}
                               className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-black/10 bg-white text-apple-gray-700 transition hover:bg-apple-gray-100"
-                              aria-label={`向左查看第 ${group.week} 周课表`}
+                              aria-label={`向左查看第 ${group.week} 週課表`}
                             >
                               <ChevronLeft className="h-4 w-4" />
                             </button>
@@ -1176,7 +1176,7 @@ export default function StudentPage() {
                               type="button"
                               onClick={() => scrollPlanTrack(group.week, 'right')}
                               className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-black/10 bg-white text-apple-gray-700 transition hover:bg-apple-gray-100"
-                              aria-label={`向右查看第 ${group.week} 周课表`}
+                              aria-label={`向右查看第 ${group.week} 週課表`}
                             >
                               <ChevronRight className="h-4 w-4" />
                             </button>
@@ -1221,7 +1221,7 @@ export default function StudentPage() {
                   <div className="rounded-3xl border border-dashed border-black/15 bg-white p-6 text-center">
                     <p className="font-bold text-apple-gray-900">{t.schedule.unsyncedThisWeekPlan}</p>
                     <p className="mt-2 text-sm leading-6 text-apple-gray-600">
-                      如果你已经报名，请先确认登录的是报名邮箱；仍看不到资料时，请联系教练绑定账号。你仍然可以提交自主训练回馈。
+                      如果你已經報名，請先確認登入的是報名信箱；仍看不到資料时，請聯絡教練綁定帳號。你仍然可以提交自主訓練回饋。
                     </p>
                   </div>
                 )}
@@ -1234,14 +1234,14 @@ export default function StudentPage() {
                   <MessageSquareText className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="text-sm text-apple-gray-500">完成后回报</p>
-                  <h2 className="text-2xl font-black text-apple-gray-900">今日训练感受</h2>
+                  <p className="text-sm text-apple-gray-500">完成後回報</p>
+                  <h2 className="text-2xl font-black text-apple-gray-900">今日訓練感受</h2>
                 </div>
               </div>
 
               {!isLoggedIn && (
                 <div className="mb-5 rounded-3xl bg-amber-50 p-4 text-sm leading-6 text-amber-800">
-                  请先登录报名邮箱。登录后提交的训练回馈才会同步给教练。
+                  請先登入報名信箱。登入後提交的訓練回饋才會同步给教練。
                 </div>
               )}
 
@@ -1251,10 +1251,10 @@ export default function StudentPage() {
               >
                 <div className="grid gap-4 sm:grid-cols-2">
                   {[
-                    { key: 'distance', label: '实际里程', placeholder: '填写实际里程', icon: Route },
-                    { key: 'duration', label: '完成時間', placeholder: '填写完成时间', icon: Timer },
-                    { key: 'pace', label: '平均配速', placeholder: '填写平均配速', icon: Activity },
-                    { key: 'heartRate', label: '平均心率', placeholder: '填写平均心率', icon: HeartPulse },
+                    { key: 'distance', label: '實際里程', placeholder: '填寫實際里程', icon: Route },
+                    { key: 'duration', label: '完成時間', placeholder: '填寫完成时间', icon: Timer },
+                    { key: 'pace', label: '平均配速', placeholder: '填寫平均配速', icon: Activity },
+                    { key: 'heartRate', label: '平均心率', placeholder: '填寫平均心率', icon: HeartPulse },
                   ].map((field) => (
                     <label key={field.key} className="block">
                       <span className="mb-2 block text-sm font-semibold text-apple-gray-700">
@@ -1288,7 +1288,7 @@ export default function StudentPage() {
                     className="w-full"
                   />
                   <div className="mt-1 flex justify-between text-xs text-apple-gray-500">
-                    <span>很轻松</span>
+                    <span>很輕鬆</span>
                     <span>刚刚好</span>
                     <span>非常吃力</span>
                   </div>
@@ -1296,7 +1296,7 @@ export default function StudentPage() {
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block">
-                    <span className="mb-2 block text-sm font-semibold text-apple-gray-700">睡眠质量</span>
+                    <span className="mb-2 block text-sm font-semibold text-apple-gray-700">睡眠質量</span>
                     <select
                       value={feedback.sleepQuality}
                       onChange={(event) => updateField('sleepQuality', event.target.value)}
@@ -1309,16 +1309,16 @@ export default function StudentPage() {
                     </select>
                   </label>
                   <label className="block">
-                    <span className="mb-2 block text-sm font-semibold text-apple-gray-700">疲劳程度</span>
+                    <span className="mb-2 block text-sm font-semibold text-apple-gray-700">疲勞程度</span>
                     <select
                       value={feedback.fatigueLevel}
                       onChange={(event) => updateField('fatigueLevel', event.target.value)}
                       className="apple-input"
                     >
-                      <option>轻松</option>
+                      <option>輕鬆</option>
                       <option>普通</option>
-                      <option>偏疲劳</option>
-                      <option>非常疲劳</option>
+                      <option>偏疲勞</option>
+                      <option>非常疲勞</option>
                     </select>
                   </label>
                   <label className="block">
@@ -1330,16 +1330,16 @@ export default function StudentPage() {
                     >
                       <option>完成原计划</option>
                       <option>部分完成</option>
-                      <option>改为轻松跑</option>
+                      <option>改为輕鬆跑</option>
                       <option>未完成 / 休息</option>
                     </select>
                   </label>
                   <label className="block">
-                    <span className="mb-2 block text-sm font-semibold text-apple-gray-700">疼痛 / 不适位置</span>
+                    <span className="mb-2 block text-sm font-semibold text-apple-gray-700">疼痛 / 不適位置</span>
                     <input
                       value={feedback.painLocation}
                       onChange={(event) => updateField('painLocation', event.target.value)}
-                      placeholder="例如：右小腿、左膝；没有可留空"
+                      placeholder="例如：右小腿、左膝；沒有可留空"
                       className="apple-input"
                     />
                   </label>
@@ -1347,13 +1347,13 @@ export default function StudentPage() {
 
                 <label className="block">
                   <div className="mb-2 flex items-center justify-between gap-3">
-                    <span className="text-sm font-semibold text-apple-gray-700">训练感受</span>
+                    <span className="text-sm font-semibold text-apple-gray-700">訓練感受</span>
                   </div>
                   <textarea
                     value={feedback.feeling}
                     onChange={(event) => updateField('feeling', event.target.value)}
                     rows={5}
-                    placeholder="填写训练感受"
+                    placeholder="填寫訓練感受"
                     className="apple-input resize-none"
                   />
                 </label>
@@ -1364,13 +1364,13 @@ export default function StudentPage() {
                     value={feedback.note}
                     onChange={(event) => updateField('note', event.target.value)}
                     rows={3}
-                    placeholder="例如：今天临时加班、天气很热、补给不足等"
+                    placeholder="例如：今天临时加班、天气很热、補給不足等"
                     className="apple-input resize-none"
                   />
                 </label>
 
                 <label className="block rounded-3xl border border-dashed border-black/20 bg-white p-5">
-                  <span className="mb-2 block text-sm font-semibold text-apple-gray-700">上传跑步截图</span>
+                  <span className="mb-2 block text-sm font-semibold text-apple-gray-700">上傳跑步截圖</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -1378,7 +1378,7 @@ export default function StudentPage() {
                     className="block w-full text-sm text-apple-gray-600 file:mr-4 file:rounded-full file:border-0 file:bg-black file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
                   />
                   <span className="mt-2 block text-xs leading-5 text-apple-gray-500">
-                    第一版先记录截图文件名；后续可接图片上传与自动识别里程、配速、心率。
+                    第一版先記錄截圖文件名；後續可接圖片上傳與自動識別里程、配速、心率。
                   </span>
                 </label>
 
@@ -1386,7 +1386,7 @@ export default function StudentPage() {
                   <div className="flex items-start gap-3 rounded-3xl bg-green-50 p-4 text-green-800">
                     <CheckCircle2 className="mt-0.5 h-5 w-5" />
                     <p className="text-sm leading-6">
-                      已提交。教练端的「今日待处理」会看到這筆回馈，並依照 RPE 与感受调整下一次课表。
+                      已提交。教練端的「今日待處理」會看到這筆回饋，並依照 RPE 與感受調整下一次課表。
                     </p>
                   </div>
                 )}
@@ -1403,7 +1403,7 @@ export default function StudentPage() {
                   className="apple-button-primary w-full gap-2 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Send className="h-4 w-4" />
-                  {isSubmitting ? '提交中...' : '提交給教练'}
+                  {isSubmitting ? '提交中...' : '提交給教練'}
                 </button>
               </form>
             </section>
@@ -1429,24 +1429,24 @@ export default function StudentPage() {
               <div>
                 <p className="text-sm font-semibold text-apple-blue">Account settings</p>
                 <h2 id="student-settings-title" className="mt-1 text-2xl font-black text-apple-gray-900">
-                  设置
+                  設定
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-apple-gray-600">
-                  这里只放影响训练沟通的资料，保存后会同步给教练端查看。
+                  這裡只放影响訓練溝通的資料，儲存後會同步给教練端查看。
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsSettingsOpen(false)}
                 className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-black/10 bg-white text-xl leading-none text-apple-gray-500 transition hover:bg-apple-gray-100 hover:text-apple-gray-900"
-                aria-label="关闭设置"
+                aria-label="关闭設定"
               >
                 ×
               </button>
             </div>
 
             <div className="mb-5 rounded-2xl bg-apple-gray-100 px-4 py-3 text-sm text-apple-gray-600">
-              登录邮箱：{user?.email || '-'}
+              登入信箱：{user?.email || '-'}
             </div>
 
             <form onSubmit={handleSaveSettings} className="space-y-4">
@@ -1461,21 +1461,21 @@ export default function StudentPage() {
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-2 block text-sm font-semibold text-apple-gray-700">手机 / 联系方式</span>
+                  <span className="mb-2 block text-sm font-semibold text-apple-gray-700">手机 / 聯絡方式</span>
                   <input
                     value={profileForm.phone}
                     onChange={(event) => updateProfileField('phone', event.target.value)}
                     className="apple-input"
-                    placeholder="方便教练联系"
+                    placeholder="方便教練聯絡"
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-2 block text-sm font-semibold text-apple-gray-700">当前 PB</span>
+                  <span className="mb-2 block text-sm font-semibold text-apple-gray-700">目前 PB</span>
                   <input
                     value={profileForm.pb}
                     onChange={(event) => updateProfileField('pb', event.target.value)}
                     className="apple-input"
-                    placeholder="当前 PB"
+                    placeholder="目前 PB"
                   />
                 </label>
               </div>
@@ -1505,7 +1505,7 @@ export default function StudentPage() {
                   className="apple-button-primary gap-2 px-6 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Settings className="h-4 w-4" />
-                  {isSavingSettings ? '保存中...' : '保存设置'}
+                  {isSavingSettings ? '儲存中...' : '儲存設定'}
                 </button>
               </div>
             </form>

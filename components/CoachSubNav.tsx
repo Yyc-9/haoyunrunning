@@ -6,9 +6,9 @@ import { ClipboardList, LayoutDashboard, NotebookPen, UsersRound } from 'lucide-
 
 const coachNavItems = [
   { href: '/coach', label: '工作台', icon: LayoutDashboard },
-  { href: '/coach/students', label: '学员列表', icon: UsersRound },
-  { href: '/coach/planner', label: '课表面板', icon: NotebookPen },
-  { href: '/coach/signups', label: '报名资料', icon: ClipboardList },
+  { href: '/coach/students', label: '學員列表', icon: UsersRound },
+  { href: '/coach/planner', label: '課表面板', icon: NotebookPen },
+  { href: '/coach/signups', label: '報名資料', icon: ClipboardList },
 ]
 
 function isActivePath(pathname: string, href: string) {
@@ -20,7 +20,7 @@ export default function CoachSubNav() {
   const pathname = usePathname()
 
   return (
-    <nav aria-label="教练端内部导航" className="mb-8 -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+    <nav aria-label="教練端內部导航" className="mb-8 -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
       <div className="flex min-w-max gap-2 rounded-3xl bg-white/85 p-2 shadow-sm ring-1 ring-black/10 backdrop-blur">
         {coachNavItems.map((item) => {
           const active = isActivePath(pathname, item.href)

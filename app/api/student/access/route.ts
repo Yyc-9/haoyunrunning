@@ -5,7 +5,7 @@ import { canAccessTrainingContent, getStudentAccessSummary } from '@/lib/student
 export async function GET(request: NextRequest) {
   const user = await getAuthedUser(request.headers.get('authorization'))
   if (!user) {
-    return NextResponse.json({ error: '请先登录学员账号。' }, { status: 401 })
+    return NextResponse.json({ error: '請先登入學員帳號。' }, { status: 401 })
   }
 
   try {
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : '读取报名状态失败。' },
+      { error: error instanceof Error ? error.message : '讀取報名狀態失敗。' },
       { status: 500 }
     )
   }

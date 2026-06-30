@@ -7,23 +7,23 @@ export default function CtaSection() {
   const features = [
     {
       icon: CheckCircle,
-      title: '30天免费试用',
-      description: '体验完整训练系统',
+      title: '30天免费試用',
+      description: '体验完整訓練系統',
     },
     {
       icon: Smartphone,
-      title: '移动端优先',
-      description: '随时随地训练记录',
+      title: '移动端優先',
+      description: '隨時隨地訓練記錄',
     },
     {
       icon: Clock,
-      title: '灵活安排',
+      title: '彈性安排',
       description: '适配您的日程计划',
     },
     {
       icon: Shield,
       title: '安全保障',
-      description: '科学训练防伤体系',
+      description: '科學訓練防傷体系',
     },
   ]
 
@@ -41,12 +41,12 @@ export default function CtaSection() {
             >
               <h2 className="text-4xl md:text-5xl font-bold mb-6">
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-black to-apple-gray-800">
-                  开始您的跑步之旅
+                  開始您的跑步之旅
                 </span>
               </h2>
               <p className="text-xl text-apple-gray-600 mb-8 max-w-lg">
-                加入数千名已通过科学训练实现目标的跑者行列。
-                专业的教练团队，个性化的训练计划，完整的支持系统。
+                加入数千名已透過科學訓練實現目標的跑者行列。
+                專業的教練團隊，個性化的訓練计划，完整的支援系統。
               </p>
 
               <div className="space-y-4 mb-10">
@@ -76,7 +76,7 @@ export default function CtaSection() {
                   whileTap={{ scale: 0.95 }}
                   className="apple-button-primary text-lg px-10 py-4"
                 >
-                  立即免费试用
+                  立即免费試用
                   <ArrowRight className="h-5 w-5 inline-block ml-2" />
                 </motion.button>
                 <motion.button
@@ -84,7 +84,7 @@ export default function CtaSection() {
                   whileTap={{ scale: 0.95 }}
                   className="apple-button-outline text-lg px-10 py-4"
                 >
-                  预约咨询
+                  预约諮詢
                 </motion.button>
               </div>
             </motion.div>
@@ -104,14 +104,14 @@ export default function CtaSection() {
                   </div>
                 </div>
 
-                <h3 className="text-2xl font-bold mb-8">数据见证实力</h3>
+                <h3 className="text-2xl font-bold mb-8">資料见证实力</h3>
 
                 <div className="space-y-6">
                   {[
                     { label: '社区规模', value: '5,000+', unit: '活跃跑者' },
                     { label: '累计里程', value: '250万+', unit: '公里' },
-                    { label: '目标达成', value: '89%', unit: '完成率' },
-                    { label: '教练回复', value: '24', unit: '小时内平均回复' },
+                    { label: '目標达成', value: '89%', unit: '完成率' },
+                    { label: '教練回复', value: '24', unit: '小時內平均回复' },
                   ].map((stat, index) => (
                     <div key={index} className="flex items-center justify-between">
                       <div>
@@ -126,17 +126,17 @@ export default function CtaSection() {
                 <div className="mt-10 pt-6 border-t border-apple-gray-200">
                   <div className="text-center">
                     <div className="text-sm text-apple-gray-500 mb-2">
-                      加入我们，您将会获得
+                      加入我們，您將會获得
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       {[
-                        '个性化计划',
-                        '教练指导',
-                        '数据分析',
-                        '社群支持',
-                        '营养建议',
-                        '防伤指导',
-                        '比赛策略',
+                        '個性化计划',
+                        '教練指導',
+                        '資料分析',
+                        '社群支援',
+                        '營養建議',
+                        '防傷指導',
+                        '比賽策略',
                         '终身学习',
                       ].map((benefit, index) => (
                         <div
@@ -166,14 +166,14 @@ export default function CtaSection() {
             className="mt-20 pt-10 border-t border-apple-gray-200"
           >
             <div className="text-center">
-              <div className="text-sm text-apple-gray-500 mb-6">信任与认可</div>
+              <div className="text-sm text-apple-gray-500 mb-6">信任與认可</div>
               <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12">
                 {[
-                  { name: '跑步协会', logo: '🏃' },
+                  { name: '跑步协會', logo: '🏃' },
                   { name: '体育科技', logo: '⚡' },
-                  { name: '健康认证', logo: '⭐' },
-                  { name: '运动医学', logo: '🏥' },
-                  { name: '数据安全', logo: '🔒' },
+                  { name: '健康認證', logo: '⭐' },
+                  { name: '運動医学', logo: '🏥' },
+                  { name: '資料安全', logo: '🔒' },
                 ].map((org, index) => (
                   <div
                     key={index}
