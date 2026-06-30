@@ -161,15 +161,15 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
         </div>
       </div>
 
-      <section className="overflow-hidden border-b border-black/5 bg-apple-gray-950 px-4 py-8 text-white sm:px-6 lg:px-8 lg:py-10">
+      <section className="overflow-hidden border-b border-black/5 bg-white px-4 py-8 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-7xl">
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-stretch">
-            <div>
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-stretch">
+            <div className="rounded-[2rem] border border-black/5 bg-apple-gray-50 p-6 shadow-sm md:p-8">
               <p className="text-sm font-semibold uppercase tracking-wide text-apple-blue">{t.courseDetail.heroLabel}</p>
-              <h1 className="mt-3 max-w-4xl text-3xl font-black leading-tight md:text-5xl">
+              <h1 className="mt-3 max-w-4xl text-3xl font-black leading-tight text-apple-gray-900 md:text-5xl">
                 {text(course.title)}
               </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-white/75 md:text-lg">
+              <p className="mt-4 max-w-2xl text-base leading-7 text-apple-gray-600 md:text-lg">
                 {text(course.slogan)}
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
@@ -180,18 +180,17 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
                   [t.courseDetail.meetingPoint, course.meetingPoint],
                   [t.courseDetail.coursePeriod, course.period],
                 ].map(([label, value]) => (
-                  <span key={`${label}-${value}`} className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white/90">
-                    <span className="text-white/50">{label}</span>
+                  <span key={`${label}-${value}`} className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-apple-gray-900 shadow-sm">
+                    <span className="text-apple-gray-400">{label}</span>
                     {text(value)}
                   </span>
                 ))}
               </div>
             </div>
 
-            <div className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-3 shadow-2xl shadow-black/30 backdrop-blur">
+            <div className="rounded-[2rem] border border-black/5 bg-white p-3 shadow-xl shadow-black/10">
               <div className="relative overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#111] p-5">
                 <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,.09)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.09)_1px,transparent_1px)] [background-size:28px_28px]" />
-                <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-apple-blue/30 blur-3xl" />
                 <div className="relative">
                   <div className="flex items-start justify-between gap-4">
                     <div>
