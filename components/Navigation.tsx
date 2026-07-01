@@ -110,8 +110,8 @@ export default function Navigation() {
         className={clsx(
           'fixed left-0 right-0 top-0 z-50 transition-all duration-300',
           isScrolled
-            ? 'border-b border-apple-gray-200 bg-white/92 py-3 shadow-sm backdrop-blur-glass'
-            : 'py-4'
+            ? 'border-b border-apple-gray-200 bg-white/92 py-2 shadow-sm backdrop-blur-glass sm:py-3'
+            : 'py-3 sm:py-4'
         )}
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -120,7 +120,7 @@ export default function Navigation() {
               'relative flex min-w-0 items-center justify-between rounded-full border px-3 text-apple-gray-950 shadow-lg backdrop-blur-2xl transition-all duration-300 sm:px-6',
               isScrolled
                 ? 'border-transparent bg-transparent py-0 shadow-none'
-                : 'border-black/10 bg-white/94 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.18)] ring-1 ring-white/70'
+                : 'border-black/10 bg-white/94 py-2 shadow-[0_18px_60px_rgba(0,0,0,0.18)] ring-1 ring-white/70 sm:py-3'
             )}
           >
             {/* Logo */}
@@ -129,7 +129,7 @@ export default function Navigation() {
               whileTap={{ scale: 0.95 }}
               className="flex min-w-0 items-center space-x-2 justify-self-start"
             >
-              <div className="relative h-10 w-10 overflow-hidden rounded-full border border-black/10 bg-white shadow-sm">
+              <div className="relative h-9 w-9 overflow-hidden rounded-full border border-black/10 bg-white shadow-sm sm:h-10 sm:w-10">
                 <Image
                   src="/goodluck-logo-nav.jpg"
                   alt="好運跑班 Logo"
@@ -139,7 +139,7 @@ export default function Navigation() {
                   priority
                 />
               </div>
-              <span className="max-w-[9rem] truncate text-lg font-bold tracking-tight text-apple-gray-950 sm:max-w-none sm:text-xl">{t.common.brand}</span>
+              <span className="max-w-[8rem] truncate text-base font-bold tracking-tight text-apple-gray-950 sm:max-w-none sm:text-xl">{t.common.brand}</span>
             </motion.div>
 
             {/* Desktop Navigation */}
@@ -260,7 +260,7 @@ export default function Navigation() {
               ) : isLoggedIn ? (
                 <Link
                   href="/student"
-                  className="inline-flex h-10 items-center justify-center rounded-full border border-black/10 bg-white px-4 text-sm font-bold text-apple-gray-950 shadow-sm transition-colors duration-200 hover:text-apple-blue"
+                  className="inline-flex h-9 items-center justify-center rounded-full border border-black/10 bg-white px-3 text-sm font-bold text-apple-gray-950 shadow-sm transition-colors duration-200 hover:text-apple-blue sm:h-10 sm:px-4"
                 >
                   {t.common.myAccount}
                 </Link>
@@ -272,7 +272,7 @@ export default function Navigation() {
                     setIsAuthModalOpen(true)
                     setIsMenuOpen(false)
                   }}
-                  className="inline-flex h-10 items-center justify-center rounded-full border border-black/10 bg-white px-4 text-sm font-bold text-apple-gray-950 shadow-sm transition-colors duration-200 hover:text-apple-blue"
+                  className="inline-flex h-9 items-center justify-center rounded-full border border-black/10 bg-white px-3 text-sm font-bold text-apple-gray-950 shadow-sm transition-colors duration-200 hover:text-apple-blue sm:h-10 sm:px-4"
                 >
                   <LogIn className="mr-1.5 h-4 w-4" />
                   {t.common.login}
@@ -282,7 +282,7 @@ export default function Navigation() {
                 type="button"
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-apple-gray-700 shadow-sm transition-colors duration-200 hover:bg-apple-gray-100"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white text-apple-gray-700 shadow-sm transition-colors duration-200 hover:bg-apple-gray-100 sm:h-10 sm:w-10"
                 aria-label={isMenuOpen ? '關閉選單' : '開啟選單'}
               >
                 {isMenuOpen ? (

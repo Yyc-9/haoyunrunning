@@ -117,7 +117,7 @@ export const defaultShopProducts: ShopProduct[] = [
     image: '',
     rating: 5,
     reviews: 0,
-    tags: ['赛後恢復'],
+    tags: ['賽後恢復'],
     stockQuantity: 20,
     active: true,
     sizes: ['S', 'M', 'L', 'XL'],

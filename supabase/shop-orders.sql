@@ -242,7 +242,7 @@ insert into public.shop_products (
     '',
     5,
     0,
-    '["赛後恢復"]'::jsonb,
+    '["賽後恢復"]'::jsonb,
     '[]'::jsonb,
     '["S","M","L","XL"]'::jsonb,
     20,

@@ -543,7 +543,7 @@ insert into public.shop_products (
   ('1', '好運競速跑步背心', '跑者服飾', 0, '私訊諮詢', '/goodluck-running-vest.jpg', 5, 0, '["團隊裝備"]'::jsonb, '[{"id":"purple-white","name":"紫電白","image":"/goodluck-running-vest.jpg"},{"id":"black-blue","name":"曜黑藍","image":"/goodluck-running-vest-black.jpg"}]'::jsonb, '["XS","S","M","L","XL"]'::jsonb, 20, true),
   ('2', '好運跑步 T 恤', '跑者服飾', 0, '私訊諮詢', '/goodluck-running-tee.jpg', 5, 0, '["團隊裝備"]'::jsonb, '[]'::jsonb, '["XS","S","M","L","XL"]'::jsonb, 20, true),
   ('3', '好運跑步帽', '跑者配件', 0, '私訊諮詢', '', 5, 0, '["日常訓練"]'::jsonb, '[]'::jsonb, '["S/M","L/XL"]'::jsonb, 20, true),
-  ('4', '好運毛巾衣', '跑者服飾', 0, '私訊諮詢', '', 5, 0, '["赛後恢復"]'::jsonb, '[]'::jsonb, '["S","M","L","XL"]'::jsonb, 20, true),
+  ('4', '好運毛巾衣', '跑者服飾', 0, '私訊諮詢', '', 5, 0, '["賽後恢復"]'::jsonb, '[]'::jsonb, '["S","M","L","XL"]'::jsonb, 20, true),
   ('5', 'CALBOMB 蜂蜜檸檬能量膠', '運動補給', 0, '私訊諮詢', '/calbomb-energy-gel.png', 5, 0, '["訓練補給","無添加認證"]'::jsonb, '[]'::jsonb, '[]'::jsonb, 30, true)
 on conflict (id) do nothing;
 

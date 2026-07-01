@@ -18,26 +18,32 @@ function isOptionalSchemaError(error: { code?: string; message?: string } | null
 
 export async function GET() {
   if (!supabaseAdmin) {
-    return NextResponse.json({ products: defaultShopProducts }, { headers: noStoreHeaders })
+    return NextResponse.json({ products: defaultShopProducts, source: 'fallback' }, { headers: noStoreHeaders })
   }
 
-  const { data, error } = await supabaseAdmin
-    .from('shop_products')
-    .select('id, name, category, price, price_label, image, rating, reviews, tags, variants, sizes, stock_quantity, active')
-    .eq('active', true)
-    .order('category', { ascending: true })
-    .order('name', { ascending: true })
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('shop_products')
+      .select('id, name, category, price, price_label, image, rating, reviews, tags, variants, sizes, stock_quantity, active')
+      .eq('active', true)
+      .order('category', { ascending: true })
+      .order('name', { ascending: true })
 
-  if (error) {
-    if (isOptionalSchemaError(error)) {
-      return NextResponse.json({ products: defaultShopProducts }, { headers: noStoreHeaders })
+    if (error) {
+      if (isOptionalSchemaError(error)) {
+        return NextResponse.json({ products: defaultShopProducts, source: 'fallback' }, { headers: noStoreHeaders })
+      }
+
+      console.error('Shop products query error:', error)
+      return NextResponse.json({ products: defaultShopProducts, source: 'fallback' }, { headers: noStoreHeaders })
     }
 
-    return NextResponse.json({ error: error.message, products: defaultShopProducts }, { status: 500, headers: noStoreHeaders })
+    return NextResponse.json(
+      { products: (data ?? []).map((row) => shopProductFromRow(row as ShopProductRow)), source: 'database' },
+      { headers: noStoreHeaders }
+    )
+  } catch (error) {
+    console.error('Shop products request failed:', error)
+    return NextResponse.json({ products: defaultShopProducts, source: 'fallback' }, { headers: noStoreHeaders })
   }
-
-  return NextResponse.json(
-    { products: (data ?? []).map((row) => shopProductFromRow(row as ShopProductRow)) },
-    { headers: noStoreHeaders }
-  )
 }

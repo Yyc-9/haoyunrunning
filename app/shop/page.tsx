@@ -22,7 +22,6 @@ export default function ShopPage() {
   const [currentPage, setCurrentPage] = useState(0)
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({})
   const [selectedSizes, setSelectedSizes] = useState<Record<string, string>>({})
-  const [productsError, setProductsError] = useState('')
 
   useEffect(() => {
     let isActive = true
@@ -32,21 +31,17 @@ export default function ShopPage() {
         const response = await fetch('/api/shop/products', { cache: 'no-store' })
         const payload = (await response.json().catch(() => ({}))) as {
           products?: ShopProduct[]
-          error?: string
         }
 
         if (!response.ok) {
-          throw new Error(payload.error || '商品庫存讀取失敗。')
+          throw new Error('商品資料暫時無法更新。')
         }
 
         if (isActive && payload.products) {
           setProducts(payload.products)
-          setProductsError('')
         }
       } catch (error) {
-        if (isActive) {
-          setProductsError(error instanceof Error ? error.message : '商品庫存讀取失敗。')
-        }
+        console.error('Load shop products failed:', error)
       }
     }
 
@@ -100,17 +95,17 @@ export default function ShopPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-white">
-      <div className="relative h-[22rem] overflow-hidden bg-black sm:h-96">
+      <div className="relative h-[16.5rem] overflow-hidden bg-black sm:h-80 lg:h-[22rem]">
         <div className="absolute inset-0 bg-cover bg-center opacity-75" style={{ backgroundImage: 'url("/20250605[好運]三周年慶-7096.jpg")' }} />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/15 to-black/25" />
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="relative z-10 flex h-full flex-col items-center justify-center px-4 text-white">
-          <h1 className="mb-4 text-center text-4xl font-bold sm:text-5xl">好運商店</h1>
-          <p className="max-w-2xl text-center text-lg leading-8 text-white/85 sm:text-xl">跑班裝備與訓練補給，先把真正會用上的東西整理好。</p>
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="relative z-10 flex h-full flex-col items-center justify-end px-4 pb-8 text-white sm:justify-center sm:pb-0">
+          <h1 className="mb-3 text-center text-4xl font-black sm:text-5xl">好運商店</h1>
+          <p className="max-w-2xl text-center text-base leading-7 text-white/88 sm:text-xl">跑班裝備與訓練補給，先把真正會用上的東西整理好。</p>
         </motion.div>
       </div>
 
-      <div className="container mx-auto px-4 py-12">
-        <div className="relative mx-auto mb-8 max-w-2xl">
+      <div className="container mx-auto px-4 py-8 sm:py-10">
+        <div className="relative mx-auto mb-6 max-w-2xl">
           <div className="relative">
             <Search className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
             <input
@@ -136,7 +131,7 @@ export default function ShopPage() {
           )}
         </div>
 
-        <div className="mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+        <div className="mb-6 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
           <div className="flex flex-wrap gap-2">
             <button onClick={() => setSelectedCategory('')} className={`apple-chip ${selectedCategory === '' ? 'apple-chip-active' : ''}`}>全部</button>
             {(categories as string[]).map((category) => (
@@ -154,13 +149,7 @@ export default function ShopPage() {
           </select>
         </div>
 
-        <p className="mb-6 text-gray-600">共 {results.total} 件商品 {query && `（搜尋「${query}」）`}</p>
-        {productsError ? (
-          <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
-            {productsError} 目前先顯示本地商品資料。
-          </div>
-        ) : null}
-
+        <p className="mb-5 text-gray-600">共 {results.total} 件商品 {query && `（搜尋「${query}」）`}</p>
         {results.items.length > 0 ? (
           <motion.div initial="hidden" animate="visible" className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {results.items.map((product) => {
