@@ -68,7 +68,7 @@ export default function ProfilePage() {
                 </div>
               </div>
               <div className="bg-apple-gray-950 p-8 text-white md:p-10">
-                <h2 className="text-xl font-black">登入後可以做什么？</h2>
+                <h2 className="text-xl font-black">登入後可以做什麼？</h2>
                 <div className="mt-6 space-y-4">
                   {[
                     ['查看課表', '讀取教練本週同步的訓練安排。'],
