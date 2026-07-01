@@ -164,7 +164,7 @@ async function sendOptionalEnrollmentEmail(input: { to: string; studentName: str
       status: response.status,
       detail: await response.text().catch(() => ''),
     })
-    return '核准已完成，但郵件發送失敗，請稍後检查郵件服務設定。'
+    return '核准已完成，但郵件發送失敗，請稍後檢查郵件服務設定。'
   }
 
   return '核准已完成，並已發送課表開通郵件。'
@@ -414,7 +414,7 @@ export async function GET(request: NextRequest) {
       paymentChannelLabel: order.payment_account_label || account?.label || '',
       assignedAccount: account
         ? `${account.label}｜${account.bank_name}${account.bank_code ? `(${account.bank_code})` : ''}｜${account.account_name}｜${account.account_number}`
-        : '未分配收款戶頭',
+        : '未分配收款帳戶',
       inventoryReserved: order.inventory_reserved ?? true,
       items: orderItems.map((item) => {
         const option = [item.variant_id, item.size ? `尺碼 ${item.size}` : ''].filter(Boolean).join(' / ')
@@ -465,7 +465,7 @@ export async function PATCH(request: NextRequest) {
     const enabled = body.enabled === true
 
     if (!userId) {
-      return json({ error: '缺少用户 ID。' }, { status: 400 })
+      return json({ error: '缺少使用者 ID。' }, { status: 400 })
     }
 
     const { data: target, error: targetError } = await supabaseAdmin!
@@ -475,11 +475,11 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (targetError || !target) {
-      return json({ error: targetError?.message || '找不到用户。' }, { status: 404 })
+      return json({ error: targetError?.message || '找不到使用者。' }, { status: 404 })
     }
 
     if (target.role === 'admin') {
-      return json({ error: '管理員角色不能在這裡被改为普通教練或學員。' }, { status: 400 })
+      return json({ error: '管理員角色不能在這裡被改為普通教練或學員。' }, { status: 400 })
     }
 
     const { data: profile, error } = await supabaseAdmin!
@@ -658,11 +658,11 @@ export async function PATCH(request: NextRequest) {
     const weight = Number(body.weight ?? 1)
 
     if (!label || !accountName || !bankName || !accountNumber) {
-      return json({ error: '請填寫通道名稱、户名、銀行名稱和收款帳號。' }, { status: 400 })
+      return json({ error: '請填寫通道名稱、戶名、銀行名稱和收款帳號。' }, { status: 400 })
     }
 
     if (!Number.isInteger(weight) || weight < 1) {
-      return json({ error: '权重必須是正整數。' }, { status: 400 })
+      return json({ error: '權重必須是正整數。' }, { status: 400 })
     }
 
     const { data: account, error } = await supabaseAdmin!
@@ -680,10 +680,10 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (error || !account) {
-      return json({ error: error?.message || '新增收款戶頭失敗。' }, { status: 500 })
+      return json({ error: error?.message || '新增收款帳戶失敗。' }, { status: 500 })
     }
 
-    return json({ account, message: '收款戶頭已新增。' })
+    return json({ account, message: '收款帳戶已新增。' })
   }
 
   if (body.action === 'toggle_payment_account') {
@@ -691,7 +691,7 @@ export async function PATCH(request: NextRequest) {
     const active = body.active === true
 
     if (!accountId) {
-      return json({ error: '缺少收款戶頭 ID。' }, { status: 400 })
+      return json({ error: '缺少收款帳戶 ID。' }, { status: 400 })
     }
 
     const { data: account, error } = await supabaseAdmin!
@@ -702,10 +702,10 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (error || !account) {
-      return json({ error: error?.message || '更新收款戶頭失敗。' }, { status: 500 })
+      return json({ error: error?.message || '更新收款帳戶失敗。' }, { status: 500 })
     }
 
-    return json({ account, message: active ? '收款戶頭已啟用。' : '收款戶頭已停用。' })
+    return json({ account, message: active ? '收款帳戶已啟用。' : '收款帳戶已停用。' })
   }
 
   if (body.action === 'bind_student') {
@@ -717,7 +717,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (studentId === coachId) {
-      return json({ error: '不能把同一個帳號同时作為學員和教練綁定。' }, { status: 400 })
+      return json({ error: '不能把同一個帳號同時作為學員和教練綁定。' }, { status: 400 })
     }
 
     const { data: relatedProfiles, error: relatedProfilesError } = await supabaseAdmin!
@@ -768,7 +768,7 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (error || !data) {
-      return json({ error: error?.message || '解绑失敗。' }, { status: 500 })
+      return json({ error: error?.message || '解綁失敗。' }, { status: 500 })
     }
 
     return json({ binding: data, message: '綁定關係已取消。' })

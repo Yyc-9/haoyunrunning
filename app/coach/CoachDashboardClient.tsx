@@ -94,8 +94,8 @@ const riskRank: Record<RiskLevel, number> = {
   low: 1,
 }
 
-const redFlagPattern = /胸痛|胸悶|心悸|頭暈|眩晕|呼吸困難|喘不过气|晕厥|昏厥|恶心|冒冷汗|麻木|刺痛|跛|跛行|不能走|無法走|肿|腫脹|紅肿|剧痛|锐痛|撕裂|拉傷|扭傷|发热|发烧/i
-const fatiguePattern = /疲勞|很累|睡眠差|睡不好|没恢復|恢復差|沉重|乏力|酸痛|压力大|狀態差|不舒服|不適/i
+const redFlagPattern = /胸痛|胸悶|心悸|頭暈|眩暈|呼吸困難|喘不過氣|暈厥|昏厥|惡心|冒冷汗|麻木|刺痛|跛|跛行|不能走|無法走|腫|腫脹|紅腫|劇痛|銳痛|撕裂|拉傷|扭傷|發熱|發燒/i
+const fatiguePattern = /疲勞|很累|睡眠差|睡不好|沒恢復|恢復差|沉重|乏力|酸痛|壓力大|狀態差|不舒服|不適/i
 
 function assessFeedbackRisk(rpeValue: number | string, feeling: string, status: FeedbackItem['status']): RiskAssessment {
   const rpe = typeof rpeValue === 'number' ? rpeValue : Number(rpeValue)
@@ -125,7 +125,7 @@ function assessFeedbackRisk(rpeValue: number | string, feeling: string, status: 
 
   if (status === 'flagged') {
     score += 2
-    reasons.push('系統已標記为需留意')
+    reasons.push('系統已標記為需留意')
   }
 
   if (score >= 5) {
@@ -135,7 +135,7 @@ function assessFeedbackRisk(rpeValue: number | string, feeling: string, status: 
       tone: riskTone.high,
       score,
       reasons,
-      action: '優先聯絡學員，必要时暫停質量课並建議就醫或轉介專業人員。',
+      action: '優先聯絡學員，必要時暫停質量課並建議就醫或轉介專業人員。',
     }
   }
 
@@ -156,7 +156,7 @@ function assessFeedbackRisk(rpeValue: number | string, feeling: string, status: 
     tone: riskTone.low,
     score,
     reasons: reasons.length > 0 ? reasons : ['未出現高 RPE 或紅旗描述'],
-    action: '维持计划，繼續觀察回饋趨勢。',
+    action: '维持計畫，繼續觀察回饋趨勢。',
   }
 }
 
@@ -178,11 +178,11 @@ const quickLinks = [
 const coachNotes = [
   {
     title: '狀態正常',
-    body: '这周狀態稳定，先维持目前強度。注意 easy run 不要跑快，长距离後补足碳水和睡眠。',
+    body: '這周狀態穩定，先维持目前強度。注意 easy run 不要跑快，長距離後补足碳水和睡眠。',
   },
   {
     title: '疲勞偏高',
-    body: '今天反馈顯示疲勞偏高，下一次訓練先下调 20% 量，保留輕鬆跑和拉伸，暂不追配速。',
+    body: '今天反饋顯示疲勞偏高，下一次訓練先下調 20% 量，保留輕鬆跑和拉伸，暫不追配速。',
   },
   {
     title: '疼痛觀察',
@@ -472,7 +472,7 @@ export default function CoachDashboardClient() {
                     </div>
                   ))}
                   <p className="rounded-2xl bg-apple-gray-100 p-4">
-                    依據：Borg CR10/RPE 用於主觀強度監控；IOC 共識支援訓練負荷、疲勞、疼痛和健康狀態監測；ACSM/AHA 將胸痛、頭暈、異常呼吸困難等列为運動中需要停止並評估的警示訊號。
+                    依據：Borg CR10/RPE 用於主觀強度監控；IOC 共識支援訓練負荷、疲勞、疼痛和健康狀態監測；ACSM/AHA 將胸痛、頭暈、異常呼吸困難等列為運動中需要停止並評估的警示訊號。
                   </p>
                   <p className="rounded-2xl bg-red-50 p-4 font-semibold text-red-700">
                     {t.coach.disclaimer}
@@ -484,7 +484,7 @@ export default function CoachDashboardClient() {
                 <div className="mb-5 flex items-center justify-between gap-4">
                   <div>
                     <p className="text-sm text-apple-gray-500">Reply library</p>
-                    <h2 className="text-2xl font-black text-apple-gray-900">教練备注库</h2>
+                    <h2 className="text-2xl font-black text-apple-gray-900">教練備註庫</h2>
                   </div>
                   <FileText className="h-5 w-5 text-apple-gray-600" />
                 </div>
@@ -497,8 +497,8 @@ export default function CoachDashboardClient() {
                         <button
                           onClick={() => handleCopyNote(note.body, note.title)}
                           className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white text-apple-gray-700 transition hover:bg-apple-gray-100"
-                          title={`复制${note.title}备注`}
-                          aria-label={`复制${note.title}备注`}
+                          title={`復制${note.title}備註`}
+                          aria-label={`復制${note.title}備註`}
                         >
                           {copiedNote === note.title ? (
                             <CheckCircle2 className="h-4 w-4 text-green-600" />
@@ -562,7 +562,7 @@ export default function CoachDashboardClient() {
                       {item.feeling}
                     </p>
                     <p className="mt-3 text-sm leading-6 text-apple-gray-600">
-                      判断：{item.risk.reasons.join('；')}。建議：{item.risk.action}
+                      判斷：{item.risk.reasons.join('；')}。建議：{item.risk.action}
                     </p>
                     </article>
                   ))}
@@ -620,7 +620,7 @@ export default function CoachDashboardClient() {
                   </div>
                 ) : (
                   <div className="rounded-2xl border border-dashed border-black/15 bg-white p-5 text-sm leading-6 text-apple-gray-600">
-                    綁定成功後，學員會马上出現在這裡。
+                    綁定成功後，學員會馬上出現在這裡。
                   </div>
                 )}
 
@@ -647,12 +647,12 @@ export default function CoachDashboardClient() {
               <div className="apple-card p-6">
                 <div className="mb-4 flex items-center gap-3">
                   <CalendarDays className="h-5 w-5 text-apple-gray-700" />
-                  <h2 className="font-bold text-apple-gray-900">資料库狀態</h2>
+                  <h2 className="font-bold text-apple-gray-900">資料庫狀態</h2>
                 </div>
                 <p className="text-sm leading-6 text-apple-gray-600">
                   {liveFeedback.length > 0
                     ? '已讀取 Supabase 的真實學員回饋。'
-                    : '已切换为真實資料模式；目前等待學員提交第一笔回饋。'}
+                    : '已切換為真實資料模式；目前等待學員提交第一筆回饋。'}
                 </p>
               </div>
 

@@ -16,7 +16,7 @@ function getMobileCourseName(name: string) {
   return name
     .replace(/^2026\s*/, '')
     .replace(/^好運跑步訓練營\s*X\s*/, '')
-    .replace(/^好運跑步訓練营\s*X\s*/, '')
+    .replace(/^好運跑步訓練營\s*X\s*/, '')
 }
 
 type LevelFilter = 'all' | 'beginner' | 'advanced' | 'elite'
@@ -34,13 +34,13 @@ export default function CoursesTable() {
         .replaceAll('課程', '課程')
         .replaceAll('周', '週')
         .replaceAll('節奏', '節奏')
-        .replaceAll('旧生', '舊生')
+        .replaceAll('舊生', '舊生')
         .replaceAll('適合', '適合')
         .replaceAll('請', '請')
         .replaceAll('諮詢', '諮詢')
         .replaceAll('費用', '費用')
         .replaceAll('班', '班')
-        .replaceAll('入门', '入門')
+        .replaceAll('入門', '入門')
         .replaceAll('初心', '初心')
         .replaceAll('初阶', '初階')
     }
@@ -51,7 +51,7 @@ export default function CoursesTable() {
         .replaceAll('課程', '課程')
         .replaceAll('週', '周')
         .replaceAll('節奏', '節奏')
-        .replaceAll('舊生', '旧生')
+        .replaceAll('舊生', '舊生')
         .replaceAll('費用', '費用')
     }
     return text
@@ -220,7 +220,7 @@ export default function CoursesTable() {
         </div>
       </div>
 
-      {/* 手机課程卡片 */}
+      {/* 手機課程卡片 */}
       <div className="courses-mobile-list space-y-4 md:hidden">
         {Array.from(groupedCourses.entries()).map(([weekday, coursesInWeek]) => (
           <section key={weekday} className="space-y-3">
@@ -280,11 +280,11 @@ export default function CoursesTable() {
                   {isExpanded && (
                     <div className="mt-4 space-y-4 rounded-2xl bg-apple-gray-50 p-4">
                       <div>
-                        <h5 className="mb-1 text-xs font-bold uppercase tracking-wide text-apple-gray-500">上课时间</h5>
+                        <h5 className="mb-1 text-xs font-bold uppercase tracking-wide text-apple-gray-500">上課時間</h5>
                         <p className="text-sm leading-6 text-apple-gray-700">{localeText(course.classTime)}</p>
                       </div>
                       <div>
-                        <h5 className="mb-1 text-xs font-bold uppercase tracking-wide text-apple-gray-500">適合对象</h5>
+                        <h5 className="mb-1 text-xs font-bold uppercase tracking-wide text-apple-gray-500">適合對象</h5>
                         <p className="text-sm leading-6 text-apple-gray-700">{localeText(course.groupAudience)}</p>
                       </div>
                       <div>
@@ -329,7 +329,7 @@ export default function CoursesTable() {
         <div className="flex flex-col">
           {/* 表头 */}
           <div className="grid grid-cols-7 border-b border-apple-gray-200 bg-apple-gray-50">
-            <div className="border-r border-apple-gray-200 px-6 py-4 text-left text-sm font-semibold text-apple-gray-700">时间</div>
+            <div className="border-r border-apple-gray-200 px-6 py-4 text-left text-sm font-semibold text-apple-gray-700">時間</div>
             <div className="border-r border-apple-gray-200 px-6 py-4 text-left text-sm font-semibold text-apple-gray-700">班級名稱</div>
             <div className="border-r border-apple-gray-200 px-6 py-4 text-left text-sm font-semibold text-apple-gray-700">地點</div>
             <div className="border-r border-apple-gray-200 px-6 py-4 text-left text-sm font-semibold text-apple-gray-700">程度</div>
@@ -388,7 +388,7 @@ export default function CoursesTable() {
                       </div>
                     </div>
 
-                    {/* 展开的內嵌面板 */}
+                    {/* 展開的內嵌面板 */}
                     {isExpanded && (
                       <div className="bg-apple-gray-50 px-6 py-4 border-t border-apple-gray-200">
                         <div className="space-y-4 rounded-xl bg-white p-4 border border-apple-gray-200">
@@ -402,7 +402,7 @@ export default function CoursesTable() {
 
                             <div>
                               <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-apple-gray-500">
-                                適合对象
+                                適合對象
                               </h4>
                               <p className="text-sm text-apple-gray-700">{localeText(course.groupAudience)}</p>
                             </div>

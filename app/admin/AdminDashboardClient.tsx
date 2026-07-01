@@ -129,12 +129,12 @@ const statusTone: Record<PaymentOrderStatus, string> = {
 }
 
 const tabs: Array<{ id: AdminTab; label: string; icon: typeof LayoutDashboard; ready: boolean }> = [
-  { id: 'overview', label: '总览', icon: LayoutDashboard, ready: true },
+  { id: 'overview', label: '總覽', icon: LayoutDashboard, ready: true },
   { id: 'students', label: '學員管理', icon: UsersRound, ready: true },
   { id: 'coaches', label: '教練管理', icon: UserCog, ready: true },
-  { id: 'orders', label: '訂單审核', icon: ClipboardList, ready: true },
+  { id: 'orders', label: '訂單審核', icon: ClipboardList, ready: true },
   { id: 'products', label: '商城商品', icon: Boxes, ready: true },
-  { id: 'paymentAccounts', label: '收款戶頭', icon: Landmark, ready: true },
+  { id: 'paymentAccounts', label: '收款帳戶', icon: Landmark, ready: true },
   { id: 'refunds', label: '退款申請', icon: RotateCcw, ready: false },
   { id: 'events', label: '活動報名', icon: CreditCard, ready: false },
   { id: 'settings', label: '系統設定', icon: Settings, ready: false },
@@ -414,10 +414,10 @@ export default function AdminDashboardClient() {
               </p>
               <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">管理員後台</h1>
               <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
-                管理商城訂單、庫存與收款戶頭；課程和教練資料先保留在後台，後續再整理權限模型。
+                管理商城訂單、庫存與收款帳戶；課程和教練資料先保留在後台，後續再整理權限模型。
               </p>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-apple-gray-500">
-                訂單审核僅限超級管理員；買家端不會顯示完整收款戶頭，後五碼只用於人工對帳參考。
+                訂單審核僅限超級管理員；買家端不會顯示完整收款帳戶，後五碼只用於人工對帳參考。
               </p>
             </div>
 
@@ -427,7 +427,7 @@ export default function AdminDashboardClient() {
             </button>
           </div>
 
-          <nav aria-label="管理員後台导航" className="mb-8 overflow-x-auto">
+          <nav aria-label="管理員後台導航" className="mb-8 overflow-x-auto">
             <div className="flex min-w-max gap-2 rounded-3xl bg-white/85 p-2 shadow-sm ring-1 ring-black/10 backdrop-blur">
               {tabs.map((tab) => {
                 const Icon = tab.icon
@@ -444,7 +444,7 @@ export default function AdminDashboardClient() {
                   >
                     <Icon className="h-4 w-4" />
                     {tab.label}
-                    {!tab.ready ? <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11px]">预留</span> : null}
+                    {!tab.ready ? <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11px]">預留</span> : null}
                   </button>
                 )
               })}
@@ -470,8 +470,8 @@ export default function AdminDashboardClient() {
                   ['已核准訂單', data.overview.approvedOrderCount],
                   ['商城商品', data.overview.productCount],
                   ['低庫存商品', data.overview.lowStockCount],
-                  ['收款戶頭', data.overview.paymentAccountCount],
-                  ['學員总数', data.overview.studentCount],
+                  ['收款帳戶', data.overview.paymentAccountCount],
+                  ['學員總數', data.overview.studentCount],
                 ].map(([label, value]) => (
                   <div key={label} className="apple-card p-5">
                     <p className="text-sm text-apple-gray-500">{label}</p>
@@ -534,7 +534,7 @@ export default function AdminDashboardClient() {
                 <table className="w-full min-w-[1180px] text-left text-sm">
                   <thead className="bg-apple-gray-100 text-apple-gray-600">
                     <tr>
-                      {['姓名', '信箱', '綁定教練', '報名課程', '付款狀態', '課表', '最近回饋', '建立时间', '綁定操作'].map((header) => (
+                      {['姓名', '信箱', '綁定教練', '報名課程', '付款狀態', '課表', '最近回饋', '建立時間', '綁定操作'].map((header) => (
                         <th key={header} className="px-4 py-3 font-bold">{header}</th>
                       ))}
                     </tr>
@@ -585,7 +585,7 @@ export default function AdminDashboardClient() {
                                 onClick={() => runAction(`unbind-${student.bindings[0].id}`, { action: 'unbind_student', bindingId: student.bindings[0].id })}
                                 className="rounded-full border border-red-200 px-3 py-2 text-xs font-bold text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
                               >
-                                解绑
+                                解綁
                               </button>
                             ) : null}
                           </div>
@@ -635,7 +635,7 @@ export default function AdminDashboardClient() {
                 <table className="w-full min-w-[960px] text-left text-sm">
                   <thead className="bg-apple-gray-100 text-apple-gray-600">
                     <tr>
-                      {['姓名', '信箱', '權限狀態', '綁定學員数', '負責課程', '建立时间', '操作'].map((header) => (
+                      {['姓名', '信箱', '權限狀態', '綁定學員數', '負責課程', '建立時間', '操作'].map((header) => (
                         <th key={header} className="px-4 py-3 font-bold">{header}</th>
                       ))}
                     </tr>
@@ -746,11 +746,11 @@ export default function AdminDashboardClient() {
 	                  <div className="mt-5 grid gap-3 md:grid-cols-3">
 	                    {[
 	                      [order.orderKind === 'shop' ? '商城訂單' : '報名課程', order.courseName],
-	                      ['应付金額', order.amountText],
+	                      ['應付金額', order.amountText],
 	                      ['後五碼（人工對帳參考）', order.transferLastFive],
-	                      ['付款代号', order.paymentReference],
+	                      ['付款代號', order.paymentReference],
 	                      ['付款通道', order.paymentChannelLabel || '-'],
-	                      ['分配戶頭（僅後台）', order.assignedAccount || '-'],
+	                      ['分配帳戶（僅後台）', order.assignedAccount || '-'],
 	                    ].map(([label, value]) => (
 	                      <div key={label} className="rounded-2xl bg-apple-gray-100 p-4">
 	                        <p className="text-xs font-semibold text-apple-gray-500">{label}</p>
@@ -763,7 +763,7 @@ export default function AdminDashboardClient() {
 	                      {order.items.length > 0 ? (
 	                        <p className="text-sm leading-6 text-apple-gray-700">商品：{order.items.join('、')}</p>
 	                      ) : null}
-	                      <p className="mt-1 text-sm leading-6 text-apple-gray-600">备注：{order.notes || order.reviewNote || '暫無备注'}</p>
+	                      <p className="mt-1 text-sm leading-6 text-apple-gray-600">備註：{order.notes || order.reviewNote || '暫無備註'}</p>
 	                    </div>
 	                  ) : null}
 	                </article>
@@ -775,7 +775,7 @@ export default function AdminDashboardClient() {
 	            <section className="apple-card overflow-hidden">
 	              <div className="border-b border-black/10 p-5">
 	                <h2 className="text-xl font-black text-apple-gray-900">商城商品</h2>
-	                <p className="mt-1 text-sm text-apple-gray-600">庫存會在買家提交訂單时立即扣除；訂單被標記異常时會退回庫存。</p>
+	                <p className="mt-1 text-sm text-apple-gray-600">庫存會在買家提交訂單時立即扣除；訂單被標記異常時會退回庫存。</p>
 	              </div>
 	              {data.products.length === 0 ? (
 	                <div className="p-10 text-center text-sm font-semibold text-apple-gray-500">
@@ -786,7 +786,7 @@ export default function AdminDashboardClient() {
 	                  <table className="w-full min-w-[860px] text-left text-sm">
 	                    <thead className="bg-apple-gray-100 text-apple-gray-600">
 	                      <tr>
-	                        {['商品', '分类', '价格', '狀態', '庫存', '操作'].map((header) => (
+	                        {['商品', '分類', '價格', '狀態', '庫存', '操作'].map((header) => (
 	                          <th key={header} className="px-4 py-3 font-bold">{header}</th>
 	                        ))}
 	                      </tr>
@@ -837,16 +837,16 @@ export default function AdminDashboardClient() {
 	          {activeTab === 'paymentAccounts' && data ? (
 	            <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
 	              <div className="apple-card p-5">
-	                <h2 className="text-xl font-black text-apple-gray-900">新增收款戶頭</h2>
-	                <p className="mt-1 text-sm leading-6 text-apple-gray-600">这些資料只在管理員後台顯示。買家下单时只會看到付款通道名和付款代号。</p>
+	                <h2 className="text-xl font-black text-apple-gray-900">新增收款帳戶</h2>
+	                <p className="mt-1 text-sm leading-6 text-apple-gray-600">這些資料只在管理員後台顯示。買家下單時只會看到付款通道名和付款代號。</p>
 	                <div className="mt-5 grid gap-3">
 	                  {[
-	                    ['label', '通道名稱，例如 A 戶頭'],
-	                    ['accountName', '户名'],
+	                    ['label', '通道名稱，例如 A 帳戶'],
+	                    ['accountName', '戶名'],
 	                    ['bankName', '銀行名稱'],
 	                    ['bankCode', '銀行代碼，可留空'],
 	                    ['accountNumber', '收款帳號'],
-	                    ['weight', '分配权重'],
+	                    ['weight', '分配權重'],
 	                  ].map(([field, placeholder]) => (
 	                    <input
 	                      key={field}
@@ -865,18 +865,18 @@ export default function AdminDashboardClient() {
 	                  className="apple-button-primary mt-4 w-full gap-2 disabled:cursor-not-allowed disabled:opacity-50"
 	                >
 	                  <CreditCard className="h-4 w-4" />
-	                  新增戶頭
+	                  新增帳戶
 	                </button>
 	              </div>
 
 	              <div className="apple-card overflow-hidden">
 	                <div className="border-b border-black/10 p-5">
-	                  <h2 className="text-xl font-black text-apple-gray-900">收款戶頭池</h2>
-	                  <p className="mt-1 text-sm text-apple-gray-600">活跃戶頭會被新商城訂單随机分配。</p>
+	                  <h2 className="text-xl font-black text-apple-gray-900">收款帳戶池</h2>
+	                  <p className="mt-1 text-sm text-apple-gray-600">活躍帳戶會被新商城訂單隨機分配。</p>
 	                </div>
 	                {data.paymentAccounts.length === 0 ? (
 	                  <div className="p-10 text-center text-sm font-semibold text-apple-gray-500">
-	                    還沒有收款戶頭。
+	                    還沒有收款帳戶。
 	                  </div>
 	                ) : (
 	                  <div className="divide-y divide-black/10">
@@ -888,7 +888,7 @@ export default function AdminDashboardClient() {
 	                              <span className={`rounded-full px-3 py-1 text-xs font-bold ${account.active ? 'bg-emerald-50 text-emerald-700' : 'bg-apple-gray-100 text-apple-gray-500'}`}>
 	                                {account.active ? '啟用中' : '已停用'}
 	                              </span>
-	                              <span className="rounded-full bg-apple-gray-100 px-3 py-1 text-xs font-bold text-apple-gray-600">权重 {account.weight}</span>
+	                              <span className="rounded-full bg-apple-gray-100 px-3 py-1 text-xs font-bold text-apple-gray-600">權重 {account.weight}</span>
 	                            </div>
 	                            <h3 className="text-lg font-black text-apple-gray-900">{account.label}</h3>
 	                            <p className="mt-2 text-sm leading-6 text-apple-gray-600">
@@ -917,8 +917,8 @@ export default function AdminDashboardClient() {
 	          {!tabs.find((tab) => tab.id === activeTab)?.ready ? (
             <section className="apple-card p-10 text-center">
               <Settings className="mx-auto h-10 w-10 text-apple-gray-400" />
-              <h2 className="mt-4 text-2xl font-black text-apple-gray-900">後續阶段開放</h2>
-              <p className="mt-2 text-apple-gray-600">這個入口已预留，第一阶段先保证管理員權限、學員、教練和訂單审核可用。</p>
+              <h2 className="mt-4 text-2xl font-black text-apple-gray-900">後續階段開放</h2>
+              <p className="mt-2 text-apple-gray-600">這個入口已預留，第一階段先保證管理員權限、學員、教練和訂單審核可用。</p>
             </section>
           ) : null}
         </div>

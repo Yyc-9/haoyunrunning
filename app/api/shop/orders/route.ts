@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
   if (error || !data) {
     if (isSetupError(error)) {
       return NextResponse.json(
-        { error: '商城資料库尚未完成升級，請先執行 supabase/shop-orders.sql。' },
+        { error: '商城資料庫尚未完成升級，請先執行 supabase/shop-orders.sql。' },
         { status: 500 }
       )
     }

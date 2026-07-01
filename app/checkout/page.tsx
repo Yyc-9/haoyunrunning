@@ -206,7 +206,7 @@ export default function CheckoutPage() {
                     </div>
                     <h3 className="font-black text-apple-gray-900">銀行轉帳 / 人工核對</h3>
                     <p className="mt-3 text-sm leading-6 text-apple-gray-600">
-                      買家端不會顯示完整收款戶頭。請使用訂單編號作為付款備註，付款後填寫轉出帳戶後五碼。
+                      買家端不會顯示完整收款帳戶。請使用訂單編號作為付款備註，付款後填寫轉出帳戶後五碼。
                     </p>
                   </div>
                   <div className="rounded-3xl border border-black/10 bg-white p-5">
@@ -248,7 +248,7 @@ export default function CheckoutPage() {
                 <div className="mb-2 text-sm text-white/65">商品數量</div>
                 <div className="text-3xl font-black">{itemCount}</div>
                 <div className="mt-3 text-sm text-white/65">
-                  {total > 0 ? `小计 NT$${(total / 100).toFixed(0)}` : '金額由後台/客服確認'}
+                  {total > 0 ? `小計 NT$${(total / 100).toFixed(0)}` : '金額由後台/客服確認'}
                 </div>
               </div>
 
@@ -265,7 +265,7 @@ export default function CheckoutPage() {
                   </div>
                   <div className="rounded-3xl border border-black/10 bg-white p-4">
                     <label className="block">
-                      <span className="text-sm font-bold text-apple-gray-700">转出帳戶後五碼</span>
+                      <span className="text-sm font-bold text-apple-gray-700">轉出帳戶後五碼</span>
                       <input
                         value={transferLastFive}
                         onChange={(event) => setTransferLastFive(event.target.value.replace(/\D/g, '').slice(0, 5))}

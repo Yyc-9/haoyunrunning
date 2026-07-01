@@ -129,13 +129,13 @@ export default function ProfilePage() {
                 href: '/coach/students',
                 icon: UsersRound,
                 title: '學員管理',
-                description: '查看已綁定學員、最近回饋和訓練进度。',
+                description: '查看已綁定學員、最近回饋和訓練進度。',
               },
               {
                 href: '/coach/planner',
                 icon: NotebookPen,
                 title: '課表面板',
-                description: '儲存後写入 training_plans，並同步给學員端查看。',
+                description: '儲存後寫入 training_plans，並同步給學員端查看。',
               },
             ].map((item) => (
               <Link key={item.href} href={item.href} className="apple-card block p-6">
@@ -161,8 +161,8 @@ export default function ProfilePage() {
             <div className="grid gap-4 md:grid-cols-3">
               {[
                 ['高風險優先', 'RPE 很高或出現胸悶、頭暈、明顯疼痛等紅旗描述，優先聯絡。'],
-                ['中風險降量', '疲勞、恢復差或 RPE 偏高时，下次訓練先降量觀察。'],
-                ['低風險觀察', '回饋稳定时维持计划，繼續看趨勢。'],
+                ['中風險降量', '疲勞、恢復差或 RPE 偏高時，下次訓練先降量觀察。'],
+                ['低風險觀察', '回饋穩定時维持計畫，繼續看趨勢。'],
               ].map(([title, description]) => (
                 <div key={title} className="rounded-3xl bg-apple-gray-100 p-5">
                   <h3 className="font-bold text-apple-gray-900">{title}</h3>
@@ -179,7 +179,7 @@ export default function ProfilePage() {
   return (
     <main className="pt-24 min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <div className="container mx-auto px-4 py-12 max-w-6xl">
-        {/* 用户資訊卡片 */}
+        {/* 使用者資訊卡片 */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -214,7 +214,7 @@ export default function ProfilePage() {
           {/* 快捷入口 */}
           <div className="grid grid-cols-4 gap-2 md:gap-4 mt-8 pt-6 border-t border-apple-gray-200">
             <QuickLink icon={TrendingUp} label="訓練資料" href="/student#training-data" />
-            <QuickLink icon={Calendar} label="訓練计划" href="/student#training-plan" />
+            <QuickLink icon={Calendar} label="訓練計畫" href="/student#training-plan" />
             <QuickLink icon={Target} label="我的目標" href="/student#goals" />
             <QuickLink icon={Settings} label="設定" href="/student?settings=1" />
           </div>

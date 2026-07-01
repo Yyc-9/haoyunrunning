@@ -1,5 +1,5 @@
 /**
- * 搜尋和过滤工具
+ * 搜尋和過滤工具
  */
 
 export interface SearchOptions {
@@ -45,7 +45,7 @@ export class SearchEngine<T extends Record<string, unknown>> {
       )
     }
 
-    // 应用过滤器
+    // 應用過滤器
     if (options.filters) {
       Object.entries(options.filters).forEach(([key, value]) => {
         results = results.filter(item => {
@@ -63,7 +63,7 @@ export class SearchEngine<T extends Record<string, unknown>> {
       results = this.sort(results, options.sortBy)
     }
 
-    // 分页
+    // 分頁
     const offset = options.offset || 0
     const limit = options.limit || 10
     const paginatedResults = results.slice(offset, offset + limit)
@@ -76,7 +76,7 @@ export class SearchEngine<T extends Record<string, unknown>> {
   }
 
   /**
-   * 获取过滤选项
+   * 取得過滤選項
    */
   getFilterOptions(field: keyof T): (string | number)[] {
     const values = new Set<string | number>()
@@ -90,7 +90,7 @@ export class SearchEngine<T extends Record<string, unknown>> {
   }
 
   /**
-   * 获取搜尋建議
+   * 取得搜尋建議
    */
   getSuggestions(query: string, limit: number = 5): string[] {
     if (!query) return []
@@ -113,7 +113,7 @@ export class SearchEngine<T extends Record<string, unknown>> {
   }
 
   /**
-   * 排序结果
+   * 排序結果
    */
   private sort(items: T[], sortBy: string): T[] {
     const sorted = [...items]
@@ -160,7 +160,7 @@ export function fuzzyMatch(query: string, text: string): number {
       return 0 // 未找到字符
     }
 
-    // 连续字符得分更高
+    // 連續字符得分更高
     const distance = foundIndex - textIndex
     score += distance === 0 ? 10 : Math.max(0, 10 - distance)
     textIndex = foundIndex + 1

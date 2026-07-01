@@ -28,49 +28,8 @@ type CourseDetailClientProps = {
   course: CourseDetail | null
 }
 
-function localizeText(text: string, language: string) {
-  if (language === 'zh-CN') {
-    return text
-      .replaceAll('好運', '好運')
-      .replaceAll('訓練', '訓練')
-      .replaceAll('課程', '課程')
-      .replaceAll('週', '周')
-      .replaceAll('節奏', '節奏')
-      .replaceAll('備賽', '备赛')
-      .replaceAll('階', '阶')
-      .replaceAll('適合', '適合')
-      .replaceAll('請', '請')
-      .replaceAll('諮詢', '諮詢')
-      .replaceAll('實際', '實際')
-      .replaceAll('集合點', '集合点')
-      .replaceAll('報名', '報名')
-      .replaceAll('後', '後')
-      .replaceAll('總', '总')
-      .replaceAll('練', '练')
-      .replaceAll('創', '创')
-      .replaceAll('師', '师')
-      .replaceAll('經', '经')
-      .replaceAll('歷', '历')
-      .replaceAll('證', '证')
-      .replaceAll('專', '专')
-      .replaceAll('體', '体')
-      .replaceAll('學', '学')
-      .replaceAll('臺', '台')
-      .replaceAll('灣', '湾')
-      .replaceAll('規劃', '规划')
-      .replaceAll('穩定', '稳定')
-      .replaceAll('進步', '进步')
-      .replaceAll('與', '與')
-      .replaceAll('賽事', '賽事')
-      .replaceAll('國', '国')
-      .replaceAll('級', '級')
-      .replaceAll('協會', '协會')
-      .replaceAll('專任', '专任')
-      .replaceAll('運動', '運動')
-      .replaceAll('訓', '训')
-      .replaceAll('教練', '教練')
-  }
-
+function localizeText(text: string, _language: string) {
+  void _language
   return text
 }
 

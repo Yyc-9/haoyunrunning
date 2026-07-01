@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (!Number.isInteger(weekNumber) || weekNumber < 1) {
-    return NextResponse.json({ error: '請填寫有效周数。' }, { status: 400 })
+    return NextResponse.json({ error: '請填寫有效週數。' }, { status: 400 })
   }
 
   if (!isIsoDate(weekStart)) {
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
     }))
 
   if (cleanedWorkouts.length === 0) {
-    return NextResponse.json({ error: '請至少填寫一项訓練內容。' }, { status: 400 })
+    return NextResponse.json({ error: '請至少填寫一項訓練內容。' }, { status: 400 })
   }
 
   const { data: deletedPlans, error: deleteError } = await supabaseAdmin!

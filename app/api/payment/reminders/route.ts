@@ -37,12 +37,12 @@ async function handleReminderCheck(request: NextRequest) {
 
     return NextResponse.json({
       ...result,
-      todo: 'TODO: 接入 Vercel Cron 或 Supabase 定时任务後，定时调用此 API。目前可手动触发。',
+      todo: 'TODO: 接入 Vercel Cron 或 Supabase 定時任務後，定時呼叫此 API。目前可手動觸發。',
     })
   } catch (error) {
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : '检查待匯款提醒失敗。',
+        error: error instanceof Error ? error.message : '檢查待匯款提醒失敗。',
         todo: '請確認已执行 supabase/payment-order-statuses.sql，尤其是 reminder_sent_at 字段。',
       },
       { status: 500 }

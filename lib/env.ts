@@ -1,24 +1,24 @@
 /**
- * 環境变量驗證工具
- * 在应用启动时檢查必需的環境变量
+ * 環境變數驗證工具
+ * 在應用啟動時檢查必需的環境變數
  */
 
 export interface EnvConfig {
-  // 应用設定
+  // 應用設定
   nodeEnv: 'development' | 'production' | 'test'
   siteUrl: string
   appName: string
 
-  // Supabase 設定 (可选)
+  // Supabase 設定 (可選)
   supabaseUrl?: string
   supabaseAnonKey?: string
   supabaseServiceRoleKey?: string
 
-  // 文件上傳
+  // 檔案上傳
   maxFileSize: number
   allowedFileTypes: string[]
 
-  // 调試
+  // 偵錯
   debugMode: boolean
 }
 
@@ -28,7 +28,7 @@ function getNodeEnv(value: string | undefined): EnvConfig['nodeEnv'] {
 }
 
 /**
- * 从環境变量加载設定
+ * 從環境變數載入設定
  */
 export function loadEnvConfig(): EnvConfig {
   const requiredEnvs = [
@@ -36,7 +36,7 @@ export function loadEnvConfig(): EnvConfig {
     'NEXT_PUBLIC_APP_NAME',
   ]
 
-  // 檢查必需環境变量
+  // 檢查必需環境變數
   const missing = requiredEnvs.filter(env => !process.env[env])
   if (missing.length > 0) {
     throw new Error(
@@ -58,7 +58,7 @@ export function loadEnvConfig(): EnvConfig {
     debugMode: process.env.NEXT_PUBLIC_DEBUG_MODE === 'true',
   }
 
-  // 可选的 Supabase 設定
+  // 可選的 Supabase 設定
   if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
     config.supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     config.supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -81,7 +81,7 @@ export function loadEnvConfig(): EnvConfig {
 }
 
 /**
- * 获取缓存的設定
+ * 取得快取的設定
  */
 let cachedConfig: EnvConfig | null = null
 
@@ -101,17 +101,17 @@ export function isSupabaseConfigured(): boolean {
 }
 
 /**
- * 驗證文件上傳
+ * 驗證檔案上傳
  */
 export function validateFileUpload(file: File): { valid: boolean; error?: string } {
   const config = getConfig()
 
-  // 檢查文件大小
+  // 檢查檔案大小
   const fileSizeMB = file.size / (1024 * 1024)
   if (fileSizeMB > config.maxFileSize) {
     return {
       valid: false,
-      error: `文件大小不能超過 ${config.maxFileSize}MB`,
+      error: `檔案大小不能超過 ${config.maxFileSize}MB`,
     }
   }
 

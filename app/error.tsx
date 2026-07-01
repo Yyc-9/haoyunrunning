@@ -25,7 +25,7 @@ export default function Error({ error, reset }: ErrorProps) {
         {/* Message */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-apple-gray-900 mb-4">
-            出現了一点问题
+            出現了一點問題
           </h2>
           <p className="text-lg text-apple-gray-600 mb-8">
             我們遇到了一個意外錯誤。請稍後重試，或者返回首頁。
@@ -39,7 +39,7 @@ export default function Error({ error, reset }: ErrorProps) {
             className="apple-button-primary inline-flex items-center justify-center px-8 py-3 hover:scale-105 active:scale-95 transition-transform duration-200"
           >
             <RefreshCw className="h-5 w-5 mr-2" />
-            重新尝試
+            重新嘗試
           </button>
           <Link href="/" className="apple-button-outline inline-flex items-center justify-center px-8 py-3 hover:scale-105 active:scale-95 transition-transform duration-200">
             <Home className="h-5 w-5 mr-2" />

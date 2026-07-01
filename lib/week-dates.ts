@@ -20,8 +20,8 @@ const statusLabels: Record<Language, Record<WeekStatus, string>> = {
   'zh-CN': {
     this: '本週',
     next: '下一周',
-    past: '历史周',
-    future: '未来周',
+    past: '歷史周',
+    future: '未來周',
   },
   'zh-TW': {
     this: '本週',
@@ -176,7 +176,7 @@ export function formatCoachWeekTitle(weekStart: string, language: Language = 'zh
     })}`
   }
 
-  const weekText = language === 'zh-TW' ? '這一週' : '这一周'
+  const weekText = language === 'zh-TW' ? '這一週' : '這一周'
   return `${date.getUTCFullYear()} 年 ${date.getUTCMonth() + 1} 月 ${date.getUTCDate()} 日${weekText}`
 }
 

@@ -214,7 +214,7 @@ export default function CoachSignupsClient() {
       setLeads((current) => current.map((lead) => (lead.id === id ? updatedLead : lead)))
       setMessage(emailMessage || reviewNote)
     } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : '更新审核狀態失敗。')
+      setError(updateError instanceof Error ? updateError.message : '更新審核狀態失敗。')
     } finally {
       setUpdatingId('')
     }
@@ -231,11 +231,11 @@ export default function CoachSignupsClient() {
       '想報名的團練',
       '匯款金額',
       '後五碼',
-      '同行人数',
+      '同行人數',
       '跑步经验',
       '目標',
-      '备注',
-      '提交时间',
+      '備註',
+      '提交時間',
     ]
 
     const rows = filteredLeads.map((lead) => [
@@ -329,7 +329,7 @@ export default function CoachSignupsClient() {
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="搜尋姓名、電話、IG、目標或备注"
+                  placeholder="搜尋姓名、電話、IG、目標或備註"
                   className="apple-input pl-11"
                 />
               </div>
@@ -419,9 +419,9 @@ export default function CoachSignupsClient() {
                         <div className="mb-4 grid gap-3 md:grid-cols-4">
                           {[
                             ['報名課程', lead.preferred_course],
-                            ['应付金額', lead.amount_text],
+                            ['應付金額', lead.amount_text],
                             ['後五碼（人工對帳參考）', lead.transfer_last_five],
-                            ['提交时间', formatDate(lead.payment_submitted_at || lead.created_at)],
+                            ['提交時間', formatDate(lead.payment_submitted_at || lead.created_at)],
                           ].map(([label, value]) => (
                             <div key={label} className="rounded-2xl bg-white p-3">
                               <p className="text-xs font-semibold text-apple-gray-500">{label}</p>
@@ -459,7 +459,7 @@ export default function CoachSignupsClient() {
                         ['後五碼（人工對帳參考）', lead.transfer_last_five],
                         ['跑步经验', lead.running_experience],
                         ['目標', lead.goal],
-                        ['备注', lead.notes],
+                        ['備註', lead.notes],
                       ]
                         .filter(([, value]) => value)
                         .map(([label, value]) => (

@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   if (!supabaseAdmin) {
-    return NextResponse.json({ error: 'Supabase 尚未設定，暂时無法收集資料。' }, { status: 500 })
+    return NextResponse.json({ error: 'Supabase 尚未設定，暫時無法收集資料。' }, { status: 500 })
   }
 
   const body = (await request.json().catch(() => ({}))) as SignupLeadBody
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
 
   if (isCoursePayment && containsSensitiveLongNumber(notes)) {
     return NextResponse.json(
-      { error: '請不要填寫完整銀行卡號、身份证号或信用卡資料；這裡只需要銀行帳號後五碼。' },
+      { error: '請不要填寫完整銀行卡號、身分證號或信用卡資料；這裡只需要銀行帳號後五碼。' },
       { status: 400 }
     )
   }
@@ -206,7 +206,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   if ((status === 'approved' || status === 'rejected') && auth.profile.role !== 'admin' && auth.profile.role !== 'coach') {
-    return NextResponse.json({ error: '只有教練或管理員可以审核付款訂單。' }, { status: 403 })
+    return NextResponse.json({ error: '只有教練或管理員可以審核付款訂單。' }, { status: 403 })
   }
 
   const updatePayload: { status: string; notes?: string; reviewed_at?: string; review_note?: string } = { status }

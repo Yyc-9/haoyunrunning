@@ -220,7 +220,7 @@ export default function CoachStudentsClient() {
                         className="apple-button-primary gap-2 px-4 py-2.5 text-sm"
                       >
                         <NotebookPen className="h-4 w-4" />
-                        下发課表
+                        下發課表
                       </Link>
                       <a
                         href={`#feedback-${student.id}`}

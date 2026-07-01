@@ -7,23 +7,23 @@ export default function CtaSection() {
   const features = [
     {
       icon: CheckCircle,
-      title: '30天免费試用',
-      description: '体验完整訓練系統',
+      title: '30天免費試用',
+      description: '體验完整訓練系統',
     },
     {
       icon: Smartphone,
-      title: '移动端優先',
+      title: '行動端優先',
       description: '隨時隨地訓練記錄',
     },
     {
       icon: Clock,
       title: '彈性安排',
-      description: '适配您的日程计划',
+      description: '適配您的日程計畫',
     },
     {
       icon: Shield,
       title: '安全保障',
-      description: '科學訓練防傷体系',
+      description: '科學訓練防傷體系',
     },
   ]
 
@@ -45,8 +45,8 @@ export default function CtaSection() {
                 </span>
               </h2>
               <p className="text-xl text-apple-gray-600 mb-8 max-w-lg">
-                加入数千名已透過科學訓練實現目標的跑者行列。
-                專業的教練團隊，個性化的訓練计划，完整的支援系統。
+                加入數千名已透過科學訓練實現目標的跑者行列。
+                專業的教練團隊，個性化的訓練計畫，完整的支援系統。
               </p>
 
               <div className="space-y-4 mb-10">
@@ -76,7 +76,7 @@ export default function CtaSection() {
                   whileTap={{ scale: 0.95 }}
                   className="apple-button-primary text-lg px-10 py-4"
                 >
-                  立即免费試用
+                  立即免費試用
                   <ArrowRight className="h-5 w-5 inline-block ml-2" />
                 </motion.button>
                 <motion.button
@@ -84,7 +84,7 @@ export default function CtaSection() {
                   whileTap={{ scale: 0.95 }}
                   className="apple-button-outline text-lg px-10 py-4"
                 >
-                  预约諮詢
+                  預約諮詢
                 </motion.button>
               </div>
             </motion.div>
@@ -104,14 +104,14 @@ export default function CtaSection() {
                   </div>
                 </div>
 
-                <h3 className="text-2xl font-bold mb-8">資料见证实力</h3>
+                <h3 className="text-2xl font-bold mb-8">資料見證實力</h3>
 
                 <div className="space-y-6">
                   {[
-                    { label: '社区规模', value: '5,000+', unit: '活跃跑者' },
-                    { label: '累计里程', value: '250万+', unit: '公里' },
-                    { label: '目標达成', value: '89%', unit: '完成率' },
-                    { label: '教練回复', value: '24', unit: '小時內平均回复' },
+                    { label: '社群规模', value: '5,000+', unit: '活躍跑者' },
+                    { label: '累計里程', value: '250萬+', unit: '公里' },
+                    { label: '目標達成', value: '89%', unit: '完成率' },
+                    { label: '教練回覆', value: '24', unit: '小時內平均回覆' },
                   ].map((stat, index) => (
                     <div key={index} className="flex items-center justify-between">
                       <div>
@@ -126,18 +126,18 @@ export default function CtaSection() {
                 <div className="mt-10 pt-6 border-t border-apple-gray-200">
                   <div className="text-center">
                     <div className="text-sm text-apple-gray-500 mb-2">
-                      加入我們，您將會获得
+                      加入我們，您將會獲得
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       {[
-                        '個性化计划',
+                        '個性化計畫',
                         '教練指導',
                         '資料分析',
                         '社群支援',
                         '營養建議',
                         '防傷指導',
                         '比賽策略',
-                        '终身学习',
+                        '終身學習',
                       ].map((benefit, index) => (
                         <div
                           key={index}
@@ -166,13 +166,13 @@ export default function CtaSection() {
             className="mt-20 pt-10 border-t border-apple-gray-200"
           >
             <div className="text-center">
-              <div className="text-sm text-apple-gray-500 mb-6">信任與认可</div>
+              <div className="text-sm text-apple-gray-500 mb-6">信任與認可</div>
               <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12">
                 {[
-                  { name: '跑步协會', logo: '🏃' },
-                  { name: '体育科技', logo: '⚡' },
+                  { name: '跑步協會', logo: '🏃' },
+                  { name: '體育科技', logo: '⚡' },
                   { name: '健康認證', logo: '⭐' },
-                  { name: '運動医学', logo: '🏥' },
+                  { name: '運動醫學', logo: '🏥' },
                   { name: '資料安全', logo: '🔒' },
                 ].map((org, index) => (
                   <div

@@ -63,9 +63,9 @@ export const bankTransferDetails: BankTransferDetails = {
   accountName: '系統分配付款通道',
   bankName: '後台保密',
   bankCode: '後台保密',
-  accountNumber: '不會在買家端顯示完整收款戶頭',
-  amountNote: '請依訂單金額或客服確認为准。',
-  paymentMemo: '請备注訂單編號或報名姓名，付款後提交转出帳戶後五碼。',
+  accountNumber: '不會在買家端顯示完整收款帳戶',
+  amountNote: '請依訂單金額或客服確認為準。',
+  paymentMemo: '請備註訂單編號或報名姓名，付款後提交轉出帳戶後五碼。',
 }
 
 export const paymentProviders: Record<PaymentProvider, { enabled: boolean; secretEnv: string }> = {

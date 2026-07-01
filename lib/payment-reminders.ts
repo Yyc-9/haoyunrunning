@@ -23,7 +23,7 @@ export async function checkPendingTransferReminders(options: { dryRun?: boolean;
       checked: 0,
       sent: 0,
       results: [] as ReminderResult[],
-      message: 'Supabase 尚未設定，暂时無法檢查待匯款提醒。',
+      message: 'Supabase 尚未設定，暫時無法檢查待匯款提醒。',
     }
   }
 
@@ -58,7 +58,7 @@ export async function checkPendingTransferReminders(options: { dryRun?: boolean;
         skipped: true,
         message: 'dryRun：符合提醒條件，但未發送郵件。',
       })),
-      message: `dryRun 完成，共 ${leads.length} 笔 pending_transfer 超過 24 小時。`,
+      message: `dryRun 完成，共 ${leads.length} 筆 pending_transfer 超過 24 小時。`,
     }
   }
 
@@ -86,7 +86,7 @@ export async function checkPendingTransferReminders(options: { dryRun?: boolean;
         .eq('id', lead.id)
 
       if (updateError) {
-        results[results.length - 1].message = `提醒郵件已發送，但記錄提醒时间失敗：${updateError.message}`
+        results[results.length - 1].message = `提醒郵件已發送，但記錄提醒時間失敗：${updateError.message}`
       }
     }
   }
@@ -95,6 +95,6 @@ export async function checkPendingTransferReminders(options: { dryRun?: boolean;
     checked: leads.length,
     sent: results.filter((item) => item.sent).length,
     results,
-    message: `檢查完成，共 ${leads.length} 笔待提醒，已發送 ${results.filter((item) => item.sent).length} 封。`,
+    message: `檢查完成，共 ${leads.length} 筆待提醒，已發送 ${results.filter((item) => item.sent).length} 封。`,
   }
 }

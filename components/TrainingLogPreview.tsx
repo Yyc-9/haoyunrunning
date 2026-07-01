@@ -165,7 +165,7 @@ export default function TrainingLogPreview() {
       >
         <h2 className="text-3xl font-black text-apple-gray-900 md:text-4xl">訓練日志系統</h2>
         <p className="mt-3 max-w-3xl text-lg leading-8 text-apple-gray-600">
-          這裡會同步教練派發的真實課表；課表清空或尚未派發时顯示空狀態。
+          這裡會同步教練派發的真實課表；課表清空或尚未派發時顯示空狀態。
         </p>
       </motion.div>
 
@@ -192,7 +192,7 @@ export default function TrainingLogPreview() {
                 <div className="text-sm text-apple-gray-500">
                   {latestPlan?.workout_date || (isLoading ? '同步中' : '尚未同步')}
                 </div>
-                <h3 className="text-xl font-bold text-apple-gray-900">今日訓練计划</h3>
+                <h3 className="text-xl font-bold text-apple-gray-900">今日訓練計畫</h3>
               </div>
             </div>
             <span className="rounded-full bg-apple-blue/10 px-4 py-1 text-sm font-bold text-apple-blue">
@@ -216,7 +216,7 @@ export default function TrainingLogPreview() {
                 {[
                   { icon: CalendarDays, label: '訓練日', value: latestPlan.day_label },
                   { icon: Timer, label: '目標配速', value: latestPlan.pace || '由教練調整' },
-                  { icon: TrendingUp, label: '周数', value: `第 ${latestPlan.week_number} 周` },
+                  { icon: TrendingUp, label: '週數', value: `第 ${latestPlan.week_number} 周` },
                   { icon: Heart, label: '狀態', value: '完成後回報' },
                 ].map((item) => (
                   <div key={item.label} className="rounded-xl border border-apple-gray-200 bg-white p-4">
@@ -262,7 +262,7 @@ export default function TrainingLogPreview() {
               <div className="grid gap-4 sm:grid-cols-2">
                 {[
                   { name: 'distance', label: '完成里程 (km)', icon: MapPin, placeholder: '填寫完成里程' },
-                  { name: 'duration', label: '完成时间', icon: Timer, placeholder: '填寫完成时间' },
+                  { name: 'duration', label: '完成時間', icon: Timer, placeholder: '填寫完成時間' },
                   { name: 'pace', label: '平均配速', icon: Timer, placeholder: '填寫平均配速' },
                   { name: 'heartRate', label: '平均心率', icon: Heart, placeholder: '填寫平均心率' },
                 ].map((field) => (
@@ -285,7 +285,7 @@ export default function TrainingLogPreview() {
 
               <label className="block">
                 <span className="mb-4 block text-sm font-medium text-apple-gray-700">
-                  体感疲勞度 (RPE 1-10): <span className="font-bold text-apple-blue">{formData.rpe}</span>
+                  體感疲勞度 (RPE 1-10): <span className="font-bold text-apple-blue">{formData.rpe}</span>
                 </span>
                 <input
                   type="range"
@@ -303,7 +303,7 @@ export default function TrainingLogPreview() {
               </label>
 
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-apple-gray-700">訓練感受與备注</span>
+                <span className="mb-2 block text-sm font-medium text-apple-gray-700">訓練感受與備註</span>
                 <div className="relative">
                   <MessageSquare className="absolute left-3 top-3 h-5 w-5 text-apple-gray-400" />
                   <textarea

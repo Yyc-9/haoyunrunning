@@ -201,7 +201,7 @@ export const coachProfiles = {
     nickname: '琦琦教練',
     role: '好運跑班創始人兼總教練',
     imageUrl: '/coaches/chen-sheng-qi.jpg',
-    bio: '好運跑班創始人兼總教練，曾任寶礦力路跑進階訓練課程教練、MIZUNO REBELLION 馬拉松訓練營總教練、NIKE RUN CLUB 大中華區與北京總教練。',
+    bio: '好運跑班創始人兼總教練，曾任寶礦力路跑進階訓練課程教練、MIZUNO REBELLION 馬拉鬆訓練營總教練、NIKE RUN CLUB 大中華區與北京總教練。',
     specialties: ['企業跑班課程規劃', '中、高階跑者週期訓練規劃', '1 對 1 中、高階線上訓練規劃', '初階跑者建立運動習慣'],
     style: '以完整週期規劃串起團練、線上課表與賽事目標，重視跑者長期穩定進步。',
     achievements: ['我型我速萬金石 2023-2026 教練', 'NIKE FAST42 臺灣北區教練', '國立體育大學陸上運動技術學系'],
@@ -221,7 +221,7 @@ export const coachProfiles = {
     name: '吳珮慈教練',
     role: '初階跑者與跑者肌力體能訓練',
     imageUrl: '/coaches/wu-pei-ci.jpg',
-    bio: '好運跑班教練，曾任寶礦力路跑初階訓練課程教練、長榮懂跑步訓練營教練、MIZUNO REBELLION 馬拉松訓練營教練。',
+    bio: '好運跑班教練，曾任寶礦力路跑初階訓練課程教練、長榮懂跑步訓練營教練、MIZUNO REBELLION 馬拉鬆訓練營教練。',
     specialties: ['企業跑班', '初階跑者訓練', '1 對 1 初階跑者訓練', '跑者肌力體能訓練'],
     style: '用清楚、安全的訓練步驟協助新手建立跑步習慣與基礎肌力。',
     achievements: ['我型我速萬金石 2024-2026 教練', '博仲法律事務所跑步社教練', '天主教輔仁大學體育系碩士班'],
@@ -232,20 +232,20 @@ export const coachProfiles = {
     nickname: '扁扁教練',
     role: '初階跑者、特殊族群與肌力訓練',
     imageUrl: '/coaches/chen-yi-ting.jpg',
-    bio: '好運跑班教練，具伊甸松山視障中心視多障運動課教師、臺師大體適能與適應體育 TA 經歷。',
+    bio: '好運跑班教練，具伊甸鬆山視障中心視多障運動課教師、臺師大體適能與適應體育 TA 經歷。',
     specialties: ['初階跑者訓練', '特殊族群功能性訓練', '肌力訓練'],
     style: '細膩觀察身體狀態，用功能性訓練與肌力基礎降低跑步風險。',
-    achievements: ['伊甸松山視障中心視多障運動課教師', '國立臺灣師範大學運動與科學學系碩士'],
+    achievements: ['伊甸鬆山視障中心視多障運動課教師', '國立臺灣師範大學運動與科學學系碩士'],
     certifications: ['中華民國田徑協會 C 級教練', '中華民國田徑協會 C 級裁判', 'C 級健身體適能教練', '國民體適能檢測員', '丙級運動防護員'],
   },
   wuWeiQiao: {
     name: '鄔惟喬教練',
-    role: '跑班教練與馬拉松訓練營助教',
+    role: '跑班教練與馬拉鬆訓練營助教',
     imageUrl: '/coaches/wu-wei-qiao.jpg',
-    bio: '曾任森林跑站助教、好運跑班教練、MIZUNO REBELLION 馬拉松訓練營助教，出身台北市立大學陸上競技系。',
+    bio: '曾任森林跑站助教、好運跑班教練、MIZUNO REBELLION 馬拉鬆訓練營助教，出身台北市立大學陸上競技系。',
     specialties: ['跑步基礎訓練', '團練協助', '跑者體能建立'],
     style: '用穩定陪伴與動作提醒，幫助跑者在團練裡逐步累積。',
-    achievements: ['森林跑站助教', 'MIZUNO REBELLION 馬拉松訓練營助教', '台北市立大學陸上競技系'],
+    achievements: ['森林跑站助教', 'MIZUNO REBELLION 馬拉鬆訓練營助教', '台北市立大學陸上競技系'],
     certifications: ['中華民國初級田徑專任教練證', '中華民國 C 級田徑裁判證', '中華民國 C 級田徑教練證', '體適能 C 級指導員'],
   },
   luoPeiCi: {
@@ -272,10 +272,10 @@ export const coachProfiles = {
     name: '周賢峰教練',
     role: '初階跑者習慣建立與競技跑者經驗分享',
     imageUrl: '/coaches/zhou-xian-feng.jpg',
-    bio: '好運跑班教練，曾任長榮懂跑步訓練營助教、MIZUNO REBELLION 馬拉松訓練營教練，具豐富路跑與場地賽經驗。',
-    specialties: ['初階跑者建立運動習慣', '半程馬拉松訓練', '賽事配速經驗分享'],
+    bio: '好運跑班教練，曾任長榮懂跑步訓練營助教、MIZUNO REBELLION 馬拉鬆訓練營教練，具豐富路跑與場地賽經驗。',
+    specialties: ['初階跑者建立運動習慣', '半程馬拉鬆訓練', '賽事配速經驗分享'],
     style: '把選手經驗轉化為一般跑者可吸收的訓練提醒，陪學員穩定養成習慣。',
-    achievements: ['2023 Garmin Run 亞洲系列賽臺北站半程馬拉松冠軍', '2023 臺南古都國際半程馬拉松亞軍', '成都世大運半程馬拉松國手', '半程馬拉松 1:06:58，全程馬拉松 2:31:24'],
+    achievements: ['2023 Garmin Run 亞洲系列賽臺北站半程馬拉鬆冠軍', '2023 臺南古都國際半程馬拉鬆亞軍', '成都世大運半程馬拉鬆國手', '半程馬拉鬆 1:06:58，全程馬拉鬆 2:31:24'],
     certifications: ['中華民國田徑 C 級教練', '中華民國田徑 C 級裁判'],
   },
   yangShengHao: {
@@ -284,7 +284,7 @@ export const coachProfiles = {
     bio: '長庚路跑社教練與好運跑班教練，具國立體育大學陸上運動技術學系背景。',
     specialties: ['初階跑者跑姿建立', '企業跑班課程規劃', '社團課程規劃'],
     style: '以跑姿基礎和團練節奏建立訓練秩序，幫助跑者穩定累積。',
-    achievements: ['2026 萬金石馬拉松 10K 總 2', '2026 台南國際古都馬拉松 10K 總 3', '2025 台中國際馬拉松半程馬拉松第一名', '2024 全國田徑錦標賽男子 1500M 第一名'],
+    achievements: ['2026 萬金石馬拉鬆 10K 總 2', '2026 台南國際古都馬拉鬆 10K 總 3', '2025 台中國際馬拉鬆半程馬拉鬆第一名', '2024 全國田徑錦標賽男子 1500M 第一名'],
     certifications: ['中華民國田徑 C 級教練', '中華民國田徑 C 級裁判'],
   },
   luoMinYao: {
@@ -520,7 +520,7 @@ export const allCourses = courseGroups.flatMap((group) =>
     const classTime =
       course.classTime ||
       course.time ||
-      (course.name.includes('早鳥') || course.name.includes('早鸟')
+      (course.name.includes('早鳥') || course.name.includes('早鳥')
         ? '早晨團練，實際集合時間請以開課通知為準'
         : course.name.includes('夜跑')
           ? '晚間團練，實際集合時間請以開課通知為準'

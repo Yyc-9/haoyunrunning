@@ -30,7 +30,7 @@ export default function NotFound() {
           </Link>
           <Link href="/" className="apple-button-outline inline-flex items-center justify-center px-8 py-3 hover:scale-105 active:scale-95 transition-transform duration-200">
             <ArrowRight className="h-5 w-5 mr-2 rotate-180" />
-            返回上页
+            返回上頁
           </Link>
         </div>
 

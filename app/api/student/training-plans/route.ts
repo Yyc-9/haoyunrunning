@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
   const weekStart = request.nextUrl.searchParams.get('weekStart') ?? getTodayInfo().weekStart
   if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
-    return NextResponse.json({ error: '課表周参数格式錯誤。' }, { status: 400 })
+    return NextResponse.json({ error: '課表周参數格式錯誤。' }, { status: 400 })
   }
 
   const { data: plans, error } = await supabaseAdmin

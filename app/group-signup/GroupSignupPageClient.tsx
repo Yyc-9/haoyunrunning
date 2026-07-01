@@ -13,7 +13,7 @@ function localizeCourseTitle(title: string, language: string) {
       .replaceAll('訓練', '訓練')
       .replaceAll('週', '周')
       .replaceAll('課程', '課程')
-      .replaceAll('補習班', '补习班')
+      .replaceAll('補習班', '补習班')
   }
 
   return title

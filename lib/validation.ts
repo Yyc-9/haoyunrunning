@@ -35,18 +35,18 @@ export function validatePassword(password: string): ValidationError | null {
     return { field: 'password', message: '請輸入密碼' }
   }
   if (password.length < 6) {
-    return { field: 'password', message: '密碼至少6个字符' }
+    return { field: 'password', message: '密碼至少6個字符' }
   }
   return null
 }
 
 export function validatePhone(phone: string): ValidationError | null {
   if (!phone) {
-    return { field: 'phone', message: '請輸入手机号' }
+    return { field: 'phone', message: '請輸入手機號' }
   }
   const phoneRegex = /^1[3-9]\d{9}$/
   if (!phoneRegex.test(phone)) {
-    return { field: 'phone', message: '手机号格式不正確' }
+    return { field: 'phone', message: '手機號格式不正確' }
   }
   return null
 }
@@ -56,7 +56,7 @@ export function validateName(name: string): ValidationError | null {
     return { field: 'name', message: '請輸入姓名' }
   }
   if (name.length < 2) {
-    return { field: 'name', message: '姓名至少2个字符' }
+    return { field: 'name', message: '姓名至少2個字符' }
   }
   return null
 }

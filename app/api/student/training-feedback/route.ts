@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
   const rpe = cleanNumber(body.rpe)
 
   if (rpe !== null && (rpe < 1 || rpe > 10)) {
-    return NextResponse.json({ error: 'RPE 必須在 1 到 10 之间。' }, { status: 400 })
+    return NextResponse.json({ error: 'RPE 必須在 1 到 10 之間。' }, { status: 400 })
   }
 
   let coachId: string | null = null
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!plan || plan.student_id !== user.id) {
-      return NextResponse.json({ error: '这份課表不属于目前學員，不能提交回饋。' }, { status: 403 })
+      return NextResponse.json({ error: '這份課表不屬於目前學員，不能提交回饋。' }, { status: 403 })
     }
 
     coachId = plan.coach_id
