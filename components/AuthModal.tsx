@@ -14,6 +14,40 @@ interface AuthModalProps {
   mode?: 'login' | 'register'
 }
 
+function getAuthErrorMessage(error: unknown, fallbackMessage: string, emailNotConfirmedMessage: string) {
+  const rawMessage = error instanceof Error ? error.message : String(error ?? '')
+  const message = rawMessage.toLowerCase()
+
+  if (message.includes('email not confirmed')) {
+    return emailNotConfirmedMessage
+  }
+
+  if (message.includes('invalid login credentials')) {
+    return '信箱或密碼不正確。'
+  }
+
+  if (message.includes('user already registered') || message.includes('already registered')) {
+    return '這個信箱已經註冊，請直接登入。'
+  }
+
+  if (message.includes('password should be') || message.includes('weak password')) {
+    return '密碼強度不足，請使用至少 6 個字元。'
+  }
+
+  if (
+    message.includes('load failed') ||
+    message.includes('failed to fetch') ||
+    message.includes('fetch failed') ||
+    message.includes('networkerror') ||
+    message.includes('authretryablefetcherror') ||
+    message.includes('err_connection')
+  ) {
+    return '目前無法連線到登入服務。請先重新整理頁面再試一次；如果仍失敗，可能是目前網路或瀏覽器阻擋 Supabase 認證服務。'
+  }
+
+  return rawMessage || fallbackMessage
+}
+
 export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModalProps) {
   const [activeMode, setActiveMode] = useState<'login' | 'register'>(mode)
   const [showPassword, setShowPassword] = useState(false)
@@ -84,11 +118,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
       router.push('/student')
       onClose()
     } catch (error) {
-      const rawMessage = error instanceof Error ? error.message : ''
-      const message = rawMessage.toLowerCase().includes('email not confirmed')
-        ? t.auth.emailNotConfirmed
-        : rawMessage || t.auth.actionFailed
-      setErrorMessage(message)
+      setErrorMessage(getAuthErrorMessage(error, t.auth.actionFailed, t.auth.emailNotConfirmed))
     } finally {
       setIsSubmitting(false)
     }

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
-import type { User as SupabaseUser } from '@supabase/supabase-js'
+import type { Session, User as SupabaseUser } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 
 export interface User {
@@ -36,6 +36,65 @@ type ProfilePayload = {
   phone?: string | null
   pb?: string | null
   avatar_url?: string | null
+}
+
+function isRetryableAuthNetworkError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? '')
+  const name = error && typeof error === 'object' && 'name' in error ? String((error as { name?: unknown }).name ?? '') : ''
+
+  return /AuthRetryableFetchError|Failed to fetch|Load failed|NetworkError|ERR_CONNECTION|fetch failed/i.test(`${name} ${message}`)
+}
+
+function getSupabaseStorageKey() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (!supabaseUrl) return null
+
+  try {
+    const projectRef = new URL(supabaseUrl).hostname.split('.')[0]
+    return projectRef ? `sb-${projectRef}-auth-token` : null
+  } catch {
+    return null
+  }
+}
+
+function saveSupabaseSessionFallback(session: Session) {
+  if (typeof window === 'undefined') return
+  const storageKey = getSupabaseStorageKey()
+  if (!storageKey) return
+
+  window.localStorage.setItem(storageKey, JSON.stringify(session))
+}
+
+function removeSupabaseSessionFallback() {
+  if (typeof window === 'undefined') return
+  const storageKey = getSupabaseStorageKey()
+  if (!storageKey) return
+
+  window.localStorage.removeItem(storageKey)
+  window.localStorage.removeItem(`${storageKey}-user`)
+  window.localStorage.removeItem(`${storageKey}-code-verifier`)
+}
+
+async function loginViaServer(email: string, password: string) {
+  const response = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  })
+  const payload = (await response.json().catch(() => ({}))) as {
+    session?: Session
+    user?: SupabaseUser
+    error?: string
+  }
+
+  if (!response.ok || !payload.session || !payload.user) {
+    throw new Error(payload.error || '登入服務暫時無法完成驗證，請稍後再試。')
+  }
+
+  return {
+    session: payload.session,
+    user: payload.user,
+  }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -76,18 +135,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return nextUser
   }, [])
 
-  const loadProfileFromServer = useCallback(async (fallbackEmail = '') => {
+  const loadProfileFromServer = useCallback(async (fallbackEmail = '', accessToken?: string) => {
     if (!supabase) return null
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
+    let token = accessToken
+    if (!token) {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      token = session?.access_token
+    }
 
-    if (!session?.access_token) return null
+    if (!token) return null
 
     const response = await fetch('/api/account/me', {
       headers: {
-        Authorization: `Bearer ${session.access_token}`,
+        Authorization: `Bearer ${token}`,
       },
     })
 
@@ -213,16 +276,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Supabase 尚未設定。')
       }
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
+      let data: { user: SupabaseUser | null; session: Session | null }
+      const { data: directData, error } = await supabase.auth.signInWithPassword({ email, password })
 
-      if (error) throw error
+      if (error) {
+        if (!isRetryableAuthNetworkError(error)) {
+          throw error
+        }
+
+        const fallback = await loginViaServer(email, password)
+        saveSupabaseSessionFallback(fallback.session)
+        data = fallback
+      } else {
+        data = directData
+      }
 
       if (data.user) {
         applyAuthUser(data.user)
-        await loadProfile(data.user.id, data.user.email ?? email)
+        await loadProfileFromServer(data.user.email ?? email, data.session?.access_token)
       }
     } catch (error) {
       console.error('Login error:', error)
@@ -230,12 +301,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }, [applyAuthUser, loadProfile])
+  }, [applyAuthUser, loadProfileFromServer])
 
   const logout = useCallback(() => {
     if (supabase) {
       supabase.auth.signOut()
     }
+    removeSupabaseSessionFallback()
     window.localStorage.removeItem('goodluck-user-role')
     setUser(null)
   }, [])
