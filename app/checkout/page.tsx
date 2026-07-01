@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { CheckCircle2, CreditCard, MessageCircle, PackageCheck, Send, ShieldCheck, Truck } from 'lucide-react'
+import { CheckCircle2, CreditCard, ExternalLink, LockKeyhole, MessageCircle, PackageCheck, Send, ShieldCheck, Truck, X } from 'lucide-react'
 import { useCart } from '@/app/cart-provider'
 import { supabase } from '@/lib/supabase'
 
@@ -29,8 +29,11 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmittingTransfer, setIsSubmittingTransfer] = useState(false)
   const [error, setError] = useState('')
+  const [paymentError, setPaymentError] = useState('')
   const [transferMessage, setTransferMessage] = useState('')
   const [order, setOrder] = useState<CreatedOrder | null>(null)
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
+  const [isStartingCardPayment, setIsStartingCardPayment] = useState(false)
 
   const updateField = (field: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [field]: value }))
@@ -41,6 +44,7 @@ export default function CheckoutPage() {
     setError('')
     setOrder(null)
     setTransferMessage('')
+    setPaymentError('')
 
     if (items.length === 0) {
       setError('購物車沒有商品。')
@@ -80,6 +84,7 @@ export default function CheckoutPage() {
       }
 
       setOrder(payload.order)
+      setIsPaymentModalOpen(true)
       clear()
       setForm({ customerName: '', contact: '', email: '', fulfillmentNote: '' })
     } catch (err) {
@@ -91,6 +96,7 @@ export default function CheckoutPage() {
 
   const submitTransferDetails = async () => {
     setError('')
+    setPaymentError('')
     setTransferMessage('')
 
     if (!order?.id) {
@@ -130,6 +136,44 @@ export default function CheckoutPage() {
       setError(err instanceof Error ? err.message : '付款資料提交失敗。')
     } finally {
       setIsSubmittingTransfer(false)
+    }
+  }
+
+  const startCardPayment = async () => {
+    setPaymentError('')
+
+    if (!order?.id) {
+      setPaymentError('請先提交訂單。')
+      return
+    }
+
+    if (!order.totalAmount || order.totalAmount <= 0) {
+      setPaymentError('此訂單金額仍待確認，暫時無法啟用信用卡付款。')
+      return
+    }
+
+    setIsStartingCardPayment(true)
+
+    try {
+      const response = await fetch('/api/shop/card-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: order.id }),
+      })
+      const payload = (await response.json().catch(() => ({}))) as {
+        url?: string
+        error?: string
+      }
+
+      if (!response.ok || !payload.url) {
+        throw new Error(payload.error || '信用卡安全付款暫時無法啟動。')
+      }
+
+      window.location.href = payload.url
+    } catch (err) {
+      setPaymentError(err instanceof Error ? err.message : '信用卡安全付款暫時無法啟動。')
+    } finally {
+      setIsStartingCardPayment(false)
     }
   }
 
@@ -263,28 +307,16 @@ export default function CheckoutPage() {
                     <p className="mt-1 text-sm">付款通道：{order.paymentChannelLabel || '待管理員分配'}</p>
                   </div>
                   </div>
-                  <div className="rounded-3xl border border-black/10 bg-white p-4">
-                    <label className="block">
-                      <span className="text-sm font-bold text-apple-gray-700">轉出帳戶後五碼</span>
-                      <input
-                        value={transferLastFive}
-                        onChange={(event) => setTransferLastFive(event.target.value.replace(/\D/g, '').slice(0, 5))}
-                        inputMode="numeric"
-                        maxLength={5}
-                        placeholder="例如 12345"
-                        className="apple-input mt-2"
-                      />
-                    </label>
+                  <div className="rounded-3xl border border-black/10 bg-white p-4 text-sm leading-6 text-apple-gray-600">
+                    付款資料會在彈出的付款界面處理；信用卡號與安全碼不會進入本站資料庫或後台。
                     <button
                       type="button"
-                      onClick={submitTransferDetails}
-                      disabled={isSubmittingTransfer || transferLastFive.length !== 5}
-                      className="apple-button-secondary mt-3 w-full gap-2 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => setIsPaymentModalOpen(true)}
+                      className="apple-button-secondary mt-3 w-full gap-2"
                     >
-                      <Send className="h-4 w-4" />
-                      {isSubmittingTransfer ? '送出中...' : '提交後五碼'}
+                      <CreditCard className="h-4 w-4" />
+                      開啟付款界面
                     </button>
-                    {transferMessage ? <p className="mt-3 text-sm font-semibold text-emerald-700">{transferMessage}</p> : null}
                   </div>
                 </div>
               )}
@@ -316,6 +348,114 @@ export default function CheckoutPage() {
           </div>
         </div>
       </section>
+
+      {order && isPaymentModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 px-4 py-4 backdrop-blur-sm sm:items-center">
+          <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[2rem] bg-white shadow-2xl">
+            <div className="sticky top-0 z-10 flex items-start justify-between border-b border-black/10 bg-white px-5 py-4 sm:px-6">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-apple-blue">Payment</p>
+                <h2 className="mt-1 text-2xl font-black text-apple-gray-950">付款界面</h2>
+                <p className="mt-1 text-sm text-apple-gray-500">訂單 {order.orderNumber}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPaymentModalOpen(false)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 text-apple-gray-700 transition hover:bg-apple-gray-100"
+                aria-label="關閉付款界面"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
+              <section className="rounded-3xl bg-black p-5 text-white">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-sm text-white/65">應付金額</p>
+                    <p className="mt-1 text-3xl font-black">
+                      {order.totalAmount && order.totalAmount > 0 ? `NT$${(order.totalAmount / 100).toFixed(0)}` : '待確認'}
+                    </p>
+                  </div>
+                  <div className="text-sm leading-6 text-white/70">
+                    <p>付款代號：{order.paymentReference || order.orderNumber}</p>
+                    <p>付款通道：{order.paymentChannelLabel || '待管理員分配'}</p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="rounded-3xl border border-black/10 bg-white p-5">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
+                    <LockKeyhole className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-apple-gray-950">信用卡安全付款</h3>
+                    <p className="mt-2 text-sm leading-6 text-apple-gray-600">
+                      卡號、有效期限與 CVV 只會在 Stripe 等合規收單頁面中填寫；本站不會接觸、儲存或傳送完整信用卡資料。
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={startCardPayment}
+                  disabled={isStartingCardPayment || !order.totalAmount || order.totalAmount <= 0}
+                  className="apple-button-primary mt-4 w-full gap-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  {isStartingCardPayment ? '正在啟動安全付款...' : '開啟信用卡安全付款'}
+                </button>
+                {!order.totalAmount || order.totalAmount <= 0 ? (
+                  <p className="mt-3 text-sm leading-6 text-apple-gray-500">
+                    目前商品金額為待確認，設定商品價格或收單通道後即可啟用信用卡付款。
+                  </p>
+                ) : null}
+              </section>
+
+              <section className="rounded-3xl border border-black/10 bg-apple-gray-50 p-5">
+                <div className="mb-4 flex items-start gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-apple-gray-900">
+                    <ShieldCheck className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-apple-gray-950">銀行匯款 / 後台核對</h3>
+                    <p className="mt-2 text-sm leading-6 text-apple-gray-600">
+                      買家端只顯示付款代號與通道名稱，不顯示完整收款帳戶。付款後填寫轉出帳戶後五碼，管理員後台再核對款項流向。
+                    </p>
+                  </div>
+                </div>
+                <label className="block">
+                  <span className="text-sm font-bold text-apple-gray-700">轉出帳戶後五碼</span>
+                  <input
+                    value={transferLastFive}
+                    onChange={(event) => setTransferLastFive(event.target.value.replace(/\D/g, '').slice(0, 5))}
+                    inputMode="numeric"
+                    maxLength={5}
+                    placeholder="例如 12345"
+                    className="apple-input mt-2 bg-white"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={submitTransferDetails}
+                  disabled={isSubmittingTransfer || transferLastFive.length !== 5}
+                  className="apple-button-secondary mt-3 w-full gap-2 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Send className="h-4 w-4" />
+                  {isSubmittingTransfer ? '送出中...' : '提交後五碼'}
+                </button>
+                {transferMessage ? <p className="mt-3 text-sm font-semibold text-emerald-700">{transferMessage}</p> : null}
+              </section>
+
+              {paymentError ? (
+                <div className="rounded-3xl bg-red-50 p-4 text-sm font-semibold leading-6 text-red-700">
+                  {paymentError}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   )
 }

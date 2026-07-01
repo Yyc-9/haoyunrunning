@@ -11,6 +11,7 @@ import { useCart } from '@/app/cart-provider'
 import { SearchEngine } from '@/lib/search'
 import { useToast } from '@/app/toast-provider'
 import { defaultShopProducts, type ProductVariant, type ShopProduct } from '@/lib/shop-products'
+import ShopCartDrawer from '@/components/ShopCartDrawer'
 
 export default function ShopPage() {
   const { addItem, items } = useCart()
@@ -22,6 +23,7 @@ export default function ShopPage() {
   const [currentPage, setCurrentPage] = useState(0)
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({})
   const [selectedSizes, setSelectedSizes] = useState<Record<string, string>>({})
+  const [isCartOpen, setIsCartOpen] = useState(false)
 
   useEffect(() => {
     let isActive = true
@@ -90,6 +92,7 @@ export default function ShopPage() {
       image: variant?.image ?? product.image,
     })
     showToast(`${displayName} 已加入購物車`, 'success')
+    setIsCartOpen(true)
     return true
   }
 
@@ -279,6 +282,7 @@ export default function ShopPage() {
           </div>
         </div>
       </div>
+      <ShopCartDrawer products={products} open={isCartOpen} onOpenChange={setIsCartOpen} />
     </div>
   )
 }
