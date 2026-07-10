@@ -12,7 +12,7 @@ export async function GET() {
   const { data, error } = await supabaseAdmin
     .from('site_content')
     .select('key, value')
-    .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides'])
+    .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'testimonials_content', 'page_media'])
 
   if (error) {
     console.error('Load site content error:', error)

@@ -11,7 +11,7 @@ const allowedTypes: Record<string, string> = {
   'image/webp': 'webp',
 }
 
-const allowedFolders = new Set(['products', 'hero', 'activities'])
+const allowedFolders = new Set(['products', 'hero', 'activities', 'brand', 'pages'])
 
 function json(data: unknown, init?: ResponseInit) {
   return NextResponse.json(data, {

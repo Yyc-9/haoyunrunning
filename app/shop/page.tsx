@@ -12,10 +12,12 @@ import { SearchEngine } from '@/lib/search'
 import { useToast } from '@/app/toast-provider'
 import { defaultShopProducts, type ProductVariant, type ShopProduct } from '@/lib/shop-products'
 import ShopCartDrawer from '@/components/ShopCartDrawer'
+import { useSiteContent } from '@/app/site-content-provider'
 
 export default function ShopPage() {
   const { addItem, items } = useCart()
   const { showToast } = useToast()
+  const { pageMedia } = useSiteContent()
   const [products, setProducts] = useState<ShopProduct[]>(defaultShopProducts)
   const [query, setQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
@@ -104,11 +106,11 @@ export default function ShopPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-white">
       <div className="relative h-[16.5rem] overflow-hidden bg-black sm:h-80 lg:h-[22rem]">
-        <div className="absolute inset-0 bg-cover bg-center opacity-75" style={{ backgroundImage: 'url("/20250605[好運]三周年慶-7096.jpg")' }} />
+        <div className="absolute inset-0 bg-cover bg-center opacity-75" style={{ backgroundImage: `url("${pageMedia.shopHero}")` }} />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/15 to-black/25" />
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="relative z-10 flex h-full flex-col items-center justify-end px-4 pb-8 text-white sm:justify-center sm:pb-0">
-          <h1 className="mb-3 text-center text-4xl font-black sm:text-5xl">好運商店</h1>
-          <p className="max-w-2xl text-center text-base leading-7 text-white/88 sm:text-xl">跑班裝備與訓練補給，先把真正會用上的東西整理好。</p>
+          <h1 className="mb-3 text-center text-4xl font-black sm:text-5xl">{pageMedia.shopTitle}</h1>
+          <p className="max-w-2xl text-center text-base leading-7 text-white/88 sm:text-xl">{pageMedia.shopSubtitle}</p>
         </motion.div>
       </div>
 

@@ -5,6 +5,7 @@ import { ArrowLeft, BookOpenCheck, CalendarDays, Instagram, UsersRound } from 'l
 import { useLanguage } from '@/app/language-context'
 import LeadCollectionForm from '@/components/LeadCollectionForm'
 import { allCourses } from '@/lib/goodluck-data'
+import { useSiteContent } from '@/app/site-content-provider'
 
 function localizeCourseTitle(title: string, language: string) {
   if (language === 'zh-CN') {
@@ -21,6 +22,7 @@ function localizeCourseTitle(title: string, language: string) {
 
 export default function GroupSignupPageClient() {
   const { language, t } = useLanguage()
+  const { brand } = useSiteContent()
   const courseOptions = allCourses.map((course) => localizeCourseTitle(course.title, language))
 
   return (
@@ -46,7 +48,7 @@ export default function GroupSignupPageClient() {
               </p>
             </div>
             <a
-              href="https://www.instagram.com/nurture.running.team/"
+              href={brand.instagramUrl}
               target="_blank"
               rel="noreferrer"
               className="apple-button-outline inline-flex items-center justify-center gap-2 px-6 py-3"

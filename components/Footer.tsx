@@ -4,9 +4,11 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Instagram, Mail, MapPin, ShoppingBag, TicketCheck } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
+import { useSiteContent } from '@/app/site-content-provider'
 
 export default function Footer() {
   const { t } = useLanguage()
+  const { brand } = useSiteContent()
   const currentYear = new Date().getFullYear()
 
   const footerLinks = [
@@ -29,21 +31,21 @@ export default function Footer() {
     {
       title: '聯絡',
       links: [
-        { name: 'Instagram', href: 'https://www.instagram.com/nurture.running.team/' },
-        { name: '課程諮詢', href: 'https://www.instagram.com/nurture.running.team/' },
-        { name: '商品諮詢', href: 'https://www.instagram.com/nurture.running.team/' },
+        { name: 'Instagram', href: brand.instagramUrl },
+        { name: '課程諮詢', href: brand.instagramUrl },
+        { name: '商品諮詢', href: brand.instagramUrl },
       ],
     },
   ]
 
   const contactInfo = [
-    { icon: Instagram, text: '@nurture.running.team' },
-    { icon: Mail, text: t.footer.contactInstagram },
-    { icon: MapPin, text: t.footer.address },
+    { icon: Instagram, text: brand.instagramHandle },
+    { icon: Mail, text: brand.contactText },
+    { icon: MapPin, text: brand.address },
   ]
 
   const socialMedia = [
-    { icon: Instagram, href: 'https://www.instagram.com/nurture.running.team/', isPrimary: true },
+    { icon: Instagram, href: brand.instagramUrl, isPrimary: true },
   ]
 
   return (
@@ -55,8 +57,8 @@ export default function Footer() {
             <div className="mb-6 flex items-center space-x-3">
               <div className="relative h-14 w-14 overflow-hidden rounded-full border border-black/10 bg-white shadow-sm">
                 <Image
-                  src="/goodluck-logo-nav.jpg"
-                  alt={`${t.common.brand} Logo`}
+                  src={brand.logoUrl}
+                  alt={`${brand.brandName} Logo`}
                   fill
                   sizes="56px"
                   className="object-cover"
@@ -65,16 +67,16 @@ export default function Footer() {
 
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {t.common.brand}
+                  {brand.brandName}
                 </h2>
                 <p className="text-sm text-gray-600">
-                  {t.common.tagline}
+                  {brand.tagline}
                 </p>
               </div>
             </div>
 
             <p className="mb-6 max-w-md text-gray-600">
-              {t.footer.description}
+              {brand.footerDescription}
             </p>
 
             {/* Contact Info */}
@@ -137,7 +139,7 @@ export default function Footer() {
         {/* Bottom Section */}
         <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
           <p className="mb-4 text-sm text-gray-500 md:mb-0">
-            © {currentYear} {t.common.brand}. {t.footer.copyright}
+            © {currentYear} {brand.brandName}. {t.footer.copyright}
           </p>
 
           {/* Social Media */}

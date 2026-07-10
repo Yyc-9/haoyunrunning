@@ -8,9 +8,14 @@ import {
   defaultSiteContent,
   isSafePublicUrl,
   normalizeActivities,
+  normalizeAboutContent,
+  normalizeBrandContent,
   normalizeCourseOverrides,
   normalizeHeroSlides,
+  normalizeHomeContent,
+  normalizePageMedia,
   normalizeSeasonalUpdate,
+  normalizeTestimonialsContent,
   siteContentFromRows,
 } from '@/lib/site-content'
 
@@ -310,7 +315,7 @@ export async function GET(request: NextRequest) {
     supabaseAdmin!
       .from('site_content')
       .select('key, value')
-      .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides']),
+      .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'testimonials_content', 'page_media']),
   ])
 
   const firstError = [
@@ -788,6 +793,16 @@ export async function PATCH(request: NextRequest) {
       value = Object.fromEntries(
         Object.entries(normalizeCourseOverrides(body.value)).filter(([slug]) => validSlugs.has(slug))
       )
+    } else if (section === 'brand_content') {
+      value = normalizeBrandContent(body.value)
+    } else if (section === 'home_content') {
+      value = normalizeHomeContent(body.value)
+    } else if (section === 'about_content') {
+      value = normalizeAboutContent(body.value)
+    } else if (section === 'testimonials_content') {
+      value = normalizeTestimonialsContent(body.value)
+    } else if (section === 'page_media') {
+      value = normalizePageMedia(body.value)
     } else {
       return json({ error: '網站內容區塊無效。' }, { status: 400 })
     }

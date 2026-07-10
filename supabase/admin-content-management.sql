@@ -40,7 +40,12 @@ values
     'seasonal_update',
     '{"active":false,"period":"","title":"","summary":"","body":"","href":"","linkLabel":"了解更多"}'::jsonb
   ),
-  ('course_overrides', '{}'::jsonb)
+  ('course_overrides', '{}'::jsonb),
+  ('brand_content', '{}'::jsonb),
+  ('home_content', '{}'::jsonb),
+  ('about_content', '{}'::jsonb),
+  ('testimonials_content', '{}'::jsonb),
+  ('page_media', '{}'::jsonb)
 on conflict (key) do nothing;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useSiteContent } from '@/app/site-content-provider'
 import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/app/providers'
 import { useLanguage } from '@/app/language-context'
@@ -20,6 +21,7 @@ export default function Navigation() {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
   const { user, isLoggedIn, isLoading, logout } = useAuth()
   const { language, setLanguage, t } = useLanguage()
+  const { brand } = useSiteContent()
   const searchParams = useSearchParams()
 
   useEffect(() => {
@@ -132,15 +134,15 @@ export default function Navigation() {
             >
               <div className="relative h-9 w-9 overflow-hidden rounded-full border border-black/10 bg-white shadow-sm sm:h-10 sm:w-10">
                 <Image
-                  src="/goodluck-logo-nav.jpg"
-                  alt="好運跑班 Logo"
+                  src={brand.logoUrl}
+                  alt={`${brand.brandName} Logo`}
                   fill
                   sizes="40px"
                   className="object-cover"
                   priority
                 />
               </div>
-              <span className="max-w-[8rem] truncate text-base font-bold tracking-tight text-apple-gray-950 sm:max-w-none sm:text-xl">{t.common.brand}</span>
+              <span className="max-w-[8rem] truncate text-base font-bold tracking-tight text-apple-gray-950 sm:max-w-none sm:text-xl">{brand.brandName}</span>
             </motion.div>
 
             {/* Desktop Navigation */}

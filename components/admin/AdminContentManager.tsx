@@ -2,9 +2,38 @@
 
 import Image from 'next/image'
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowDown, ArrowUp, CalendarRange, ImagePlus, Loader2, Megaphone, Plus, Save, Trash2 } from 'lucide-react'
+import {
+  ArrowDown,
+  ArrowUp,
+  BadgeInfo,
+  CalendarRange,
+  ExternalLink,
+  FileText,
+  GalleryHorizontalEnd,
+  Home,
+  ImageIcon,
+  ImagePlus,
+  LayoutGrid,
+  Loader2,
+  Megaphone,
+  Plus,
+  Save,
+  ShoppingBag,
+  Sparkles,
+  Trash2,
+} from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import type { CourseOverride, HomeActivity, SeasonalUpdate, SiteContent } from '@/lib/site-content'
+import type {
+  AboutContent,
+  BrandContent,
+  CourseOverride,
+  HomeActivity,
+  HomeContent,
+  PageMedia,
+  SeasonalUpdate,
+  SiteContent,
+  TestimonialsContent,
+} from '@/lib/site-content'
 
 type CourseSummary = {
   slug: string
@@ -25,16 +54,15 @@ type AdminContentManagerProps = {
   runAction: (id: string, action: Record<string, unknown>) => Promise<boolean>
 }
 
-type ContentMode = 'hero' | 'activities' | 'seasonal' | 'courses'
+type ContentMode = 'overview' | 'hero' | 'home' | 'activities' | 'seasonal' | 'brand' | 'media' | 'about' | 'testimonials' | 'courses'
 
-async function uploadHeroImage(file: File) {
+async function uploadSiteImage(file: File, folder: 'hero' | 'brand' | 'pages') {
   if (!supabase) throw new Error('圖片服務尚未設定。')
   const { data: { session } } = await supabase.auth.getSession()
   if (!session?.access_token) throw new Error('請重新登入管理員帳號。')
-
   const formData = new FormData()
   formData.set('file', file)
-  formData.set('folder', 'hero')
+  formData.set('folder', folder)
   const response = await fetch('/api/admin/upload', {
     method: 'POST',
     headers: { Authorization: `Bearer ${session.access_token}` },
@@ -43,6 +71,44 @@ async function uploadHeroImage(file: File) {
   const payload = (await response.json().catch(() => ({}))) as { url?: string; error?: string }
   if (!response.ok || !payload.url) throw new Error(payload.error || '圖片上傳失敗。')
   return payload.url
+}
+
+function Field({ label, children, wide = false }: { label: string; children: React.ReactNode; wide?: boolean }) {
+  return <label className={wide ? 'md:col-span-2' : ''}><span className="mb-2 block text-xs font-bold text-apple-gray-500">{label}</span>{children}</label>
+}
+
+function ImageField({ label, value, folder, onChange, onError }: { label: string; value: string; folder: 'brand' | 'pages'; onChange: (url: string) => void; onError: (message: string) => void }) {
+  const [uploading, setUploading] = useState(false)
+  async function upload(file?: File) {
+    if (!file) return
+    setUploading(true)
+    onError('')
+    try {
+      onChange(await uploadSiteImage(file, folder))
+    } catch (error) {
+      onError(error instanceof Error ? error.message : '圖片上傳失敗。')
+    } finally {
+      setUploading(false)
+    }
+  }
+  return (
+    <div className="border-b border-black/10 py-5 first:pt-0 last:border-0 last:pb-0">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div className="relative h-28 w-full shrink-0 overflow-hidden rounded-lg bg-apple-gray-100 sm:w-44">
+          {value ? <Image src={value} alt={`${label}預覽`} fill sizes="176px" className="object-cover" /> : <ImageIcon className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 text-apple-gray-400" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-bold text-apple-gray-900">{label}</p>
+          <p className="mt-1 truncate text-xs text-apple-gray-500">{value || '尚未設定圖片'}</p>
+          <label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-black/10 bg-white px-4 py-2 text-sm font-bold hover:bg-apple-gray-100">
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+            更換圖片
+            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={uploading} onChange={(event) => upload(event.target.files?.[0])} />
+          </label>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function courseDraft(course: CourseSummary, override?: CourseOverride): CourseOverride {
@@ -61,10 +127,15 @@ function courseDraft(course: CourseSummary, override?: CourseOverride): CourseOv
 }
 
 export default function AdminContentManager({ content, courses, runAction }: AdminContentManagerProps) {
-  const [mode, setMode] = useState<ContentMode>('hero')
+  const [mode, setMode] = useState<ContentMode>('overview')
   const [slides, setSlides] = useState(content.heroSlides)
   const [activities, setActivities] = useState<HomeActivity[]>(content.activities)
   const [seasonal, setSeasonal] = useState<SeasonalUpdate>(content.seasonalUpdate)
+  const [brand, setBrand] = useState<BrandContent>(content.brand)
+  const [home, setHome] = useState<HomeContent>(content.home)
+  const [about, setAbout] = useState<AboutContent>(content.about)
+  const [testimonials, setTestimonials] = useState<TestimonialsContent>(content.testimonials)
+  const [pageMedia, setPageMedia] = useState<PageMedia>(content.pageMedia)
   const [courseOverrides, setCourseOverrides] = useState(content.courseOverrides)
   const [selectedSlug, setSelectedSlug] = useState(courses[0]?.slug || '')
   const [draft, setDraft] = useState<CourseOverride>(() => courses[0] ? courseDraft(courses[0], content.courseOverrides[courses[0].slug]) : {})
@@ -75,21 +146,38 @@ export default function AdminContentManager({ content, courses, runAction }: Adm
     setSlides(content.heroSlides)
     setActivities(content.activities)
     setSeasonal(content.seasonalUpdate)
+    setBrand(content.brand)
+    setHome(content.home)
+    setAbout(content.about)
+    setTestimonials(content.testimonials)
+    setPageMedia(content.pageMedia)
     setCourseOverrides(content.courseOverrides)
   }, [content])
 
   const selectedCourse = useMemo(() => courses.find((course) => course.slug === selectedSlug), [courses, selectedSlug])
-
   useEffect(() => {
     if (selectedCourse) setDraft(courseDraft(selectedCourse, courseOverrides[selectedCourse.slug]))
   }, [courseOverrides, selectedCourse])
+
+  const modes = [
+    { id: 'overview' as const, label: '內容總覽', description: '查看可管理區域', icon: LayoutGrid },
+    { id: 'hero' as const, label: '首頁輪播', description: '圖片與排序', icon: GalleryHorizontalEnd },
+    { id: 'home' as const, label: '首頁文案', description: '區塊標題與重點', icon: Home },
+    { id: 'activities' as const, label: '活動入口', description: '報名與活動連結', icon: Megaphone },
+    { id: 'seasonal' as const, label: '季度資訊', description: '首頁公告', icon: CalendarRange },
+    { id: 'brand' as const, label: '品牌與聯絡', description: 'Logo、社群與頁尾', icon: BadgeInfo },
+    { id: 'media' as const, label: '各頁主視覺', description: '商店、關於與見證', icon: ImageIcon },
+    { id: 'about' as const, label: '關於我們', description: '品牌故事與對象', icon: Sparkles },
+    { id: 'testimonials' as const, label: '學員見證', description: '見證頁文案', icon: FileText },
+    { id: 'courses' as const, label: '課程資料', description: '班級日期與內容', icon: ShoppingBag },
+  ]
 
   async function addHeroImage(file?: File) {
     if (!file) return
     setIsUploading(true)
     setLocalError('')
     try {
-      const url = await uploadHeroImage(file)
+      const url = await uploadSiteImage(file, 'hero')
       setSlides((current) => [...current, url].slice(0, 8))
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : '圖片上傳失敗。')
@@ -112,122 +200,86 @@ export default function AdminContentManager({ content, courses, runAction }: Adm
     if (!selectedCourse) return
     const nextOverrides = { ...courseOverrides, [selectedCourse.slug]: draft }
     setCourseOverrides(nextOverrides)
-    await runAction(`course-${selectedCourse.slug}`, {
-      action: 'save_site_content',
-      section: 'course_overrides',
-      value: nextOverrides,
-    })
+    await runAction(`course-${selectedCourse.slug}`, { action: 'save_site_content', section: 'course_overrides', value: nextOverrides })
   }
 
-  const modes: Array<{ id: ContentMode; label: string }> = [
-    { id: 'hero', label: '首頁輪播' },
-    { id: 'activities', label: '活動入口' },
-    { id: 'seasonal', label: '季度資訊' },
-    { id: 'courses', label: '課程資料' },
-  ]
+  const saveButton = (id: string, section: string, value: unknown, label = '儲存並發布') => (
+    <button type="button" onClick={() => runAction(id, { action: 'save_site_content', section, value })} className="apple-button-primary gap-2 px-6 py-3">
+      <Save className="h-4 w-4" />{label}
+    </button>
+  )
+
+  const panelHeader = (title: string, description: string, previewPath?: string) => (
+    <div className="flex flex-col justify-between gap-4 border-b border-black/10 px-5 py-5 sm:px-6 md:flex-row md:items-center">
+      <div><h2 className="text-xl font-black text-apple-gray-900">{title}</h2><p className="mt-1 text-sm leading-6 text-apple-gray-600">{description}</p></div>
+      {previewPath ? <a href={previewPath} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-bold text-apple-blue">查看前台<ExternalLink className="h-4 w-4" /></a> : null}
+    </div>
+  )
 
   return (
-    <section>
-      <div className="mb-5 flex gap-2 overflow-x-auto rounded-2xl bg-white p-2 ring-1 ring-black/10">
-        {modes.map((item) => (
-          <button key={item.id} type="button" onClick={() => setMode(item.id)} className={`min-w-max rounded-xl px-4 py-2.5 text-sm font-bold ${mode === item.id ? 'bg-black text-white' : 'text-apple-gray-600 hover:bg-apple-gray-100'}`}>
-            {item.label}
-          </button>
-        ))}
-      </div>
+    <section className="grid min-w-0 max-w-full gap-5 overflow-hidden lg:grid-cols-[220px_minmax(0,1fr)] lg:items-start">
+      <aside className="min-w-0 max-w-full lg:sticky lg:top-28">
+        <div className="flex w-full max-w-full gap-2 overflow-x-auto border-b border-black/10 pb-3 lg:flex-col lg:overflow-visible lg:border-b-0 lg:pb-0">
+          {modes.map((item) => {
+            const Icon = item.icon
+            return <button key={item.id} type="button" onClick={() => setMode(item.id)} className={`flex min-w-max items-center gap-3 rounded-lg px-3 py-3 text-left transition lg:min-w-0 ${mode === item.id ? 'bg-black text-white' : 'bg-white text-apple-gray-700 ring-1 ring-black/10 hover:bg-apple-gray-100'}`}><Icon className="h-4 w-4 shrink-0" /><span><span className="block text-sm font-bold">{item.label}</span><span className={`hidden text-xs lg:block ${mode === item.id ? 'text-white/60' : 'text-apple-gray-500'}`}>{item.description}</span></span></button>
+          })}
+        </div>
+      </aside>
 
-      {localError ? <p className="mb-5 rounded-2xl bg-red-50 px-5 py-4 text-sm font-semibold text-red-600">{localError}</p> : null}
+      <div className="min-w-0">
+        {localError ? <p className="mb-5 rounded-lg bg-red-50 px-5 py-4 text-sm font-semibold text-red-600">{localError}</p> : null}
 
-      {mode === 'hero' ? (
-        <div className="apple-card overflow-hidden">
-          <div className="flex flex-col justify-between gap-3 border-b border-black/10 p-5 md:flex-row md:items-center">
-            <div>
-              <h2 className="text-xl font-black text-apple-gray-900">首頁輪播圖片</h2>
-              <p className="mt-1 text-sm text-apple-gray-600">最多 8 張，可調整順序或刪除；儲存後首頁立即使用。</p>
+        {mode === 'overview' ? (
+          <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
+            {panelHeader('網站內容中心', '所有日常可替換的圖片與文案集中在這裡。商品本身請到「商城商品」管理。')}
+            <div className="grid md:grid-cols-2">
+              {modes.filter((item) => item.id !== 'overview').map((item) => { const Icon = item.icon; return <button key={item.id} type="button" onClick={() => setMode(item.id)} className="flex items-center gap-4 border-b border-black/10 p-5 text-left transition hover:bg-apple-gray-50 md:odd:border-r"><span className="flex h-10 w-10 items-center justify-center rounded-lg bg-apple-gray-100"><Icon className="h-5 w-5" /></span><span><span className="block font-black text-apple-gray-900">{item.label}</span><span className="mt-1 block text-sm text-apple-gray-500">{item.description}</span></span></button> })}
             </div>
-            <label title="新增首頁輪播圖片" className="apple-button-outline inline-flex cursor-pointer items-center justify-center gap-2 px-5 py-3">
-              {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
-              新增圖片
-              <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={isUploading || slides.length >= 8} onChange={(event) => addHeroImage(event.target.files?.[0])} />
-            </label>
           </div>
-          <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
-            {slides.map((slide, index) => (
-              <article key={`${slide}-${index}`} className="overflow-hidden rounded-2xl border border-black/10 bg-white">
-                <div className="relative aspect-video bg-apple-gray-100">
-                  <Image src={slide} alt={`首頁輪播 ${index + 1}`} fill sizes="(min-width: 1280px) 30vw, 50vw" className="object-cover" />
-                </div>
-                <div className="flex items-center justify-between gap-2 p-3">
-                  <span className="text-xs font-bold text-apple-gray-500">第 {index + 1} 張</span>
-                  <div className="flex gap-1">
-                    <button title="向前移動" type="button" disabled={index === 0} onClick={() => moveSlide(index, -1)} className="rounded-lg p-2 hover:bg-apple-gray-100 disabled:opacity-30"><ArrowUp className="h-4 w-4" /></button>
-                    <button title="向後移動" type="button" disabled={index === slides.length - 1} onClick={() => moveSlide(index, 1)} className="rounded-lg p-2 hover:bg-apple-gray-100 disabled:opacity-30"><ArrowDown className="h-4 w-4" /></button>
-                    <button title="刪除圖片" type="button" disabled={slides.length <= 1} onClick={() => setSlides((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="rounded-lg p-2 text-red-500 hover:bg-red-50 disabled:opacity-30"><Trash2 className="h-4 w-4" /></button>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-          <div className="border-t border-black/10 p-5 text-right">
-            <button type="button" onClick={() => runAction('save-hero', { action: 'save_site_content', section: 'hero_slides', value: slides })} className="apple-button-primary gap-2 px-6 py-3"><Save className="h-4 w-4" />儲存輪播</button>
-          </div>
-        </div>
-      ) : null}
+        ) : null}
 
-      {mode === 'activities' ? (
-        <div className="apple-card overflow-hidden">
-          <div className="flex flex-col justify-between gap-3 border-b border-black/10 p-5 md:flex-row md:items-center">
-            <div><h2 className="text-xl font-black text-apple-gray-900">首頁活動入口</h2><p className="mt-1 text-sm text-apple-gray-600">新增活動、報名頁或外部連結，首頁會依順序顯示。</p></div>
-            <button type="button" disabled={activities.length >= 8} onClick={() => setActivities((current) => [...current, { title: '', description: '', action: '立即查看', href: '/' }])} className="apple-button-outline gap-2 px-5 py-3 disabled:opacity-40"><Plus className="h-4 w-4" />新增活動</button>
+        {mode === 'hero' ? (
+          <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
+            {panelHeader('首頁輪播圖片', '最多 8 張，可調整順序或刪除。建議使用橫式高解析度照片。', '/')}
+            <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
+              {slides.map((slide, index) => <article key={`${slide}-${index}`} className="overflow-hidden rounded-lg border border-black/10"><div className="relative aspect-video bg-apple-gray-100"><Image src={slide} alt={`首頁輪播 ${index + 1}`} fill sizes="360px" className="object-cover" /></div><div className="flex items-center justify-between p-3"><span className="text-xs font-bold text-apple-gray-500">第 {index + 1} 張</span><div className="flex gap-1"><button title="向前移動" type="button" disabled={index === 0} onClick={() => moveSlide(index, -1)} className="p-2 disabled:opacity-30"><ArrowUp className="h-4 w-4" /></button><button title="向後移動" type="button" disabled={index === slides.length - 1} onClick={() => moveSlide(index, 1)} className="p-2 disabled:opacity-30"><ArrowDown className="h-4 w-4" /></button><button title="刪除圖片" type="button" disabled={slides.length <= 1} onClick={() => setSlides((current) => current.filter((_, i) => i !== index))} className="p-2 text-red-500 disabled:opacity-30"><Trash2 className="h-4 w-4" /></button></div></div></article>)}
+              <label className="flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-black/20 bg-apple-gray-50 text-sm font-bold text-apple-gray-600"><ImagePlus className="mb-3 h-6 w-6" />{isUploading ? '圖片上傳中...' : '新增輪播圖片'}<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={isUploading || slides.length >= 8} onChange={(event) => addHeroImage(event.target.files?.[0])} /></label>
+            </div>
+            <div className="border-t border-black/10 p-5 text-right">{saveButton('save-hero', 'hero_slides', slides, '儲存輪播')}</div>
           </div>
-          <div className="grid gap-4 p-5 md:grid-cols-2">
-            {activities.map((activity, index) => (
-              <article key={index} className="rounded-2xl border border-black/10 p-4">
-                <div className="mb-3 flex items-center justify-between"><Megaphone className="h-5 w-5 text-apple-blue" /><button title="刪除活動" type="button" onClick={() => setActivities((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="rounded-lg p-2 text-red-500 hover:bg-red-50"><Trash2 className="h-4 w-4" /></button></div>
-                <div className="grid gap-3">
-                  <input value={activity.title} onChange={(event) => setActivities((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, title: event.target.value } : item))} placeholder="活動名稱" className="apple-input" />
-                  <textarea value={activity.description} onChange={(event) => setActivities((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, description: event.target.value } : item))} placeholder="活動說明" rows={3} className="apple-input resize-y" />
-                  <input value={activity.action} onChange={(event) => setActivities((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, action: event.target.value } : item))} placeholder="按鈕文字" className="apple-input" />
-                  <input value={activity.href} onChange={(event) => setActivities((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, href: event.target.value } : item))} placeholder="網站路徑或完整網址" className="apple-input" />
-                </div>
-              </article>
-            ))}
-          </div>
-          <div className="border-t border-black/10 p-5 text-right"><button type="button" onClick={() => runAction('save-activities', { action: 'save_site_content', section: 'home_activities', value: activities })} className="apple-button-primary gap-2 px-6 py-3"><Save className="h-4 w-4" />發布活動入口</button></div>
-        </div>
-      ) : null}
+        ) : null}
 
-      {mode === 'seasonal' ? (
-        <div className="apple-card overflow-hidden">
-          <div className="border-b border-black/10 p-5"><div className="flex items-center gap-3"><CalendarRange className="h-5 w-5 text-apple-blue" /><h2 className="text-xl font-black text-apple-gray-900">季度資訊</h2></div><p className="mt-2 text-sm text-apple-gray-600">發布訓練季度、招生週期或重要公告；開啟後會出現在首頁。</p></div>
-          <div className="grid gap-4 p-5 md:grid-cols-2">
-            <input value={seasonal.period} onChange={(event) => setSeasonal((current) => ({ ...current, period: event.target.value }))} placeholder="季度，例如 2026 夏季" className="apple-input" />
-            <input value={seasonal.title} onChange={(event) => setSeasonal((current) => ({ ...current, title: event.target.value }))} placeholder="標題" className="apple-input" />
-            <textarea value={seasonal.summary} onChange={(event) => setSeasonal((current) => ({ ...current, summary: event.target.value }))} placeholder="摘要" rows={3} className="apple-input resize-y md:col-span-2" />
-            <textarea value={seasonal.body} onChange={(event) => setSeasonal((current) => ({ ...current, body: event.target.value }))} placeholder="完整內容，可分段撰寫" rows={6} className="apple-input resize-y md:col-span-2" />
-            <input value={seasonal.href} onChange={(event) => setSeasonal((current) => ({ ...current, href: event.target.value }))} placeholder="延伸連結，可留空" className="apple-input" />
-            <input value={seasonal.linkLabel} onChange={(event) => setSeasonal((current) => ({ ...current, linkLabel: event.target.value }))} placeholder="連結文字" className="apple-input" />
-            <label className="flex items-center gap-3 text-sm font-bold text-apple-gray-700"><input type="checkbox" checked={seasonal.active} onChange={(event) => setSeasonal((current) => ({ ...current, active: event.target.checked }))} className="h-4 w-4" />在首頁顯示這則資訊</label>
-            <button type="button" onClick={() => runAction('save-seasonal', { action: 'save_site_content', section: 'seasonal_update', value: seasonal })} className="apple-button-primary gap-2"><Save className="h-4 w-4" />儲存季度資訊</button>
+        {mode === 'home' ? (
+          <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
+            {panelHeader('首頁文案', '管理活動區、特色區與首頁課程預覽的標題及說明。', '/')}
+            <div className="grid gap-4 p-5 md:grid-cols-2">
+              {([['activitiesLabel','活動區小標'],['activitiesTitle','活動區標題'],['activitiesDescription','活動區說明'],['featuresTitle','特色區標題'],['featuresSubtitle','特色區說明'],['coursesLabel','課程區小標'],['coursesTitle','課程區標題'],['coursesDescription','課程區說明']] as const).map(([key,label]) => <Field key={key} label={label} wide={key.endsWith('Description') || key.endsWith('Subtitle')}><input value={home[key]} onChange={(e)=>setHome((c)=>({...c,[key]:e.target.value}))} className="apple-input" /></Field>)}
+              <div className="md:col-span-2"><h3 className="mb-3 font-black">六項特色</h3><div className="divide-y divide-black/10 border-y border-black/10">{home.features.map((item,index)=><div key={index} className="grid gap-3 py-4 md:grid-cols-2"><input value={item.title} onChange={(e)=>setHome((c)=>({...c,features:c.features.map((x,i)=>i===index?{...x,title:e.target.value}:x)}))} className="apple-input" /><input value={item.description} onChange={(e)=>setHome((c)=>({...c,features:c.features.map((x,i)=>i===index?{...x,description:e.target.value}:x)}))} className="apple-input" /></div>)}</div></div>
+              <div className="md:col-span-2"><h3 className="mb-3 font-black">首頁數字</h3><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{home.stats.map((item,index)=><div key={index} className="grid gap-2"><input value={item.value} onChange={(e)=>setHome((c)=>({...c,stats:c.stats.map((x,i)=>i===index?{...x,value:e.target.value}:x)}))} className="apple-input" /><input value={item.label} onChange={(e)=>setHome((c)=>({...c,stats:c.stats.map((x,i)=>i===index?{...x,label:e.target.value}:x)}))} className="apple-input" /></div>)}</div></div>
+            </div><div className="border-t border-black/10 p-5 text-right">{saveButton('save-home', 'home_content', home)}</div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
 
-      {mode === 'courses' && selectedCourse ? (
-        <div className="apple-card overflow-hidden">
-          <div className="border-b border-black/10 p-5"><h2 className="text-xl font-black text-apple-gray-900">課程資料管理</h2><p className="mt-1 text-sm text-apple-gray-600">修改會同步到首頁課程預覽、課程列表與課程詳情頁。</p></div>
-          <div className="grid gap-4 p-5 md:grid-cols-2">
-            <label className="md:col-span-2"><span className="mb-2 block text-xs font-bold text-apple-gray-500">選擇課程</span><select value={selectedSlug} onChange={(event) => setSelectedSlug(event.target.value)} className="apple-input">{courses.map((course) => <option key={course.slug} value={course.slug}>{course.name}</option>)}</select></label>
-            {[
-              ['name', '課程名稱'], ['weekday', '星期'], ['location', '城市 / 地點'], ['period', '課程週期'], ['classTime', '上課時間'], ['meetingPoint', '集合地點'], ['feeNote', '費用說明'], ['targetAudience', '適合對象'], ['focus', '訓練方向'],
-            ].map(([field, label]) => (
-              <label key={field} className={['meetingPoint', 'targetAudience', 'focus'].includes(field) ? 'md:col-span-2' : ''}><span className="mb-2 block text-xs font-bold text-apple-gray-500">{label}</span><input value={String(draft[field as keyof CourseOverride] ?? '')} onChange={(event) => setDraft((current) => ({ ...current, [field]: event.target.value }))} className="apple-input" /></label>
-            ))}
-            <label className="flex items-center gap-3 text-sm font-bold text-apple-gray-700"><input type="checkbox" checked={draft.active !== false} onChange={(event) => setDraft((current) => ({ ...current, active: event.target.checked }))} className="h-4 w-4" />這門課程對外顯示</label>
-            <button type="button" onClick={saveCourse} className="apple-button-primary gap-2"><Save className="h-4 w-4" />儲存課程資料</button>
+        {mode === 'activities' ? (
+          <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('首頁活動入口', '新增活動、報名頁或外部連結，首頁會依順序顯示。', '/')}
+            <div className="divide-y divide-black/10">{activities.map((activity,index)=><div key={index} className="grid gap-3 p-5 md:grid-cols-2"><Field label="活動名稱"><input value={activity.title} onChange={(e)=>setActivities((c)=>c.map((x,i)=>i===index?{...x,title:e.target.value}:x))} className="apple-input" /></Field><Field label="按鈕文字"><input value={activity.action} onChange={(e)=>setActivities((c)=>c.map((x,i)=>i===index?{...x,action:e.target.value}:x))} className="apple-input" /></Field><Field label="活動說明" wide><textarea rows={3} value={activity.description} onChange={(e)=>setActivities((c)=>c.map((x,i)=>i===index?{...x,description:e.target.value}:x))} className="apple-input resize-y" /></Field><Field label="連結"><input value={activity.href} onChange={(e)=>setActivities((c)=>c.map((x,i)=>i===index?{...x,href:e.target.value}:x))} className="apple-input" /></Field><button title="刪除活動" type="button" onClick={()=>setActivities((c)=>c.filter((_,i)=>i!==index))} className="self-end justify-self-start rounded-lg px-3 py-2 text-sm font-bold text-red-600 hover:bg-red-50"><Trash2 className="mr-2 inline h-4 w-4" />刪除</button></div>)}</div>
+            <div className="flex flex-col justify-between gap-3 border-t border-black/10 p-5 sm:flex-row"><button type="button" disabled={activities.length>=8} onClick={()=>setActivities((c)=>[...c,{title:'',description:'',action:'立即查看',href:'/'}])} className="apple-button-outline gap-2 px-5 py-3"><Plus className="h-4 w-4" />新增活動</button>{saveButton('save-activities','home_activities',activities,'發布活動入口')}</div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
+
+        {mode === 'seasonal' ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('季度資訊','發布招生週期或重要公告；開啟後會出現在首頁。','/')}<div className="grid gap-4 p-5 md:grid-cols-2"><Field label="季度"><input value={seasonal.period} onChange={(e)=>setSeasonal((c)=>({...c,period:e.target.value}))} className="apple-input" /></Field><Field label="標題"><input value={seasonal.title} onChange={(e)=>setSeasonal((c)=>({...c,title:e.target.value}))} className="apple-input" /></Field><Field label="摘要" wide><textarea rows={3} value={seasonal.summary} onChange={(e)=>setSeasonal((c)=>({...c,summary:e.target.value}))} className="apple-input resize-y" /></Field><Field label="完整內容" wide><textarea rows={6} value={seasonal.body} onChange={(e)=>setSeasonal((c)=>({...c,body:e.target.value}))} className="apple-input resize-y" /></Field><Field label="延伸連結"><input value={seasonal.href} onChange={(e)=>setSeasonal((c)=>({...c,href:e.target.value}))} className="apple-input" /></Field><Field label="連結文字"><input value={seasonal.linkLabel} onChange={(e)=>setSeasonal((c)=>({...c,linkLabel:e.target.value}))} className="apple-input" /></Field><label className="flex items-center gap-3 text-sm font-bold"><input type="checkbox" checked={seasonal.active} onChange={(e)=>setSeasonal((c)=>({...c,active:e.target.checked}))} className="h-4 w-4" />在首頁顯示</label><div className="text-right">{saveButton('save-seasonal','seasonal_update',seasonal)}</div></div></div> : null}
+
+        {mode === 'brand' ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('品牌與聯絡','Logo 與聯絡資料會同步到導覽列及頁尾。','/')}<div className="p-5"><ImageField label="品牌 Logo" value={brand.logoUrl} folder="brand" onChange={(logoUrl)=>setBrand((c)=>({...c,logoUrl}))} onError={setLocalError}/><div className="mt-5 grid gap-4 md:grid-cols-2">{([['brandName','品牌名稱'],['tagline','品牌標語'],['instagramUrl','Instagram 網址'],['instagramHandle','Instagram 帳號'],['contactText','聯絡說明'],['address','服務地區']] as const).map(([key,label])=><Field key={key} label={label}><input value={brand[key]} onChange={(e)=>setBrand((c)=>({...c,[key]:e.target.value}))} className="apple-input" /></Field>)}<Field label="頁尾品牌介紹" wide><textarea rows={4} value={brand.footerDescription} onChange={(e)=>setBrand((c)=>({...c,footerDescription:e.target.value}))} className="apple-input resize-y" /></Field></div></div><div className="border-t border-black/10 p-5 text-right">{saveButton('save-brand','brand_content',brand)}</div></div> : null}
+
+        {mode === 'media' ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('各頁主視覺','更換關於、學員見證、商店與週年活動頁的主要圖片。')}<div className="p-5"><ImageField label="關於我們主圖" value={pageMedia.aboutHero} folder="pages" onChange={(aboutHero)=>setPageMedia((c)=>({...c,aboutHero}))} onError={setLocalError}/><ImageField label="學員見證主圖" value={pageMedia.testimonialsHero} folder="pages" onChange={(testimonialsHero)=>setPageMedia((c)=>({...c,testimonialsHero}))} onError={setLocalError}/><ImageField label="商店主視覺" value={pageMedia.shopHero} folder="pages" onChange={(shopHero)=>setPageMedia((c)=>({...c,shopHero}))} onError={setLocalError}/><ImageField label="週年活動主圖" value={pageMedia.anniversaryHero} folder="pages" onChange={(anniversaryHero)=>setPageMedia((c)=>({...c,anniversaryHero}))} onError={setLocalError}/><div className="mt-5 grid gap-4 md:grid-cols-2"><Field label="商店標題"><input value={pageMedia.shopTitle} onChange={(e)=>setPageMedia((c)=>({...c,shopTitle:e.target.value}))} className="apple-input" /></Field><Field label="商店說明"><input value={pageMedia.shopSubtitle} onChange={(e)=>setPageMedia((c)=>({...c,shopSubtitle:e.target.value}))} className="apple-input" /></Field></div></div><div className="border-t border-black/10 p-5 text-right">{saveButton('save-media','page_media',pageMedia)}</div></div> : null}
+
+        {mode === 'about' ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('關於我們','管理品牌故事、理念、適合對象與頁尾行動文字。','/about')}<div className="grid gap-4 p-5 md:grid-cols-2">{([['eyebrow','頁面小標'],['title','主標題'],['titleHighlight','主標題重點'],['description','品牌介紹'],['beliefsLabel','理念小標'],['beliefsTitle','理念標題'],['audienceLabel','對象小標'],['audienceTitle','對象標題'],['audienceDescription','對象說明'],['ctaTitle','頁尾標題'],['ctaDescription','頁尾說明']] as const).map(([key,label])=><Field key={key} label={label} wide={['description','beliefsTitle','audienceTitle','audienceDescription','ctaTitle','ctaDescription'].includes(key)}>{['description','audienceDescription','ctaDescription'].includes(key)?<textarea rows={4} value={about[key]} onChange={(e)=>setAbout((c)=>({...c,[key]:e.target.value}))} className="apple-input resize-y" />:<input value={about[key]} onChange={(e)=>setAbout((c)=>({...c,[key]:e.target.value}))} className="apple-input" />}</Field>)}<Field label="對象標籤（以逗號分隔）" wide><input value={about.audienceTags.join(', ')} onChange={(e)=>setAbout((c)=>({...c,audienceTags:e.target.value.split(',').map(x=>x.trim()).filter(Boolean)}))} className="apple-input" /></Field><div className="md:col-span-2"><h3 className="mb-3 font-black">三項品牌理念</h3>{about.beliefs.map((item,index)=><div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2"><input value={item.title} onChange={(e)=>setAbout((c)=>({...c,beliefs:c.beliefs.map((x,i)=>i===index?{...x,title:e.target.value}:x)}))} className="apple-input" /><input value={item.description} onChange={(e)=>setAbout((c)=>({...c,beliefs:c.beliefs.map((x,i)=>i===index?{...x,description:e.target.value}:x)}))} className="apple-input" /></div>)}</div><div className="md:col-span-2"><h3 className="mb-3 font-black">三項服務重點</h3>{about.facts.map((item,index)=><div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2"><input value={item.title} onChange={(e)=>setAbout((c)=>({...c,facts:c.facts.map((x,i)=>i===index?{...x,title:e.target.value}:x)}))} className="apple-input" /><input value={item.description} onChange={(e)=>setAbout((c)=>({...c,facts:c.facts.map((x,i)=>i===index?{...x,description:e.target.value}:x)}))} className="apple-input" /></div>)}</div></div><div className="border-t border-black/10 p-5 text-right">{saveButton('save-about','about_content',about)}</div></div> : null}
+
+        {mode === 'testimonials' ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('學員見證','管理見證頁首屏、成長路徑與 Instagram 引導文案。','/testimonials')}<div className="grid gap-4 p-5 md:grid-cols-2">{([['eyebrow','首屏小標'],['title','首屏標題'],['description','首屏說明'],['pathLabel','成長路徑小標'],['pathTitle','成長路徑標題'],['pathDescription','成長路徑說明'],['ctaLabel','結尾小標'],['ctaTitle','結尾標題'],['ctaDescription','結尾說明']] as const).map(([key,label])=><Field key={key} label={label} wide={['description','pathTitle','pathDescription','ctaTitle','ctaDescription'].includes(key)}>{['description','pathDescription','ctaDescription'].includes(key)?<textarea rows={4} value={testimonials[key]} onChange={(e)=>setTestimonials((c)=>({...c,[key]:e.target.value}))} className="apple-input resize-y" />:<input value={testimonials[key]} onChange={(e)=>setTestimonials((c)=>({...c,[key]:e.target.value}))} className="apple-input" />}</Field>)}<div className="md:col-span-2"><h3 className="mb-3 font-black">三段成長路徑</h3>{testimonials.themes.map((item,index)=><div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2"><input value={item.title} onChange={(e)=>setTestimonials((c)=>({...c,themes:c.themes.map((x,i)=>i===index?{...x,title:e.target.value}:x)}))} className="apple-input" /><input value={item.description} onChange={(e)=>setTestimonials((c)=>({...c,themes:c.themes.map((x,i)=>i===index?{...x,description:e.target.value}:x)}))} className="apple-input" /></div>)}</div></div><div className="border-t border-black/10 p-5 text-right">{saveButton('save-testimonials','testimonials_content',testimonials)}</div></div> : null}
+
+        {mode === 'courses' && selectedCourse ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('課程資料管理','修改會同步到首頁課程預覽、課程列表與課程詳情頁。','/courses')}<div className="grid gap-4 p-5 md:grid-cols-2"><Field label="選擇課程" wide><select value={selectedSlug} onChange={(e)=>setSelectedSlug(e.target.value)} className="apple-input">{courses.map((course)=><option key={course.slug} value={course.slug}>{course.name}</option>)}</select></Field>{([['name','課程名稱'],['weekday','星期'],['location','城市 / 地點'],['period','課程週期'],['classTime','上課時間'],['meetingPoint','集合地點'],['feeNote','費用說明'],['targetAudience','適合對象'],['focus','訓練方向']] as const).map(([field,label])=><Field key={field} label={label} wide={['meetingPoint','targetAudience','focus'].includes(field)}><input value={String(draft[field]??'')} onChange={(e)=>setDraft((c)=>({...c,[field]:e.target.value}))} className="apple-input" /></Field>)}<label className="flex items-center gap-3 text-sm font-bold"><input type="checkbox" checked={draft.active!==false} onChange={(e)=>setDraft((c)=>({...c,active:e.target.checked}))} className="h-4 w-4" />這門課程對外顯示</label><button type="button" onClick={saveCourse} className="apple-button-primary gap-2"><Save className="h-4 w-4" />儲存課程資料</button></div></div> : null}
+      </div>
     </section>
   )
 }

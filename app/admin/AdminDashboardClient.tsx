@@ -153,10 +153,8 @@ const tabs: Array<{ id: AdminTab; label: string; icon: typeof LayoutDashboard; r
   { id: 'coaches', label: '教練管理', icon: UserCog, ready: true },
   { id: 'orders', label: '訂單審核', icon: ClipboardList, ready: true },
   { id: 'products', label: '商城商品', icon: Boxes, ready: true },
-  { id: 'content', label: '網站內容', icon: PanelsTopLeft, ready: true },
+  { id: 'content', label: '內容中心', icon: PanelsTopLeft, ready: true },
   { id: 'paymentAccounts', label: '收款帳戶', icon: Landmark, ready: true },
-  { id: 'refunds', label: '退款申請', icon: RotateCcw, ready: false },
-  { id: 'settings', label: '系統設定', icon: Settings, ready: false },
 ]
 
 function formatDate(value: string | null | undefined) {
@@ -447,11 +445,11 @@ export default function AdminDashboardClient() {
           <div className="mb-8 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
             <div>
               <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
-                Admin console
+                超級管理員
               </p>
               <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">管理員後台</h1>
               <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
-                集中管理商城商品、網站圖片、活動公告、季度資訊、課程資料與訂單。
+                集中管理網站內容、商城商品、課程、活動、訂單與收款資料。
               </p>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-apple-gray-500">
                 訂單審核僅限超級管理員；買家端不會顯示完整收款帳戶，後五碼只用於人工對帳參考。

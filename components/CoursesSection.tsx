@@ -20,7 +20,7 @@ function normalizeWeekday(weekday: string) {
 
 export default function CoursesSection({ preview = false }: CoursesSectionProps) {
   const { language, t } = useLanguage()
-  const { courses: managedCourses } = useSiteContent()
+  const { courses: managedCourses, home } = useSiteContent()
   const sortedCourses = [...managedCourses].sort(
     (a, b) => weekdayOrder.indexOf(normalizeWeekday(a.weekday)) - weekdayOrder.indexOf(normalizeWeekday(b.weekday))
   )
@@ -63,14 +63,14 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
           viewport={{ once: true }}
           className="mb-10"
         >
-          <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">{t.courses.sectionLabel}</p>
+          <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">{preview ? home.coursesLabel : t.courses.sectionLabel}</p>
           <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
             <div>
               <h2 className="text-3xl font-black text-apple-gray-900 md:text-5xl">
-                {preview ? t.courses.previewTitle : t.courses.title}
+                {preview ? home.coursesTitle : t.courses.title}
               </h2>
               <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
-                {preview ? t.courses.previewSubtitle : t.courses.subtitle}
+                {preview ? home.coursesDescription : t.courses.subtitle}
               </p>
             </div>
             <div className="flex flex-wrap gap-3">

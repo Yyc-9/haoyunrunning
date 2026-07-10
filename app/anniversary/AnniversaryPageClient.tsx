@@ -4,9 +4,11 @@ import Link from 'next/link'
 import { ArrowLeft, CalendarClock, Instagram, PartyPopper, Sparkles } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
 import LeadCollectionForm from '@/components/LeadCollectionForm'
+import { useSiteContent } from '@/app/site-content-provider'
 
 export default function AnniversaryPageClient() {
   const { t } = useLanguage()
+  const { brand, pageMedia } = useSiteContent()
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
@@ -21,7 +23,7 @@ export default function AnniversaryPageClient() {
             <section className="relative overflow-hidden rounded-[2rem] bg-apple-gray-900 p-8 text-white shadow-xl md:p-12">
               <div
                 className="absolute inset-0 bg-cover bg-center opacity-35"
-                style={{ backgroundImage: 'url("/LINE_ALBUM_四週年手機桌布_260515_1.jpg")' }}
+                style={{ backgroundImage: `url("${pageMedia.anniversaryHero}")` }}
               />
               <div className="absolute inset-0 bg-gradient-to-br from-apple-gray-900 via-apple-gray-900/80 to-apple-blue/70" />
 
@@ -43,7 +45,7 @@ export default function AnniversaryPageClient() {
                     {t.anniversary.formCta}
                   </Link>
                   <a
-                    href="https://www.instagram.com/nurture.running.team/"
+                    href={brand.instagramUrl}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center justify-center gap-2 rounded-full border border-white/35 px-6 py-3 text-sm font-bold text-white transition hover:bg-white/10"

@@ -3,14 +3,12 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ArrowUpRight, CalendarDays, PartyPopper, UsersRound } from 'lucide-react'
-import { useLanguage } from '@/app/language-context'
 import { useSiteContent } from '@/app/site-content-provider'
 
 const icons = [PartyPopper, UsersRound]
 
 export default function UpcomingActivitiesSection() {
-  const { t } = useLanguage()
-  const { activities: recentActivities } = useSiteContent()
+  const { activities: recentActivities, home } = useSiteContent()
 
   if (recentActivities.length === 0) return null
 
@@ -25,14 +23,14 @@ export default function UpcomingActivitiesSection() {
             viewport={{ once: true }}
           >
             <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
-              {t.homeUpdates.label}
+              {home.activitiesLabel}
             </p>
             <h2 className="text-3xl font-bold text-apple-gray-900 md:text-4xl">
-              {t.homeUpdates.title}
+              {home.activitiesTitle}
             </h2>
           </motion.div>
           <p className="max-w-2xl text-lg text-apple-gray-600">
-            {t.homeUpdates.description}
+            {home.activitiesDescription}
           </p>
         </div>
 

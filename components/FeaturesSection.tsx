@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { Target, BarChart, Users, Clock, Heart, Trophy } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
+import { useSiteContent } from '@/app/site-content-provider'
 
 const features = [
   {
@@ -33,6 +34,7 @@ const features = [
 
 export default function FeaturesSection() {
   const { t } = useLanguage()
+  const { home } = useSiteContent()
 
   return (
     <section id="about" className="py-20 bg-white">
@@ -46,17 +48,17 @@ export default function FeaturesSection() {
         >
           <h2 className="text-3xl md:text-4xl font-bold mb-6">
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-black to-apple-gray-800">
-              {t.features.title}
+              {home.featuresTitle}
             </span>
           </h2>
           <p className="text-xl text-apple-gray-600 max-w-3xl mx-auto">
-            {t.features.subtitle}
+            {home.featuresSubtitle}
           </p>
         </motion.div>
 
         <div className="bento-grid">
           {features.map((feature, index) => {
-            const content = t.features.items[index]
+            const content = home.features[index] ?? t.features.items[index]
 
             return (
             <motion.div
@@ -93,7 +95,7 @@ export default function FeaturesSection() {
           className="mt-16 bg-gradient-to-r from-apple-blue/5 via-apple-orange/5 to-purple-500/5 rounded-3xl p-8 border border-apple-gray-200"
         >
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {t.features.stats.map((stat, index) => (
+            {home.stats.map((stat, index) => (
               <div key={index} className="text-center">
                 <div className="text-3xl font-bold text-apple-gray-900 mb-2">
                   {stat.value}
