@@ -475,6 +475,7 @@ create table if not exists public.shop_products (
   price integer not null default 0 check (price >= 0),
   price_label text not null default '私訊諮詢',
   image text not null default '',
+  video text not null default '',
   rating numeric(3, 2) not null default 5,
   reviews integer not null default 0 check (reviews >= 0),
   tags jsonb not null default '[]'::jsonb,
@@ -537,14 +538,17 @@ add column if not exists variant_id text not null default '';
 alter table public.shop_order_items
 add column if not exists size text not null default '';
 
+alter table public.shop_products
+add column if not exists video text not null default '';
+
 insert into public.shop_products (
-  id, name, category, price, price_label, image, rating, reviews, tags, variants, sizes, stock_quantity, active
+  id, name, category, price, price_label, image, video, rating, reviews, tags, variants, sizes, stock_quantity, active
 ) values
-  ('1', '好運競速跑步背心', '跑者服飾', 0, '私訊諮詢', '/goodluck-running-vest.jpg', 5, 0, '["團隊裝備"]'::jsonb, '[{"id":"purple-white","name":"紫電白","image":"/goodluck-running-vest.jpg"},{"id":"black-blue","name":"曜黑藍","image":"/goodluck-running-vest-black.jpg"}]'::jsonb, '["XS","S","M","L","XL"]'::jsonb, 20, true),
-  ('2', '好運跑步 T 恤', '跑者服飾', 0, '私訊諮詢', '/goodluck-running-tee.jpg', 5, 0, '["團隊裝備"]'::jsonb, '[]'::jsonb, '["XS","S","M","L","XL"]'::jsonb, 20, true),
-  ('3', '好運跑步帽', '跑者配件', 0, '私訊諮詢', '', 5, 0, '["日常訓練"]'::jsonb, '[]'::jsonb, '["S/M","L/XL"]'::jsonb, 20, true),
-  ('4', '好運毛巾衣', '跑者服飾', 0, '私訊諮詢', '', 5, 0, '["賽後恢復"]'::jsonb, '[]'::jsonb, '["S","M","L","XL"]'::jsonb, 20, true),
-  ('5', 'CALBOMB 蜂蜜檸檬能量膠', '運動補給', 0, '私訊諮詢', '/calbomb-energy-gel.png', 5, 0, '["訓練補給","無添加認證"]'::jsonb, '[]'::jsonb, '[]'::jsonb, 30, true)
+  ('1', '好運競速跑步背心', '跑者服飾', 0, '私訊諮詢', '/goodluck-running-vest.jpg', '', 5, 0, '["團隊裝備"]'::jsonb, '[{"id":"purple-white","name":"紫電白","image":"/goodluck-running-vest.jpg"},{"id":"black-blue","name":"曜黑藍","image":"/goodluck-running-vest-black.jpg"}]'::jsonb, '["XS","S","M","L","XL"]'::jsonb, 20, true),
+  ('2', '好運跑步 T 恤', '跑者服飾', 0, '私訊諮詢', '/goodluck-running-tee.jpg', '', 5, 0, '["團隊裝備"]'::jsonb, '[]'::jsonb, '["XS","S","M","L","XL"]'::jsonb, 20, true),
+  ('3', '好運跑步帽', '跑者配件', 0, '私訊諮詢', '/products/goodluck-cap/cap-front.jpeg', '/products/goodluck-cap/goodluck-cap-promo.mp4', 5, 0, '["日常訓練"]'::jsonb, '[]'::jsonb, '["S/M","L/XL"]'::jsonb, 20, true),
+  ('4', '好運毛巾衣', '跑者服飾', 0, '私訊諮詢', '', '', 5, 0, '["賽後恢復"]'::jsonb, '[]'::jsonb, '["S","M","L","XL"]'::jsonb, 20, true),
+  ('5', 'CALBOMB 蜂蜜檸檬能量膠', '運動補給', 0, '私訊諮詢', '/calbomb-energy-gel.png', '', 5, 0, '["訓練補給","無添加認證"]'::jsonb, '[]'::jsonb, '[]'::jsonb, 30, true)
 on conflict (id) do nothing;
 
 drop trigger if exists shop_products_set_updated_at on public.shop_products;

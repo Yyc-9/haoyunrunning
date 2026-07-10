@@ -11,6 +11,7 @@ export type ShopProduct = {
   price: number
   priceLabel: string
   image: string
+  video?: string
   rating: number
   reviews: number
   tags: string[]
@@ -27,6 +28,7 @@ export type ShopProductRow = {
   price: number | null
   price_label: string | null
   image: string | null
+  video: string | null
   rating: number | null
   reviews: number | null
   tags: unknown
@@ -100,7 +102,8 @@ export const defaultShopProducts: ShopProduct[] = [
     category: '跑者配件',
     price: 0,
     priceLabel: '私訊諮詢',
-    image: '',
+    image: '/products/goodluck-cap/cap-front.jpeg',
+    video: '/products/goodluck-cap/goodluck-cap-promo.mp4',
     rating: 5,
     reviews: 0,
     tags: ['日常訓練'],
@@ -145,6 +148,7 @@ export function shopProductFromRow(row: ShopProductRow): ShopProduct {
     price: row.price ?? 0,
     priceLabel: row.price_label ?? '私訊諮詢',
     image: row.image ?? '',
+    video: row.video || undefined,
     rating: row.rating ?? 5,
     reviews: row.reviews ?? 0,
     tags: stringArray(row.tags),

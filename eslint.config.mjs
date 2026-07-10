@@ -16,6 +16,7 @@ const eslintConfig = [
       'node_modules/**',
       'out/**',
       'public/**',
+      'media/**',
     ],
   },
   ...compat.extends('next/core-web-vitals', 'next/typescript'),

@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1280, height=720" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "PingFang TC";
+        src: local("PingFang TC");
+      }
+
+      :root {
+        --ink: #0a0a0c;
+        --soft-white: #f7f8f5;
+        --cool-gray: #d9dce2;
+        --blue: #1677ff;
+        --carbon: #24262b;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 1280px;
+        height: 720px;
+        overflow: hidden;
+        background: var(--ink);
+      }
+
+      body {
+        font-family: "PingFang TC", sans-serif;
+        color: var(--soft-white);
+      }
+
+      #root {
+        position: relative;
+        width: 1280px;
+        height: 720px;
+        overflow: hidden;
+        background: var(--ink);
+      }
+
+      .scene {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      .scene img {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      .photo-cover {
+        object-fit: cover;
+      }
+
+      .eyebrow,
+      .scene-count,
+      .detail-tag,
+      .meta {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 20px;
+        font-weight: 500;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      .eyebrow {
+        color: var(--blue);
+      }
+
+      .title {
+        max-width: 590px;
+        font-size: 80px;
+        font-weight: 900;
+        line-height: 1.08;
+        letter-spacing: 0;
+      }
+
+      .subtitle {
+        max-width: 520px;
+        font-size: 28px;
+        font-weight: 350;
+        line-height: 1.45;
+      }
+
+      .rule {
+        width: 94px;
+        height: 6px;
+        background: var(--blue);
+        transform-origin: left center;
+      }
+
+      .scene-count {
+        position: absolute;
+        right: 34px;
+        top: 28px;
+        z-index: 5;
+        color: rgba(247, 248, 245, 0.78);
+      }
+
+      .split-dark {
+        display: grid;
+        grid-template-columns: 58% 42%;
+        background: var(--ink);
+      }
+
+      .split-dark .photo-panel {
+        position: relative;
+        overflow: hidden;
+        border-right: 1px solid rgba(247, 248, 245, 0.16);
+      }
+
+      .split-dark .photo-panel img {
+        object-fit: cover;
+        object-position: center 68%;
+      }
+
+      .split-copy {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        padding: 76px 64px;
+        gap: 24px;
+      }
+
+      .split-copy .title {
+        font-size: 72px;
+      }
+
+      .detail-full .detail-photo {
+        position: absolute;
+        inset: 0;
+        object-fit: cover;
+        object-position: center 72%;
+      }
+
+      .detail-full .shade {
+        position: absolute;
+        inset: auto 0 0 0;
+        height: 220px;
+        background: rgba(10, 10, 12, 0.84);
+        border-top: 1px solid rgba(247, 248, 245, 0.2);
+      }
+
+      .detail-copy {
+        position: absolute;
+        left: 56px;
+        right: 56px;
+        bottom: 44px;
+        z-index: 3;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 32px;
+      }
+
+      .detail-copy .title {
+        font-size: 68px;
+      }
+
+      .detail-tag {
+        border: 1px solid rgba(247, 248, 245, 0.5);
+        padding: 14px 18px;
+        color: var(--soft-white);
+      }
+
+      .product-back {
+        display: grid;
+        grid-template-columns: 52% 48%;
+        background: var(--soft-white);
+        color: var(--ink);
+      }
+
+      .product-back .product-stage {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        padding: 66px;
+        background: #eceef2;
+        border-right: 1px solid #c9ccd2;
+      }
+
+      .product-back .product-stage img {
+        object-fit: contain;
+        width: 100%;
+        height: 100%;
+        filter: drop-shadow(0 24px 26px rgba(10, 10, 12, 0.16));
+      }
+
+      .product-back .copy {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        padding: 78px 72px;
+        gap: 22px;
+      }
+
+      .product-back .title {
+        font-size: 72px;
+      }
+
+      .product-back .subtitle {
+        color: #4d515a;
+      }
+
+      .spec-row {
+        display: flex;
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      .spec-pill {
+        border: 1px solid #b7bbc3;
+        padding: 12px 16px;
+        color: #353840;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 18px;
+      }
+
+      .model-scene .model-photo {
+        position: absolute;
+        inset: 0;
+        object-fit: cover;
+      }
+
+      .model-front .model-photo {
+        object-position: center;
+      }
+
+      .model-side .model-photo {
+        object-position: center;
+      }
+
+      .model-back .model-photo {
+        object-position: center;
+      }
+
+      .copy-band {
+        position: absolute;
+        z-index: 4;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        width: 470px;
+        padding: 34px 38px;
+        background: rgba(10, 10, 12, 0.84);
+        border: 1px solid rgba(247, 248, 245, 0.18);
+      }
+
+      .copy-band.left {
+        left: 40px;
+        bottom: 40px;
+      }
+
+      .copy-band.right {
+        right: 40px;
+        bottom: 40px;
+      }
+
+      .copy-band .title {
+        font-size: 62px;
+      }
+
+      .copy-band .subtitle {
+        font-size: 24px;
+      }
+
+      .final-scene .final-photo {
+        position: absolute;
+        inset: 0;
+        object-fit: cover;
+        object-position: center 72%;
+      }
+
+      .final-scene .final-shade {
+        position: absolute;
+        inset: 0;
+        background: rgba(10, 10, 12, 0.7);
+      }
+
+      .final-content {
+        position: relative;
+        z-index: 3;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
+        width: 100%;
+        height: 100%;
+        padding: 64px 76px;
+        gap: 22px;
+      }
+
+      .brand-lockup {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .brand-lockup img {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid rgba(247, 248, 245, 0.8);
+      }
+
+      .brand-lockup span {
+        font-size: 28px;
+        font-weight: 900;
+      }
+
+      .final-content .title {
+        font-size: 92px;
+        max-width: 760px;
+      }
+
+      .cta {
+        margin-top: 6px;
+        padding: 16px 22px;
+        background: var(--soft-white);
+        color: var(--ink);
+        font-size: 24px;
+        font-weight: 900;
+      }
+
+      .wipe {
+        position: absolute;
+        inset: 0;
+        z-index: 50;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        pointer-events: none;
+      }
+
+      .wipe-panel {
+        width: 100%;
+        height: 100%;
+        background: var(--blue);
+      }
+
+      .wipe.light .wipe-panel {
+        background: var(--soft-white);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="16" data-width="1280" data-height="720">
+      <section id="scene-1" class="clip scene split-dark" data-start="0" data-duration="2.5" data-track-index="1">
+        <div class="photo-panel"><img class="scene-photo" src="assets/cap-front-pair.jpeg" alt="好運跑步帽正面實拍" /></div>
+        <div class="split-copy">
+          <p class="eyebrow">GOOD LUCK RUNNING / 01</p>
+          <div class="rule"></div>
+          <h1 class="title">好運跑步帽</h1>
+          <p class="subtitle">訓練、賽事與日常穿搭，都把好運戴上。</p>
+        </div>
+        <span class="scene-count">01 / 07</span>
+      </section>
+
+      <section id="scene-2" class="clip scene detail-full" data-start="2.3" data-duration="2.3" data-track-index="2">
+        <img class="detail-photo" src="assets/cap-side.jpeg" alt="好運跑步帽側面實拍" />
+        <div class="shade"></div>
+        <div class="detail-copy">
+          <div>
+            <p class="eyebrow">FRONT DETAIL</p>
+            <h2 class="title">正面刺繡</h2>
+          </div>
+          <span class="detail-tag">好運 / GOOD LUCK</span>
+        </div>
+        <span class="scene-count">02 / 07</span>
+      </section>
+
+      <section id="scene-3" class="clip scene product-back" data-start="4.4" data-duration="2.3" data-track-index="3">
+        <div class="product-stage"><img class="back-product" src="assets/cap-back.png" alt="好運跑步帽背面馬蹄刺繡" /></div>
+        <div class="copy">
+          <p class="eyebrow">BACK DETAIL / 03</p>
+          <div class="rule"></div>
+          <h2 class="title">後方馬蹄</h2>
+          <p class="subtitle">背面開口、調節帶與金屬扣，細節一眼看清。</p>
+          <div class="spec-row">
+            <span class="spec-pill">馬蹄刺繡</span>
+            <span class="spec-pill">可調節帽圍</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene-4" class="clip scene model-scene model-front" data-start="6.5" data-duration="2.6" data-track-index="4">
+        <img class="model-photo" src="assets/cap-model-front.png" alt="跑者正面佩戴好運跑步帽" />
+        <div class="copy-band left">
+          <p class="eyebrow">ON RUNNER / FRONT</p>
+          <h2 class="title">實際佩戴</h2>
+          <p class="subtitle">正面帽型與側邊閃電，在晨光下清楚呈現。</p>
+        </div>
+        <span class="scene-count">04 / 07</span>
+      </section>
+
+      <section id="scene-5" class="clip scene model-scene model-side" data-start="8.9" data-duration="2.6" data-track-index="5">
+        <img class="model-photo" src="assets/cap-model-side.png" alt="跑者側面佩戴好運跑步帽" />
+        <div class="copy-band right">
+          <p class="eyebrow">ON RUNNER / SIDE</p>
+          <h2 class="title">側邊閃電</h2>
+          <p class="subtitle">黑白配色，把速度感留在最小的細節。</p>
+        </div>
+        <span class="scene-count">05 / 07</span>
+      </section>
+
+      <section id="scene-6" class="clip scene model-scene model-back" data-start="11.3" data-duration="2.4" data-track-index="6">
+        <img class="model-photo" src="assets/cap-model-back.png" alt="跑者背面佩戴好運跑步帽" />
+        <div class="copy-band left">
+          <p class="eyebrow">ON RUNNER / BACK</p>
+          <h2 class="title">背面細節</h2>
+          <p class="subtitle">馬蹄、帽口與調節扣，佩戴效果完整呈現。</p>
+        </div>
+        <span class="scene-count">06 / 07</span>
+      </section>
+
+      <section id="scene-7" class="clip scene final-scene" data-start="13.5" data-duration="2.5" data-track-index="7">
+        <img class="final-photo" src="assets/cap-front-pair.jpeg" alt="好運跑步帽商品實拍" />
+        <div class="final-shade"></div>
+        <div class="final-content">
+          <div class="brand-lockup">
+            <img src="assets/goodluck-logo-nav.jpg" alt="好運跑班" />
+            <span>好運跑班</span>
+          </div>
+          <h2 class="title">好運跑步帽</h2>
+          <p class="subtitle">把好運，戴上場。</p>
+          <div class="cta">商城現正展示 / 私訊了解尺寸與現貨</div>
+        </div>
+        <span class="scene-count">07 / 07</span>
+      </section>
+
+      <div id="wipe-1" class="clip wipe" data-start="2.14" data-duration="0.56" data-track-index="20"><div class="wipe-panel"></div></div>
+      <div id="wipe-2" class="clip wipe light" data-start="4.24" data-duration="0.56" data-track-index="20"><div class="wipe-panel"></div></div>
+      <div id="wipe-3" class="clip wipe" data-start="6.34" data-duration="0.56" data-track-index="20"><div class="wipe-panel"></div></div>
+      <div id="wipe-4" class="clip wipe light" data-start="8.74" data-duration="0.56" data-track-index="20"><div class="wipe-panel"></div></div>
+      <div id="wipe-5" class="clip wipe" data-start="11.14" data-duration="0.56" data-track-index="20"><div class="wipe-panel"></div></div>
+      <div id="wipe-6" class="clip wipe light" data-start="13.34" data-duration="0.56" data-track-index="20"><div class="wipe-panel"></div></div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      tl.from("#scene-1 .scene-photo", { x: -46, opacity: 0, duration: 0.72, ease: "expo.out" }, 0.18)
+        .from("#scene-1 .eyebrow", { x: 32, opacity: 0, duration: 0.34, ease: "power3.out" }, 0.34)
+        .from("#scene-1 .rule", { scaleX: 0, duration: 0.28, ease: "circ.out" }, 0.48)
+        .from("#scene-1 .title", { scale: 0.92, opacity: 0, duration: 0.52, ease: "back.out(1.25)" }, 0.5)
+        .from("#scene-1 .subtitle", { y: 26, opacity: 0, duration: 0.4, ease: "sine.out" }, 0.68)
+        .to("#scene-1 .scene-photo", { x: 18, duration: 1.38, ease: "sine.inOut" }, 0.92);
+
+      tl.from("#scene-2 .detail-photo", { scale: 1.08, opacity: 0, duration: 0.68, ease: "power4.out" }, 2.48)
+        .from("#scene-2 .shade", { y: 60, opacity: 0, duration: 0.44, ease: "expo.out" }, 2.62)
+        .from("#scene-2 .eyebrow", { x: -34, opacity: 0, duration: 0.3, ease: "circ.out" }, 2.78)
+        .from("#scene-2 .title", { y: 28, opacity: 0, duration: 0.42, ease: "power3.out" }, 2.9)
+        .from("#scene-2 .detail-tag", { scale: 0.88, opacity: 0, duration: 0.34, ease: "back.out(1.4)" }, 3.02)
+        .to("#scene-2 .detail-photo", { y: -16, duration: 1.2, ease: "sine.inOut" }, 3.2);
+
+      tl.from("#scene-3 .product-stage", { x: -58, opacity: 0, duration: 0.62, ease: "expo.out" }, 4.58)
+        .from("#scene-3 .back-product", { rotation: -4, scale: 0.9, opacity: 0, duration: 0.7, ease: "back.out(1.15)" }, 4.68)
+        .from("#scene-3 .eyebrow", { y: -24, opacity: 0, duration: 0.3, ease: "power4.out" }, 4.76)
+        .from("#scene-3 .rule", { scaleX: 0, duration: 0.25, ease: "circ.out" }, 4.9)
+        .from("#scene-3 .title", { x: 36, opacity: 0, duration: 0.46, ease: "power3.out" }, 4.96)
+        .from("#scene-3 .subtitle", { y: 24, opacity: 0, duration: 0.36, ease: "sine.out" }, 5.12)
+        .from("#scene-3 .spec-pill", { scale: 0.84, opacity: 0, duration: 0.3, stagger: 0.1, ease: "back.out(1.35)" }, 5.26)
+        .to("#scene-3 .back-product", { rotation: 1.5, scale: 0.96, duration: 1.0, ease: "sine.inOut" }, 5.5);
+
+      tl.from("#scene-4 .model-photo", { scale: 1.07, opacity: 0, duration: 0.76, ease: "power4.out" }, 6.68)
+        .from("#scene-4 .copy-band", { x: -52, opacity: 0, duration: 0.5, ease: "expo.out" }, 6.84)
+        .from("#scene-4 .eyebrow", { y: -20, opacity: 0, duration: 0.28, ease: "circ.out" }, 7.0)
+        .from("#scene-4 .title", { scale: 0.9, opacity: 0, duration: 0.42, ease: "back.out(1.25)" }, 7.08)
+        .from("#scene-4 .subtitle", { y: 22, opacity: 0, duration: 0.38, ease: "sine.out" }, 7.2)
+        .to("#scene-4 .model-photo", { x: 16, duration: 1.42, ease: "sine.inOut" }, 7.42);
+
+      tl.from("#scene-5 .model-photo", { x: -42, opacity: 0, duration: 0.66, ease: "expo.out" }, 9.08)
+        .from("#scene-5 .copy-band", { x: 54, opacity: 0, duration: 0.48, ease: "power4.out" }, 9.22)
+        .from("#scene-5 .eyebrow", { scale: 0.92, opacity: 0, duration: 0.26, ease: "back.out(1.3)" }, 9.38)
+        .from("#scene-5 .title", { y: 34, opacity: 0, duration: 0.46, ease: "power3.out" }, 9.46)
+        .from("#scene-5 .subtitle", { x: 28, opacity: 0, duration: 0.34, ease: "circ.out" }, 9.62)
+        .to("#scene-5 .model-photo", { scale: 1.035, duration: 1.34, ease: "sine.inOut" }, 9.86);
+
+      tl.from("#scene-6 .model-photo", { scale: 1.08, opacity: 0, duration: 0.72, ease: "power4.out" }, 11.48)
+        .from("#scene-6 .copy-band", { y: 46, opacity: 0, duration: 0.46, ease: "expo.out" }, 11.62)
+        .from("#scene-6 .eyebrow", { x: -28, opacity: 0, duration: 0.3, ease: "circ.out" }, 11.76)
+        .from("#scene-6 .title", { scale: 0.9, opacity: 0, duration: 0.42, ease: "back.out(1.2)" }, 11.86)
+        .from("#scene-6 .subtitle", { y: 22, opacity: 0, duration: 0.34, ease: "sine.out" }, 12.0)
+        .to("#scene-6 .model-photo", { y: -12, duration: 1.08, ease: "sine.inOut" }, 12.24);
+
+      tl.from("#scene-7 .final-photo", { scale: 1.08, opacity: 0, duration: 0.7, ease: "power4.out" }, 13.68)
+        .from("#scene-7 .final-shade", { opacity: 0, duration: 0.42, ease: "sine.out" }, 13.76)
+        .from("#scene-7 .brand-lockup", { x: -34, opacity: 0, duration: 0.38, ease: "expo.out" }, 13.84)
+        .from("#scene-7 .title", { y: 42, opacity: 0, duration: 0.5, ease: "power3.out" }, 13.98)
+        .from("#scene-7 .subtitle", { scale: 0.92, opacity: 0, duration: 0.34, ease: "back.out(1.3)" }, 14.16)
+        .from("#scene-7 .cta", { x: 46, opacity: 0, duration: 0.4, ease: "circ.out" }, 14.3)
+        .to("#scene-7 .final-content", { opacity: 0, duration: 0.32, ease: "power2.in" }, 15.62)
+        .to("#scene-7 .final-photo", { opacity: 0, duration: 0.3, ease: "power3.in" }, 15.68);
+
+      const wipes = [
+        ["#wipe-1 .wipe-panel", 2.14],
+        ["#wipe-2 .wipe-panel", 4.24],
+        ["#wipe-3 .wipe-panel", 6.34],
+        ["#wipe-4 .wipe-panel", 8.74],
+        ["#wipe-5 .wipe-panel", 11.14],
+        ["#wipe-6 .wipe-panel", 13.34],
+      ];
+
+      wipes.forEach(([selector, start], index) => {
+        tl.fromTo(selector, { scaleX: 0, transformOrigin: "left center" }, { scaleX: 1, duration: 0.28, ease: index % 2 ? "power4.in" : "expo.in" }, start)
+          .to(selector, { scaleX: 0, transformOrigin: "right center", duration: 0.28, ease: index % 2 ? "expo.out" : "power4.out" }, start + 0.28);
+      });
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

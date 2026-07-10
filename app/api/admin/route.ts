@@ -254,7 +254,7 @@ export async function GET(request: NextRequest) {
       .limit(1000),
     supabaseAdmin!
       .from('shop_products')
-      .select('id, name, category, price, price_label, image, rating, reviews, tags, variants, sizes, stock_quantity, active')
+      .select('id, name, category, price, price_label, image, video, rating, reviews, tags, variants, sizes, stock_quantity, active')
       .order('category', { ascending: true })
       .order('name', { ascending: true }),
     supabaseAdmin!

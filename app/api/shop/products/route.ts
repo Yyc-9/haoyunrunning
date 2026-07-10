@@ -24,7 +24,7 @@ export async function GET() {
   try {
     const { data, error } = await supabaseAdmin
       .from('shop_products')
-      .select('id, name, category, price, price_label, image, rating, reviews, tags, variants, sizes, stock_quantity, active')
+      .select('id, name, category, price, price_label, image, video, rating, reviews, tags, variants, sizes, stock_quantity, active')
       .eq('active', true)
       .order('category', { ascending: true })
       .order('name', { ascending: true })

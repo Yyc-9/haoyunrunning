@@ -123,6 +123,7 @@ create table if not exists public.shop_products (
   price integer not null default 0 check (price >= 0),
   price_label text not null default '私訊諮詢',
   image text not null default '',
+  video text not null default '',
   rating numeric(3, 2) not null default 5,
   reviews integer not null default 0 check (reviews >= 0),
   tags jsonb not null default '[]'::jsonb,
@@ -185,8 +186,11 @@ add column if not exists variant_id text not null default '';
 alter table public.shop_order_items
 add column if not exists size text not null default '';
 
+alter table public.shop_products
+add column if not exists video text not null default '';
+
 insert into public.shop_products (
-  id, name, category, price, price_label, image, rating, reviews, tags, variants, sizes, stock_quantity, active
+  id, name, category, price, price_label, image, video, rating, reviews, tags, variants, sizes, stock_quantity, active
 ) values
   (
     '1',
@@ -195,6 +199,7 @@ insert into public.shop_products (
     0,
     '私訊諮詢',
     '/goodluck-running-vest.jpg',
+    '',
     5,
     0,
     '["團隊裝備"]'::jsonb,
@@ -210,6 +215,7 @@ insert into public.shop_products (
     0,
     '私訊諮詢',
     '/goodluck-running-tee.jpg',
+    '',
     5,
     0,
     '["團隊裝備"]'::jsonb,
@@ -224,7 +230,8 @@ insert into public.shop_products (
     '跑者配件',
     0,
     '私訊諮詢',
-    '',
+    '/products/goodluck-cap/cap-front.jpeg',
+    '/products/goodluck-cap/goodluck-cap-promo.mp4',
     5,
     0,
     '["日常訓練"]'::jsonb,
@@ -239,6 +246,7 @@ insert into public.shop_products (
     '跑者服飾',
     0,
     '私訊諮詢',
+    '',
     '',
     5,
     0,
@@ -255,6 +263,7 @@ insert into public.shop_products (
     0,
     '私訊諮詢',
     '/calbomb-energy-gel.png',
+    '',
     5,
     0,
     '["訓練補給","無添加認證"]'::jsonb,
