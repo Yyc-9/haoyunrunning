@@ -7,6 +7,7 @@ import { ToastProvider } from './toast-provider'
 import { CartProvider } from './cart-provider'
 import { LanguageProvider } from './language-context'
 import { SpeedInsights } from '@vercel/speed-insights/next'
+import { SiteContentProvider } from './site-content-provider'
 
 export const metadata: Metadata = {
   title: '好運跑班 - 科學訓練，跑出好運',
@@ -32,17 +33,19 @@ export default function RootLayout({
     <html lang="zh-TW" className="scroll-smooth">
       <body className="min-h-screen bg-white text-black">
         <LanguageProvider>
-          <AuthProvider>
-            <CartProvider>
-              <ToastProvider>
-                <div className="relative flex min-h-screen flex-col">
-                  <NavigationWrapper />
-                  <main className="flex-1">{children}</main>
-                  <Footer />
-                </div>
-              </ToastProvider>
-            </CartProvider>
-          </AuthProvider>
+          <SiteContentProvider>
+            <AuthProvider>
+              <CartProvider>
+                <ToastProvider>
+                  <div className="relative flex min-h-screen flex-col">
+                    <NavigationWrapper />
+                    <main className="flex-1">{children}</main>
+                    <Footer />
+                  </div>
+                </ToastProvider>
+              </CartProvider>
+            </AuthProvider>
+          </SiteContentProvider>
         </LanguageProvider>
         <SpeedInsights />
       </body>

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ChevronDown, ChevronRight, MapPin, Target } from 'lucide-react'
 import { allCourses } from '@/lib/goodluck-data'
 import { useLanguage } from '@/app/language-context'
+import { useSiteContent } from '@/app/site-content-provider'
 
 const weekdayOrder = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
 
@@ -22,6 +23,7 @@ function getMobileCourseName(name: string) {
 type LevelFilter = 'all' | 'beginner' | 'advanced' | 'elite'
 export default function CoursesTable() {
   const { language } = useLanguage()
+  const { courses } = useSiteContent()
   const [levelFilter, setLevelFilter] = useState<LevelFilter>('all')
   const [cityFilter, setCityFilter] = useState<string>('all')
   const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set())
@@ -94,12 +96,12 @@ export default function CoursesTable() {
   }
 
   const cities = useMemo(() => {
-    const uniqueCities = [...new Set(allCourses.map((c) => c.location))]
+    const uniqueCities = [...new Set(courses.map((course) => course.location))]
     return uniqueCities.sort()
-  }, [])
+  }, [courses])
 
   const filteredCourses = useMemo(() => {
-    return allCourses.filter((course) => {
+    return courses.filter((course) => {
       if (levelFilter !== 'all') {
         const courseLevel = getLevelBadge(course)
         if (courseLevel !== levelFilter) return false
@@ -111,7 +113,7 @@ export default function CoursesTable() {
 
       return true
     })
-  }, [levelFilter, cityFilter])
+  }, [courses, levelFilter, cityFilter])
 
   const groupedCourses = useMemo(() => {
     const sorted = [...filteredCourses].sort(

@@ -3,10 +3,10 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ChevronRight, Clock, MapPin, Target, Users } from 'lucide-react'
-import { allCourses } from '@/lib/goodluck-data'
 import CoursePaymentInfo from '@/components/CoursePaymentInfo'
 import CoursesTable from '@/components/CoursesTable'
 import { useLanguage } from '@/app/language-context'
+import { useSiteContent } from '@/app/site-content-provider'
 
 type CoursesSectionProps = {
   preview?: boolean
@@ -20,7 +20,8 @@ function normalizeWeekday(weekday: string) {
 
 export default function CoursesSection({ preview = false }: CoursesSectionProps) {
   const { language, t } = useLanguage()
-  const sortedCourses = [...allCourses].sort(
+  const { courses: managedCourses } = useSiteContent()
+  const sortedCourses = [...managedCourses].sort(
     (a, b) => weekdayOrder.indexOf(normalizeWeekday(a.weekday)) - weekdayOrder.indexOf(normalizeWeekday(b.weekday))
   )
   const courses = preview ? sortedCourses.slice(0, 4) : sortedCourses

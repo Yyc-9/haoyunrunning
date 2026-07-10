@@ -20,6 +20,7 @@ import BenefitItem from '@/components/BenefitItem'
 import SuitabilityCard from '@/components/SuitabilityCard'
 import FAQItem from '@/components/FAQItem'
 import EnrollmentStep from '@/components/EnrollmentStep'
+import { useSiteContent } from '@/app/site-content-provider'
 
 type CourseDetail = (typeof allCourses)[number]
 type CoachDetail = CourseDetail['coach']
@@ -76,8 +77,11 @@ function getTrainingDescription(title: string, language: string) {
 
 export default function CourseDetailClient({ course }: CourseDetailClientProps) {
   const { language, t } = useLanguage()
+  const { courses, isLoading } = useSiteContent()
+  const courseSlug = course?.slug
+  const managedCourse = courseSlug ? courses.find((item) => item.slug === courseSlug) ?? (isLoading ? course : null) : null
 
-  if (!course) {
+  if (!managedCourse) {
     return (
       <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
         <section className="container mx-auto max-w-3xl px-4 py-20 text-center sm:px-6 lg:px-8">
@@ -100,6 +104,8 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
       </main>
     )
   }
+
+  course = managedCourse
 
   const text = (value: string) => localizeText(value, language)
   const instagramUrl = course.instagramUrl || 'https://www.instagram.com/nurture.running.team/'

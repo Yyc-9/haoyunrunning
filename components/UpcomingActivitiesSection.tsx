@@ -3,13 +3,16 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ArrowUpRight, CalendarDays, PartyPopper, UsersRound } from 'lucide-react'
-import { recentActivities } from '@/lib/goodluck-data'
 import { useLanguage } from '@/app/language-context'
+import { useSiteContent } from '@/app/site-content-provider'
 
 const icons = [PartyPopper, UsersRound]
 
 export default function UpcomingActivitiesSection() {
   const { t } = useLanguage()
+  const { activities: recentActivities } = useSiteContent()
+
+  if (recentActivities.length === 0) return null
 
   return (
     <section className="py-20 bg-apple-gray-100">
@@ -50,11 +53,11 @@ export default function UpcomingActivitiesSection() {
                   <Icon className="h-6 w-6 text-white" />
                 </div>
                 <h3 className="mb-3 text-xl font-bold text-apple-gray-900">
-                  {t.homeUpdates.activities[index]?.title ?? activity.title}
+                  {activity.title}
                 </h3>
-                <p className="mb-8 text-apple-gray-600">{t.homeUpdates.activities[index]?.description ?? activity.description}</p>
+                <p className="mb-8 text-apple-gray-600">{activity.description}</p>
                 <div className="inline-flex items-center text-sm font-semibold text-apple-blue">
-                  {t.homeUpdates.activities[index]?.action ?? activity.action}
+                  {activity.action}
                   <ArrowUpRight className="ml-2 h-4 w-4" />
                 </div>
               </motion.div>

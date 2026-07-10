@@ -1,7 +1,18 @@
+import { randomUUID } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminProfile } from '@/lib/admin-auth'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { shopProductFromRow, type ShopProductRow } from '@/lib/shop-products'
+import { allCourses } from '@/lib/goodluck-data'
+import {
+  defaultSiteContent,
+  isSafePublicUrl,
+  normalizeActivities,
+  normalizeCourseOverrides,
+  normalizeHeroSlides,
+  normalizeSeasonalUpdate,
+  siteContentFromRows,
+} from '@/lib/site-content'
 
 type PaymentOrderStatus = 'pending_transfer' | 'pending_review' | 'approved' | 'rejected'
 
@@ -93,6 +104,8 @@ type AdminPatchBody =
   | { action?: 'bind_student'; studentId?: string; coachId?: string }
   | { action?: 'unbind_student'; bindingId?: string }
   | { action?: 'update_product'; productId?: string; stockQuantity?: number; price?: number; active?: boolean }
+  | { action?: 'create_product'; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; tags?: string; sizes?: string }
+  | { action?: 'save_site_content'; section?: string; value?: unknown }
   | { action?: 'create_payment_account'; label?: string; accountName?: string; bankName?: string; bankCode?: string; accountNumber?: string; weight?: number }
   | { action?: 'toggle_payment_account'; accountId?: string; active?: boolean }
 
@@ -112,6 +125,29 @@ function json(data: unknown, init?: ResponseInit) {
 
 function cleanText(value: unknown) {
   return typeof value === 'string' ? value.trim() : ''
+}
+
+function commaSeparated(value: unknown) {
+  return cleanText(value)
+    .split(/[,，]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 20)
+}
+
+function isSafeProductImage(value: string) {
+  if (value.startsWith('/') && !value.startsWith('//')) return true
+
+  try {
+    const url = new URL(value)
+    return (
+      url.protocol === 'https:' &&
+      url.hostname.endsWith('.supabase.co') &&
+      url.pathname.startsWith('/storage/v1/object/public/site-media/products/')
+    )
+  } catch {
+    return false
+  }
 }
 
 function isPaymentOrderStatus(value: string): value is PaymentOrderStatus {
@@ -227,6 +263,7 @@ export async function GET(request: NextRequest) {
     shopOrdersResult,
     shopOrderItemsResult,
     paymentAccountsResult,
+    siteContentResult,
   ] = await Promise.all([
     supabaseAdmin!
       .from('profiles')
@@ -270,6 +307,10 @@ export async function GET(request: NextRequest) {
       .from('shop_payment_accounts')
       .select('id, label, account_name, bank_name, bank_code, account_number, active, weight, last_assigned_at, created_at, updated_at')
       .order('created_at', { ascending: false }),
+    supabaseAdmin!
+      .from('site_content')
+      .select('key, value')
+      .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides']),
   ])
 
   const firstError = [
@@ -282,6 +323,7 @@ export async function GET(request: NextRequest) {
     isOptionalSchemaError(shopOrdersResult.error) ? null : shopOrdersResult.error,
     isOptionalSchemaError(shopOrderItemsResult.error) ? null : shopOrderItemsResult.error,
     isOptionalSchemaError(paymentAccountsResult.error) ? null : paymentAccountsResult.error,
+    isOptionalSchemaError(siteContentResult.error) ? null : siteContentResult.error,
   ].find(Boolean)
 
   if (firstError) {
@@ -297,6 +339,7 @@ export async function GET(request: NextRequest) {
   const shopOrders = shopOrdersResult.error ? [] : (shopOrdersResult.data ?? []) as ShopOrderRow[]
   const shopOrderItems = shopOrderItemsResult.error ? [] : (shopOrderItemsResult.data ?? []) as ShopOrderItemRow[]
   const paymentAccounts = paymentAccountsResult.error ? [] : (paymentAccountsResult.data ?? []) as PaymentAccountRow[]
+  const siteContent = siteContentResult.error ? defaultSiteContent : siteContentFromRows(siteContentResult.data)
   const coursePaymentOrders = orders.filter((order) => order.source === 'course_payment')
 
   const profilesById = new Map(profiles.map((profile) => [profile.id, profile]))
@@ -448,6 +491,19 @@ export async function GET(request: NextRequest) {
     orders: dashboardOrders,
     products: shopProducts,
     paymentAccounts,
+    siteContent,
+    courses: allCourses.map((course) => ({
+      slug: course.slug,
+      name: course.name,
+      weekday: course.weekday,
+      location: course.location,
+      period: course.period,
+      classTime: course.classTime,
+      meetingPoint: course.meetingPoint,
+      feeNote: course.feeNote,
+      targetAudience: course.targetAudience,
+      focus: course.focus,
+    })),
     coachOptions: coaches
       .filter((coach) => coach.coachEnabled)
       .map((coach) => ({ id: coach.id, name: coach.name, email: coach.email })),
@@ -654,6 +710,99 @@ export async function PATCH(request: NextRequest) {
     }
 
     return json({ product, message: '商品售價、庫存與上架狀態已更新。' })
+  }
+
+  if (body.action === 'create_product') {
+    const name = cleanText(body.name).slice(0, 180)
+    const category = cleanText(body.category).slice(0, 100)
+    const image = cleanText(body.image)
+    const stockQuantity = Number(body.stockQuantity)
+    const price = Number(body.price)
+    const active = body.active === true
+
+    if (!name || !category || !image) {
+      return json({ error: '請填寫商品名稱、分類並上傳主圖。' }, { status: 400 })
+    }
+    if (!isSafePublicUrl(image) || !isSafeProductImage(image)) {
+      return json({ error: '商品圖片網址無效。' }, { status: 400 })
+    }
+    if (!Number.isInteger(stockQuantity) || stockQuantity < 0 || stockQuantity > 1_000_000) {
+      return json({ error: '庫存數量必須是有效整數。' }, { status: 400 })
+    }
+    if (!Number.isInteger(price) || price < 0 || price > 10_000_000) {
+      return json({ error: '商品售價必須是有效的新台幣整數金額。' }, { status: 400 })
+    }
+
+    const { data: product, error } = await supabaseAdmin!
+      .from('shop_products')
+      .insert({
+        id: `product-${randomUUID()}`,
+        name,
+        category,
+        price,
+        price_label: price > 0 ? `NT$${Math.round(price / 100)}` : '暫未開放購買',
+        image,
+        video: '',
+        rating: 5,
+        reviews: 0,
+        tags: commaSeparated(body.tags),
+        variants: [],
+        sizes: commaSeparated(body.sizes),
+        stock_quantity: stockQuantity,
+        active,
+      })
+      .select('*')
+      .single()
+
+    if (error || !product) {
+      return json({ error: error?.message || '新增商品失敗。' }, { status: 500 })
+    }
+
+    return json({ product, message: '商品已建立並加入商城管理。' })
+  }
+
+  if (body.action === 'save_site_content') {
+    const section = cleanText(body.section)
+    let value: unknown
+
+    if (section === 'hero_slides') {
+      const normalized = normalizeHeroSlides(body.value)
+      if (!Array.isArray(body.value) || normalized.length !== body.value.length) {
+        return json({ error: '輪播圖片資料不完整，請重新選擇圖片。' }, { status: 400 })
+      }
+      value = normalized
+    } else if (section === 'home_activities') {
+      const normalized = normalizeActivities(body.value)
+      if (!Array.isArray(body.value) || normalized.length !== body.value.length) {
+        return json({ error: '請完整填寫每一則活動的名稱、說明、按鈕文字與連結。' }, { status: 400 })
+      }
+      value = normalized
+    } else if (section === 'seasonal_update') {
+      const normalized = normalizeSeasonalUpdate(body.value)
+      if (normalized.active && (!normalized.title || !normalized.summary)) {
+        return json({ error: '顯示季度資訊前，請先填寫標題與摘要。' }, { status: 400 })
+      }
+      value = normalized
+    } else if (section === 'course_overrides') {
+      const validSlugs = new Set(allCourses.map((course) => course.slug))
+      value = Object.fromEntries(
+        Object.entries(normalizeCourseOverrides(body.value)).filter(([slug]) => validSlugs.has(slug))
+      )
+    } else {
+      return json({ error: '網站內容區塊無效。' }, { status: 400 })
+    }
+
+    const { data: content, error } = await supabaseAdmin!
+      .from('site_content')
+      .upsert({ key: section, value, updated_by: auth.user.id }, { onConflict: 'key' })
+      .select('key, value, updated_at')
+      .single()
+
+    if (error || !content) {
+      return json({ error: error?.message || '網站內容儲存失敗。' }, { status: 500 })
+    }
+
+    return json({ content, message: '網站內容已儲存並發布。' })
   }
 
   if (body.action === 'create_payment_account') {

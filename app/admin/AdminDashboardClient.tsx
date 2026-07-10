@@ -15,14 +15,18 @@ import {
   Settings,
   ShieldCheck,
   Landmark,
+  PanelsTopLeft,
   UserCog,
   UsersRound,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import type { SiteContent } from '@/lib/site-content'
+import AdminContentManager from '@/components/admin/AdminContentManager'
+import AdminProductCreator from '@/components/admin/AdminProductCreator'
 
 type PaymentOrderStatus = 'pending_transfer' | 'pending_review' | 'approved' | 'rejected'
 
-type AdminTab = 'overview' | 'students' | 'coaches' | 'orders' | 'products' | 'paymentAccounts' | 'refunds' | 'events' | 'settings'
+type AdminTab = 'overview' | 'students' | 'coaches' | 'orders' | 'products' | 'content' | 'paymentAccounts' | 'refunds' | 'settings'
 
 type AdminDashboardPayload = {
   admin: { id: string; email: string; name: string; role: string }
@@ -42,7 +46,22 @@ type AdminDashboardPayload = {
   orders: AdminOrder[]
   products: AdminProduct[]
   paymentAccounts: PaymentAccount[]
+  siteContent: SiteContent
+  courses: AdminCourseSummary[]
   coachOptions: Array<{ id: string; name: string; email: string }>
+}
+
+type AdminCourseSummary = {
+  slug: string
+  name: string
+  weekday: string
+  location: string
+  period: string
+  classTime: string
+  meetingPoint: string
+  feeNote: string
+  targetAudience: string
+  focus: string
 }
 
 type AdminStudent = {
@@ -134,9 +153,9 @@ const tabs: Array<{ id: AdminTab; label: string; icon: typeof LayoutDashboard; r
   { id: 'coaches', label: '教練管理', icon: UserCog, ready: true },
   { id: 'orders', label: '訂單審核', icon: ClipboardList, ready: true },
   { id: 'products', label: '商城商品', icon: Boxes, ready: true },
+  { id: 'content', label: '網站內容', icon: PanelsTopLeft, ready: true },
   { id: 'paymentAccounts', label: '收款帳戶', icon: Landmark, ready: true },
   { id: 'refunds', label: '退款申請', icon: RotateCcw, ready: false },
-  { id: 'events', label: '活動報名', icon: CreditCard, ready: false },
   { id: 'settings', label: '系統設定', icon: Settings, ready: false },
 ]
 
@@ -432,7 +451,7 @@ export default function AdminDashboardClient() {
               </p>
               <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">管理員後台</h1>
               <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
-                管理商城訂單、庫存與收款帳戶；課程和教練資料先保留在後台，後續再整理權限模型。
+                集中管理商城商品、網站圖片、活動公告、季度資訊、課程資料與訂單。
               </p>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-apple-gray-500">
                 訂單審核僅限超級管理員；買家端不會顯示完整收款帳戶，後五碼只用於人工對帳參考。
@@ -791,6 +810,7 @@ export default function AdminDashboardClient() {
 
 	          {activeTab === 'products' && data ? (
 	            <section className="apple-card overflow-hidden">
+	              <AdminProductCreator runAction={runAction} />
 	              <div className="border-b border-black/10 p-5">
 	                <h2 className="text-xl font-black text-apple-gray-900">商城商品</h2>
 		                <p className="mt-1 text-sm text-apple-gray-600">先設定新台幣售價再上架。訂單成立時會保留庫存，付款異常時會退回。</p>
@@ -866,6 +886,10 @@ export default function AdminDashboardClient() {
 	              )}
 	            </section>
 	          ) : null}
+
+              {activeTab === 'content' && data ? (
+                <AdminContentManager content={data.siteContent} courses={data.courses} runAction={runAction} />
+              ) : null}
 
 	          {activeTab === 'paymentAccounts' && data ? (
 	            <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">

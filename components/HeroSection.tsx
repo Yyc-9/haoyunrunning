@@ -5,17 +5,13 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { BookOpenCheck, ChevronDown, ChevronLeft, ChevronRight, Pause, Play, ShoppingBag, UsersRound } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
-
-const images = [
-  '/20250605[好運]三周年慶-7089.jpg',
-  '/20250605[好運]三周年慶-7096.jpg',
-  '/LINE_ALBUM_四週年手機桌布_260515_1.jpg',
-]
+import { useSiteContent } from '@/app/site-content-provider'
 
 export default function HeroSection() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isAutoPlay, setIsAutoPlay] = useState(true)
   const { t } = useLanguage()
+  const { heroSlides: images } = useSiteContent()
   const entryCards = [
     {
       href: '/courses',
@@ -45,7 +41,11 @@ export default function HeroSection() {
     }, 5000)
 
     return () => clearInterval(interval)
-  }, [isAutoPlay])
+  }, [images.length, isAutoPlay])
+
+  useEffect(() => {
+    if (currentImageIndex >= images.length) setCurrentImageIndex(0)
+  }, [currentImageIndex, images.length])
 
   const scrollToContent = () => {
     window.scrollTo({ top: window.innerHeight, behavior: 'smooth' })
