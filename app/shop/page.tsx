@@ -211,18 +211,16 @@ export default function ShopPage() {
                     <p className="mb-2 text-xs text-gray-500">{product.category}</p>
                     <h3 className="mb-2 font-bold text-gray-900 transition group-hover:text-black">{product.name}</h3>
 
-                    {product.variants && (
-                      <div className="mb-3 flex flex-wrap gap-2">
-                        {product.variants.map((variant) => {
-                          const isSelected = variant.id === selectedVariant?.id
-                          return (
-                            <button key={variant.id} type="button" onClick={() => setSelectedVariants((current) => ({ ...current, [product.id]: variant.id }))} className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${isSelected ? 'border-black bg-black text-white' : 'border-black/10 bg-white text-gray-700 hover:border-black/30'}`}>
-                              {variant.name}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )}
+                    <div className="mb-3 flex min-h-7 flex-wrap content-start gap-2">
+                      {product.variants?.map((variant) => {
+                        const isSelected = variant.id === selectedVariant?.id
+                        return (
+                          <button key={variant.id} type="button" onClick={() => setSelectedVariants((current) => ({ ...current, [product.id]: variant.id }))} className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${isSelected ? 'border-black bg-black text-white' : 'border-black/10 bg-white text-gray-700 hover:border-black/30'}`}>
+                            {variant.name}
+                          </button>
+                        )
+                      })}
+                    </div>
 
                     {product.sizes && (
                       <label className="mb-3 block">
