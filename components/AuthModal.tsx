@@ -115,7 +115,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
       }
 
       setSuccessMessage(t.auth.registerSuccess)
-      router.push('/student')
+      router.push('/profile')
       onClose()
     } catch (error) {
       setErrorMessage(getAuthErrorMessage(error, t.auth.actionFailed, t.auth.emailNotConfirmed))
@@ -376,14 +376,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                 {/* Terms */}
                 {activeMode === 'register' && (
                   <p className="text-xs text-apple-gray-500 text-center mt-4">
-                    {t.auth.termsPrefix}
-                    <a href="#" className="text-apple-blue hover:underline ml-1">
-                      {t.auth.terms}
-                    </a>
-                    <span className="mx-1">{t.auth.and}</span>
-                    <a href="#" className="text-apple-blue hover:underline ml-1">
-                      {t.auth.privacy}
-                    </a>
+                    註冊即表示你同意本站在帳戶與服務所需範圍內處理所填資料。
                   </p>
                 )}
 

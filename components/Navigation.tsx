@@ -18,7 +18,7 @@ export default function Navigation() {
   const [isLanguageOpen, setIsLanguageOpen] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
-  const { isLoggedIn, isLoading, logout } = useAuth()
+  const { user, isLoggedIn, isLoading, logout } = useAuth()
   const { language, setLanguage, t } = useLanguage()
   const searchParams = useSearchParams()
 
@@ -51,6 +51,7 @@ export default function Navigation() {
 
   const currentLanguage = languages.find((item) => item.code === language) ?? languages[0]
   const canSwitchLanguage = languages.length > 1
+  const accountHref = user?.role === 'admin' ? '/admin' : '/profile'
 
   const languageSwitcher = canSwitchLanguage ? (
     <div className="relative">
@@ -207,7 +208,7 @@ export default function Navigation() {
                     <User className="h-4 w-4 text-apple-gray-700" />
                   </div>
                   <Link
-                    href="/student"
+                    href={accountHref}
                     className="text-sm font-semibold text-apple-gray-950 transition-colors duration-200 hover:text-apple-blue"
                   >
                     {t.common.myAccount}
@@ -259,7 +260,7 @@ export default function Navigation() {
                 <div className="h-10 w-20 animate-pulse rounded-full bg-apple-gray-100 ring-1 ring-black/10" />
               ) : isLoggedIn ? (
                 <Link
-                  href="/student"
+                  href={accountHref}
                   className="inline-flex h-9 items-center justify-center rounded-full border border-black/10 bg-white px-3 text-sm font-bold text-apple-gray-950 shadow-sm transition-colors duration-200 hover:text-apple-blue sm:h-10 sm:px-4"
                 >
                   {t.common.myAccount}
@@ -362,7 +363,7 @@ export default function Navigation() {
                     <div className="h-11 w-full animate-pulse rounded-full bg-apple-gray-200" />
                   ) : isLoggedIn ? (
                     <>
-                      <Link href="/student" className="block">
+                      <Link href={accountHref} className="block">
                         <motion.button
                           whileTap={{ scale: 0.95 }}
                           className="w-full apple-button-outline"

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { getCartProductId } from '@/lib/shop-products'
+import { createOrderAccessToken, verifyOrderAccessToken } from '@/lib/order-access'
 
 type OrderItemInput = {
   id?: string
@@ -23,6 +24,7 @@ type OrderBody = {
 
 type TransferBody = {
   orderId?: string
+  accessToken?: string
   transferLastFive?: string
 }
 
@@ -97,9 +99,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: /庫存不足/.test(message) ? 409 : 500 })
   }
 
-  return NextResponse.json({
-    order: data,
-  })
+  const order = data as Record<string, unknown>
+  const orderId = cleanText(order.id)
+  const accessToken = createOrderAccessToken(orderId)
+
+  if (!orderId || !accessToken) {
+    return NextResponse.json({ error: '訂單已建立，但安全憑證產生失敗，請聯絡客服。' }, { status: 500 })
+  }
+
+  return NextResponse.json({ order: { ...order, accessToken } })
 }
 
 export async function PATCH(request: NextRequest) {
@@ -109,10 +117,15 @@ export async function PATCH(request: NextRequest) {
 
   const body = (await request.json().catch(() => ({}))) as TransferBody
   const orderId = cleanText(body.orderId)
+  const accessToken = cleanText(body.accessToken)
   const transferLastFive = cleanText(body.transferLastFive)
 
   if (!orderId) {
     return NextResponse.json({ error: '缺少訂單 ID。' }, { status: 400 })
+  }
+
+  if (!verifyOrderAccessToken(orderId, accessToken)) {
+    return NextResponse.json({ error: '訂單安全憑證無效，請重新提交訂單。' }, { status: 403 })
   }
 
   if (!/^\d{5}$/.test(transferLastFive)) {

@@ -11,6 +11,10 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 export const metadata: Metadata = {
   title: '好運跑班 - 科學訓練，跑出好運',
   description: '專業跑步訓練平台，提供科學訓練方案與個人化指導',
+  icons: {
+    icon: [{ url: '/goodluck-logo-nav.jpg', type: 'image/jpeg' }],
+    apple: '/goodluck-logo-nav.jpg',
+  },
 }
 
 export const viewport: Viewport = {

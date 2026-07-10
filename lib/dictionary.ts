@@ -15,7 +15,7 @@ export const dictionary = {
       login: '登入',
       logout: '登出',
       logoutFull: '登出帳戶',
-      myAccount: '學員看板',
+      myAccount: '我的帳戶',
       shop: '商店',
       language: '語言',
     },
@@ -38,11 +38,11 @@ export const dictionary = {
       previous: '上一張',
       next: '下一張',
       learnCourses: '了解課程',
-      entryLabel: '從這裡開始：選擇你的身份',
+      entryLabel: '從這裡開始',
       entries: [
-        { title: '我是新訪客', description: '第一次來，先了解課程與報名方式' },
-        { title: '我是已報名學員', description: '進入學員看板，查看課表與訓練回饋' },
-        { title: '我是教練', description: '進入教練工作台，管理課表與學員回饋' },
+        { title: '查看訓練課程', description: '依地點、程度與目標找到適合的班級' },
+        { title: '參加開放團練', description: '留下本週六團練意向與聯絡資料' },
+        { title: '逛逛好運商店', description: '查看跑班服飾、配件與訓練補給' },
       ],
       strengthsTitle: '我們的核心優勢',
       strengths: [
@@ -59,13 +59,13 @@ export const dictionary = {
     },
     features: {
       title: '好運跑班如何陪你進步？',
-      subtitle: '從第一次規律跑步到站上賽道，我們把課表、團練、回饋與社群放在同一個訓練節奏裡',
+      subtitle: '從第一次規律跑步到站上賽道，我們把週期訓練、現場指導與跑者社群放在同一個節奏裡',
       items: [
         { title: '初心到菁英都能加入', description: '依照程度安排初心補習班、初階班、夜跑班、早鳥班與 PB 班' },
         { title: '清楚的週期訓練', description: '以 12 週為一個節奏，逐步建立體能、速度、耐力與賽事狀態' },
         { title: '台灣多地團練', description: '目前整理台北、新竹、竹北、板橋、三重、竹南等班級資訊' },
-        { title: '學員訓練回報', description: '跑者能提交里程、配速、心率、RPE 與訓練感受，讓教練看見狀態' },
-        { title: '教練課表同步', description: '教練可在網站同步本週課表，讓學員知道每次訓練目的' },
+        { title: '現場動作與配速指導', description: '教練在團練現場觀察跑姿、節奏與完成狀況，提供當下建議' },
+        { title: '目標導向訓練', description: '依照 5000m、10000m、半馬、全馬與 PB 目標安排訓練重點' },
         { title: '跑者社群陪伴', description: '讓每一位跑者認識跑步、嘗試跑步，最後真正愛上跑步' },
       ],
       stats: [

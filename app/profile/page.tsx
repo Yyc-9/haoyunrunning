@@ -1,41 +1,40 @@
 'use client'
-import { useAuth } from '@/app/providers'
-import TrainingLogPreview from '@/components/TrainingLogPreview'
-import { motion } from 'framer-motion'
-import {
-  ArrowRight,
-  Calendar,
-  ClipboardList,
-  NotebookPen,
-  Settings,
-  Target,
-  TrendingUp,
-  User,
-  UsersRound,
-} from 'lucide-react'
-import Link from 'next/link'
 
-function QuickLink({ icon: Icon, label, href }: { icon: React.ElementType; label: string; href: string }) {
-  return (
-    <Link
-      href={href}
-      className="flex flex-col items-center p-4 rounded-2xl hover:bg-gray-50 transition-colors"
-    >
-      <Icon className="h-6 w-6 text-apple-blue mb-2" />
-      <span className="text-sm font-medium">{label}</span>
-    </Link>
-  )
-}
+import Link from 'next/link'
+import { motion } from 'framer-motion'
+import { ArrowRight, CircleUserRound, Instagram, ShieldCheck, ShoppingBag, TicketCheck, UsersRound } from 'lucide-react'
+import { useAuth } from '@/app/providers'
+
+const accountLinks = [
+  {
+    href: '/courses',
+    icon: TicketCheck,
+    title: '查看訓練課程',
+    description: '依地點、程度與目標找到適合的班級。',
+  },
+  {
+    href: '/group-signup',
+    icon: UsersRound,
+    title: '參加開放團練',
+    description: '留下本週六團練意向與聯絡資料。',
+  },
+  {
+    href: '/shop',
+    icon: ShoppingBag,
+    title: '前往好運商店',
+    description: '查看跑班服飾、配件與訓練補給。',
+  },
+]
 
 export default function ProfilePage() {
   const { isLoggedIn, isLoading, user } = useAuth()
 
   if (isLoading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-gray-50 to-white pt-24">
+      <main className="flex min-h-screen items-center justify-center bg-apple-gray-50 pt-24">
         <div className="text-center">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-apple-blue" />
-          <p className="mt-4 text-sm font-semibold text-apple-gray-600">正在讀取登入狀態...</p>
+          <div className="mx-auto h-11 w-11 animate-spin rounded-full border-2 border-apple-gray-200 border-t-black" />
+          <p className="mt-4 text-sm font-semibold text-apple-gray-600">正在讀取帳戶...</p>
         </div>
       </main>
     )
@@ -43,44 +42,25 @@ export default function ProfilePage() {
 
   if (!isLoggedIn || !user) {
     return (
-      <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white pt-24">
-        <section className="container mx-auto max-w-4xl px-4 py-16">
-          <div className="apple-card overflow-hidden p-0">
-            <div className="grid gap-0 md:grid-cols-[1fr_0.8fr]">
-              <div className="p-8 md:p-10">
-                <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
-                  Student entry
-                </p>
-                <h1 className="text-3xl font-black leading-tight text-apple-gray-900 md:text-5xl">
-                  已報名學員請登入後查看課表與訓練回饋
-                </h1>
-                <p className="mt-5 text-base leading-8 text-apple-gray-600">
-                  如果你已經報名課程，請使用報名信箱登入。登入後可以查看教練同步的本週課表、提交訓練回饋、更新目標和個人資料。
-                </p>
-                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                  <Link href="/?auth=login" className="apple-button-primary inline-flex items-center justify-center gap-2 px-6 py-3">
-                    登入學員帳號
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                  <Link href="/student" className="apple-button-outline inline-flex items-center justify-center gap-2 px-6 py-3">
-                    前往學員看板
-                  </Link>
-                </div>
-              </div>
-              <div className="bg-apple-gray-950 p-8 text-white md:p-10">
-                <h2 className="text-xl font-black">登入後可以做什麼？</h2>
-                <div className="mt-6 space-y-4">
-                  {[
-                    ['查看課表', '讀取教練本週同步的訓練安排。'],
-                    ['提交回饋', '填寫里程、配速、RPE、疲勞和身體感受。'],
-                    ['同步目標', '讓教練更清楚你的比賽目標和目前狀態。'],
-                  ].map(([title, description]) => (
-                    <div key={title} className="rounded-2xl bg-white/10 p-4">
-                      <h3 className="font-bold">{title}</h3>
-                      <p className="mt-2 text-sm leading-6 text-white/70">{description}</p>
-                    </div>
-                  ))}
-                </div>
+      <main className="min-h-screen bg-apple-gray-50 pt-24">
+        <section className="container mx-auto max-w-4xl px-4 py-16 sm:py-24">
+          <div className="grid overflow-hidden rounded-3xl border border-black/10 bg-white shadow-sm md:grid-cols-[1.15fr_0.85fr]">
+            <div className="p-7 sm:p-10">
+              <p className="text-sm font-bold uppercase tracking-wide text-apple-blue">我的帳戶</p>
+              <h1 className="mt-3 text-3xl font-black leading-tight text-apple-gray-950 sm:text-5xl">登入後查看你的帳戶資料</h1>
+              <p className="mt-5 text-base leading-8 text-apple-gray-600">
+                使用註冊信箱登入即可。所有一般帳戶使用相同入口；管理員登入後可另外進入管理後台。
+              </p>
+              <Link href="/?auth=login" className="apple-button-primary mt-8 inline-flex gap-2 px-6 py-3">
+                登入帳戶
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <div className="flex items-center justify-center bg-black p-10 text-white">
+              <div className="max-w-xs text-center">
+                <CircleUserRound className="mx-auto h-14 w-14 text-white/85" />
+                <h2 className="mt-5 text-xl font-black">一個帳戶，一個入口</h2>
+                <p className="mt-3 text-sm leading-7 text-white/70">不再區分學生或教練登入入口，日常瀏覽與報名功能保持一致。</p>
               </div>
             </div>
           </div>
@@ -89,146 +69,63 @@ export default function ProfilePage() {
     )
   }
 
-  const isCoach = user.role === 'coach' || user.role === 'admin'
-
-  if (isCoach) {
-    return (
-      <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white pt-24">
-        <div className="container mx-auto max-w-6xl px-4 py-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8 rounded-3xl bg-white p-8 shadow-lg"
-          >
-            <div className="flex flex-col items-start gap-6 md:flex-row md:items-center">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-black text-2xl font-bold text-white">
-                {user.name?.charAt(0) || <User className="h-10 w-10" />}
-              </div>
-              <div className="flex-1">
-                <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-apple-blue">
-                  Coach account
-                </p>
-                <h1 className="text-2xl font-bold text-apple-gray-900 md:text-3xl">
-                  {user.name || '好運教練'}
-                </h1>
-                <p className="mt-1 text-apple-gray-500">{user.email}</p>
-                <div className="mt-3 inline-flex items-center rounded-full bg-green-50 px-3 py-1 text-sm font-bold text-green-700">
-                  教練權限已啟用
-                </div>
-              </div>
-              <Link href="/coach" className="apple-button-primary gap-2">
-                進入教練工作台
-                <ArrowRight className="h-4 w-4" />
-              </Link>
+  return (
+    <main className="min-h-screen bg-apple-gray-50 pt-24">
+      <div className="container mx-auto max-w-6xl px-4 py-12 sm:py-16">
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="border-b border-black/10 pb-10"
+        >
+          <p className="text-sm font-bold uppercase tracking-wide text-apple-blue">我的帳戶</p>
+          <div className="mt-5 flex flex-col gap-6 sm:flex-row sm:items-center">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-black text-2xl font-black text-white">
+              {user.name?.charAt(0) || <CircleUserRound className="h-9 w-9" />}
             </div>
-          </motion.div>
+            <div className="min-w-0 flex-1">
+              <h1 className="truncate text-3xl font-black text-apple-gray-950">{user.name || '好運會員'}</h1>
+              <p className="mt-2 truncate text-apple-gray-600">{user.email}</p>
+              <span className="mt-3 inline-flex rounded-full bg-white px-3 py-1 text-sm font-bold text-apple-gray-700 ring-1 ring-black/10">
+                帳戶已登入
+              </span>
+            </div>
+            {user.role === 'admin' ? (
+              <Link href="/admin" className="apple-button-primary gap-2 px-5 py-3">
+                <ShieldCheck className="h-4 w-4" />
+                進入管理後台
+              </Link>
+            ) : null}
+          </div>
+        </motion.section>
 
-          <div className="grid gap-6 md:grid-cols-2">
-            {[
-              {
-                href: '/coach/students',
-                icon: UsersRound,
-                title: '學員管理',
-                description: '查看已綁定學員、最近回饋和訓練進度。',
-              },
-              {
-                href: '/coach/planner',
-                icon: NotebookPen,
-                title: '課表面板',
-                description: '儲存後寫入 training_plans，並同步給學員端查看。',
-              },
-            ].map((item) => (
-              <Link key={item.href} href={item.href} className="apple-card block p-6">
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-black text-white">
-                  <item.icon className="h-6 w-6" />
-                </div>
-                <h2 className="text-xl font-bold text-apple-gray-900">{item.title}</h2>
-                <p className="mt-3 leading-7 text-apple-gray-600">{item.description}</p>
+        <section className="py-10">
+          <h2 className="text-2xl font-black text-apple-gray-950">常用入口</h2>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {accountLinks.map((item) => (
+              <Link key={item.href} href={item.href} className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+                <item.icon className="h-6 w-6 text-apple-blue" />
+                <h3 className="mt-5 text-lg font-black text-apple-gray-950">{item.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-apple-gray-600">{item.description}</p>
               </Link>
             ))}
           </div>
+        </section>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="mt-8 rounded-3xl bg-white p-8 shadow-lg"
+        <section className="flex flex-col justify-between gap-5 border-t border-black/10 py-8 sm:flex-row sm:items-center">
+          <div>
+            <h2 className="font-black text-apple-gray-950">需要協助？</h2>
+            <p className="mt-1 text-sm text-apple-gray-600">課程、團練與商品問題請透過官方 Instagram 聯絡。</p>
+          </div>
+          <a
+            href="https://www.instagram.com/nurture.running.team/"
+            target="_blank"
+            rel="noreferrer"
+            className="apple-button-secondary gap-2 px-5 py-3"
           >
-            <div className="mb-6 flex items-center gap-3">
-              <ClipboardList className="h-6 w-6 text-apple-gray-700" />
-              <h2 className="text-xl font-bold text-apple-gray-900">教練工作台處理逻辑</h2>
-            </div>
-            <div className="grid gap-4 md:grid-cols-3">
-              {[
-                ['高風險優先', 'RPE 很高或出現胸悶、頭暈、明顯疼痛等紅旗描述，優先聯絡。'],
-                ['中風險降量', '疲勞、恢復差或 RPE 偏高時，下次訓練先降量觀察。'],
-                ['低風險觀察', '回饋穩定時维持計畫，繼續看趨勢。'],
-              ].map(([title, description]) => (
-                <div key={title} className="rounded-3xl bg-apple-gray-100 p-5">
-                  <h3 className="font-bold text-apple-gray-900">{title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-apple-gray-600">{description}</p>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        </div>
-      </main>
-    )
-  }
-
-  return (
-    <main className="pt-24 min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      <div className="container mx-auto px-4 py-12 max-w-6xl">
-        {/* 使用者資訊卡片 */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-3xl shadow-lg p-8 mb-8"
-        >
-          <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
-            <div className="h-20 w-20 rounded-full bg-gradient-to-br from-apple-blue to-apple-orange flex items-center justify-center text-white text-2xl font-bold">
-              {user.name?.charAt(0) || <User className="h-10 w-10" />}
-            </div>
-            <div className="flex-1">
-              <h1 className="text-2xl md:text-3xl font-bold text-apple-gray-900">
-                {user.name || '好運學員'}
-              </h1>
-              <p className="text-apple-gray-500 mt-1">{user.email}</p>
-              {user.pb && (
-                <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full bg-apple-blue/10 text-apple-blue text-sm font-medium">
-                  <Target className="h-4 w-4 mr-1" />
-                  PB: {user.pb}
-                </div>
-              )}
-            </div>
-            <Link href="/student#feedback" className="apple-button-primary flex items-center space-x-2">
-              <Calendar className="h-4 w-4" />
-              <span>提交今日回饋</span>
-            </Link>
-            <Link href="/student?settings=1" className="apple-button-outline flex items-center space-x-2">
-              <Settings className="h-4 w-4" />
-              <span>编辑資料</span>
-            </Link>
-          </div>
-
-          {/* 快捷入口 */}
-          <div className="grid grid-cols-4 gap-2 md:gap-4 mt-8 pt-6 border-t border-apple-gray-200">
-            <QuickLink icon={TrendingUp} label="訓練資料" href="/student#training-data" />
-            <QuickLink icon={Calendar} label="訓練計畫" href="/student#training-plan" />
-            <QuickLink icon={Target} label="我的目標" href="/student#goals" />
-            <QuickLink icon={Settings} label="設定" href="/student?settings=1" />
-          </div>
-        </motion.div>
-
-        {/* 訓練日志 */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <h2 className="text-xl font-bold mb-4 text-apple-gray-900">訓練日志</h2>
-          <TrainingLogPreview />
-        </motion.div>
+            <Instagram className="h-4 w-4" />
+            聯絡好運
+          </a>
+        </section>
       </div>
     </main>
   )

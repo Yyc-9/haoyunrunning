@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { CheckCircle2, CreditCard, ExternalLink, LockKeyhole, MessageCircle, PackageCheck, Send, ShieldCheck, Truck, X } from 'lucide-react'
+import { CheckCircle2, CreditCard, ExternalLink, Landmark, LockKeyhole, MessageCircle, PackageCheck, Send, ShieldCheck, Truck, X } from 'lucide-react'
 import { useCart } from '@/app/cart-provider'
 import { supabase } from '@/lib/supabase'
 
@@ -15,6 +15,7 @@ type CreatedOrder = {
   totalAmount?: number
   paymentReference?: string
   paymentChannelLabel?: string
+  accessToken: string
 }
 
 export default function CheckoutPage() {
@@ -79,7 +80,7 @@ export default function CheckoutPage() {
         error?: string
       }
 
-      if (!response.ok || !payload.order?.orderNumber || !payload.order?.id) {
+      if (!response.ok || !payload.order?.orderNumber || !payload.order?.id || !payload.order?.accessToken) {
         throw new Error(payload.error || '訂單提交失敗。')
       }
 
@@ -117,6 +118,7 @@ export default function CheckoutPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orderId: order.id,
+          accessToken: order.accessToken,
           transferLastFive,
         }),
       })
@@ -158,7 +160,7 @@ export default function CheckoutPage() {
       const response = await fetch('/api/shop/card-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId: order.id }),
+        body: JSON.stringify({ orderId: order.id, accessToken: order.accessToken }),
       })
       const payload = (await response.json().catch(() => ({}))) as {
         url?: string
@@ -201,30 +203,47 @@ export default function CheckoutPage() {
                   <h2 className="text-xl font-bold text-apple-gray-900">配送與聯絡資料</h2>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <input
-                    className="apple-input"
-                    value={form.customerName}
-                    onChange={(event) => updateField('customerName', event.target.value)}
-                    placeholder="姓名"
-                  />
-                  <input
-                    className="apple-input"
-                    value={form.contact}
-                    onChange={(event) => updateField('contact', event.target.value)}
-                    placeholder="手機 / LINE ID"
-                  />
-                  <input
-                    className="apple-input sm:col-span-2"
-                    value={form.email}
-                    onChange={(event) => updateField('email', event.target.value)}
-                    placeholder="Email"
-                  />
-                  <input
-                    className="apple-input sm:col-span-2"
-                    value={form.fulfillmentNote}
-                    onChange={(event) => updateField('fulfillmentNote', event.target.value)}
-                    placeholder="配送地址或跑班自取備註"
-                  />
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold text-apple-gray-700">姓名</span>
+                    <input
+                      className="apple-input"
+                      value={form.customerName}
+                      onChange={(event) => updateField('customerName', event.target.value)}
+                      autoComplete="name"
+                      placeholder="請填寫收件人姓名"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold text-apple-gray-700">聯絡方式</span>
+                    <input
+                      className="apple-input"
+                      value={form.contact}
+                      onChange={(event) => updateField('contact', event.target.value)}
+                      autoComplete="tel"
+                      placeholder="手機或 LINE ID"
+                    />
+                  </label>
+                  <label className="block sm:col-span-2">
+                    <span className="mb-2 block text-sm font-bold text-apple-gray-700">電子信箱</span>
+                    <input
+                      type="email"
+                      className="apple-input"
+                      value={form.email}
+                      onChange={(event) => updateField('email', event.target.value)}
+                      autoComplete="email"
+                      placeholder="用於接收訂單通知（選填）"
+                    />
+                  </label>
+                  <label className="block sm:col-span-2">
+                    <span className="mb-2 block text-sm font-bold text-apple-gray-700">配送或自取備註</span>
+                    <input
+                      className="apple-input"
+                      value={form.fulfillmentNote}
+                      onChange={(event) => updateField('fulfillmentNote', event.target.value)}
+                      autoComplete="street-address"
+                      placeholder="配送地址或跑班自取說明"
+                    />
+                  </label>
                 </div>
               </section>
 
@@ -248,18 +267,18 @@ export default function CheckoutPage() {
                     <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-apple-gray-100 text-apple-gray-900">
                       <CreditCard className="h-5 w-5" />
                     </div>
-                    <h3 className="font-black text-apple-gray-900">銀行轉帳 / 人工核對</h3>
+                    <h3 className="font-black text-apple-gray-900">信用卡安全付款</h3>
                     <p className="mt-3 text-sm leading-6 text-apple-gray-600">
-                      買家端不會顯示完整收款帳戶。請使用訂單編號作為付款備註，付款後填寫轉出帳戶後五碼。
+                      卡號、有效期限與安全碼只在合規收單頁面填寫，本站不接觸或儲存完整卡片資料。
                     </p>
                   </div>
                   <div className="rounded-3xl border border-black/10 bg-white p-5">
                     <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-apple-gray-100 text-apple-gray-900">
-                      <MessageCircle className="h-5 w-5" />
+                      <Landmark className="h-5 w-5" />
                     </div>
-                    <h3 className="font-black text-apple-gray-900">客服確認</h3>
+                    <h3 className="font-black text-apple-gray-900">銀行轉帳 / 人工核對</h3>
                     <p className="mt-3 text-sm leading-6 text-apple-gray-600">
-                      若金額、配送或自取方式需要確認，可以先提交訂單，再透過 Instagram 聯絡好運。
+                      買家端不顯示完整收款帳戶，只顯示付款代號與通道名稱；管理員可在後台核對資金流向。
                     </p>
                   </div>
                 </div>
@@ -354,7 +373,7 @@ export default function CheckoutPage() {
           <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[2rem] bg-white shadow-2xl">
             <div className="sticky top-0 z-10 flex items-start justify-between border-b border-black/10 bg-white px-5 py-4 sm:px-6">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-apple-blue">Payment</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-apple-blue">安全付款</p>
                 <h2 className="mt-1 text-2xl font-black text-apple-gray-950">付款界面</h2>
                 <p className="mt-1 text-sm text-apple-gray-500">訂單 {order.orderNumber}</p>
               </div>

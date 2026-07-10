@@ -2,17 +2,39 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { Instagram, KeyRound, Mail, MapPin, UserRoundCheck } from 'lucide-react'
+import { Instagram, Mail, MapPin, ShoppingBag, TicketCheck } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
 
 export default function Footer() {
   const { t } = useLanguage()
   const currentYear = new Date().getFullYear()
 
-  const footerLinks = t.footer.columns.map((column) => ({
-    title: column.title,
-    links: column.links.map((name) => ({ name, href: '#' })),
-  }))
+  const footerLinks = [
+    {
+      title: '參加好運',
+      links: [
+        { name: '訓練課程', href: '/courses' },
+        { name: '團練報名', href: '/group-signup' },
+        { name: '活動登記', href: '/anniversary' },
+      ],
+    },
+    {
+      title: '探索',
+      links: [
+        { name: '好運商店', href: '/shop' },
+        { name: '學員見證', href: '/testimonials' },
+        { name: '關於我們', href: '/about' },
+      ],
+    },
+    {
+      title: '聯絡',
+      links: [
+        { name: 'Instagram', href: 'https://www.instagram.com/nurture.running.team/' },
+        { name: '課程諮詢', href: 'https://www.instagram.com/nurture.running.team/' },
+        { name: '商品諮詢', href: 'https://www.instagram.com/nurture.running.team/' },
+      ],
+    },
+  ]
 
   const contactInfo = [
     { icon: Instagram, text: '@nurture.running.team' },
@@ -85,12 +107,23 @@ export default function Footer() {
               <ul className="space-y-2">
                 {column.links.map((link) => (
                   <li key={link.name}>
-                    <a
-                      href={link.href}
-                      className="text-sm text-gray-600 transition-colors duration-200 hover:text-blue-500"
-                    >
-                      {link.name}
-                    </a>
+                    {link.href.startsWith('http') ? (
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-sm text-gray-600 transition-colors duration-200 hover:text-blue-500"
+                      >
+                        {link.name}
+                      </a>
+                    ) : (
+                      <Link
+                        href={link.href}
+                        className="text-sm text-gray-600 transition-colors duration-200 hover:text-blue-500"
+                      >
+                        {link.name}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -110,18 +143,18 @@ export default function Footer() {
           {/* Social Media */}
           <div className="flex items-center space-x-4">
             <Link
-              href="/student"
+              href="/courses"
               className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-gray-50 hover:text-black hover:shadow-md"
             >
-              <UserRoundCheck className="h-4 w-4" />
-              {t.footer.studentDashboard}
+              <TicketCheck className="h-4 w-4" />
+              查看課程
             </Link>
             <Link
-              href="/coach"
+              href="/shop"
               className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-gray-50 hover:text-black hover:shadow-md"
             >
-              <KeyRound className="h-4 w-4" />
-              {t.footer.coachEntry}
+              <ShoppingBag className="h-4 w-4" />
+              前往商店
             </Link>
             {socialMedia.map((social, index) => {
               const Icon = social.icon

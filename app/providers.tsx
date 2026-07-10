@@ -104,7 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const applyProfile = useCallback((data: ProfilePayload, fallbackEmail = '') => {
     const nextUser: User = {
       id: data.id,
-      name: data.name || '好運學員',
+      name: data.name || '好運會員',
       email: data.email || fallbackEmail,
       phone: data.phone || '',
       gender: 'other',
@@ -123,7 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       name:
         (authUser.user_metadata?.name as string | undefined) ||
         authUser.email?.split('@')[0] ||
-        '好運學員',
+        '好運會員',
       email: authUser.email ?? '',
       phone: '',
       gender: 'other',
@@ -195,7 +195,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const fallbackUser: User = {
         id: userId,
-        name: fallbackEmail ? fallbackEmail.split('@')[0] : '好運學員',
+        name: fallbackEmail ? fallbackEmail.split('@')[0] : '好運會員',
         email: fallbackEmail,
         phone: '',
         gender: 'other',
@@ -330,7 +330,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             pb: userData.pb,
             role: 'student',
           },
-          emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/student?auth=login` : undefined,
+          emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/profile?auth=login` : undefined,
         },
       })
 

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { ChevronDown, ChevronLeft, ChevronRight, GraduationCap, Instagram, Pause, Play, ShieldCheck } from 'lucide-react'
+import { BookOpenCheck, ChevronDown, ChevronLeft, ChevronRight, Pause, Play, ShoppingBag, UsersRound } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
 
 const images = [
@@ -18,21 +18,21 @@ export default function HeroSection() {
   const { t } = useLanguage()
   const entryCards = [
     {
-      href: 'https://www.instagram.com/nurture.running.team/',
-      external: true,
-      icon: Instagram,
+      href: '/courses',
+      external: false,
+      icon: BookOpenCheck,
       ...t.hero.entries[0],
     },
     {
-      href: '/student',
+      href: '/group-signup',
       external: false,
-      icon: GraduationCap,
+      icon: UsersRound,
       ...t.hero.entries[1],
     },
     {
-      href: '/coach',
+      href: '/shop',
       external: false,
-      icon: ShieldCheck,
+      icon: ShoppingBag,
       ...t.hero.entries[2],
     },
   ]
