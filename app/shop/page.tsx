@@ -178,7 +178,7 @@ export default function ShopPage() {
                         loop
                         playsInline
                         preload="metadata"
-                        className="h-full w-full object-cover"
+                        className="h-full w-full bg-black object-contain"
                       />
                     ) : productImage ? (
                       <Image src={productImage} alt={selectedVariant ? `${product.name} ${selectedVariant.name}` : product.name} fill sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw" className="object-cover transition duration-500 group-hover:scale-105" />
