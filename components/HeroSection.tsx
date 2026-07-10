@@ -120,8 +120,8 @@ export default function HeroSection() {
         </motion.button>
       </div>
 
-      <div className="absolute bottom-8 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-5">
-        <div className="flex items-center gap-3 rounded-full bg-black/25 px-4 py-3 backdrop-blur-md">
+      <div className="absolute bottom-6 right-4 z-10 sm:bottom-8 sm:right-8">
+        <div className="flex items-center gap-3 rounded-full bg-black/20 px-4 py-3 backdrop-blur-md">
           {images.map((_, index) => (
             <button
               key={index}
@@ -142,21 +142,21 @@ export default function HeroSection() {
             {isAutoPlay ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
           </button>
         </div>
-
-        <motion.button
-          type="button"
-          aria-label={t.hero.learnCourses}
-          onClick={scrollToContent}
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.4 }}
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.95 }}
-          className="text-white/85"
-        >
-          <ChevronDown className="h-8 w-8 animate-bounce" />
-        </motion.button>
       </div>
+
+      <motion.button
+        type="button"
+        aria-label={t.hero.learnCourses}
+        onClick={scrollToContent}
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, delay: 0.4 }}
+        whileHover={{ scale: 1.08 }}
+        whileTap={{ scale: 0.95 }}
+        className="absolute bottom-6 left-4 z-10 text-white/85 sm:bottom-8 sm:left-8"
+      >
+        <ChevronDown className="h-8 w-8 animate-bounce" />
+      </motion.button>
     </section>
 
     <section className="border-b border-black/10 bg-white px-4 py-8 sm:px-6 lg:px-8">
