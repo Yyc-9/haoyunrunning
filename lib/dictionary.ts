@@ -63,7 +63,7 @@ export const dictionary = {
       items: [
         { title: '初心到菁英都能加入', description: '依照程度安排初心補習班、初階班、夜跑班、早鳥班與 PB 班' },
         { title: '清楚的週期訓練', description: '以 12 週為一個節奏，逐步建立體能、速度、耐力與賽事狀態' },
-        { title: '台灣多地團練', description: '目前整理台北、新竹、竹北、板橋、三重、竹南等班級資訊' },
+        { title: '台灣多地團練', description: '本期整理台北、新竹、竹北、竹南等班級資訊' },
         { title: '現場動作與配速指導', description: '教練在團練現場觀察跑姿、節奏與完成狀況，提供當下建議' },
         { title: '目標導向訓練', description: '依照 5000m、10000m、半馬、全馬與 PB 目標安排訓練重點' },
         { title: '跑者社群陪伴', description: '讓每一位跑者認識跑步、嘗試跑步，最後真正愛上跑步' },
@@ -132,9 +132,9 @@ export const dictionary = {
       intensity: '課程強度',
       period: '課程週期',
       highlightsDecision: [
-        { title: '12 週週期', description: '課程集中在 4 月至 6 月，適合完整建立訓練節奏。' },
+        { title: '新一期課程', description: '課程集中在 7 月至 9 月，適合完整建立訓練節奏。' },
         { title: '多目標備賽', description: '覆蓋 5000m、10000m、半馬、全馬與 PB 目標。' },
-        { title: '多地團練', description: '台北、新竹、竹北、板橋、三重、竹南等班級同步整理。' },
+        { title: '多地團練', description: '本期台北、新竹、竹北、竹南等班級同步整理。' },
       ],
       items: [
         { title: '馬拉松全程訓練營', level: '中級 ~ 高級', duration: '16 週', features: ['個人化訓練計畫', '每週影片分析', '營養指導', '比賽策略'], price: '¥2,999' },
@@ -536,7 +536,7 @@ export const dictionary = {
       items: [
         { title: '初心到精英都能加入', description: '依照程度安排初心补习班、初阶班、夜跑班、早鸟班與 PB 班' },
         { title: '清楚的週期訓練', description: '以 12 周为一個節奏，逐步建立体能、速度、耐力與賽事狀態' },
-        { title: '台灣多地團練', description: '目前整理台北、新竹、竹北、板桥、三重、竹南等班級资讯' },
+        { title: '台灣多地團練', description: '本期整理台北、新竹、竹北、竹南等班級資訊' },
         { title: '學員訓練回報', description: '跑者能提交里程、配速、心率、RPE 與訓練感受，讓教練看见狀態' },
         { title: '教練課表同步', description: '教練可在網站同步本周課表，讓學員知道每次訓練目的' },
         { title: '跑者社群陪伴', description: '讓每一位跑者认识跑步、尝試跑步，最後真正爱上跑步' },
@@ -605,9 +605,9 @@ export const dictionary = {
       intensity: '課程強度',
       period: '課程週期',
       highlightsDecision: [
-        { title: '12 周週期', description: '課程集中在 4 月至 6 月，適合完整建立訓練節奏。' },
+        { title: '新一期課程', description: '課程集中在 7 月至 9 月，適合完整建立訓練節奏。' },
         { title: '多目標备赛', description: '覆蓋 5000m、10000m、半馬、全馬與 PB 目標。' },
-        { title: '多地團練', description: '台北、新竹、竹北、板桥、三重、竹南等班級同步整理。' },
+        { title: '多地團練', description: '本期台北、新竹、竹北、竹南等班級同步整理。' },
       ],
       items: [
         { title: '馬拉松全程訓練营', level: '中級 ~ 高級', duration: '16周', features: ['個性化訓練计划', '每周影片分析', '營養指導', '比賽策略'], price: '¥2,999' },

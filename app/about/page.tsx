@@ -124,7 +124,7 @@ export default function AboutPage() {
                   {
                     icon: MapPin,
                     title: '台灣多地開課',
-                    description: '台北、新竹、竹北、板橋、三重、竹南等班級逐步整理上線。',
+                    description: '本期台北、新竹、竹北、竹南等班級同步整理上線。',
                   },
                   {
                     icon: Route,
