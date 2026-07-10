@@ -117,7 +117,7 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
                           <div className="flex gap-4">
                             <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-apple-gray-100">
                               {item.image ? (
-                                <Image src={item.image} alt={item.name} fill sizes="80px" className="object-cover" />
+                                <Image src={item.image} alt={item.name} fill sizes="80px" className="object-contain p-1" />
                               ) : (
                                 <div className="flex h-full w-full items-center justify-center">
                                   <Package className="h-8 w-8 text-apple-gray-400" />

@@ -173,7 +173,7 @@ export default function ShopPage() {
 
               return (
                 <motion.div key={product.id} className="apple-card group overflow-hidden">
-                  <div className="relative h-64 overflow-hidden bg-apple-gray-100">
+                  <div className="relative h-64 overflow-hidden bg-white">
                     {product.video ? (
                       <video
                         src={product.video}
@@ -187,7 +187,13 @@ export default function ShopPage() {
                         className="h-full w-full bg-black object-contain"
                       />
                     ) : productImage ? (
-                      <Image src={productImage} alt={selectedVariant ? `${product.name} ${selectedVariant.name}` : product.name} fill sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw" className="object-cover transition duration-500 group-hover:scale-105" />
+                      <Image
+                        src={productImage}
+                        alt={selectedVariant ? `${product.name} ${selectedVariant.name}` : product.name}
+                        fill
+                        sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                        className="object-contain p-3 transition duration-300 group-hover:scale-[1.02]"
+                      />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-white via-apple-gray-100 to-apple-gray-200">
                         <Package className="h-16 w-16 text-apple-gray-400" />
