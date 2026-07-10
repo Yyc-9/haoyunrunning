@@ -103,7 +103,6 @@ export const defaultShopProducts: ShopProduct[] = [
     price: 0,
     priceLabel: '私訊諮詢',
     image: '/products/goodluck-cap/cap-front.jpeg',
-    video: '/products/goodluck-cap/goodluck-cap-promo.mp4',
     rating: 5,
     reviews: 0,
     tags: ['日常訓練'],

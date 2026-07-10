@@ -2,12 +2,17 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Instagram, LockKeyhole, Send } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, Instagram, LockKeyhole, Send } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
 import { allCourses } from '@/lib/goodluck-data'
 import PaymentOptions from '@/components/PaymentOptions'
 import PaymentNotice from '@/components/PaymentNotice'
-import BankTransferInfo from '@/components/BankTransferInfo'
+
+type CoursePaymentOrder = {
+  id: string
+  accessToken: string
+  status: string
+}
 
 function localizeText(text: string) {
   return text
@@ -15,7 +20,6 @@ function localizeText(text: string) {
 
 export default function PaymentPageClient() {
   const { t } = useLanguage()
-  const [method, setMethod] = useState(1)
   const [isConfirmed, setIsConfirmed] = useState(false)
   const [form, setForm] = useState({
     name: '',
@@ -29,6 +33,7 @@ export default function PaymentPageClient() {
   const [isConfirmingTransfer, setIsConfirmingTransfer] = useState(false)
   const [error, setError] = useState('')
   const [isSuccess, setIsSuccess] = useState(false)
+  const [courseOrder, setCourseOrder] = useState<CoursePaymentOrder | null>(null)
 
   useEffect(() => {
     const courseSlug = new URLSearchParams(window.location.search).get('course')
@@ -79,15 +84,17 @@ export default function PaymentPageClient() {
     setIsSubmitting(true)
 
     try {
+      if (!courseOrder) {
+        throw new Error('請先建立報名付款單。')
+      }
+
       const response = await fetch('/api/signup-leads', {
-        method: 'POST',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          source: 'course_payment',
-          name: form.name,
-          email: form.email,
-          preferredCourse: form.course,
-          amountText: form.amount,
+          intent: 'submit_transfer',
+          leadId: courseOrder.id,
+          accessToken: courseOrder.accessToken,
           transferLastFive: form.transferLastFive,
           notes: form.notes,
         }),
@@ -99,6 +106,7 @@ export default function PaymentPageClient() {
       }
 
       setIsSuccess(true)
+      setCourseOrder((current) => (current ? { ...current, status: 'pending_review' } : current))
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : t.payment.transferForm.submitError)
     } finally {
@@ -146,12 +154,20 @@ export default function PaymentPageClient() {
           notes: form.notes,
         }),
       })
-      const payload = (await response.json().catch(() => ({}))) as { error?: string }
+      const payload = (await response.json().catch(() => ({}))) as {
+        lead?: { id?: string; accessToken?: string; status?: string }
+        error?: string
+      }
 
-      if (!response.ok) {
+      if (!response.ok || !payload.lead?.id || !payload.lead.accessToken) {
         throw new Error(payload.error || t.payment.transferForm.confirmError)
       }
 
+      setCourseOrder({
+        id: payload.lead.id,
+        accessToken: payload.lead.accessToken,
+        status: payload.lead.status || 'pending_transfer',
+      })
       setIsConfirmed(true)
     } catch (confirmError) {
       setError(confirmError instanceof Error ? confirmError.message : t.payment.transferForm.confirmError)
@@ -275,7 +291,7 @@ export default function PaymentPageClient() {
                 <button
                   type="button"
                   onClick={submitTransferDetails}
-                  disabled={!isConfirmed || isSubmitting}
+                  disabled={!courseOrder || isSubmitting || isSuccess}
                   className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-apple-gray-900 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-black disabled:cursor-not-allowed disabled:bg-apple-gray-200 disabled:text-apple-gray-500"
                 >
                   <Send className="h-4 w-4" />
@@ -284,7 +300,19 @@ export default function PaymentPageClient() {
               </section>
 
               <PaymentOptions title={t.payment.optionsTitle} methods={t.payment.methods} />
-              {isConfirmed ? <BankTransferInfo labels={t.payment.bankTransfer} /> : null}
+              {isConfirmed ? (
+                <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 text-amber-950">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+                    <div>
+                      <h3 className="font-black">報名付款單已建立</h3>
+                      <p className="mt-2 text-sm leading-6">
+                        目前尚未接通可隱藏實際收款戶頭的虛擬帳號服務。請先透過 Instagram 取得正式付款指引，完成後再回到此頁提交轉出帳戶後五碼。
+                      </p>
+                    </div>
+                  </div>
+                </section>
+              ) : null}
               <PaymentNotice title={t.payment.noticeTitle} notices={t.payment.notices} />
             </div>
 
@@ -300,24 +328,6 @@ export default function PaymentPageClient() {
                   </div>
                 </div>
                 <p className="text-sm leading-7 text-apple-gray-600">{t.payment.amountDescription}</p>
-
-                <div className="mt-6 space-y-3">
-                  {t.payment.methods.map((item, index) => (
-                    <button
-                      key={item.title}
-                      type="button"
-                      onClick={() => setMethod(index)}
-                      className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
-                        method === index
-                          ? 'border-apple-blue bg-apple-blue/10 text-apple-blue'
-                          : 'border-black/10 bg-white text-apple-gray-700 hover:border-apple-blue/40'
-                      }`}
-                    >
-                      <span className="block text-sm font-bold">{item.title}</span>
-                      <span className="mt-1 block text-xs opacity-75">{item.status}</span>
-                    </button>
-                  ))}
-                </div>
 
                 <button
                   type="button"

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sendEnrollmentApprovedEmail } from '@/lib/email'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { isPaymentOrderStatus } from '@/lib/payment'
+import { createCourseOrderAccessToken, verifyCourseOrderAccessToken } from '@/lib/order-access'
 
 type SignupLeadBody = {
   source?: string
@@ -16,6 +17,8 @@ type SignupLeadBody = {
   amountText?: string
   transferLastFive?: string
   intent?: string
+  leadId?: string
+  accessToken?: string
   notes?: string
 }
 
@@ -140,8 +143,12 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  if (isCoursePayment && !isConfirmTransfer) {
+    return NextResponse.json({ error: '請先建立報名付款單，再更新同一筆付款資料。' }, { status: 400 })
+  }
+
   if (source !== 'course_payment' && !phone && !email && !instagram) {
-    return NextResponse.json({ error: '請至少填寫一种聯絡方式。' }, { status: 400 })
+    return NextResponse.json({ error: '請至少填寫一種聯絡方式。' }, { status: 400 })
   }
 
   const { data, error } = await supabaseAdmin
@@ -184,14 +191,70 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error?.message || '報名資料提交失敗。' }, { status: 500 })
   }
 
-  return NextResponse.json({ lead: data })
+  const accessToken = isCoursePayment ? createCourseOrderAccessToken(data.id) : ''
+  if (isCoursePayment && !accessToken) {
+    return NextResponse.json({ error: '報名付款單已建立，但安全憑證產生失敗，請聯絡客服。' }, { status: 500 })
+  }
+
+  return NextResponse.json({ lead: { ...data, ...(accessToken ? { accessToken } : {}) } })
 }
 
 export async function PATCH(request: NextRequest) {
+  const body = (await request.json().catch(() => ({}))) as SignupLeadBody & {
+    id?: string
+    status?: string
+    reviewNote?: string
+  }
+
+  if (cleanText(body.intent) === 'submit_transfer') {
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Supabase 尚未設定。' }, { status: 500 })
+    }
+
+    const leadId = cleanText(body.leadId)
+    const accessToken = cleanText(body.accessToken)
+    const transferLastFive = cleanText(body.transferLastFive)
+    const notes = cleanText(body.notes)
+
+    if (!leadId || !verifyCourseOrderAccessToken(leadId, accessToken)) {
+      return NextResponse.json({ error: '報名付款單安全憑證無效，請重新建立付款單。' }, { status: 403 })
+    }
+
+    if (!/^\d{5}$/.test(transferLastFive)) {
+      return NextResponse.json({ error: '銀行帳號後五碼必須是 5 位數字。' }, { status: 400 })
+    }
+
+    if (containsSensitiveLongNumber(notes)) {
+      return NextResponse.json(
+        { error: '請不要填寫完整銀行卡號、身分證號或信用卡資料；這裡只需要銀行帳號後五碼。' },
+        { status: 400 }
+      )
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('signup_leads')
+      .update({
+        transfer_last_five: transferLastFive,
+        notes,
+        status: 'pending_review',
+        payment_submitted_at: new Date().toISOString(),
+      })
+      .eq('id', leadId)
+      .eq('source', 'course_payment')
+      .in('status', ['pending_transfer', 'pending_review'])
+      .select('id, source, status, transfer_last_five, payment_submitted_at')
+      .single()
+
+    if (error || !data) {
+      return NextResponse.json({ error: error?.message || '付款資料更新失敗。' }, { status: 500 })
+    }
+
+    return NextResponse.json({ lead: data })
+  }
+
   const auth = await getAuthorizedProfile(request)
   if (auth.error) return auth.error
 
-  const body = (await request.json().catch(() => ({}))) as { id?: string; status?: string; notes?: string; reviewNote?: string }
   const id = cleanText(body.id)
   const status = cleanText(body.status)
   const notes = cleanText(body.notes)

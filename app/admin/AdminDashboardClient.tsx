@@ -222,6 +222,8 @@ export default function AdminDashboardClient() {
   const [coachRoleFilter, setCoachRoleFilter] = useState<'all' | 'coach' | 'student' | 'admin'>('all')
   const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | PaymentOrderStatus>('all')
   const [productStockEdits, setProductStockEdits] = useState<Record<string, string>>({})
+  const [productPriceEdits, setProductPriceEdits] = useState<Record<string, string>>({})
+  const [productActiveEdits, setProductActiveEdits] = useState<Record<string, boolean>>({})
   const [accountForm, setAccountForm] = useState({
     label: '',
     accountName: '',
@@ -258,6 +260,20 @@ export default function AdminDashboardClient() {
         if (next[product.id] === undefined) {
           next[product.id] = String(product.stockQuantity)
         }
+      })
+      return next
+    })
+    setProductPriceEdits((current) => {
+      const next = { ...current }
+      data.products.forEach((product) => {
+        if (next[product.id] === undefined) next[product.id] = product.price > 0 ? String(product.price / 100) : ''
+      })
+      return next
+    })
+    setProductActiveEdits((current) => {
+      const next = { ...current }
+      data.products.forEach((product) => {
+        if (next[product.id] === undefined) next[product.id] = product.active
       })
       return next
     })
@@ -344,12 +360,14 @@ export default function AdminDashboardClient() {
     }
   }
 
-  async function saveProductStock(product: AdminProduct) {
+  async function saveProduct(product: AdminProduct) {
+    const priceTwd = Number(productPriceEdits[product.id] || 0)
     await runAction(`product-${product.id}`, {
-      action: 'update_product_stock',
+      action: 'update_product',
       productId: product.id,
       stockQuantity: Number(productStockEdits[product.id] ?? product.stockQuantity),
-      active: product.active,
+      price: Number.isFinite(priceTwd) ? Math.round(priceTwd * 100) : -1,
+      active: productActiveEdits[product.id] ?? product.active,
     })
   }
 
@@ -775,11 +793,11 @@ export default function AdminDashboardClient() {
 	            <section className="apple-card overflow-hidden">
 	              <div className="border-b border-black/10 p-5">
 	                <h2 className="text-xl font-black text-apple-gray-900">商城商品</h2>
-	                <p className="mt-1 text-sm text-apple-gray-600">庫存會在買家提交訂單時立即扣除；訂單被標記異常時會退回庫存。</p>
+		                <p className="mt-1 text-sm text-apple-gray-600">先設定新台幣售價再上架。訂單成立時會保留庫存，付款異常時會退回。</p>
 	              </div>
 	              {data.products.length === 0 ? (
 	                <div className="p-10 text-center text-sm font-semibold text-apple-gray-500">
-	                  尚未讀取到商品資料。請先執行商城 SQL 迁移。
+		                  尚未讀取到商品資料。請先執行商城資料庫升級。
 	                </div>
 	              ) : (
 	                <div className="overflow-x-auto">
@@ -800,12 +818,27 @@ export default function AdminDashboardClient() {
 	                          </td>
 	                          <td className="px-4 py-4 text-apple-gray-600">{product.category || '-'}</td>
 	                          <td className="px-4 py-4 font-semibold text-apple-gray-800">
-	                            {product.price > 0 ? `NT$${(product.price / 100).toFixed(0)}` : product.priceLabel}
+		                            <div className="flex items-center gap-2">
+		                              <span className="font-bold">NT$</span>
+		                              <input
+		                                value={productPriceEdits[product.id] ?? ''}
+		                                onChange={(event) => setProductPriceEdits((current) => ({ ...current, [product.id]: event.target.value.replace(/\D/g, '') }))}
+		                                className="apple-input w-28 py-2 text-sm"
+		                                inputMode="numeric"
+		                                placeholder="尚未設定"
+		                              />
+		                            </div>
 	                          </td>
 	                          <td className="px-4 py-4">
-	                            <span className={`rounded-full px-3 py-1 text-xs font-bold ${product.active ? 'bg-emerald-50 text-emerald-700' : 'bg-apple-gray-100 text-apple-gray-500'}`}>
-	                              {product.active ? '上架中' : '已下架'}
-	                            </span>
+		                            <label className="inline-flex items-center gap-2 text-xs font-bold text-apple-gray-700">
+		                              <input
+		                                type="checkbox"
+		                                checked={productActiveEdits[product.id] ?? product.active}
+		                                onChange={(event) => setProductActiveEdits((current) => ({ ...current, [product.id]: event.target.checked }))}
+		                                className="h-4 w-4"
+		                              />
+		                              {(productActiveEdits[product.id] ?? product.active) ? '上架' : '下架'}
+		                            </label>
 	                          </td>
 	                          <td className="px-4 py-4">
 	                            <input
@@ -819,10 +852,10 @@ export default function AdminDashboardClient() {
 	                            <button
 	                              type="button"
 	                              disabled={updatingId === `product-${product.id}`}
-	                              onClick={() => saveProductStock(product)}
+		                              onClick={() => saveProduct(product)}
 	                              className="rounded-full bg-black px-4 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
 	                            >
-	                              儲存庫存
+		                              儲存商品
 	                            </button>
 	                          </td>
 	                        </tr>

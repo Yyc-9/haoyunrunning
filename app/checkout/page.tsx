@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { CheckCircle2, CreditCard, ExternalLink, Landmark, LockKeyhole, MessageCircle, PackageCheck, Send, ShieldCheck, Truck, X } from 'lucide-react'
 import { useCart } from '@/app/cart-provider'
@@ -16,6 +16,12 @@ type CreatedOrder = {
   paymentReference?: string
   paymentChannelLabel?: string
   accessToken: string
+}
+
+type PaymentReadiness = {
+  cardConfigured: boolean
+  manualTransferConfigured: boolean
+  taiwanGatewayConfigured: boolean
 }
 
 export default function CheckoutPage() {
@@ -35,6 +41,24 @@ export default function CheckoutPage() {
   const [order, setOrder] = useState<CreatedOrder | null>(null)
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
   const [isStartingCardPayment, setIsStartingCardPayment] = useState(false)
+  const [paymentReadiness, setPaymentReadiness] = useState<PaymentReadiness | null>(null)
+
+  useEffect(() => {
+    let active = true
+
+    fetch('/api/payments/status', { cache: 'no-store' })
+      .then((response) => response.json())
+      .then((payload: PaymentReadiness) => {
+        if (active) setPaymentReadiness(payload)
+      })
+      .catch(() => {
+        if (active) setPaymentReadiness({ cardConfigured: false, manualTransferConfigured: false, taiwanGatewayConfigured: false })
+      })
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   const updateField = (field: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [field]: value }))
@@ -49,6 +73,11 @@ export default function CheckoutPage() {
 
     if (items.length === 0) {
       setError('購物車沒有商品。')
+      return
+    }
+
+    if (!paymentReadiness?.cardConfigured && !paymentReadiness?.manualTransferConfigured) {
+      setError('目前尚未設定可用的付款通道，暫時不能提交訂單。')
       return
     }
 
@@ -269,16 +298,18 @@ export default function CheckoutPage() {
                     </div>
                     <h3 className="font-black text-apple-gray-900">信用卡安全付款</h3>
                     <p className="mt-3 text-sm leading-6 text-apple-gray-600">
-                      卡號、有效期限與安全碼只在合規收單頁面填寫，本站不接觸或儲存完整卡片資料。
+                      {paymentReadiness?.cardConfigured
+                        ? '卡號、有效期限與安全碼只在合規收單頁面填寫，本站不接觸或儲存完整卡片資料。'
+                        : '信用卡收單通道尚未完成設定，目前不會要求客戶輸入任何卡片資料。'}
                     </p>
                   </div>
                   <div className="rounded-3xl border border-black/10 bg-white p-5">
                     <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-apple-gray-100 text-apple-gray-900">
                       <Landmark className="h-5 w-5" />
                     </div>
-                    <h3 className="font-black text-apple-gray-900">銀行轉帳 / 人工核對</h3>
+                    <h3 className="font-black text-apple-gray-900">ATM 虛擬帳號 / 人工核對</h3>
                     <p className="mt-3 text-sm leading-6 text-apple-gray-600">
-                      買家端不顯示完整收款帳戶，只顯示付款代號與通道名稱；管理員可在後台核對資金流向。
+                      若要隱藏實際收款戶頭，需由台灣金流平台產生每筆訂單專用的虛擬帳號；目前尚未接通。
                     </p>
                   </div>
                 </div>
@@ -349,7 +380,7 @@ export default function CheckoutPage() {
               <button
                 type="button"
                 onClick={submitOrder}
-                disabled={isSubmitting || items.length === 0}
+                disabled={isSubmitting || items.length === 0 || !paymentReadiness || (!paymentReadiness.cardConfigured && !paymentReadiness.manualTransferConfigured)}
                 className="apple-button-primary mb-3 w-full gap-2 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Send className="h-4 w-4" />
@@ -418,7 +449,7 @@ export default function CheckoutPage() {
                 <button
                   type="button"
                   onClick={startCardPayment}
-                  disabled={isStartingCardPayment || !order.totalAmount || order.totalAmount <= 0}
+                  disabled={isStartingCardPayment || !paymentReadiness?.cardConfigured || !order.totalAmount || order.totalAmount <= 0}
                   className="apple-button-primary mt-4 w-full gap-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <ExternalLink className="h-4 w-4" />
@@ -428,6 +459,9 @@ export default function CheckoutPage() {
                   <p className="mt-3 text-sm leading-6 text-apple-gray-500">
                     目前商品金額為待確認，設定商品價格或收單通道後即可啟用信用卡付款。
                   </p>
+                ) : null}
+                {!paymentReadiness?.cardConfigured ? (
+                  <p className="mt-3 text-sm leading-6 text-amber-700">信用卡通道尚未完成商戶與回呼設定，現在不可使用。</p>
                 ) : null}
               </section>
 
@@ -439,7 +473,7 @@ export default function CheckoutPage() {
                   <div>
                     <h3 className="font-black text-apple-gray-950">銀行匯款 / 後台核對</h3>
                     <p className="mt-2 text-sm leading-6 text-apple-gray-600">
-                      買家端只顯示付款代號與通道名稱，不顯示完整收款帳戶。付款後填寫轉出帳戶後五碼，管理員後台再核對款項流向。
+                      普通轉帳必須先取得收款帳號；若要隱藏實際戶頭，請等待支付平台提供虛擬帳號。尚未取得正式付款指引前，請勿匯款。
                     </p>
                   </div>
                 </div>
@@ -452,18 +486,22 @@ export default function CheckoutPage() {
                     maxLength={5}
                     placeholder="例如 12345"
                     className="apple-input mt-2 bg-white"
+                    disabled={!paymentReadiness?.manualTransferConfigured}
                   />
                 </label>
                 <button
                   type="button"
                   onClick={submitTransferDetails}
-                  disabled={isSubmittingTransfer || transferLastFive.length !== 5}
+                  disabled={isSubmittingTransfer || !paymentReadiness?.manualTransferConfigured || transferLastFive.length !== 5}
                   className="apple-button-secondary mt-3 w-full gap-2 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Send className="h-4 w-4" />
                   {isSubmittingTransfer ? '送出中...' : '提交後五碼'}
                 </button>
                 {transferMessage ? <p className="mt-3 text-sm font-semibold text-emerald-700">{transferMessage}</p> : null}
+                {!paymentReadiness?.manualTransferConfigured ? (
+                  <p className="mt-3 text-sm leading-6 text-amber-700">後台目前沒有啟用的收款通道，請勿先行匯款。</p>
+                ) : null}
               </section>
 
               {paymentError ? (

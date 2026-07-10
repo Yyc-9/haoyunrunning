@@ -231,7 +231,7 @@ insert into public.shop_products (
     0,
     '私訊諮詢',
     '/products/goodluck-cap/cap-front.jpeg',
-    '/products/goodluck-cap/goodluck-cap-promo.mp4',
+    '',
     5,
     0,
     '["日常訓練"]'::jsonb,
@@ -434,10 +434,14 @@ begin
         updated_at = now()
     where id = v_product_id
       and active = true
+      and price > 0
       and stock_quantity >= v_quantity
     returning * into v_product;
 
     if not found then
+      if exists (select 1 from public.shop_products where id = v_product_id and active = true and price <= 0) then
+        raise exception '商品尚未設定售價：%', v_product_id;
+      end if;
       raise exception '庫存不足：%', v_product_id;
     end if;
 

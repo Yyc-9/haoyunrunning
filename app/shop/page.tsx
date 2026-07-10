@@ -70,6 +70,11 @@ export default function ShopPage() {
   const categories = useMemo(() => engine.getFilterOptions('category'), [engine])
 
   const handleAddToCart = (product: ShopProduct, variant?: ProductVariant, size?: string) => {
+    if (product.price <= 0) {
+      showToast(`${product.name} 尚未設定售價`, 'error')
+      return false
+    }
+
     const cartQuantity = items
       .filter((item) => item.productId === product.id)
       .reduce((sum, item) => sum + item.quantity, 0)
@@ -164,6 +169,7 @@ export default function ShopPage() {
                 .reduce((sum, item) => sum + item.quantity, 0)
               const remainingStock = Math.max(0, product.stockQuantity - cartQuantity)
               const isSoldOut = product.stockQuantity <= 0 || remainingStock <= 0
+              const isPurchasable = product.price > 0 && !isSoldOut
 
               return (
                 <motion.div key={product.id} className="apple-card group overflow-hidden">
@@ -236,17 +242,17 @@ export default function ShopPage() {
                     <div className="grid gap-3 sm:grid-cols-2">
                       <button
                         type="button"
-                        disabled={isSoldOut}
+                        disabled={!isPurchasable}
                         onClick={() => handleAddToCart(product, selectedVariant, selectedSize)}
                         className="apple-button-secondary gap-2 px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <ShoppingBag className="h-4 w-4" />
-                        {isSoldOut ? '庫存不足' : '加入購物車'}
+                        {isSoldOut ? '庫存不足' : product.price <= 0 ? '售價待設定' : '加入購物車'}
                       </button>
-                      {isSoldOut ? (
+                      {!isPurchasable ? (
                         <button type="button" disabled className="apple-button-primary gap-2 px-4 py-2.5 text-sm opacity-50">
                           <CreditCard className="h-4 w-4" />
-                          前往結帳
+                          {isSoldOut ? '庫存不足' : '暫未開放購買'}
                         </button>
                       ) : (
                         <Link

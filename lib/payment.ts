@@ -15,19 +15,19 @@ export const paymentOrderStatusLabels = {
   'zh-TW': {
     pending_transfer: '待匯款 / 待填寫後五碼',
     pending_review: '已提交後五碼，待人工核對',
-    approved: '已核准，課表已開通',
+    approved: '付款已核准，報名已確認',
     rejected: '核對未通過或需補充資料',
   },
   'zh-CN': {
     pending_transfer: '待匯款 / 待填寫後五碼',
     pending_review: '已提交後五碼，待人工核對',
-    approved: '已核准，課表已開通',
+    approved: '付款已核准，報名已確認',
     rejected: '核對未透過或需補充資料',
   },
   en: {
     pending_transfer: 'Awaiting transfer / last five digits',
     pending_review: 'Last five digits submitted, pending review',
-    approved: 'Approved, training access enabled',
+    approved: 'Payment approved, registration confirmed',
     rejected: 'Review failed or more information needed',
   },
 } as const
@@ -60,12 +60,12 @@ export type BankTransferDetails = {
 }
 
 export const bankTransferDetails: BankTransferDetails = {
-  accountName: '系統分配付款通道',
-  bankName: '後台保密',
-  bankCode: '後台保密',
-  accountNumber: '不會在買家端顯示完整收款帳戶',
-  amountNote: '請依訂單金額或客服確認為準。',
-  paymentMemo: '請備註訂單編號或報名姓名，付款後提交轉出帳戶後五碼。',
+  accountName: '待支付平台提供',
+  bankName: '待支付平台提供',
+  bankCode: '待支付平台提供',
+  accountNumber: '尚未產生虛擬帳號',
+  amountNote: '請依訂單顯示金額為準。',
+  paymentMemo: '虛擬帳號服務接通後，系統會顯示付款期限與訂單代號。',
 }
 
 export const paymentProviders: Record<PaymentProvider, { enabled: boolean; secretEnv: string }> = {

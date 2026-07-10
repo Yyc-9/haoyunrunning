@@ -92,7 +92,7 @@ type AdminPatchBody =
   | { action?: 'review_order'; orderId?: string; orderKind?: 'course' | 'shop'; status?: PaymentOrderStatus; reviewNote?: string }
   | { action?: 'bind_student'; studentId?: string; coachId?: string }
   | { action?: 'unbind_student'; bindingId?: string }
-  | { action?: 'update_product_stock'; productId?: string; stockQuantity?: number; active?: boolean }
+  | { action?: 'update_product'; productId?: string; stockQuantity?: number; price?: number; active?: boolean }
   | { action?: 'create_payment_account'; label?: string; accountName?: string; bankName?: string; bankCode?: string; accountNumber?: string; weight?: number }
   | { action?: 'toggle_payment_account'; accountId?: string; active?: boolean }
 
@@ -154,8 +154,8 @@ async function sendOptionalEnrollmentEmail(input: { to: string; studentName: str
     body: JSON.stringify({
       from,
       to: input.to,
-      subject: '好運跑班課表已開通',
-      text: `${input.studentName || '同學'}你好：你的 ${input.courseName || '已報名課程'} 報名付款已經核准，課表已開通。`,
+      subject: '好運跑班報名付款已確認',
+      text: `${input.studentName || '同學'}你好：你的 ${input.courseName || '已報名課程'} 報名付款已經核准，報名確認完成。後續課程通知將另行聯絡。`,
     }),
   })
 
@@ -167,7 +167,7 @@ async function sendOptionalEnrollmentEmail(input: { to: string; studentName: str
     return '核准已完成，但郵件發送失敗，請稍後檢查郵件服務設定。'
   }
 
-  return '核准已完成，並已發送課表開通郵件。'
+  return '核准已完成，並已發送報名確認郵件。'
 }
 
 async function requireAdmin(request: NextRequest) {
@@ -619,9 +619,10 @@ export async function PATCH(request: NextRequest) {
     return json({ order, message: emailMessage || finalReviewNote })
   }
 
-  if (body.action === 'update_product_stock') {
+  if (body.action === 'update_product') {
     const productId = cleanText(body.productId)
     const stockQuantity = Number(body.stockQuantity)
+    const price = Number(body.price)
     const active = body.active === true
 
     if (!productId) {
@@ -632,10 +633,16 @@ export async function PATCH(request: NextRequest) {
       return json({ error: '庫存數量必須是 0 或正整數。' }, { status: 400 })
     }
 
+    if (!Number.isInteger(price) || price < 0 || price > 10_000_000) {
+      return json({ error: '商品售價必須是有效的新台幣整數金額。' }, { status: 400 })
+    }
+
     const { data: product, error } = await supabaseAdmin!
       .from('shop_products')
       .update({
         stock_quantity: stockQuantity,
+        price,
+        price_label: price > 0 ? `NT$${Math.round(price / 100)}` : '暫未開放購買',
         active,
       })
       .eq('id', productId)
@@ -643,10 +650,10 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (error || !product) {
-      return json({ error: error?.message || '更新庫存失敗。' }, { status: 500 })
+      return json({ error: error?.message || '更新商品失敗。' }, { status: 500 })
     }
 
-    return json({ product, message: '商品庫存已更新。' })
+    return json({ product, message: '商品售價、庫存與上架狀態已更新。' })
   }
 
   if (body.action === 'create_payment_account') {
