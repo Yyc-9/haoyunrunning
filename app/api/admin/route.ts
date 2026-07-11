@@ -118,8 +118,8 @@ type AdminPatchBody =
   | { action?: 'review_order'; orderId?: string; orderKind?: 'course' | 'shop'; status?: PaymentOrderStatus; reviewNote?: string }
   | { action?: 'bind_student'; studentId?: string; coachId?: string }
   | { action?: 'unbind_student'; bindingId?: string }
-  | { action?: 'update_product'; productId?: string; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; variants?: Array<{ id?: string; name?: string; image?: string }> }
-  | { action?: 'create_product'; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string }
+  | { action?: 'update_product'; productId?: string; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; variants?: Array<{ id?: string; name?: string; image?: string }>; summary?: string; description?: string; gallery?: string[]; highlights?: string; specifications?: Array<{ label?: string; value?: string }>; usageNotes?: string; externalUrl?: string }
+  | { action?: 'create_product'; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; summary?: string; description?: string; gallery?: string[]; highlights?: string; specifications?: Array<{ label?: string; value?: string }>; usageNotes?: string; externalUrl?: string }
   | { action?: 'save_site_content'; section?: string; value?: unknown }
   | { action?: 'create_payment_account'; label?: string; accountName?: string; bankName?: string; bankCode?: string; accountNumber?: string; weight?: number }
   | { action?: 'toggle_payment_account'; accountId?: string; active?: boolean }
@@ -148,6 +148,34 @@ function commaSeparated(value: unknown) {
     .map((item) => item.trim())
     .filter(Boolean)
     .slice(0, 20)
+}
+
+function lineSeparated(value: unknown) {
+  return cleanText(value)
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 30)
+}
+
+function cleanSpecifications(value: unknown) {
+  if (!Array.isArray(value)) return []
+
+  return value.slice(0, 30).flatMap((item) => {
+    if (!item || typeof item !== 'object') return []
+    const row = item as { label?: unknown; value?: unknown }
+    const label = cleanText(row.label).slice(0, 80)
+    const specificationValue = cleanText(row.value).slice(0, 300)
+    return label && specificationValue ? [{ label, value: specificationValue }] : []
+  })
+}
+
+function cleanGallery(value: unknown) {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item) => cleanText(item))
+    .filter((item) => item && isSafePublicUrl(item) && isSafeProductMedia(item))
+    .slice(0, 12)
 }
 
 function isSafeProductMedia(value: string) {
@@ -307,7 +335,7 @@ export async function GET(request: NextRequest) {
       .limit(1000),
     supabaseAdmin!
       .from('shop_products')
-      .select('id, name, category, price, price_label, image, video, rating, reviews, tags, variants, sizes, stock_quantity, active')
+      .select('id, name, category, price, price_label, image, video, rating, reviews, tags, summary, description, gallery, highlights, specifications, usage_notes, external_url, variants, sizes, stock_quantity, active')
       .order('category', { ascending: true })
       .order('name', { ascending: true }),
     supabaseAdmin!
@@ -738,6 +766,12 @@ export async function PATCH(request: NextRequest) {
     const stockQuantity = Number(body.stockQuantity)
     const price = Number(body.price)
     const active = body.active === true
+    const summary = cleanText(body.summary).slice(0, 500)
+    const description = cleanText(body.description).slice(0, 5000)
+    const externalUrl = cleanText(body.externalUrl)
+    const rawGallery = Array.isArray(body.gallery) ? body.gallery : []
+    const gallery = cleanGallery(rawGallery)
+    const specifications = cleanSpecifications(body.specifications)
     const rawVariants = Array.isArray(body.variants) ? body.variants.slice(0, 20) : []
     const variants = rawVariants.flatMap((item) => {
       const id = cleanText(item.id).slice(0, 100)
@@ -755,6 +789,12 @@ export async function PATCH(request: NextRequest) {
     }
     if (video && (!isSafePublicUrl(video) || !isSafeProductMedia(video))) {
       return json({ error: '商品影片網址無效。' }, { status: 400 })
+    }
+    if (gallery.length !== rawGallery.length) {
+      return json({ error: '商品詳情圖片網址無效。' }, { status: 400 })
+    }
+    if (externalUrl && !isSafePublicUrl(externalUrl)) {
+      return json({ error: '商品官方連結網址無效。' }, { status: 400 })
     }
     if (variants.length !== rawVariants.length) {
       return json({ error: '請完整填寫每一個商品款式及款式圖片。' }, { status: 400 })
@@ -779,6 +819,13 @@ export async function PATCH(request: NextRequest) {
         image,
         video,
         tags: commaSeparated(body.tags),
+        summary,
+        description,
+        gallery,
+        highlights: lineSeparated(body.highlights),
+        specifications,
+        usage_notes: lineSeparated(body.usageNotes),
+        external_url: externalUrl,
         sizes: commaSeparated(body.sizes),
         variants,
         active,
@@ -802,6 +849,12 @@ export async function PATCH(request: NextRequest) {
     const stockQuantity = Number(body.stockQuantity)
     const price = Number(body.price)
     const active = body.active === true
+    const summary = cleanText(body.summary).slice(0, 500)
+    const description = cleanText(body.description).slice(0, 5000)
+    const externalUrl = cleanText(body.externalUrl)
+    const rawGallery = Array.isArray(body.gallery) ? body.gallery : []
+    const gallery = cleanGallery(rawGallery)
+    const specifications = cleanSpecifications(body.specifications)
 
     if (!name || !category || !image) {
       return json({ error: '請填寫商品名稱、分類並上傳主圖。' }, { status: 400 })
@@ -811,6 +864,12 @@ export async function PATCH(request: NextRequest) {
     }
     if (video && (!isSafePublicUrl(video) || !isSafeProductMedia(video))) {
       return json({ error: '商品影片網址無效。' }, { status: 400 })
+    }
+    if (gallery.length !== rawGallery.length) {
+      return json({ error: '商品詳情圖片網址無效。' }, { status: 400 })
+    }
+    if (externalUrl && !isSafePublicUrl(externalUrl)) {
+      return json({ error: '商品官方連結網址無效。' }, { status: 400 })
     }
     if (!Number.isInteger(stockQuantity) || stockQuantity < 0 || stockQuantity > 1_000_000) {
       return json({ error: '庫存數量必須是有效整數。' }, { status: 400 })
@@ -832,6 +891,13 @@ export async function PATCH(request: NextRequest) {
         rating: 5,
         reviews: 0,
         tags: commaSeparated(body.tags),
+        summary,
+        description,
+        gallery,
+        highlights: lineSeparated(body.highlights),
+        specifications,
+        usage_notes: lineSeparated(body.usageNotes),
+        external_url: externalUrl,
         variants: [],
         sizes: commaSeparated(body.sizes),
         stock_quantity: stockQuantity,

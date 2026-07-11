@@ -2,11 +2,40 @@
 
 import Image from 'next/image'
 import { useState } from 'react'
-import { Film, ImagePlus, Loader2, PackagePlus, Trash2 } from 'lucide-react'
+import { Film, ImagePlus, Loader2, PackagePlus, Plus, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 type AdminProductCreatorProps = {
   runAction: (id: string, action: Record<string, unknown>) => Promise<boolean>
+}
+
+const initialProductForm = {
+  name: '',
+  category: '跑者配件',
+  price: '',
+  stockQuantity: '0',
+  image: '',
+  video: '',
+  gallery: [] as string[],
+  tags: '',
+  sizes: '',
+  summary: '',
+  description: '',
+  highlights: '',
+  specifications: '',
+  usageNotes: '',
+  externalUrl: '',
+  active: false,
+}
+
+function parseSpecificationLines(value: string) {
+  return value.split(/\r?\n/).flatMap((line) => {
+    const separator = line.search(/[:：]/)
+    if (separator < 1) return []
+    const label = line.slice(0, separator).trim()
+    const specificationValue = line.slice(separator + 1).trim()
+    return label && specificationValue ? [{ label, value: specificationValue }] : []
+  })
 }
 
 export async function uploadProductMedia(file: File, mediaKind: 'image' | 'video') {
@@ -62,27 +91,19 @@ export async function uploadProductMedia(file: File, mediaKind: 'image' | 'video
 }
 
 export default function AdminProductCreator({ runAction }: AdminProductCreatorProps) {
-  const [form, setForm] = useState({
-    name: '',
-    category: '跑者配件',
-    price: '',
-    stockQuantity: '0',
-    image: '',
-    video: '',
-    tags: '',
-    sizes: '',
-    active: false,
-  })
-  const [uploadingKind, setUploadingKind] = useState<'image' | 'video' | ''>('')
+  const [form, setForm] = useState(initialProductForm)
+  const [uploadingKind, setUploadingKind] = useState('')
   const [uploadError, setUploadError] = useState('')
 
-  async function handleMedia(file: File | undefined, mediaKind: 'image' | 'video') {
+  async function handleMedia(file: File | undefined, mediaKind: 'image' | 'video', target: 'image' | 'video' | 'gallery' = mediaKind) {
     if (!file) return
-    setUploadingKind(mediaKind)
+    setUploadingKind(target)
     setUploadError('')
     try {
       const url = await uploadProductMedia(file, mediaKind)
-      setForm((current) => ({ ...current, [mediaKind]: url }))
+      setForm((current) => target === 'gallery'
+        ? { ...current, gallery: [...current.gallery, url].slice(0, 12) }
+        : { ...current, [target]: url })
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : '媒體上傳失敗。')
     } finally {
@@ -102,11 +123,18 @@ export default function AdminProductCreator({ runAction }: AdminProductCreatorPr
       video: form.video,
       tags: form.tags,
       sizes: form.sizes,
+      summary: form.summary,
+      description: form.description,
+      gallery: form.gallery,
+      highlights: form.highlights,
+      specifications: parseSpecificationLines(form.specifications),
+      usageNotes: form.usageNotes,
+      externalUrl: form.externalUrl,
       active: form.active,
     })
 
     if (created) {
-      setForm({ name: '', category: '跑者配件', price: '', stockQuantity: '0', image: '', video: '', tags: '', sizes: '', active: false })
+      setForm(initialProductForm)
     }
   }
 
@@ -127,6 +155,11 @@ export default function AdminProductCreator({ runAction }: AdminProductCreatorPr
             {uploadingKind === 'video' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Film className="h-4 w-4" />}
             {form.video ? '更換影片' : '上傳影片'}
             <input type="file" accept="video/mp4,video/webm,video/quicktime" className="sr-only" disabled={Boolean(uploadingKind)} onChange={(event) => handleMedia(event.target.files?.[0], 'video')} />
+          </label>
+          <label title="加入商品詳情圖片" className="apple-button-outline inline-flex cursor-pointer items-center justify-center gap-2 px-4 py-3">
+            {uploadingKind === 'gallery' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            加入詳情圖
+            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={Boolean(uploadingKind) || form.gallery.length >= 12} onChange={(event) => handleMedia(event.target.files?.[0], 'image', 'gallery')} />
           </label>
         </div>
       </div>
@@ -184,6 +217,32 @@ export default function AdminProductCreator({ runAction }: AdminProductCreatorPr
             <PackagePlus className="h-4 w-4" />
             建立商品
           </button>
+        </div>
+      </div>
+
+      {form.gallery.length > 0 ? (
+        <div className="mt-5 border-t border-black/10 pt-5">
+          <h3 className="text-sm font-black text-apple-gray-900">商品詳情圖片</h3>
+          <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-6">
+            {form.gallery.map((imageUrl, index) => (
+              <div key={`${imageUrl}-${index}`} className="relative aspect-square overflow-hidden rounded-lg border border-black/10 bg-apple-gray-100">
+                <Image src={imageUrl} alt={`詳情圖片 ${index + 1}`} fill sizes="120px" className="object-contain p-1" />
+                <button type="button" onClick={() => setForm((current) => ({ ...current, gallery: current.gallery.filter((_, itemIndex) => itemIndex !== index) }))} aria-label={`移除詳情圖片 ${index + 1}`} className="absolute right-1 top-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-red-600 shadow"><Trash2 className="h-3.5 w-3.5" /></button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="mt-5 border-t border-black/10 pt-5">
+        <div className="mb-4"><h3 className="font-black text-apple-gray-950">商品詳情</h3><p className="mt-1 text-xs text-apple-gray-500">這些內容會直接顯示在商品獨立頁面。</p></div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="md:col-span-2"><span className="mb-2 block text-xs font-bold text-apple-gray-500">商品摘要</span><input value={form.summary} onChange={(event) => setForm((current) => ({ ...current, summary: event.target.value }))} maxLength={500} placeholder="用一句話說明商品特色" className="apple-input" /></label>
+          <label className="md:col-span-2"><span className="mb-2 block text-xs font-bold text-apple-gray-500">完整介紹</span><textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} rows={5} maxLength={5000} placeholder="商品用途、設計與適合情境" className="apple-input resize-y" /></label>
+          <label><span className="mb-2 block text-xs font-bold text-apple-gray-500">商品重點（每行一項）</span><textarea value={form.highlights} onChange={(event) => setForm((current) => ({ ...current, highlights: event.target.value }))} rows={5} placeholder={'團隊限定設計\n適合日常訓練'} className="apple-input resize-y" /></label>
+          <label><span className="mb-2 block text-xs font-bold text-apple-gray-500">規格（每行「名稱：內容」）</span><textarea value={form.specifications} onChange={(event) => setForm((current) => ({ ...current, specifications: event.target.value }))} rows={5} placeholder={'尺寸：S、M、L\n顏色：黑色'} className="apple-input resize-y" /></label>
+          <label><span className="mb-2 block text-xs font-bold text-apple-gray-500">使用與保養（每行一項）</span><textarea value={form.usageNotes} onChange={(event) => setForm((current) => ({ ...current, usageNotes: event.target.value }))} rows={4} className="apple-input resize-y" /></label>
+          <label><span className="mb-2 block text-xs font-bold text-apple-gray-500">官方商品連結（選填）</span><input type="url" value={form.externalUrl} onChange={(event) => setForm((current) => ({ ...current, externalUrl: event.target.value }))} placeholder="https://" className="apple-input" /></label>
         </div>
       </div>
     </div>

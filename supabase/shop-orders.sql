@@ -127,6 +127,13 @@ create table if not exists public.shop_products (
   rating numeric(3, 2) not null default 5,
   reviews integer not null default 0 check (reviews >= 0),
   tags jsonb not null default '[]'::jsonb,
+  summary text not null default '',
+  description text not null default '',
+  gallery jsonb not null default '[]'::jsonb,
+  highlights jsonb not null default '[]'::jsonb,
+  specifications jsonb not null default '[]'::jsonb,
+  usage_notes jsonb not null default '[]'::jsonb,
+  external_url text not null default '',
   variants jsonb not null default '[]'::jsonb,
   sizes jsonb not null default '[]'::jsonb,
   stock_quantity integer not null default 0 check (stock_quantity >= 0),
@@ -188,6 +195,15 @@ add column if not exists size text not null default '';
 
 alter table public.shop_products
 add column if not exists video text not null default '';
+
+alter table public.shop_products
+  add column if not exists summary text not null default '',
+  add column if not exists description text not null default '',
+  add column if not exists gallery jsonb not null default '[]'::jsonb,
+  add column if not exists highlights jsonb not null default '[]'::jsonb,
+  add column if not exists specifications jsonb not null default '[]'::jsonb,
+  add column if not exists usage_notes jsonb not null default '[]'::jsonb,
+  add column if not exists external_url text not null default '';
 
 insert into public.shop_products (
   id, name, category, price, price_label, image, video, rating, reviews, tags, variants, sizes, stock_quantity, active

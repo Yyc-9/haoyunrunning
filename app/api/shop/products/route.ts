@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { defaultShopProducts, shopProductFromRow, type ShopProductRow } from '@/lib/shop-products'
 import { supabaseAdmin } from '@/lib/supabase-server'
 
@@ -16,34 +16,43 @@ function isOptionalSchemaError(error: { code?: string; message?: string } | null
   )
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const requestedId = request.nextUrl.searchParams.get('id')?.trim() ?? ''
+
   if (!supabaseAdmin) {
-    return NextResponse.json({ products: defaultShopProducts, source: 'fallback' }, { headers: noStoreHeaders })
+    const products = requestedId ? defaultShopProducts.filter((product) => product.id === requestedId) : defaultShopProducts
+    return NextResponse.json({ products, product: products[0] ?? null, source: 'fallback' }, { headers: noStoreHeaders })
   }
 
   try {
     const { data, error } = await supabaseAdmin
       .from('shop_products')
-      .select('id, name, category, price, price_label, image, video, rating, reviews, tags, variants, sizes, stock_quantity, active')
+      .select('id, name, category, price, price_label, image, video, rating, reviews, tags, summary, description, gallery, highlights, specifications, usage_notes, external_url, variants, sizes, stock_quantity, active')
       .eq('active', true)
       .order('category', { ascending: true })
       .order('name', { ascending: true })
 
     if (error) {
       if (isOptionalSchemaError(error)) {
-        return NextResponse.json({ products: defaultShopProducts, source: 'fallback' }, { headers: noStoreHeaders })
+        const products = requestedId ? defaultShopProducts.filter((product) => product.id === requestedId) : defaultShopProducts
+        return NextResponse.json({ products, product: products[0] ?? null, source: 'fallback' }, { headers: noStoreHeaders })
       }
 
       console.error('Shop products query error:', error)
-      return NextResponse.json({ products: defaultShopProducts, source: 'fallback' }, { headers: noStoreHeaders })
+      const products = requestedId ? defaultShopProducts.filter((product) => product.id === requestedId) : defaultShopProducts
+      return NextResponse.json({ products, product: products[0] ?? null, source: 'fallback' }, { headers: noStoreHeaders })
     }
 
+    const products = (data ?? [])
+      .map((row) => shopProductFromRow(row as ShopProductRow))
+      .filter((product) => !requestedId || product.id === requestedId)
     return NextResponse.json(
-      { products: (data ?? []).map((row) => shopProductFromRow(row as ShopProductRow)), source: 'database' },
+      { products, product: products[0] ?? null, source: 'database' },
       { headers: noStoreHeaders }
     )
   } catch (error) {
     console.error('Shop products request failed:', error)
-    return NextResponse.json({ products: defaultShopProducts, source: 'fallback' }, { headers: noStoreHeaders })
+    const products = requestedId ? defaultShopProducts.filter((product) => product.id === requestedId) : defaultShopProducts
+    return NextResponse.json({ products, product: products[0] ?? null, source: 'fallback' }, { headers: noStoreHeaders })
   }
 }

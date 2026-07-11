@@ -14,6 +14,13 @@ export type AdminEditableProduct = {
   image: string
   video?: string
   tags: string[]
+  summary: string
+  description: string
+  gallery: string[]
+  highlights: string[]
+  specifications: Array<{ label: string; value: string }>
+  usageNotes: string[]
+  externalUrl?: string
   sizes?: string[]
   variants?: Array<{ id: string; name: string; image: string }>
   stockQuantity: number
@@ -34,10 +41,27 @@ function productDraft(product: AdminEditableProduct) {
     image: product.image,
     video: product.video ?? '',
     tags: product.tags.join('、'),
+    summary: product.summary,
+    description: product.description,
+    gallery: [...product.gallery],
+    highlights: product.highlights.join('\n'),
+    specifications: product.specifications.map((item) => `${item.label}：${item.value}`).join('\n'),
+    usageNotes: product.usageNotes.join('\n'),
+    externalUrl: product.externalUrl ?? '',
     sizes: (product.sizes ?? []).join('、'),
     variants: (product.variants ?? []).map((variant) => ({ ...variant })),
     active: product.active,
   }
+}
+
+function parseSpecificationLines(value: string) {
+  return value.split(/\r?\n/).flatMap((line) => {
+    const separator = line.search(/[:：]/)
+    if (separator < 1) return []
+    const label = line.slice(0, separator).trim()
+    const specificationValue = line.slice(separator + 1).trim()
+    return label && specificationValue ? [{ label, value: specificationValue }] : []
+  })
 }
 
 export default function AdminProductEditor({ product, runAction }: AdminProductEditorProps) {
@@ -50,9 +74,9 @@ export default function AdminProductEditor({ product, runAction }: AdminProductE
     setDraft(productDraft(product))
   }, [product])
 
-  async function uploadMedia(file: File | undefined, mediaKind: 'image' | 'video', variantIndex?: number) {
+  async function uploadMedia(file: File | undefined, mediaKind: 'image' | 'video', variantIndex?: number | 'gallery') {
     if (!file) return
-    const key = mediaKind === 'video' ? 'video' : variantIndex === undefined ? 'main' : `variant-${variantIndex}`
+    const key = mediaKind === 'video' ? 'video' : variantIndex === undefined ? 'main' : variantIndex === 'gallery' ? 'gallery' : `variant-${variantIndex}`
     setUploadingKey(key)
     setLocalError('')
     try {
@@ -61,6 +85,8 @@ export default function AdminProductEditor({ product, runAction }: AdminProductE
         setDraft((current) => ({ ...current, video: url }))
       } else if (variantIndex === undefined) {
         setDraft((current) => ({ ...current, image: url }))
+      } else if (variantIndex === 'gallery') {
+        setDraft((current) => ({ ...current, gallery: [...current.gallery, url].slice(0, 12) }))
       } else {
         setDraft((current) => ({
           ...current,
@@ -103,6 +129,13 @@ export default function AdminProductEditor({ product, runAction }: AdminProductE
       video: draft.video,
       tags: draft.tags,
       sizes: draft.sizes,
+      summary: draft.summary,
+      description: draft.description,
+      gallery: draft.gallery,
+      highlights: draft.highlights,
+      specifications: parseSpecificationLines(draft.specifications),
+      usageNotes: draft.usageNotes,
+      externalUrl: draft.externalUrl,
       variants: draft.variants,
       active: draft.active,
     })
@@ -150,6 +183,39 @@ export default function AdminProductEditor({ product, runAction }: AdminProductE
           <label><span className="mb-2 block text-xs font-bold text-apple-gray-500">標籤</span><input value={draft.tags} onChange={(event) => setDraft((current) => ({ ...current, tags: event.target.value }))} placeholder="以逗號分隔" className="apple-input" /></label>
           <label><span className="mb-2 block text-xs font-bold text-apple-gray-500">尺寸或規格</span><input value={draft.sizes} onChange={(event) => setDraft((current) => ({ ...current, sizes: event.target.value }))} placeholder="以逗號分隔" className="apple-input" /></label>
           <label className="flex items-center gap-3 text-sm font-bold text-apple-gray-700"><input type="checkbox" checked={draft.active} onChange={(event) => setDraft((current) => ({ ...current, active: event.target.checked }))} className="h-4 w-4" />{draft.active ? '商品已上架' : '商品已下架'}</label>
+        </div>
+      </div>
+
+      <div className="border-t border-black/10 px-5 py-5">
+        <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <div><h3 className="font-black text-apple-gray-950">商品詳情圖片</h3><p className="mt-1 text-xs text-apple-gray-500">最多 12 張，顧客可在商品頁逐張查看。</p></div>
+          <label className="apple-button-outline inline-flex cursor-pointer gap-2 px-4 py-2 text-sm">
+            {uploadingKey === 'gallery' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+            加入圖片
+            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={Boolean(uploadingKey) || draft.gallery.length >= 12} onChange={(event) => uploadMedia(event.target.files?.[0], 'image', 'gallery')} />
+          </label>
+        </div>
+        {draft.gallery.length > 0 ? (
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+            {draft.gallery.map((imageUrl, index) => (
+              <div key={`${imageUrl}-${index}`} className="relative aspect-square overflow-hidden rounded-lg border border-black/10 bg-apple-gray-100">
+                <Image src={imageUrl} alt={`${draft.name}詳情圖片 ${index + 1}`} fill sizes="120px" className="object-contain p-1" />
+                <button type="button" onClick={() => setDraft((current) => ({ ...current, gallery: current.gallery.filter((_, itemIndex) => itemIndex !== index) }))} aria-label={`移除詳情圖片 ${index + 1}`} className="absolute right-1 top-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-red-600 shadow"><Trash2 className="h-3.5 w-3.5" /></button>
+              </div>
+            ))}
+          </div>
+        ) : <p className="border-y border-black/10 py-4 text-sm text-apple-gray-500">目前會以商品主圖作為商品頁圖片。</p>}
+      </div>
+
+      <div className="border-t border-black/10 px-5 py-5">
+        <div className="mb-4"><h3 className="font-black text-apple-gray-950">商品詳情內容</h3><p className="mt-1 text-xs text-apple-gray-500">儲存後會直接更新前台商品頁。</p></div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="md:col-span-2"><span className="mb-2 block text-xs font-bold text-apple-gray-500">商品摘要</span><input value={draft.summary} onChange={(event) => setDraft((current) => ({ ...current, summary: event.target.value }))} maxLength={500} placeholder="用一句話說明商品特色" className="apple-input" /></label>
+          <label className="md:col-span-2"><span className="mb-2 block text-xs font-bold text-apple-gray-500">完整介紹</span><textarea value={draft.description} onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))} rows={5} maxLength={5000} className="apple-input resize-y" /></label>
+          <label><span className="mb-2 block text-xs font-bold text-apple-gray-500">商品重點（每行一項）</span><textarea value={draft.highlights} onChange={(event) => setDraft((current) => ({ ...current, highlights: event.target.value }))} rows={5} className="apple-input resize-y" /></label>
+          <label><span className="mb-2 block text-xs font-bold text-apple-gray-500">規格（每行「名稱：內容」）</span><textarea value={draft.specifications} onChange={(event) => setDraft((current) => ({ ...current, specifications: event.target.value }))} rows={5} className="apple-input resize-y" /></label>
+          <label><span className="mb-2 block text-xs font-bold text-apple-gray-500">使用與保養（每行一項）</span><textarea value={draft.usageNotes} onChange={(event) => setDraft((current) => ({ ...current, usageNotes: event.target.value }))} rows={4} className="apple-input resize-y" /></label>
+          <label><span className="mb-2 block text-xs font-bold text-apple-gray-500">官方商品連結（選填）</span><input type="url" value={draft.externalUrl} onChange={(event) => setDraft((current) => ({ ...current, externalUrl: event.target.value }))} placeholder="https://" className="apple-input" /></label>
         </div>
       </div>
 

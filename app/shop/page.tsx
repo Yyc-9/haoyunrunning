@@ -2,316 +2,123 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useMemo, useState } from 'react'
-import { CreditCard, MessageCircle, Package, Search, Shield, ShoppingBag, Star, Truck } from 'lucide-react'
-import { motion } from 'framer-motion'
-import Link from 'next/link'
 import Image from 'next/image'
-import { useCart } from '@/app/cart-provider'
-import { SearchEngine } from '@/lib/search'
-import { useToast } from '@/app/toast-provider'
-import { defaultShopProducts, type ProductVariant, type ShopProduct } from '@/lib/shop-products'
+import Link from 'next/link'
+import { useEffect, useMemo, useState } from 'react'
+import { ArrowRight, Package, Search } from 'lucide-react'
 import ShopCartDrawer from '@/components/ShopCartDrawer'
-import { useSiteContent } from '@/app/site-content-provider'
+import { defaultShopProducts, type ShopProduct } from '@/lib/shop-products'
+
+type SortOption = 'featured' | 'price-low' | 'price-high'
+
+function formatPrice(product: ShopProduct) {
+  return product.price > 0 ? `NT$${Math.round(product.price / 100).toLocaleString('zh-TW')}` : '洽詢售價'
+}
 
 export default function ShopPage() {
-  const { addItem, items } = useCart()
-  const { showToast } = useToast()
-  const { pageMedia, brand } = useSiteContent()
   const [products, setProducts] = useState<ShopProduct[]>(defaultShopProducts)
   const [query, setQuery] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('')
-  const [sortBy, setSortBy] = useState<'relevance' | 'price-low' | 'price-high' | 'rating'>('relevance')
-  const [currentPage, setCurrentPage] = useState(0)
-  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({})
-  const [selectedSizes, setSelectedSizes] = useState<Record<string, string>>({})
+  const [category, setCategory] = useState('')
+  const [sort, setSort] = useState<SortOption>('featured')
   const [isCartOpen, setIsCartOpen] = useState(false)
 
   useEffect(() => {
     let isActive = true
 
-    async function loadProducts() {
-      try {
-        const response = await fetch('/api/shop/products', { cache: 'no-store' })
-        const payload = (await response.json().catch(() => ({}))) as {
-          products?: ShopProduct[]
-        }
+    fetch('/api/shop/products', { cache: 'no-store' })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => ({}))) as { products?: ShopProduct[] }
+        if (!response.ok) throw new Error('商品資料載入失敗。')
+        if (isActive && payload.products) setProducts(payload.products)
+      })
+      .catch((error) => console.error('Load shop products failed:', error))
 
-        if (!response.ok) {
-          throw new Error('商品資料暫時無法更新。')
-        }
-
-        if (isActive && payload.products) {
-          setProducts(payload.products)
-        }
-      } catch (error) {
-        console.error('Load shop products failed:', error)
-      }
-    }
-
-    loadProducts()
-
-    return () => {
-      isActive = false
-    }
+    return () => { isActive = false }
   }, [])
 
-  const engine = useMemo(() => new SearchEngine(products, ['name', 'category']), [products])
-
-  const results = useMemo(() => {
-    return engine.search({
-      query,
-      filters: selectedCategory ? { category: selectedCategory } : {},
-      sortBy,
-      limit: 9,
-      offset: currentPage * 9,
+  const categories = useMemo(() => Array.from(new Set(products.map((product) => product.category).filter(Boolean))), [products])
+  const visibleProducts = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase()
+    const filtered = products.filter((product) => {
+      const matchesCategory = !category || product.category === category
+      const haystack = [product.name, product.category, product.summary, ...product.tags].join(' ').toLowerCase()
+      return matchesCategory && (!normalizedQuery || haystack.includes(normalizedQuery))
     })
-  }, [query, selectedCategory, sortBy, currentPage, engine])
 
-  const suggestions = useMemo(() => (query ? engine.getSuggestions(query, 5) : []), [query, engine])
-  const categories = useMemo(() => engine.getFilterOptions('category'), [engine])
-
-  const handleAddToCart = (product: ShopProduct, variant?: ProductVariant, size?: string) => {
-    if (product.price <= 0) {
-      showToast(`${product.name} 目前採洽詢購買`, 'info')
-      return false
-    }
-
-    const cartQuantity = items
-      .filter((item) => item.productId === product.id)
-      .reduce((sum, item) => sum + item.quantity, 0)
-
-    if (cartQuantity >= product.stockQuantity) {
-      showToast(`${product.name} 庫存不足`, 'error')
-      return false
-    }
-
-    const optionName = variant?.name || ''
-    const displayName = optionName ? `${product.name} - ${optionName}` : product.name
-    const toastName = [displayName, size ? `尺寸 ${size}` : ''].filter(Boolean).join(' / ')
-
-    addItem({
-      id: [product.id, variant?.id, size].filter(Boolean).join(':'),
-      productId: product.id,
-      variantId: variant?.id,
-      size,
-      name: displayName,
-      price: product.price,
-      image: variant?.image ?? product.image,
-    })
-    showToast(`${toastName} 已加入購物車`, 'success')
-    setIsCartOpen(true)
-    return true
-  }
+    if (sort === 'price-low') return [...filtered].sort((a, b) => a.price - b.price)
+    if (sort === 'price-high') return [...filtered].sort((a, b) => b.price - a.price)
+    return filtered
+  }, [category, products, query, sort])
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-white">
-      <div className="relative h-[16.5rem] overflow-hidden bg-black sm:h-80 lg:h-[22rem]">
-        <div className="absolute inset-0 bg-cover bg-center opacity-75" style={{ backgroundImage: `url("${pageMedia.shopHero}")` }} />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/15 to-black/25" />
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="relative z-10 flex h-full flex-col items-center justify-end px-4 pb-8 text-white sm:justify-center sm:pb-0">
-          <h1 className="mb-3 text-center text-4xl font-black sm:text-5xl">{pageMedia.shopTitle}</h1>
-          <p className="max-w-2xl text-center text-base leading-7 text-white/88 sm:text-xl">{pageMedia.shopSubtitle}</p>
-        </motion.div>
-      </div>
-
-      <div className="container mx-auto px-4 py-8 sm:py-10">
-        <div className="relative mx-auto mb-6 max-w-2xl">
-          <div className="relative">
-            <Search className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="搜尋商品..."
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value)
-                setCurrentPage(0)
-              }}
-              className="apple-input pl-12"
-            />
-          </div>
-
-          {suggestions.length > 0 && (
-            <div className="absolute left-0 right-0 top-full z-10 mt-2 overflow-hidden rounded-2xl border border-black/10 bg-white shadow-lg">
-              {suggestions.map((suggestion) => (
-                <button key={suggestion} onClick={() => setQuery(suggestion)} className="w-full border-b px-4 py-3 text-left text-sm transition last:border-b-0 hover:bg-apple-gray-100">
-                  {suggestion}
-                </button>
-              ))}
+    <main className="min-h-screen bg-white pt-20 sm:pt-24">
+      <section className="border-b border-black/10 bg-apple-gray-50">
+        <div className="container mx-auto px-4 py-10 sm:py-14">
+          <p className="text-sm font-bold text-apple-gray-500">GOOD LUCK RUNNING SHOP</p>
+          <div className="mt-2 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+            <div>
+              <h1 className="text-3xl font-black text-apple-gray-950 sm:text-4xl">好運商店</h1>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-apple-gray-600 sm:text-base">跑班服飾、配件與訓練補給。點進商品即可查看完整圖片、規格、庫存與購買選項。</p>
             </div>
-          )}
+            <p className="text-sm font-semibold text-apple-gray-500">目前共 {products.length} 件商品</p>
+          </div>
         </div>
+      </section>
 
-        <div className="mb-6 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-          <div className="flex flex-wrap gap-2">
-            <button onClick={() => setSelectedCategory('')} className={`apple-chip ${selectedCategory === '' ? 'apple-chip-active' : ''}`}>全部</button>
-            {(categories as string[]).map((category) => (
-              <button key={category} onClick={() => setSelectedCategory(category)} className={`apple-chip ${selectedCategory === category ? 'apple-chip-active' : ''}`}>
-                {category}
-              </button>
+      <section className="container mx-auto px-4 py-8 sm:py-10">
+        <div className="grid gap-3 border-b border-black/10 pb-6 md:grid-cols-[minmax(260px,1fr)_auto_auto] md:items-center">
+          <label className="relative block max-w-xl">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-apple-gray-400" />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜尋商品" className="apple-input pl-10" />
+          </label>
+          <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0">
+            <button type="button" onClick={() => setCategory('')} className={`whitespace-nowrap rounded-md border px-3 py-2 text-sm font-bold transition ${!category ? 'border-black bg-black text-white' : 'border-black/10 bg-white text-apple-gray-700 hover:border-black/30'}`}>全部</button>
+            {categories.map((item) => (
+              <button key={item} type="button" onClick={() => setCategory(item)} className={`whitespace-nowrap rounded-md border px-3 py-2 text-sm font-bold transition ${category === item ? 'border-black bg-black text-white' : 'border-black/10 bg-white text-apple-gray-700 hover:border-black/30'}`}>{item}</button>
             ))}
           </div>
-
-          <select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} className="apple-input w-full py-2 text-sm md:w-auto md:min-w-48">
-            <option value="relevance">相關度</option>
-            <option value="price-low">價格：低到高</option>
-            <option value="price-high">價格：高到低</option>
-            <option value="rating">推薦度：高到低</option>
+          <select value={sort} onChange={(event) => setSort(event.target.value as SortOption)} aria-label="商品排序" className="apple-input py-2 text-sm md:w-40">
+            <option value="featured">推薦排序</option>
+            <option value="price-low">價格低到高</option>
+            <option value="price-high">價格高到低</option>
           </select>
         </div>
 
-        <p className="mb-5 text-gray-600">共 {results.total} 件商品 {query && `（搜尋「${query}」）`}</p>
-        {results.items.length > 0 ? (
-          <motion.div initial="hidden" animate="visible" className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {results.items.map((product) => {
-              const selectedVariant = product.variants?.find((variant) => variant.id === selectedVariants[product.id]) ?? product.variants?.[0]
-              const selectedSize = selectedSizes[product.id] ?? product.sizes?.[0]
-              const productImage = selectedVariant?.image ?? product.image
-              const cartQuantity = items
-                .filter((item) => item.productId === product.id)
-                .reduce((sum, item) => sum + item.quantity, 0)
-              const remainingStock = Math.max(0, product.stockQuantity - cartQuantity)
-              const isSoldOut = product.stockQuantity <= 0 || remainingStock <= 0
-              const isPurchasable = product.price > 0 && !isSoldOut
-
-              return (
-                <motion.div key={product.id} className="apple-card group overflow-hidden">
-                  <div className="relative h-64 overflow-hidden bg-white">
-                    {product.video ? (
-                      <video
-                        src={product.video}
-                        poster={productImage || undefined}
-                        aria-label={`${product.name} 宣傳影片`}
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        preload="metadata"
-                        className="h-full w-full bg-black object-contain"
-                      />
-                    ) : productImage ? (
-                      <Image
-                        src={productImage}
-                        alt={selectedVariant ? `${product.name} ${selectedVariant.name}` : product.name}
-                        fill
-                        sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
-                        className="object-contain p-3 transition duration-300 group-hover:scale-[1.02]"
-                      />
+        {visibleProducts.length > 0 ? (
+          <div className="grid grid-cols-2 gap-x-3 gap-y-8 pt-7 md:grid-cols-3 md:gap-x-5 lg:grid-cols-4">
+            {visibleProducts.map((product) => (
+              <article key={product.id} className="group min-w-0">
+                <Link href={`/shop/${encodeURIComponent(product.id)}`} className="block">
+                  <div className="relative aspect-square overflow-hidden rounded-md border border-black/10 bg-apple-gray-50">
+                    {product.image ? (
+                      <Image src={product.image} alt={product.name} fill sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw" className="object-contain p-3 transition duration-300 group-hover:scale-[1.025]" />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-white via-apple-gray-100 to-apple-gray-200">
-                        <Package className="h-16 w-16 text-apple-gray-400" />
-                      </div>
+                      <div className="flex h-full items-center justify-center"><Package className="h-10 w-10 text-apple-gray-300" /></div>
                     )}
-                    <div className="absolute left-3 top-3 flex flex-wrap gap-2 pr-3">
-                      {product.tags.map((tag) => <span key={tag} className="rounded-full bg-black/80 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">{tag}</span>)}
-                    </div>
-                    <div className="absolute right-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-black text-apple-gray-900 shadow-sm">
-                      {isSoldOut ? '售完' : `庫存 ${remainingStock}`}
+                    {product.stockQuantity <= 0 ? <span className="absolute left-2 top-2 rounded bg-black px-2 py-1 text-xs font-bold text-white">售完</span> : null}
+                  </div>
+                  <div className="pt-3">
+                    <p className="text-xs text-apple-gray-500">{product.category}</p>
+                    <h2 className="mt-1 line-clamp-2 min-h-12 text-sm font-black leading-6 text-apple-gray-950 sm:text-base">{product.name}</h2>
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      <span className="text-base font-black text-apple-gray-950">{formatPrice(product)}</span>
+                      <ArrowRight className="h-4 w-4 shrink-0 text-apple-gray-400 transition group-hover:translate-x-1 group-hover:text-black" />
                     </div>
                   </div>
-
-                  <div className="p-5">
-                    <p className="mb-2 text-xs text-gray-500">{product.category}</p>
-                    <h3 className="mb-2 font-bold text-gray-900 transition group-hover:text-black">{product.name}</h3>
-
-                    <div className="mb-3 flex min-h-7 flex-wrap content-start gap-2">
-                      {product.variants?.map((variant) => {
-                        const isSelected = variant.id === selectedVariant?.id
-                        return (
-                          <button key={variant.id} type="button" onClick={() => setSelectedVariants((current) => ({ ...current, [product.id]: variant.id }))} className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${isSelected ? 'border-black bg-black text-white' : 'border-black/10 bg-white text-gray-700 hover:border-black/30'}`}>
-                            {variant.name}
-                          </button>
-                        )
-                      })}
-                    </div>
-
-                    {product.sizes && (
-                      <label className="mb-3 block">
-                        <span className="mb-2 block text-xs font-semibold text-gray-600">尺寸</span>
-                        <select value={selectedSize} onChange={(event) => setSelectedSizes((current) => ({ ...current, [product.id]: event.target.value }))} className="apple-input py-2 text-sm">
-                          {product.sizes.map((size) => <option key={size} value={size}>{size}</option>)}
-                        </select>
-                      </label>
-                    )}
-
-                    <div className="mb-3 flex items-center gap-1">
-                      <div className="flex text-amber-400">
-                        {Array.from({ length: 5 }).map((_, index) => <Star key={index} className={`h-4 w-4 ${index < Math.floor(product.rating) ? 'fill-current' : ''}`} />)}
-                      </div>
-                      <span className="text-sm text-gray-600">{product.reviews > 0 ? `${product.rating} (${product.reviews})` : '好運推薦'}</span>
-                    </div>
-
-                    <div className="mb-4 flex items-baseline gap-2">
-                      <span className="text-2xl font-bold text-gray-900">{product.price > 0 ? `NT$${(product.price / 100).toFixed(0)}` : '洽詢售價'}</span>
-                      {cartQuantity > 0 ? <span className="text-xs font-semibold text-apple-gray-500">購物車中 {cartQuantity}</span> : null}
-                    </div>
-
-                    {isPurchasable ? (
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <button
-                          type="button"
-                          onClick={() => handleAddToCart(product, selectedVariant, selectedSize)}
-                          className="apple-button-secondary gap-2 px-4 py-2.5 text-sm"
-                        >
-                          <ShoppingBag className="h-4 w-4" />
-                          加入購物車
-                        </button>
-                        <Link
-                          href="/checkout"
-                          onClick={(event) => {
-                            if (!handleAddToCart(product, selectedVariant, selectedSize)) {
-                              event.preventDefault()
-                            }
-                          }}
-                          className="apple-button-primary gap-2 px-4 py-2.5 text-sm"
-                        >
-                          <CreditCard className="h-4 w-4" />
-                          前往結帳
-                        </Link>
-                      </div>
-                    ) : isSoldOut ? (
-                      <button type="button" disabled className="apple-button-secondary w-full gap-2 px-4 py-2.5 text-sm opacity-60">
-                        <Package className="h-4 w-4" />
-                        補貨中
-                      </button>
-                    ) : (
-                      <a href={brand.instagramUrl} target="_blank" rel="noreferrer" className="apple-button-primary w-full gap-2 px-4 py-2.5 text-sm">
-                        <MessageCircle className="h-4 w-4" />
-                        聯絡購買
-                      </a>
-                    )}
-                  </div>
-                </motion.div>
-              )
-            })}
-          </motion.div>
-        ) : (
-          <div className="py-12 text-center">
-            <Package className="mx-auto mb-4 h-16 w-16 text-gray-300" />
-            <p className="mb-4 text-lg text-gray-500">未找到符合的商品</p>
-            <button onClick={() => { setQuery(''); setSelectedCategory('') }} className="apple-button-primary px-6 py-2">清除篩選</button>
-          </div>
-        )}
-      </div>
-
-      <div className="border-t bg-gray-50 py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-            {[
-              { icon: Truck, title: '跑班自取 / 配送', description: '依商品與課程活動安排' },
-              { icon: Shield, title: '實用優先', description: '只整理跑者真正會用到的裝備' },
-              { icon: Package, title: '補給支援', description: '訓練與賽事前後都能補上' },
-            ].map((item) => (
-              <div key={item.title} className="text-center">
-                <item.icon className="mx-auto mb-4 h-12 w-12 text-black" />
-                <h4 className="mb-2 font-bold text-gray-900">{item.title}</h4>
-                <p className="text-gray-600">{item.description}</p>
-              </div>
+                </Link>
+              </article>
             ))}
           </div>
-        </div>
-      </div>
+        ) : (
+          <div className="flex min-h-80 flex-col items-center justify-center text-center">
+            <Package className="h-12 w-12 text-apple-gray-300" />
+            <p className="mt-4 font-black text-apple-gray-900">找不到符合條件的商品</p>
+            <button type="button" onClick={() => { setQuery(''); setCategory('') }} className="mt-4 text-sm font-bold text-apple-gray-600 underline underline-offset-4">清除搜尋條件</button>
+          </div>
+        )}
+      </section>
+
       <ShopCartDrawer products={products} open={isCartOpen} onOpenChange={setIsCartOpen} />
-    </div>
+    </main>
   )
 }
