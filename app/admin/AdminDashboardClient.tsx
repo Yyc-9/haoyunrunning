@@ -15,6 +15,7 @@ import {
   RefreshCw,
   RotateCcw,
   ShieldCheck,
+  Trash2,
   Landmark,
   KeyRound,
   PanelsTopLeft,
@@ -385,6 +386,29 @@ export default function AdminDashboardClient() {
     }
   }
 
+  async function deleteOrder(order: AdminOrder) {
+    const inventoryMessage = order.orderKind === 'shop' && order.inventoryReserved
+      ? ' 系統會同時歸還這筆訂單預留的商品庫存。'
+      : ''
+    const confirmed = window.confirm(
+      `確定刪除「${order.studentName}」的${order.orderKind === 'shop' ? '商城訂單' : '課程報名'}？${inventoryMessage} 此操作無法復原。`
+    )
+    if (!confirmed) return
+
+    const deleted = await runAction(`delete-${order.id}`, {
+      action: 'delete_order',
+      orderId: order.id,
+      orderKind: order.orderKind,
+    })
+    if (deleted) {
+      setOrderReviewNotes((current) => {
+        const next = { ...current }
+        delete next[order.id]
+        return next
+      })
+    }
+  }
+
   async function createPaymentAccount() {
     const created = await runAction('create-payment-account', {
       action: 'create_payment_account',
@@ -466,7 +490,7 @@ export default function AdminDashboardClient() {
                 const active = activeTab === tab.id
 
                 return (
-                  <button
+	                      <button
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
@@ -823,9 +847,20 @@ export default function AdminDashboardClient() {
                         className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-white px-5 py-2.5 text-sm font-bold text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <RotateCcw className="h-4 w-4" />
-                        標記異常
-                      </button>
-                    </div>
+	                        標記異常
+	                      </button>
+                          {order.status !== 'approved' ? (
+                            <button
+                              type="button"
+                              disabled={updatingId === `delete-${order.id}`}
+                              onClick={() => deleteOrder(order)}
+                              className="inline-flex items-center justify-center gap-2 rounded-full border border-red-300 bg-white px-5 py-2.5 text-sm font-bold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {updatingId === `delete-${order.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                              刪除記錄
+                            </button>
+                          ) : null}
+	                    </div>
                   </div>
 	                  <div className="mt-5 grid gap-3 md:grid-cols-3">
 	                    {[

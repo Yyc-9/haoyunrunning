@@ -116,6 +116,7 @@ type AdminPatchBody =
   | { action?: 'set_coach_role'; userId?: string; enabled?: boolean }
   | { action?: 'create_coach_invite' }
   | { action?: 'review_order'; orderId?: string; orderKind?: 'course' | 'shop'; status?: PaymentOrderStatus; reviewNote?: string }
+  | { action?: 'delete_order'; orderId?: string; orderKind?: 'course' | 'shop' }
   | { action?: 'bind_student'; studentId?: string; coachId?: string }
   | { action?: 'unbind_student'; bindingId?: string }
   | { action?: 'update_product'; productId?: string; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; variants?: Array<{ id?: string; name?: string; image?: string }>; summary?: string; description?: string; gallery?: string[]; highlights?: string; specifications?: Array<{ label?: string; value?: string }>; usageNotes?: string; externalUrl?: string }
@@ -632,6 +633,63 @@ export async function PATCH(request: NextRequest) {
     }
 
     return json({ profile, message: enabled ? '已授予教練權限。' : '已取消教練權限。' })
+  }
+
+  if (body.action === 'delete_order') {
+    const orderId = cleanText(body.orderId)
+    const orderKind = cleanText(body.orderKind)
+
+    if (!orderId || !['course', 'shop'].includes(orderKind)) {
+      return json({ error: '訂單資料不完整。' }, { status: 400 })
+    }
+
+    if (orderKind === 'shop') {
+      const { data: deleted, error } = await supabaseAdmin!.rpc('delete_shop_order_with_inventory', {
+        p_order_id: orderId,
+      })
+
+      if (error) {
+        const approved = /approved|核准/i.test(error.message)
+        return json(
+          { error: approved ? '已核准的商城訂單不能刪除。' : error.message || '刪除商城訂單失敗。' },
+          { status: approved ? 409 : 500 }
+        )
+      }
+      if (deleted !== true) {
+        return json({ error: '找不到商城訂單。' }, { status: 404 })
+      }
+
+      return json({ message: '商城訂單已刪除；如有預留庫存，系統已自動歸還。' })
+    }
+
+    const { data: currentOrder, error: currentOrderError } = await supabaseAdmin!
+      .from('signup_leads')
+      .select('id, status')
+      .eq('id', orderId)
+      .eq('source', 'course_payment')
+      .maybeSingle()
+
+    if (currentOrderError) {
+      return json({ error: currentOrderError.message }, { status: 500 })
+    }
+    if (!currentOrder) {
+      return json({ error: '找不到課程報名訂單。' }, { status: 404 })
+    }
+    if (currentOrder.status === 'approved') {
+      return json({ error: '已核准的課程報名不能刪除。' }, { status: 409 })
+    }
+
+    const { error } = await supabaseAdmin!
+      .from('signup_leads')
+      .delete()
+      .eq('id', orderId)
+      .eq('source', 'course_payment')
+
+    if (error) {
+      return json({ error: error.message || '刪除課程報名失敗。' }, { status: 500 })
+    }
+
+    return json({ message: '未完成的課程報名記錄已刪除。' })
   }
 
   if (body.action === 'review_order') {
