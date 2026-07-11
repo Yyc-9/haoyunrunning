@@ -7,6 +7,7 @@ import {
   Boxes,
   CheckCircle2,
   ClipboardList,
+  Copy,
   CreditCard,
   Download,
   LayoutDashboard,
@@ -15,6 +16,7 @@ import {
   RotateCcw,
   ShieldCheck,
   Landmark,
+  KeyRound,
   PanelsTopLeft,
   UserCog,
   UsersRound,
@@ -50,6 +52,16 @@ type AdminDashboardPayload = {
   siteContent: SiteContent
   courses: AdminCourseSummary[]
   coachOptions: Array<{ id: string; name: string; email: string }>
+  coachInvites: CoachInvite[]
+}
+
+type CoachInvite = {
+  id: string
+  code: string
+  usedBy: string
+  usedAt: string | null
+  expiresAt: string | null
+  createdAt: string
 }
 
 type AdminCourseSummary = {
@@ -624,6 +636,55 @@ export default function AdminDashboardClient() {
 
           {activeTab === 'coaches' && data ? (
             <section className="apple-card overflow-hidden">
+              <div className="border-b border-black/10 bg-apple-gray-100 p-5">
+                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <KeyRound className="h-5 w-5 text-apple-gray-700" />
+                      <h2 className="text-lg font-black text-apple-gray-900">教練認證碼</h2>
+                    </div>
+                    <p className="mt-1 text-sm text-apple-gray-600">認證碼限用一次，有效期 30 天；使用者登入後輸入即可升級為教練。</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => runAction('create-coach-invite', { action: 'create_coach_invite' })}
+                    disabled={updatingId === 'create-coach-invite'}
+                    className="apple-button-primary gap-2 px-5 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {updatingId === 'create-coach-invite' ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+                    生成認證碼
+                  </button>
+                </div>
+
+                <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                  {data.coachInvites.slice(0, 6).map((invite) => {
+                    const expired = Boolean(invite.expiresAt && new Date(invite.expiresAt).getTime() < Date.now())
+                    const status = invite.usedAt ? `已由 ${invite.usedBy || '教練帳號'} 使用` : expired ? '已過期' : '可使用'
+                    return (
+                      <div key={invite.id} className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 bg-white p-3">
+                        <div className="min-w-0">
+                          <p className="truncate font-mono text-sm font-bold text-apple-gray-900">{invite.code}</p>
+                          <p className={`mt-1 text-xs font-semibold ${invite.usedAt || expired ? 'text-apple-gray-500' : 'text-emerald-700'}`}>{status}</p>
+                        </div>
+                        {!invite.usedAt && !expired ? (
+                          <button
+                            type="button"
+                            onClick={() => navigator.clipboard.writeText(invite.code)}
+                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-black/10 text-apple-gray-700 hover:bg-apple-gray-100"
+                            aria-label="複製認證碼"
+                            title="複製認證碼"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </button>
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                  {data.coachInvites.length === 0 ? (
+                    <p className="text-sm text-apple-gray-500">目前尚未生成認證碼。</p>
+                  ) : null}
+                </div>
+              </div>
               <div className="border-b border-black/10 p-5">
                 <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
                   <div>

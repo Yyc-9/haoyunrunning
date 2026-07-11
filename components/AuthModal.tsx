@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, User, Mail, Phone, Lock, Award, Eye, EyeOff, ChevronRight } from 'lucide-react'
+import { X, User, Mail, Phone, Lock, Award, Eye, EyeOff, ChevronRight, UsersRound } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '@/app/providers'
 import { useLanguage } from '@/app/language-context'
@@ -54,6 +54,8 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [oauthSubmitting, setOauthSubmitting] = useState<'google' | 'apple' | null>(null)
+  const [coachOptions, setCoachOptions] = useState<Array<{ id: string; name: string }>>([])
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -61,10 +63,23 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
     pb: '',
     email: '',
     password: '',
+    coachId: '',
   })
   const router = useRouter()
-  const { login, register } = useAuth()
+  const { login, loginWithOAuth, register } = useAuth()
   const { t } = useLanguage()
+  const oauthProviders = [
+    {
+      id: 'apple' as const,
+      label: 'Apple',
+      enabled: process.env.NEXT_PUBLIC_APPLE_AUTH_ENABLED === 'true',
+    },
+    {
+      id: 'google' as const,
+      label: 'Google',
+      enabled: process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === 'true',
+    },
+  ].filter((provider) => provider.enabled)
 
   useEffect(() => {
     if (isOpen) {
@@ -72,6 +87,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
       setErrorMessage('')
       setSuccessMessage('')
       setIsSubmitting(false)
+      setOauthSubmitting(null)
     }
   }, [isOpen, mode])
 
@@ -85,6 +101,26 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
       document.body.style.overflow = 'unset'
     }
   }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen || activeMode !== 'register') return
+
+    let active = true
+    fetch('/api/coaches/options', { cache: 'no-store' })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => ({}))) as {
+          coaches?: Array<{ id: string; name: string }>
+        }
+        if (active && response.ok) setCoachOptions(payload.coaches ?? [])
+      })
+      .catch(() => {
+        if (active) setCoachOptions([])
+      })
+
+    return () => {
+      active = false
+    }
+  }, [activeMode, isOpen])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -105,6 +141,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
         phone: formData.phone,
         gender: formData.gender as 'male' | 'female' | 'other',
         pb: formData.pb,
+        coachId: formData.coachId,
         password: formData.password,
       })
 
@@ -121,6 +158,19 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
       setErrorMessage(getAuthErrorMessage(error, t.auth.actionFailed, t.auth.emailNotConfirmed))
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleOAuthLogin = async (provider: 'google' | 'apple') => {
+    setErrorMessage('')
+    setSuccessMessage('')
+    setOauthSubmitting(provider)
+
+    try {
+      await loginWithOAuth(provider)
+    } catch (error) {
+      setErrorMessage(getAuthErrorMessage(error, t.auth.actionFailed, t.auth.emailNotConfirmed))
+      setOauthSubmitting(null)
     }
   }
 
@@ -290,6 +340,28 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                           />
                         </div>
                       </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-apple-gray-700">
+                          綁定教練（選填）
+                        </label>
+                        <div className="relative">
+                          <UsersRound className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-apple-gray-400" />
+                          <select
+                            name="coachId"
+                            value={formData.coachId}
+                            onChange={handleChange}
+                            className="apple-input pl-10"
+                          >
+                            <option value="">暫不選擇，之後可在學員看板綁定</option>
+                            {coachOptions.map((coach) => (
+                              <option key={coach.id} value={coach.id}>
+                                {coach.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
                     </>
                   )}
 
@@ -398,7 +470,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                 </div>
               </form>
 
-              {/* Apple ID style footer */}
+              {oauthProviders.length > 0 ? (
               <div className="px-6 pb-6">
                 <div className="text-center">
                   <div className="inline-flex items-center space-x-2 text-apple-gray-500">
@@ -407,19 +479,23 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                     <div className="h-px w-12 bg-apple-gray-300" />
                   </div>
                   <div className="flex justify-center space-x-3 mt-4">
-                    {t.auth.providers.map((provider) => (
+                    {oauthProviders.map((provider) => (
                       <motion.button
-                        key={provider}
+                        key={provider.id}
+                        type="button"
+                        onClick={() => handleOAuthLogin(provider.id)}
+                        disabled={oauthSubmitting !== null}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="apple-button-outline text-sm px-4 py-2"
+                        className="apple-button-outline px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        {provider}
+                        {oauthSubmitting === provider.id ? '連線中...' : provider.label}
                       </motion.button>
                     ))}
                   </div>
                 </div>
               </div>
+              ) : null}
             </motion.div>
           </div>
         </>

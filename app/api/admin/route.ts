@@ -103,8 +103,18 @@ type PaymentAccountRow = {
   updated_at: string
 }
 
+type CoachInviteRow = {
+  id: string
+  code: string
+  used_by: string | null
+  used_at: string | null
+  expires_at: string | null
+  created_at: string
+}
+
 type AdminPatchBody =
   | { action?: 'set_coach_role'; userId?: string; enabled?: boolean }
+  | { action?: 'create_coach_invite' }
   | { action?: 'review_order'; orderId?: string; orderKind?: 'course' | 'shop'; status?: PaymentOrderStatus; reviewNote?: string }
   | { action?: 'bind_student'; studentId?: string; coachId?: string }
   | { action?: 'unbind_student'; bindingId?: string }
@@ -269,6 +279,7 @@ export async function GET(request: NextRequest) {
     shopOrderItemsResult,
     paymentAccountsResult,
     siteContentResult,
+    coachInvitesResult,
   ] = await Promise.all([
     supabaseAdmin!
       .from('profiles')
@@ -316,6 +327,11 @@ export async function GET(request: NextRequest) {
       .from('site_content')
       .select('key, value')
       .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'testimonials_content', 'page_media']),
+    supabaseAdmin!
+      .from('coach_invites')
+      .select('id, code, used_by, used_at, expires_at, created_at')
+      .order('created_at', { ascending: false })
+      .limit(30),
   ])
 
   const firstError = [
@@ -329,6 +345,7 @@ export async function GET(request: NextRequest) {
     isOptionalSchemaError(shopOrderItemsResult.error) ? null : shopOrderItemsResult.error,
     isOptionalSchemaError(paymentAccountsResult.error) ? null : paymentAccountsResult.error,
     isOptionalSchemaError(siteContentResult.error) ? null : siteContentResult.error,
+    coachInvitesResult.error,
   ].find(Boolean)
 
   if (firstError) {
@@ -345,6 +362,7 @@ export async function GET(request: NextRequest) {
   const shopOrderItems = shopOrderItemsResult.error ? [] : (shopOrderItemsResult.data ?? []) as ShopOrderItemRow[]
   const paymentAccounts = paymentAccountsResult.error ? [] : (paymentAccountsResult.data ?? []) as PaymentAccountRow[]
   const siteContent = siteContentResult.error ? defaultSiteContent : siteContentFromRows(siteContentResult.data)
+  const coachInvites = (coachInvitesResult.data ?? []) as CoachInviteRow[]
   const coursePaymentOrders = orders.filter((order) => order.source === 'course_payment')
 
   const profilesById = new Map(profiles.map((profile) => [profile.id, profile]))
@@ -513,6 +531,16 @@ export async function GET(request: NextRequest) {
     coachOptions: coaches
       .filter((coach) => coach.coachEnabled)
       .map((coach) => ({ id: coach.id, name: coach.name, email: coach.email })),
+    coachInvites: coachInvites.map((invite) => ({
+      id: invite.id,
+      code: invite.code,
+      usedBy: invite.used_by
+        ? profilesById.get(invite.used_by)?.name || profilesById.get(invite.used_by)?.email || '已使用'
+        : '',
+      usedAt: invite.used_at,
+      expiresAt: invite.expires_at,
+      createdAt: invite.created_at,
+    })),
   })
 }
 
@@ -521,6 +549,26 @@ export async function PATCH(request: NextRequest) {
   if (auth.error) return auth.error
 
   const body = (await request.json().catch(() => ({}))) as AdminPatchBody
+
+  if (body.action === 'create_coach_invite') {
+    const code = `HYCOACH-${randomUUID().replaceAll('-', '').slice(0, 10).toUpperCase()}`
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    const { data: invite, error } = await supabaseAdmin!
+      .from('coach_invites')
+      .insert({
+        code,
+        created_by: auth.user.id,
+        expires_at: expiresAt,
+      })
+      .select('id, code, expires_at, created_at')
+      .single()
+
+    if (error || !invite) {
+      return json({ error: error?.message || '生成教練認證碼失敗。' }, { status: 500 })
+    }
+
+    return json({ invite, message: `教練認證碼 ${code} 已生成，有效期 30 天。` })
+  }
 
   if (body.action === 'set_coach_role') {
     const userId = cleanText(body.userId)

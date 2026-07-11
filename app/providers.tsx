@@ -20,8 +20,9 @@ export interface AuthContextType {
   isLoggedIn: boolean
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
+  loginWithOAuth: (provider: 'google' | 'apple') => Promise<void>
   logout: () => void
-  register: (data: Omit<User, 'id'> & { password: string }) => Promise<{ needsEmailConfirmation: boolean }>
+  register: (data: Omit<User, 'id'> & { password: string; coachId?: string }) => Promise<{ needsEmailConfirmation: boolean }>
   updateUser: (data: Partial<User>) => void
   refreshUser: () => Promise<User | null>
 }
@@ -36,6 +37,16 @@ type ProfilePayload = {
   phone?: string | null
   pb?: string | null
   avatar_url?: string | null
+}
+
+class AccountSessionError extends Error {
+  code: string
+
+  constructor(message: string, code: string) {
+    super(message)
+    this.name = 'AccountSessionError'
+    this.code = code
+  }
 }
 
 function isRetryableAuthNetworkError(error: unknown) {
@@ -100,6 +111,7 @@ async function loginViaServer(email: string, password: string) {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [sessionNotice, setSessionNotice] = useState('')
 
   const applyProfile = useCallback((data: ProfilePayload, fallbackEmail = '') => {
     const nextUser: User = {
@@ -157,9 +169,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const payload = (await response.json().catch(() => ({}))) as {
       profile?: ProfilePayload
       error?: string
+      code?: string
     }
 
     if (!response.ok || !payload.profile) {
+      if (payload.code === 'SESSION_REVOKED') {
+        throw new AccountSessionError(
+          payload.error || '此帳號已在其他裝置登入，目前裝置已登出。',
+          payload.code
+        )
+      }
       throw new Error(payload.error || '讀取帳號角色失敗。')
     }
 
@@ -169,24 +188,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadProfile = useCallback(async (userId: string, fallbackEmail = '') => {
     if (!supabase) return null
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle()
-
-    if (!error && data) {
-      return applyProfile(data as ProfilePayload, fallbackEmail)
-    }
-
-    if (error) {
-      console.error('Load profile error:', error)
-    }
-
     try {
       return await loadProfileFromServer(fallbackEmail)
     } catch (serverError) {
       console.error('Load server profile error:', serverError)
+
+      if (serverError instanceof AccountSessionError && serverError.code === 'SESSION_REVOKED') {
+        await supabase.auth.signOut({ scope: 'local' })
+        removeSupabaseSessionFallback()
+        window.localStorage.removeItem('goodluck-user-role')
+        setUser(null)
+        setSessionNotice(serverError.message)
+        return null
+      }
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle()
+
+      if (!error && data) {
+        return applyProfile(data as ProfilePayload, fallbackEmail)
+      }
+
+      if (error) {
+        console.error('Load profile error:', error)
+      }
 
       const savedRole =
         typeof window !== 'undefined'
@@ -207,6 +235,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return fallbackUser
     }
   }, [applyProfile, loadProfileFromServer])
+
+  useEffect(() => {
+    if (!user || !supabase) return
+
+    const checkCurrentSession = () => {
+      loadProfile(user.id, user.email).catch((error) => {
+        console.error('Session heartbeat error:', error)
+      })
+    }
+    const interval = window.setInterval(checkCurrentSession, 60_000)
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') checkCurrentSession()
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+
+    return () => {
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
+  }, [loadProfile, user])
 
   useEffect(() => {
     let mounted = true
@@ -303,23 +351,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [applyAuthUser, loadProfileFromServer])
 
+  const loginWithOAuth = useCallback(async (provider: 'google' | 'apple') => {
+    if (!supabase) {
+      throw new Error('Supabase 尚未設定。')
+    }
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/profile` : undefined,
+      },
+    })
+
+    if (error) throw error
+  }, [])
+
   const logout = useCallback(() => {
     if (supabase) {
-      supabase.auth.signOut()
+      supabase.auth.signOut({ scope: 'local' })
     }
     removeSupabaseSessionFallback()
     window.localStorage.removeItem('goodluck-user-role')
     setUser(null)
   }, [])
 
-  const register = useCallback(async (data: Omit<User, 'id'> & { password: string }) => {
+  const register = useCallback(async (data: Omit<User, 'id'> & { password: string; coachId?: string }) => {
     setIsLoading(true)
     try {
       if (!supabase) {
         throw new Error('Supabase 尚未設定。')
       }
 
-      const { password, ...userData } = data
+      const { password, coachId, ...userData } = data
       const { data: signUpData, error } = await supabase.auth.signUp({
         email: userData.email,
         password,
@@ -329,6 +392,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             phone: userData.phone,
             pb: userData.pb,
             role: 'student',
+            preferred_coach_id: coachId || '',
           },
           emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/profile?auth=login` : undefined,
         },
@@ -410,13 +474,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoggedIn: user !== null,
     isLoading,
     login,
+    loginWithOAuth,
     logout,
     register,
     updateUser,
     refreshUser,
   }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      {sessionNotice ? (
+        <div className="fixed bottom-4 left-1/2 z-[100] flex w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 items-center justify-between gap-4 rounded-2xl bg-black px-4 py-3 text-sm font-semibold text-white shadow-xl">
+          <span>{sessionNotice}</span>
+          <button
+            type="button"
+            onClick={() => setSessionNotice('')}
+            className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-black"
+          >
+            關閉
+          </button>
+        </div>
+      ) : null}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth() {

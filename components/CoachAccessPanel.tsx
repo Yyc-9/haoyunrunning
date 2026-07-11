@@ -153,6 +153,7 @@ export default function CoachAccessPanel({ compact = false, onStudentBound }: Co
           </div>
         )}
 
+        {isCoach ? (
         <div className="rounded-3xl bg-apple-gray-100 p-4">
           <div className="mb-3 flex items-center gap-2">
             <Link2 className="h-4 w-4 text-apple-gray-700" />
@@ -174,6 +175,7 @@ export default function CoachAccessPanel({ compact = false, onStudentBound }: Co
             {t.coach.bindStudent}
           </button>
         </div>
+        ) : null}
       </div>
 
       {!user && (

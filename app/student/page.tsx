@@ -27,6 +27,7 @@ import {
 import Link from 'next/link'
 import { useAuth } from '@/app/providers'
 import { useLanguage } from '@/app/language-context'
+import StudentCoachBindingPanel from '@/components/StudentCoachBindingPanel'
 import {
   addMyStudentRace,
   getMyStudentRaces,
@@ -819,6 +820,18 @@ export default function StudentPage() {
               )
             ))}
           </nav>
+
+          {!isCoach ? (
+            <div className="mb-6">
+              <StudentCoachBindingPanel
+                currentCoachName={boundCoachName}
+                onBound={(coachName) => {
+                  setCoachBound(true)
+                  setBoundCoachName(coachName)
+                }}
+              />
+            </div>
+          ) : null}
 
           <section id="training-data" className="scroll-mt-28">
             <article className="apple-card mb-6 p-6 md:p-8">
