@@ -108,8 +108,8 @@ type AdminPatchBody =
   | { action?: 'review_order'; orderId?: string; orderKind?: 'course' | 'shop'; status?: PaymentOrderStatus; reviewNote?: string }
   | { action?: 'bind_student'; studentId?: string; coachId?: string }
   | { action?: 'unbind_student'; bindingId?: string }
-  | { action?: 'update_product'; productId?: string; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; tags?: string; sizes?: string; variants?: Array<{ id?: string; name?: string; image?: string }> }
-  | { action?: 'create_product'; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; tags?: string; sizes?: string }
+  | { action?: 'update_product'; productId?: string; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; variants?: Array<{ id?: string; name?: string; image?: string }> }
+  | { action?: 'create_product'; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string }
   | { action?: 'save_site_content'; section?: string; value?: unknown }
   | { action?: 'create_payment_account'; label?: string; accountName?: string; bankName?: string; bankCode?: string; accountNumber?: string; weight?: number }
   | { action?: 'toggle_payment_account'; accountId?: string; active?: boolean }
@@ -140,7 +140,7 @@ function commaSeparated(value: unknown) {
     .slice(0, 20)
 }
 
-function isSafeProductImage(value: string) {
+function isSafeProductMedia(value: string) {
   if (value.startsWith('/') && !value.startsWith('//')) return true
 
   try {
@@ -686,6 +686,7 @@ export async function PATCH(request: NextRequest) {
     const name = cleanText(body.name).slice(0, 180)
     const category = cleanText(body.category).slice(0, 100)
     const image = cleanText(body.image)
+    const video = cleanText(body.video)
     const stockQuantity = Number(body.stockQuantity)
     const price = Number(body.price)
     const active = body.active === true
@@ -694,15 +695,18 @@ export async function PATCH(request: NextRequest) {
       const id = cleanText(item.id).slice(0, 100)
       const variantName = cleanText(item.name).slice(0, 100)
       const variantImage = cleanText(item.image)
-      if (!/^[a-zA-Z0-9_-]+$/.test(id) || !variantName || !variantImage || !isSafePublicUrl(variantImage) || !isSafeProductImage(variantImage)) return []
+      if (!/^[a-zA-Z0-9_-]+$/.test(id) || !variantName || !variantImage || !isSafePublicUrl(variantImage) || !isSafeProductMedia(variantImage)) return []
       return [{ id, name: variantName, image: variantImage }]
     })
 
     if (!productId || !name || !category || !image) {
       return json({ error: '請完整填寫商品名稱、分類與主圖。' }, { status: 400 })
     }
-    if (!isSafePublicUrl(image) || !isSafeProductImage(image)) {
+    if (!isSafePublicUrl(image) || !isSafeProductMedia(image)) {
       return json({ error: '商品圖片網址無效。' }, { status: 400 })
+    }
+    if (video && (!isSafePublicUrl(video) || !isSafeProductMedia(video))) {
+      return json({ error: '商品影片網址無效。' }, { status: 400 })
     }
     if (variants.length !== rawVariants.length) {
       return json({ error: '請完整填寫每一個商品款式及款式圖片。' }, { status: 400 })
@@ -725,6 +729,7 @@ export async function PATCH(request: NextRequest) {
         price,
         price_label: price > 0 ? `NT$${Math.round(price / 100)}` : '洽詢售價',
         image,
+        video,
         tags: commaSeparated(body.tags),
         sizes: commaSeparated(body.sizes),
         variants,
@@ -738,13 +743,14 @@ export async function PATCH(request: NextRequest) {
       return json({ error: error?.message || '更新商品失敗。' }, { status: 500 })
     }
 
-    return json({ product, message: '商品內容、圖片、售價與庫存已更新。' })
+    return json({ product, message: '商品內容、圖片、影片、售價與庫存已更新。' })
   }
 
   if (body.action === 'create_product') {
     const name = cleanText(body.name).slice(0, 180)
     const category = cleanText(body.category).slice(0, 100)
     const image = cleanText(body.image)
+    const video = cleanText(body.video)
     const stockQuantity = Number(body.stockQuantity)
     const price = Number(body.price)
     const active = body.active === true
@@ -752,8 +758,11 @@ export async function PATCH(request: NextRequest) {
     if (!name || !category || !image) {
       return json({ error: '請填寫商品名稱、分類並上傳主圖。' }, { status: 400 })
     }
-    if (!isSafePublicUrl(image) || !isSafeProductImage(image)) {
+    if (!isSafePublicUrl(image) || !isSafeProductMedia(image)) {
       return json({ error: '商品圖片網址無效。' }, { status: 400 })
+    }
+    if (video && (!isSafePublicUrl(video) || !isSafeProductMedia(video))) {
+      return json({ error: '商品影片網址無效。' }, { status: 400 })
     }
     if (!Number.isInteger(stockQuantity) || stockQuantity < 0 || stockQuantity > 1_000_000) {
       return json({ error: '庫存數量必須是有效整數。' }, { status: 400 })
@@ -771,7 +780,7 @@ export async function PATCH(request: NextRequest) {
         price,
         price_label: price > 0 ? `NT$${Math.round(price / 100)}` : '洽詢售價',
         image,
-        video: '',
+        video,
         rating: 5,
         reviews: 0,
         tags: commaSeparated(body.tags),

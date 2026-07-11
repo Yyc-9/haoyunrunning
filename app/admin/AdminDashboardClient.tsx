@@ -808,7 +808,7 @@ export default function AdminDashboardClient() {
 	              <AdminProductCreator runAction={runAction} />
 	              <div className="px-1">
 	                <h2 className="text-xl font-black text-apple-gray-900">商品資料與庫存</h2>
-	                <p className="mt-1 text-sm text-apple-gray-600">直接修改商品內容、圖片、款式、售價、庫存與上架狀態。</p>
+	                <p className="mt-1 text-sm text-apple-gray-600">直接修改商品內容、圖片、影片、款式、售價、庫存與上架狀態。</p>
 	              </div>
 	              {data.products.length === 0 ? (
 	                <div className="apple-card p-10 text-center text-sm font-semibold text-apple-gray-500">目前沒有商品，請使用上方表單建立第一件商品。</div>

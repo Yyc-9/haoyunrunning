@@ -2,8 +2,8 @@
 
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
-import { ImagePlus, Loader2, Plus, Save, Trash2 } from 'lucide-react'
-import { uploadProductImage } from '@/components/admin/AdminProductCreator'
+import { Film, ImagePlus, Loader2, Plus, Save, Trash2 } from 'lucide-react'
+import { uploadProductMedia } from '@/components/admin/AdminProductCreator'
 
 export type AdminEditableProduct = {
   id: string
@@ -12,6 +12,7 @@ export type AdminEditableProduct = {
   price: number
   priceLabel: string
   image: string
+  video?: string
   tags: string[]
   sizes?: string[]
   variants?: Array<{ id: string; name: string; image: string }>
@@ -31,6 +32,7 @@ function productDraft(product: AdminEditableProduct) {
     price: product.price > 0 ? String(product.price / 100) : '',
     stockQuantity: String(product.stockQuantity),
     image: product.image,
+    video: product.video ?? '',
     tags: product.tags.join('、'),
     sizes: (product.sizes ?? []).join('、'),
     variants: (product.variants ?? []).map((variant) => ({ ...variant })),
@@ -48,14 +50,16 @@ export default function AdminProductEditor({ product, runAction }: AdminProductE
     setDraft(productDraft(product))
   }, [product])
 
-  async function uploadImage(file: File | undefined, variantIndex?: number) {
+  async function uploadMedia(file: File | undefined, mediaKind: 'image' | 'video', variantIndex?: number) {
     if (!file) return
-    const key = variantIndex === undefined ? 'main' : `variant-${variantIndex}`
+    const key = mediaKind === 'video' ? 'video' : variantIndex === undefined ? 'main' : `variant-${variantIndex}`
     setUploadingKey(key)
     setLocalError('')
     try {
-      const url = await uploadProductImage(file)
-      if (variantIndex === undefined) {
+      const url = await uploadProductMedia(file, mediaKind)
+      if (mediaKind === 'video') {
+        setDraft((current) => ({ ...current, video: url }))
+      } else if (variantIndex === undefined) {
         setDraft((current) => ({ ...current, image: url }))
       } else {
         setDraft((current) => ({
@@ -64,7 +68,7 @@ export default function AdminProductEditor({ product, runAction }: AdminProductE
         }))
       }
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : '圖片上傳失敗。')
+      setLocalError(error instanceof Error ? error.message : '媒體上傳失敗。')
     } finally {
       setUploadingKey('')
     }
@@ -96,6 +100,7 @@ export default function AdminProductEditor({ product, runAction }: AdminProductE
       price: Number.isFinite(priceTwd) ? Math.round(priceTwd * 100) : -1,
       stockQuantity: Number(draft.stockQuantity || 0),
       image: draft.image,
+      video: draft.video,
       tags: draft.tags,
       sizes: draft.sizes,
       variants: draft.variants,
@@ -106,16 +111,35 @@ export default function AdminProductEditor({ product, runAction }: AdminProductE
 
   return (
     <article className="apple-card overflow-hidden">
-      <div className="grid gap-5 p-5 lg:grid-cols-[180px_minmax(0,1fr)]">
-        <div>
-          <div className="relative aspect-square overflow-hidden rounded-lg border border-black/10 bg-apple-gray-100">
-            <Image src={draft.image} alt={`${draft.name}主圖`} fill sizes="180px" className="object-contain p-2" />
+      <div className="grid gap-5 p-5 lg:grid-cols-[380px_minmax(0,1fr)]">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <div className="relative aspect-square overflow-hidden rounded-lg border border-black/10 bg-apple-gray-100">
+              <Image src={draft.image} alt={`${draft.name}主圖`} fill sizes="180px" className="object-contain p-2" />
+            </div>
+            <label className="apple-button-outline mt-3 flex cursor-pointer gap-2 px-4 py-2.5 text-sm">
+              {uploadingKey === 'main' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+              更換主圖
+              <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={Boolean(uploadingKey)} onChange={(event) => uploadMedia(event.target.files?.[0], 'image')} />
+            </label>
           </div>
-          <label className="apple-button-outline mt-3 flex cursor-pointer gap-2 px-4 py-2.5 text-sm">
-            {uploadingKey === 'main' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
-            更換主圖
-            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={Boolean(uploadingKey)} onChange={(event) => uploadImage(event.target.files?.[0])} />
-          </label>
+          <div>
+            <div className="relative aspect-square overflow-hidden rounded-lg border border-black/10 bg-black">
+              {draft.video ? (
+                <video src={draft.video} poster={draft.image || undefined} aria-label={`${draft.name}影片預覽`} controls muted playsInline preload="metadata" className="h-full w-full object-contain" />
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-2 text-white/65"><Film className="h-9 w-9" /><span className="text-xs font-bold">尚未上傳影片</span></div>
+              )}
+            </div>
+            <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+              <label className="apple-button-outline flex cursor-pointer gap-2 px-3 py-2.5 text-sm">
+                {uploadingKey === 'video' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Film className="h-4 w-4" />}
+                {draft.video ? '更換影片' : '上傳影片'}
+                <input type="file" accept="video/mp4,video/webm,video/quicktime" className="sr-only" disabled={Boolean(uploadingKey)} onChange={(event) => uploadMedia(event.target.files?.[0], 'video')} />
+              </label>
+              {draft.video ? <button type="button" title="移除影片" aria-label={`移除${draft.name}影片`} onClick={() => setDraft((current) => ({ ...current, video: '' }))} className="inline-flex h-10 w-10 items-center justify-center rounded-full text-red-600 transition hover:bg-red-50"><Trash2 className="h-4 w-4" /></button> : null}
+            </div>
+          </div>
         </div>
 
         <div className="grid min-w-0 gap-4 md:grid-cols-2">
@@ -146,7 +170,7 @@ export default function AdminProductEditor({ product, runAction }: AdminProductE
                   <label className="apple-button-outline cursor-pointer gap-2 px-4 py-2 text-sm">
                     {uploadingKey === `variant-${index}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
                     {variant.image ? '更換圖片' : '上傳圖片'}
-                    <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={Boolean(uploadingKey)} onChange={(event) => uploadImage(event.target.files?.[0], index)} />
+                    <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={Boolean(uploadingKey)} onChange={(event) => uploadMedia(event.target.files?.[0], 'image', index)} />
                   </label>
                 </div>
                 <button type="button" onClick={() => setDraft((current) => ({ ...current, variants: current.variants.filter((_, itemIndex) => itemIndex !== index) }))} className="inline-flex h-10 w-10 items-center justify-center rounded-full text-red-600 transition hover:bg-red-50" aria-label={`刪除${variant.name || '款式'}`}><Trash2 className="h-4 w-4" /></button>

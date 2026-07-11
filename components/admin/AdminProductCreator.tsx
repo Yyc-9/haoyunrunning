@@ -2,17 +2,50 @@
 
 import Image from 'next/image'
 import { useState } from 'react'
-import { ImagePlus, Loader2, PackagePlus } from 'lucide-react'
+import { Film, ImagePlus, Loader2, PackagePlus, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 type AdminProductCreatorProps = {
   runAction: (id: string, action: Record<string, unknown>) => Promise<boolean>
 }
 
-export async function uploadProductImage(file: File) {
-  if (!supabase) throw new Error('圖片服務尚未設定。')
+export async function uploadProductMedia(file: File, mediaKind: 'image' | 'video') {
+  if (!supabase) throw new Error('媒體服務尚未設定。')
   const { data: { session } } = await supabase.auth.getSession()
   if (!session?.access_token) throw new Error('請重新登入管理員帳號。')
+
+  if (mediaKind === 'video') {
+    const signResponse = await fetch('/api/admin/upload', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contentType: file.type,
+        fileSize: file.size,
+        folder: 'products',
+      }),
+    })
+    const signed = (await signResponse.json().catch(() => ({}))) as {
+      url?: string
+      path?: string
+      token?: string
+      error?: string
+    }
+    if (!signResponse.ok || !signed.url || !signed.path || !signed.token) {
+      throw new Error(signed.error || '無法建立影片上傳憑證。')
+    }
+
+    const { error } = await supabase.storage
+      .from('site-media')
+      .uploadToSignedUrl(signed.path, signed.token, file, {
+        contentType: file.type,
+        cacheControl: '31536000',
+      })
+    if (error) throw new Error(error.message || '影片上傳失敗。')
+    return signed.url
+  }
 
   const formData = new FormData()
   formData.set('file', file)
@@ -35,24 +68,25 @@ export default function AdminProductCreator({ runAction }: AdminProductCreatorPr
     price: '',
     stockQuantity: '0',
     image: '',
+    video: '',
     tags: '',
     sizes: '',
     active: false,
   })
-  const [isUploading, setIsUploading] = useState(false)
+  const [uploadingKind, setUploadingKind] = useState<'image' | 'video' | ''>('')
   const [uploadError, setUploadError] = useState('')
 
-  async function handleImage(file?: File) {
+  async function handleMedia(file: File | undefined, mediaKind: 'image' | 'video') {
     if (!file) return
-    setIsUploading(true)
+    setUploadingKind(mediaKind)
     setUploadError('')
     try {
-      const image = await uploadProductImage(file)
-      setForm((current) => ({ ...current, image }))
+      const url = await uploadProductMedia(file, mediaKind)
+      setForm((current) => ({ ...current, [mediaKind]: url }))
     } catch (error) {
-      setUploadError(error instanceof Error ? error.message : '圖片上傳失敗。')
+      setUploadError(error instanceof Error ? error.message : '媒體上傳失敗。')
     } finally {
-      setIsUploading(false)
+      setUploadingKind('')
     }
   }
 
@@ -65,13 +99,14 @@ export default function AdminProductCreator({ runAction }: AdminProductCreatorPr
       price: Number.isFinite(priceTwd) ? Math.round(priceTwd * 100) : -1,
       stockQuantity: Number(form.stockQuantity || 0),
       image: form.image,
+      video: form.video,
       tags: form.tags,
       sizes: form.sizes,
       active: form.active,
     })
 
     if (created) {
-      setForm({ name: '', category: '跑者配件', price: '', stockQuantity: '0', image: '', tags: '', sizes: '', active: false })
+      setForm({ name: '', category: '跑者配件', price: '', stockQuantity: '0', image: '', video: '', tags: '', sizes: '', active: false })
     }
   }
 
@@ -80,33 +115,50 @@ export default function AdminProductCreator({ runAction }: AdminProductCreatorPr
       <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
         <div>
           <h2 className="text-xl font-black text-apple-gray-900">新增商城商品</h2>
-          <p className="mt-1 text-sm leading-6 text-apple-gray-600">上傳主圖並填寫商品資料。可先儲存為下架狀態，確認完成後再公開。</p>
+          <p className="mt-1 text-sm leading-6 text-apple-gray-600">主圖為必填，也可加入一支商品影片。可先儲存為下架狀態，確認完成後再公開。</p>
         </div>
-        <label title="上傳商品主圖" className="apple-button-outline inline-flex cursor-pointer items-center justify-center gap-2 px-5 py-3">
-          {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
-          {form.image ? '更換主圖' : '上傳主圖'}
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="sr-only"
-            disabled={isUploading}
-            onChange={(event) => handleImage(event.target.files?.[0])}
-          />
-        </label>
+        <div className="flex flex-wrap gap-2">
+          <label title="上傳商品主圖" className="apple-button-outline inline-flex cursor-pointer items-center justify-center gap-2 px-4 py-3">
+            {uploadingKind === 'image' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+            {form.image ? '更換主圖' : '上傳主圖'}
+            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={Boolean(uploadingKind)} onChange={(event) => handleMedia(event.target.files?.[0], 'image')} />
+          </label>
+          <label title="上傳商品影片" className="apple-button-outline inline-flex cursor-pointer items-center justify-center gap-2 px-4 py-3">
+            {uploadingKind === 'video' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Film className="h-4 w-4" />}
+            {form.video ? '更換影片' : '上傳影片'}
+            <input type="file" accept="video/mp4,video/webm,video/quicktime" className="sr-only" disabled={Boolean(uploadingKind)} onChange={(event) => handleMedia(event.target.files?.[0], 'video')} />
+          </label>
+        </div>
       </div>
 
       {uploadError ? <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">{uploadError}</p> : null}
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-[220px_1fr]">
-        <div className="relative aspect-square overflow-hidden rounded-lg border border-black/10 bg-apple-gray-100">
-          {form.image ? (
-            <Image src={form.image} alt="新商品主圖預覽" fill sizes="220px" className="object-contain p-3" />
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-2 text-apple-gray-400">
-              <PackagePlus className="h-10 w-10" />
-              <span className="text-xs font-bold">尚未上傳主圖</span>
-            </div>
-          )}
+      <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(320px,460px)_1fr]">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="relative aspect-square overflow-hidden rounded-lg border border-black/10 bg-apple-gray-100">
+            {form.image ? (
+              <Image src={form.image} alt="新商品主圖預覽" fill sizes="220px" className="object-contain p-3" />
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center gap-2 text-apple-gray-400">
+                <PackagePlus className="h-10 w-10" />
+                <span className="text-xs font-bold">尚未上傳主圖</span>
+              </div>
+            )}
+          </div>
+          <div className="relative aspect-square overflow-hidden rounded-lg border border-black/10 bg-black">
+            {form.video ? (
+              <>
+                <video src={form.video} poster={form.image || undefined} aria-label="新商品影片預覽" controls muted playsInline preload="metadata" className="h-full w-full object-contain" />
+                <button type="button" title="移除影片" aria-label="移除新商品影片" onClick={() => setForm((current) => ({ ...current, video: '' }))} className="absolute right-2 top-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-red-600 shadow-sm"><Trash2 className="h-4 w-4" /></button>
+              </>
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center gap-2 bg-apple-gray-950 text-white/65">
+                <Film className="h-10 w-10" />
+                <span className="text-xs font-bold">選擇性上傳影片</span>
+                <span className="text-[11px]">MP4、WebM、MOV；50 MB 內</span>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">
@@ -125,7 +177,7 @@ export default function AdminProductCreator({ runAction }: AdminProductCreatorPr
           </label>
           <button
             type="button"
-            disabled={isUploading || !form.name.trim() || !form.image}
+            disabled={Boolean(uploadingKind) || !form.name.trim() || !form.image}
             onClick={createProduct}
             className="apple-button-primary gap-2 disabled:cursor-not-allowed disabled:opacity-40"
           >
