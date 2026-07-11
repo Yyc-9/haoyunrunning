@@ -48,6 +48,7 @@ type AdminDashboardPayload = {
   students: AdminStudent[]
   coaches: AdminCoach[]
   orders: AdminOrder[]
+  courseCapacity: CourseCapacityRow[]
   products: AdminProduct[]
   paymentAccounts: PaymentAccount[]
   siteContent: SiteContent
@@ -63,6 +64,16 @@ type CoachInvite = {
   usedAt: string | null
   expiresAt: string | null
   createdAt: string
+}
+
+type CourseCapacityRow = {
+  slug: string
+  name: string
+  capacity: number
+  paidCount: number
+  pendingTransferCount: number
+  pendingReviewCount: number
+  remaining: number
 }
 
 type AdminCourseSummary = {
@@ -111,6 +122,7 @@ type AdminOrder = {
   studentName: string
   email: string
   courseName: string
+  courseSlug: string
   amountText: string
   transferLastFive: string
   status: PaymentOrderStatus
@@ -782,6 +794,29 @@ export default function AdminDashboardClient() {
 
           {activeTab === 'orders' && data ? (
             <section className="grid gap-4">
+              <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
+                <div className="border-b border-black/10 px-5 py-4">
+                  <h2 className="text-lg font-black text-apple-gray-900">班級名額</h2>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[760px] text-left text-sm">
+                    <thead className="bg-apple-gray-100 text-apple-gray-600">
+                      <tr>{['課程', '已付款', '待核對', '待付款', '剩餘'].map((label) => <th key={label} className="px-4 py-3 font-bold">{label}</th>)}</tr>
+                    </thead>
+                    <tbody className="divide-y divide-black/10">
+                      {data.courseCapacity.map((course) => (
+                        <tr key={course.slug}>
+                          <td className="px-4 py-3 font-bold text-apple-gray-900">{course.name}</td>
+                          <td className="px-4 py-3 text-apple-gray-700">{course.paidCount} / {course.capacity}</td>
+                          <td className="px-4 py-3 text-blue-700">{course.pendingReviewCount}</td>
+                          <td className="px-4 py-3 text-amber-700">{course.pendingTransferCount}</td>
+                          <td className={`px-4 py-3 font-black ${course.remaining === 0 ? 'text-red-600' : 'text-emerald-700'}`}>{course.remaining}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
               <div className="apple-card p-5">
                 <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_auto]">
 	                  <input

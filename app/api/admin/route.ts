@@ -48,6 +48,7 @@ type SignupLeadRow = {
   name: string
   email: string
   preferred_course: string
+  course_slug: string
   amount_text: string
   transfer_last_five: string
   status: string
@@ -297,6 +298,14 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request)
   if (auth.error) return auth.error
 
+  const { error: inviteCleanupError } = await supabaseAdmin!
+    .from('coach_invites')
+    .delete()
+    .not('used_at', 'is', null)
+  if (inviteCleanupError) {
+    console.warn('[admin] Used coach invite cleanup failed.', inviteCleanupError.message)
+  }
+
   const [
     profilesResult,
     bindingsResult,
@@ -359,6 +368,7 @@ export async function GET(request: NextRequest) {
     supabaseAdmin!
       .from('coach_invites')
       .select('id, code, used_by, used_at, expires_at, created_at')
+      .is('used_at', null)
       .order('created_at', { ascending: false })
       .limit(30),
   ])
@@ -475,6 +485,7 @@ export async function GET(request: NextRequest) {
     studentName: order.name,
     email: order.email,
     courseName: order.preferred_course,
+    courseSlug: order.course_slug || '',
     amountText: order.amount_text,
     transferLastFive: order.transfer_last_five,
     status: isPaymentOrderStatus(order.status) ? order.status : 'pending_review',
@@ -499,6 +510,7 @@ export async function GET(request: NextRequest) {
       studentName: order.customer_name,
       email: order.email || '',
       courseName: order.order_number,
+      courseSlug: '',
       amountText: formatAmount(order.total_amount),
       transferLastFive: order.transfer_last_five || '',
       status: isPaymentOrderStatus(order.status) ? order.status : 'pending_transfer',
@@ -535,12 +547,27 @@ export async function GET(request: NextRequest) {
     paymentAccountCount: paymentAccounts.filter((account) => account.active).length,
   }
 
+  const courseCapacity = allCourses.map((course) => {
+    const courseOrders = coursePaymentOrders.filter((order) => order.course_slug === course.slug)
+    const paidCount = courseOrders.filter((order) => order.status === 'approved').length
+    return {
+      slug: course.slug,
+      name: course.name,
+      capacity: 40,
+      paidCount,
+      pendingTransferCount: courseOrders.filter((order) => order.status === 'pending_transfer').length,
+      pendingReviewCount: courseOrders.filter((order) => order.status === 'pending_review').length,
+      remaining: Math.max(0, 40 - paidCount),
+    }
+  })
+
   return json({
     admin: auth.adminProfile,
     overview,
     students,
     coaches,
     orders: dashboardOrders,
+    courseCapacity,
     products: shopProducts,
     paymentAccounts,
     siteContent,
@@ -787,20 +814,32 @@ export async function PATCH(request: NextRequest) {
       return json({ order, message: finalReviewNote })
     }
 
-    const { data: order, error } = await supabaseAdmin!
-      .from('signup_leads')
-      .update({
-        status,
-        reviewed_at: new Date().toISOString(),
-        review_note: finalReviewNote,
-      })
-      .eq('id', orderId)
-      .eq('source', 'course_payment')
-      .select('*')
-      .single()
+    const courseReviewResult = status === 'approved'
+      ? await supabaseAdmin!.rpc('approve_course_enrollment', {
+          p_lead_id: orderId,
+          p_review_note: finalReviewNote,
+        })
+      : await supabaseAdmin!
+          .from('signup_leads')
+          .update({
+            status,
+            reviewed_at: new Date().toISOString(),
+            review_note: finalReviewNote,
+          })
+          .eq('id', orderId)
+          .eq('source', 'course_payment')
+          .select('*')
+          .single()
+
+    const order = courseReviewResult.data as SignupLeadRow | null
+    const error = courseReviewResult.error
 
     if (error || !order) {
-      return json({ error: error?.message || '訂單更新失敗。' }, { status: 500 })
+      const capacityReached = /course capacity reached/i.test(error?.message ?? '')
+      return json(
+        { error: capacityReached ? '這個班級已達 40 人，不能再核准新的付款。' : error?.message || '訂單更新失敗。' },
+        { status: capacityReached ? 409 : 500 }
+      )
     }
 
     let emailMessage = ''

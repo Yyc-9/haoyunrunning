@@ -6,7 +6,6 @@ import {
   CalendarDays,
   ChevronRight,
   Clock,
-  ExternalLink,
   Instagram,
   MapPin,
   Navigation,
@@ -109,7 +108,6 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
 
   const text = (value: string) => localizeText(value, language)
   const instagramUrl = brand.instagramUrl || course.instagramUrl || 'https://www.instagram.com/nurture.running.team/'
-  const signupUrl = course.signupUrl || '/join'
   const courseCoaches = course.coaches.map((coach) => localizeCoach(coach, language))
 
   return (
@@ -208,15 +206,13 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
                   </div>
 
                   <div className="mt-5 flex flex-col gap-3">
-                    <a
-                      href={signupUrl}
-                      target={course.signupUrl ? '_blank' : undefined}
-                      rel={course.signupUrl ? 'noreferrer' : undefined}
+                    <Link
+                      href={`/courses/${course.slug}/register`}
                       className="apple-button-primary inline-flex w-full items-center justify-center gap-2 px-6 py-3"
                     >
-                      <ExternalLink className="h-5 w-5" />
+                      <ChevronRight className="h-5 w-5" />
                       立即報名
-                    </a>
+                    </Link>
                     <a
                       href={instagramUrl}
                       target="_blank"

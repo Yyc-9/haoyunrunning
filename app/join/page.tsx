@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowRight, ExternalLink, Instagram, MapPin, ShoppingBag } from 'lucide-react'
+import { ArrowRight, Instagram, MapPin, ShoppingBag } from 'lucide-react'
 import { useSiteContent } from '@/app/site-content-provider'
 
 const weekdayOrder = ['週一', '週二', '週三', '週四', '週五', '週六', '週日']
@@ -41,15 +41,13 @@ export default function JoinPage() {
                   </div>
                   <h2 className="mt-3 text-base font-black leading-6 text-apple-gray-950 sm:text-lg">{course.name}</h2>
                 </div>
-                <a
-                  href={course.signupUrl || `/courses/${course.slug}`}
-                  target={course.signupUrl ? '_blank' : undefined}
-                  rel={course.signupUrl ? 'noreferrer' : undefined}
+                <Link
+                  href={`/courses/${course.slug}/register`}
                   className="apple-button-primary w-full shrink-0 gap-2 px-5 py-2.5 text-sm sm:w-auto"
                 >
                   立即報名
-                  <ExternalLink className="h-4 w-4" />
-                </a>
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
               </div>
               <Link href={`/courses/${course.slug}`} className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-apple-gray-600 transition hover:text-apple-blue">
                 查看課程詳情

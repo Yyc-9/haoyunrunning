@@ -281,15 +281,27 @@ export async function PATCH(request: NextRequest) {
     updatePayload.review_note = reviewNote
   }
 
-  const { data, error } = await supabaseAdmin!
-    .from('signup_leads')
-    .update(updatePayload)
-    .eq('id', id)
-    .select('*')
-    .single()
+  const reviewResult = status === 'approved'
+    ? await supabaseAdmin!.rpc('approve_course_enrollment', {
+        p_lead_id: id,
+        p_review_note: reviewNote,
+      })
+    : await supabaseAdmin!
+        .from('signup_leads')
+        .update(updatePayload)
+        .eq('id', id)
+        .select('*')
+        .single()
+
+  const data = reviewResult.data as Record<string, string> | null
+  const error = reviewResult.error
 
   if (error || !data) {
-    return NextResponse.json({ error: error?.message || '報名資料更新失敗。' }, { status: 500 })
+    const capacityReached = /course capacity reached/i.test(error?.message ?? '')
+    return NextResponse.json(
+      { error: capacityReached ? '這個班級已達 40 人，不能再核准新的付款。' : error?.message || '報名資料更新失敗。' },
+      { status: capacityReached ? 409 : 500 }
+    )
   }
 
   let emailMessage = ''

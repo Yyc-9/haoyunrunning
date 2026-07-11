@@ -7,6 +7,7 @@ import {
   ArrowUp,
   BadgeInfo,
   CalendarRange,
+  Copy,
   ExternalLink,
   FileText,
   GalleryHorizontalEnd,
@@ -143,6 +144,8 @@ export default function AdminContentManager({ content, courses, runAction }: Adm
   const [draft, setDraft] = useState<CourseOverride>(() => courses[0] ? courseDraft(courses[0], content.courseOverrides[courses[0].slug]) : {})
   const [isUploading, setIsUploading] = useState(false)
   const [localError, setLocalError] = useState('')
+  const [scriptLoading, setScriptLoading] = useState(false)
+  const [scriptMessage, setScriptMessage] = useState('')
 
   useEffect(() => {
     setSlides(content.heroSlides)
@@ -185,6 +188,36 @@ export default function AdminContentManager({ content, courses, runAction }: Adm
       setLocalError(error instanceof Error ? error.message : '圖片上傳失敗。')
     } finally {
       setIsUploading(false)
+    }
+  }
+
+  async function copyGoogleFormsScript() {
+    if (!supabase || !selectedCourse) return
+    setScriptLoading(true)
+    setLocalError('')
+    setScriptMessage('')
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) throw new Error('請重新登入管理員帳號。')
+
+      const response = await fetch('/api/admin/google-forms-script', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ courseSlug: selectedCourse.slug }),
+      })
+      const payload = (await response.json().catch(() => ({}))) as { script?: string; error?: string }
+      if (!response.ok || !payload.script) throw new Error(payload.error || '取得 Google 表單串接程式失敗。')
+
+      await navigator.clipboard.writeText(payload.script)
+      setScriptMessage('Apps Script 已複製。')
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : '取得 Google 表單串接程式失敗。')
+    } finally {
+      setScriptLoading(false)
     }
   }
 
@@ -280,7 +313,7 @@ export default function AdminContentManager({ content, courses, runAction }: Adm
 
         {mode === 'testimonials' ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('學員見證','管理見證頁首屏、成長路徑與 Instagram 引導文案。','/testimonials')}<div className="grid gap-4 p-5 md:grid-cols-2">{([['eyebrow','首屏小標'],['title','首屏標題'],['description','首屏說明'],['pathLabel','成長路徑小標'],['pathTitle','成長路徑標題'],['pathDescription','成長路徑說明'],['ctaLabel','結尾小標'],['ctaTitle','結尾標題'],['ctaDescription','結尾說明']] as const).map(([key,label])=><Field key={key} label={label} wide={['description','pathTitle','pathDescription','ctaTitle','ctaDescription'].includes(key)}>{['description','pathDescription','ctaDescription'].includes(key)?<textarea rows={4} value={testimonials[key]} onChange={(e)=>setTestimonials((c)=>({...c,[key]:e.target.value}))} className="apple-input resize-y" />:<input value={testimonials[key]} onChange={(e)=>setTestimonials((c)=>({...c,[key]:e.target.value}))} className="apple-input" />}</Field>)}<div className="md:col-span-2"><h3 className="mb-3 font-black">三段成長路徑</h3>{testimonials.themes.map((item,index)=><div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2"><input value={item.title} onChange={(e)=>setTestimonials((c)=>({...c,themes:c.themes.map((x,i)=>i===index?{...x,title:e.target.value}:x)}))} className="apple-input" /><input value={item.description} onChange={(e)=>setTestimonials((c)=>({...c,themes:c.themes.map((x,i)=>i===index?{...x,description:e.target.value}:x)}))} className="apple-input" /></div>)}</div></div><div className="border-t border-black/10 p-5 text-right">{saveButton('save-testimonials','testimonials_content',testimonials)}</div></div> : null}
 
-        {mode === 'courses' && selectedCourse ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('課程資料管理','修改會同步到首頁課程預覽、課程列表、報名入口與課程詳情頁。','/courses')}<div className="grid gap-4 p-5 md:grid-cols-2"><Field label="選擇課程" wide><select value={selectedSlug} onChange={(e)=>setSelectedSlug(e.target.value)} className="apple-input">{courses.map((course)=><option key={course.slug} value={course.slug}>{course.name}</option>)}</select></Field>{([['name','課程名稱'],['weekday','星期'],['location','城市 / 地點'],['period','課程週期'],['classTime','上課時間'],['meetingPoint','集合地點'],['feeNote','費用說明'],['targetAudience','適合對象'],['focus','訓練方向'],['signupUrl','線上報名連結']] as const).map(([field,label])=><Field key={field} label={label} wide={['meetingPoint','targetAudience','focus','signupUrl'].includes(field)}><input type={field === 'signupUrl' ? 'url' : 'text'} value={String(draft[field]??'')} onChange={(e)=>setDraft((c)=>({...c,[field]:e.target.value}))} className="apple-input" placeholder={field === 'signupUrl' ? 'https://forms.gle/...' : undefined} /></Field>)}<label className="flex items-center gap-3 text-sm font-bold"><input type="checkbox" checked={draft.active!==false} onChange={(e)=>setDraft((c)=>({...c,active:e.target.checked}))} className="h-4 w-4" />這門課程對外顯示</label><button type="button" onClick={saveCourse} className="apple-button-primary gap-2"><Save className="h-4 w-4" />儲存課程資料</button></div></div> : null}
+        {mode === 'courses' && selectedCourse ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('課程資料管理','修改會同步到首頁課程預覽、課程列表、報名入口與課程詳情頁。','/courses')}<div className="grid gap-4 p-5 md:grid-cols-2"><Field label="選擇課程" wide><select value={selectedSlug} onChange={(e)=>setSelectedSlug(e.target.value)} className="apple-input">{courses.map((course)=><option key={course.slug} value={course.slug}>{course.name}</option>)}</select></Field>{([['name','課程名稱'],['weekday','星期'],['location','城市 / 地點'],['period','課程週期'],['classTime','上課時間'],['meetingPoint','集合地點'],['feeNote','費用說明'],['targetAudience','適合對象'],['focus','訓練方向'],['signupUrl','線上報名連結']] as const).map(([field,label])=><Field key={field} label={label} wide={['meetingPoint','targetAudience','focus','signupUrl'].includes(field)}><input type={field === 'signupUrl' ? 'url' : 'text'} value={String(draft[field]??'')} onChange={(e)=>setDraft((c)=>({...c,[field]:e.target.value}))} className="apple-input" placeholder={field === 'signupUrl' ? 'https://forms.gle/...' : undefined} /></Field>)}<label className="flex items-center gap-3 text-sm font-bold"><input type="checkbox" checked={draft.active!==false} onChange={(e)=>setDraft((c)=>({...c,active:e.target.checked}))} className="h-4 w-4" />這門課程對外顯示</label><div className="flex flex-wrap gap-2"><button type="button" onClick={saveCourse} className="apple-button-primary gap-2"><Save className="h-4 w-4" />儲存課程資料</button><button type="button" disabled={scriptLoading} onClick={copyGoogleFormsScript} className="apple-button-outline gap-2"><Copy className="h-4 w-4" />{scriptLoading?'正在產生':'複製 Apps Script'}</button></div>{scriptMessage?<p className="md:col-span-2 text-sm font-bold text-emerald-700">{scriptMessage}</p>:null}</div></div> : null}
       </div>
     </section>
   )

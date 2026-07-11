@@ -110,5 +110,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: profileError.message }, { status: 500 })
   }
 
+  const { error: deleteInviteError } = await supabaseAdmin
+    .from('coach_invites')
+    .delete()
+    .eq('id', invite.id)
+    .eq('used_by', user.id)
+
+  if (deleteInviteError) {
+    console.warn('[coach] Used invite cleanup failed.', deleteInviteError.message)
+  }
+
   return NextResponse.json({ profile })
 }

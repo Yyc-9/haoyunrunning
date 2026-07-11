@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { ChevronDown, ChevronRight, ExternalLink, MapPin, Target } from 'lucide-react'
+import { ChevronDown, ChevronRight, MapPin, Target } from 'lucide-react'
 import { allCourses } from '@/lib/goodluck-data'
 import { useLanguage } from '@/app/language-context'
 import { useSiteContent } from '@/app/site-content-provider'
@@ -300,15 +300,13 @@ export default function CoursesTable() {
                         </p>
                       </div>
                       <div className="grid gap-2">
-                        <a
-                          href={course.signupUrl || '/join'}
-                          target={course.signupUrl ? '_blank' : undefined}
-                          rel={course.signupUrl ? 'noreferrer' : undefined}
+                        <Link
+                          href={`/courses/${course.slug}/register`}
                           className="inline-flex items-center justify-center gap-2 rounded-full bg-apple-blue px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600"
                         >
                           立即報名
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
+                          <ChevronRight className="h-4 w-4" />
+                        </Link>
                         <Link
                           href={`/courses/${course.slug}`}
                           className="inline-flex items-center justify-center gap-2 rounded-full border border-apple-blue px-4 py-2.5 text-sm font-semibold text-apple-blue transition-colors hover:bg-apple-blue/10"
@@ -424,15 +422,13 @@ export default function CoursesTable() {
                           </div>
 
                           <div className="flex flex-wrap gap-3 pt-2">
-                            <a
-                              href={course.signupUrl || '/join'}
-                              target={course.signupUrl ? '_blank' : undefined}
-                              rel={course.signupUrl ? 'noreferrer' : undefined}
+                            <Link
+                              href={`/courses/${course.slug}/register`}
                               className="inline-flex items-center gap-2 rounded-lg bg-apple-blue px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-600"
                             >
                               立即報名
-                              <ExternalLink className="h-4 w-4" />
-                            </a>
+                              <ChevronRight className="h-4 w-4" />
+                            </Link>
                             <Link
                               href={`/courses/${course.slug}`}
                               className="inline-flex items-center gap-2 rounded-lg border border-apple-blue px-4 py-2 text-sm font-semibold text-apple-blue transition-colors hover:bg-apple-blue/10"

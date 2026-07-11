@@ -102,7 +102,7 @@ export const courseGroups: CourseGroup[] = [
         location: '竹北',
         period: '7/13 - 9/21',
         focus: '夜間團練、耐力與節奏訓練',
-        signupUrl: 'https://forms.gle/wsV88xbJNDvdthMcA',
+        signupUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSe_6ORIFzEAIEkZ8C3Psr29vcdpGFuJsqh1yuAmEPuKYWrFHw/viewform?pli=1',
       },
       {
         slug: 'taipei-night-run-wednesday',
