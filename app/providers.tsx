@@ -108,6 +108,33 @@ async function loginViaServer(email: string, password: string) {
   }
 }
 
+async function registerViaServer(data: {
+  email: string
+  password: string
+  name: string
+  phone: string
+  pb: string
+  coachId?: string
+}) {
+  const response = await fetch('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  const payload = (await response.json().catch(() => ({}))) as {
+    needsEmailConfirmation?: boolean
+    session?: Session | null
+    user?: SupabaseUser | null
+    error?: string
+  }
+
+  if (!response.ok) {
+    throw new Error(payload.error || '帳戶暫時無法建立，請稍後再試。')
+  }
+
+  return payload
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -383,37 +410,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const { password, coachId, ...userData } = data
-      const { data: signUpData, error } = await supabase.auth.signUp({
-        email: userData.email,
+      const signUpData = await registerViaServer({
+        email: userData.email.trim().toLowerCase(),
         password,
-        options: {
-          data: {
-            name: userData.name,
-            phone: userData.phone,
-            pb: userData.pb,
-            role: 'student',
-            preferred_coach_id: coachId || '',
-          },
-          emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/profile?auth=login` : undefined,
-        },
+        name: userData.name,
+        phone: userData.phone,
+        pb: userData.pb,
+        coachId,
       })
-
-      if (error) throw error
-
       const authUser = signUpData.user
       if (!authUser) {
         return { needsEmailConfirmation: true }
       }
 
-      if (!signUpData.session) {
+      if (!signUpData.session || signUpData.needsEmailConfirmation) {
         return { needsEmailConfirmation: true }
       }
+
+      const { error: sessionError } = await supabase.auth.setSession(signUpData.session)
+      if (sessionError) throw sessionError
 
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
           name: userData.name,
-          email: userData.email,
+          email: userData.email.trim().toLowerCase(),
           phone: userData.phone,
           pb: userData.pb,
           role: 'student',
