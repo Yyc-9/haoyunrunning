@@ -44,6 +44,7 @@ export type Course = {
   suitableFor?: string[]
   notSuitableFor?: string[]
   faq?: Array<{ question: string; answer: string }>
+  signupUrl?: string
   instagramUrl?: string
   targetAudience?: string
   coach?: Coach
@@ -85,6 +86,7 @@ export const courseGroups: CourseGroup[] = [
         location: '新竹市',
         period: '7/14 - 9/29',
         focus: '跑步入門、基礎體能、姿勢與節奏建立',
+        signupUrl: 'https://forms.gle/nFGgHrLcQmKdYZoN9',
       },
     ],
   },
@@ -100,6 +102,7 @@ export const courseGroups: CourseGroup[] = [
         location: '竹北',
         period: '7/13 - 9/21',
         focus: '夜間團練、耐力與節奏訓練',
+        signupUrl: 'https://forms.gle/wsV88xbJNDvdthMcA',
       },
       {
         slug: 'taipei-night-run-wednesday',
@@ -108,6 +111,7 @@ export const courseGroups: CourseGroup[] = [
         location: '台北',
         period: '7/15 - 9/30',
         focus: '夜間團練、基礎跑力與配速控制',
+        signupUrl: 'https://forms.gle/1CtsF16FF1Q1CSwa9',
       },
       {
         slug: 'taipei-pb-tuesday',
@@ -116,6 +120,7 @@ export const courseGroups: CourseGroup[] = [
         location: '台北',
         period: '7/14 - 9/29',
         focus: '速度能力、間歇訓練、賽事 PB 目標',
+        signupUrl: 'https://forms.gle/eFuNCUoB7AgXYuNK6',
       },
       {
         slug: 'hsinchu-morning-run-wednesday',
@@ -124,6 +129,7 @@ export const courseGroups: CourseGroup[] = [
         location: '新竹',
         period: '7/8 - 9/30',
         focus: '晨間訓練、耐力建立、穩定輸出',
+        signupUrl: 'https://forms.gle/8KdmTRMhdKKoVfPq7',
       },
       {
         slug: 'zhubei-night-run-wednesday',
@@ -132,6 +138,7 @@ export const courseGroups: CourseGroup[] = [
         location: '竹北',
         period: '7/15 - 9/30',
         focus: '夜間團練、跑姿與肌耐力整合',
+        signupUrl: 'https://forms.gle/8eNwbYgNZZhRTfJB6',
       },
       {
         slug: 'hsinchu-night-run-thursday',
@@ -140,6 +147,7 @@ export const courseGroups: CourseGroup[] = [
         location: '新竹市',
         period: '7/9 - 9/24',
         focus: '夜間團練、配速感與有氧能力',
+        signupUrl: 'https://forms.gle/ASZgZa8vYJiwM9FFA',
       },
       {
         slug: 'zhunan-beginner-thursday',
@@ -148,6 +156,7 @@ export const courseGroups: CourseGroup[] = [
         location: '竹南',
         period: '7/9 - 9/24',
         focus: '初階跑班、基礎體能與穩定訓練',
+        signupUrl: 'https://forms.gle/27DdkMRjqir2KGfAA',
       },
       {
         slug: 'taipei-morning-run-saturday',
@@ -156,6 +165,7 @@ export const courseGroups: CourseGroup[] = [
         location: '台北',
         period: '7/11 - 9/19',
         focus: '晨間團練、長距離基礎與賽事準備',
+        signupUrl: 'https://forms.gle/vpSJXxaAS8BPWuPX8',
       },
     ],
   },

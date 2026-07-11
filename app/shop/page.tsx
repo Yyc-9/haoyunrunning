@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useMemo, useState } from 'react'
-import { CreditCard, Package, Search, Shield, ShoppingBag, Star, Truck } from 'lucide-react'
+import { CreditCard, MessageCircle, Package, Search, Shield, ShoppingBag, Star, Truck } from 'lucide-react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -17,7 +17,7 @@ import { useSiteContent } from '@/app/site-content-provider'
 export default function ShopPage() {
   const { addItem, items } = useCart()
   const { showToast } = useToast()
-  const { pageMedia } = useSiteContent()
+  const { pageMedia, brand } = useSiteContent()
   const [products, setProducts] = useState<ShopProduct[]>(defaultShopProducts)
   const [query, setQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
@@ -73,7 +73,7 @@ export default function ShopPage() {
 
   const handleAddToCart = (product: ShopProduct, variant?: ProductVariant, size?: string) => {
     if (product.price <= 0) {
-      showToast(`${product.name} 尚未設定售價`, 'error')
+      showToast(`${product.name} 目前採洽詢購買`, 'info')
       return false
     }
 
@@ -86,8 +86,9 @@ export default function ShopPage() {
       return false
     }
 
-    const optionName = [variant?.name, size ? `尺寸 ${size}` : ''].filter(Boolean).join(' / ')
+    const optionName = variant?.name || ''
     const displayName = optionName ? `${product.name} - ${optionName}` : product.name
+    const toastName = [displayName, size ? `尺寸 ${size}` : ''].filter(Boolean).join(' / ')
 
     addItem({
       id: [product.id, variant?.id, size].filter(Boolean).join(':'),
@@ -98,7 +99,7 @@ export default function ShopPage() {
       price: product.price,
       image: variant?.image ?? product.image,
     })
-    showToast(`${displayName} 已加入購物車`, 'success')
+    showToast(`${toastName} 已加入購物車`, 'success')
     setIsCartOpen(true)
     return true
   }
@@ -241,26 +242,20 @@ export default function ShopPage() {
                     </div>
 
                     <div className="mb-4 flex items-baseline gap-2">
-                      <span className="text-2xl font-bold text-gray-900">{product.price > 0 ? `NT$${(product.price / 100).toFixed(0)}` : product.priceLabel}</span>
+                      <span className="text-2xl font-bold text-gray-900">{product.price > 0 ? `NT$${(product.price / 100).toFixed(0)}` : '洽詢售價'}</span>
                       {cartQuantity > 0 ? <span className="text-xs font-semibold text-apple-gray-500">購物車中 {cartQuantity}</span> : null}
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <button
-                        type="button"
-                        disabled={!isPurchasable}
-                        onClick={() => handleAddToCart(product, selectedVariant, selectedSize)}
-                        className="apple-button-secondary gap-2 px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <ShoppingBag className="h-4 w-4" />
-                        {isSoldOut ? '庫存不足' : product.price <= 0 ? '售價待設定' : '加入購物車'}
-                      </button>
-                      {!isPurchasable ? (
-                        <button type="button" disabled className="apple-button-primary gap-2 px-4 py-2.5 text-sm opacity-50">
-                          <CreditCard className="h-4 w-4" />
-                          {isSoldOut ? '庫存不足' : '暫未開放購買'}
+                    {isPurchasable ? (
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <button
+                          type="button"
+                          onClick={() => handleAddToCart(product, selectedVariant, selectedSize)}
+                          className="apple-button-secondary gap-2 px-4 py-2.5 text-sm"
+                        >
+                          <ShoppingBag className="h-4 w-4" />
+                          加入購物車
                         </button>
-                      ) : (
                         <Link
                           href="/checkout"
                           onClick={(event) => {
@@ -273,8 +268,18 @@ export default function ShopPage() {
                           <CreditCard className="h-4 w-4" />
                           前往結帳
                         </Link>
-                      )}
-                    </div>
+                      </div>
+                    ) : isSoldOut ? (
+                      <button type="button" disabled className="apple-button-secondary w-full gap-2 px-4 py-2.5 text-sm opacity-60">
+                        <Package className="h-4 w-4" />
+                        補貨中
+                      </button>
+                    ) : (
+                      <a href={brand.instagramUrl} target="_blank" rel="noreferrer" className="apple-button-primary w-full gap-2 px-4 py-2.5 text-sm">
+                        <MessageCircle className="h-4 w-4" />
+                        聯絡購買
+                      </a>
+                    )}
                   </div>
                 </motion.div>
               )

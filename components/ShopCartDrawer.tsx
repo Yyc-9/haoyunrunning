@@ -15,7 +15,7 @@ type ShopCartDrawerProps = {
 }
 
 function formatCartAmount(value: number) {
-  return value > 0 ? `NT$${(value / 100).toFixed(0)}` : '待確認'
+  return `NT$${Math.max(0, value / 100).toFixed(0)}`
 }
 
 export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCartDrawerProps) {
@@ -127,7 +127,7 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
                             <div className="min-w-0 flex-1">
                               <h3 className="line-clamp-2 text-sm font-black leading-5 text-apple-gray-950">{item.name}</h3>
                               <p className="mt-1 text-sm font-semibold text-apple-gray-600">
-                                {item.price > 0 ? formatCartAmount(item.price * item.quantity) : '金額待確認'}
+                                {formatCartAmount(item.price * item.quantity)}
                               </p>
                               {remaining !== null ? (
                                 <p className="mt-1 text-xs text-apple-gray-500">剩餘可加 {remaining}</p>

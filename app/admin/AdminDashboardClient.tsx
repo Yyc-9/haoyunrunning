@@ -8,11 +8,11 @@ import {
   CheckCircle2,
   ClipboardList,
   CreditCard,
+  Download,
   LayoutDashboard,
   Loader2,
   RefreshCw,
   RotateCcw,
-  Settings,
   ShieldCheck,
   Landmark,
   PanelsTopLeft,
@@ -23,10 +23,11 @@ import { supabase } from '@/lib/supabase'
 import type { SiteContent } from '@/lib/site-content'
 import AdminContentManager from '@/components/admin/AdminContentManager'
 import AdminProductCreator from '@/components/admin/AdminProductCreator'
+import AdminProductEditor, { type AdminEditableProduct } from '@/components/admin/AdminProductEditor'
 
 type PaymentOrderStatus = 'pending_transfer' | 'pending_review' | 'approved' | 'rejected'
 
-type AdminTab = 'overview' | 'students' | 'coaches' | 'orders' | 'products' | 'content' | 'paymentAccounts' | 'refunds' | 'settings'
+type AdminTab = 'overview' | 'students' | 'coaches' | 'orders' | 'products' | 'content' | 'paymentAccounts'
 
 type AdminDashboardPayload = {
   admin: { id: string; email: string; name: string; role: string }
@@ -62,6 +63,7 @@ type AdminCourseSummary = {
   feeNote: string
   targetAudience: string
   focus: string
+  signupUrl: string
 }
 
 type AdminStudent = {
@@ -109,16 +111,7 @@ type AdminOrder = {
   items: string[]
 }
 
-type AdminProduct = {
-  id: string
-  name: string
-  category: string
-  price: number
-  priceLabel: string
-  image: string
-  stockQuantity: number
-  active: boolean
-}
+type AdminProduct = AdminEditableProduct
 
 type PaymentAccount = {
   id: string
@@ -147,26 +140,32 @@ const statusTone: Record<PaymentOrderStatus, string> = {
   rejected: 'bg-red-50 text-red-700',
 }
 
-const tabs: Array<{ id: AdminTab; label: string; icon: typeof LayoutDashboard; ready: boolean }> = [
-  { id: 'overview', label: '總覽', icon: LayoutDashboard, ready: true },
-  { id: 'students', label: '學員管理', icon: UsersRound, ready: true },
-  { id: 'coaches', label: '教練管理', icon: UserCog, ready: true },
-  { id: 'orders', label: '訂單審核', icon: ClipboardList, ready: true },
-  { id: 'products', label: '商城商品', icon: Boxes, ready: true },
-  { id: 'content', label: '內容中心', icon: PanelsTopLeft, ready: true },
-  { id: 'paymentAccounts', label: '收款帳戶', icon: Landmark, ready: true },
+const tabs: Array<{ id: AdminTab; label: string; icon: typeof LayoutDashboard }> = [
+  { id: 'overview', label: '總覽', icon: LayoutDashboard },
+  { id: 'students', label: '學員管理', icon: UsersRound },
+  { id: 'coaches', label: '教練管理', icon: UserCog },
+  { id: 'orders', label: '訂單審核', icon: ClipboardList },
+  { id: 'products', label: '商城商品', icon: Boxes },
+  { id: 'content', label: '內容中心', icon: PanelsTopLeft },
+  { id: 'paymentAccounts', label: '收款帳戶', icon: Landmark },
 ]
 
 function formatDate(value: string | null | undefined) {
   if (!value) return '暫無資料'
 
-  return new Intl.DateTimeFormat('zh-CN', {
+  return new Intl.DateTimeFormat('zh-TW', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value))
+}
+
+function csvCell(value: unknown) {
+  let text = String(value ?? '')
+  if (/^[=+\-@]/.test(text)) text = `'${text}`
+  return `"${text.replaceAll('"', '""')}"`
 }
 
 async function getAccessToken() {
@@ -238,9 +237,7 @@ export default function AdminDashboardClient() {
   const [studentPlanFilter, setStudentPlanFilter] = useState<'all' | 'enabled' | 'missing'>('all')
   const [coachRoleFilter, setCoachRoleFilter] = useState<'all' | 'coach' | 'student' | 'admin'>('all')
   const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | PaymentOrderStatus>('all')
-  const [productStockEdits, setProductStockEdits] = useState<Record<string, string>>({})
-  const [productPriceEdits, setProductPriceEdits] = useState<Record<string, string>>({})
-  const [productActiveEdits, setProductActiveEdits] = useState<Record<string, boolean>>({})
+  const [orderReviewNotes, setOrderReviewNotes] = useState<Record<string, string>>({})
   const [accountForm, setAccountForm] = useState({
     label: '',
     accountName: '',
@@ -267,34 +264,6 @@ export default function AdminDashboardClient() {
   useEffect(() => {
     loadDashboard()
   }, [loadDashboard])
-
-  useEffect(() => {
-    if (!data?.products) return
-
-    setProductStockEdits((current) => {
-      const next = { ...current }
-      data.products.forEach((product) => {
-        if (next[product.id] === undefined) {
-          next[product.id] = String(product.stockQuantity)
-        }
-      })
-      return next
-    })
-    setProductPriceEdits((current) => {
-      const next = { ...current }
-      data.products.forEach((product) => {
-        if (next[product.id] === undefined) next[product.id] = product.price > 0 ? String(product.price / 100) : ''
-      })
-      return next
-    })
-    setProductActiveEdits((current) => {
-      const next = { ...current }
-      data.products.forEach((product) => {
-        if (next[product.id] === undefined) next[product.id] = product.active
-      })
-      return next
-    })
-  }, [data?.products])
 
   const pendingOrders = useMemo(
     () => data?.orders.filter((order) => order.status === 'pending_review') ?? [],
@@ -359,6 +328,33 @@ export default function AdminDashboardClient() {
     })
   }, [data?.orders, orderQuery, orderStatusFilter])
 
+  function downloadOrders() {
+    const headers = ['類型', '訂單編號', '姓名', '信箱', '課程或商城訂單', '金額', '狀態', '商品', '取貨與客戶備註', '管理備註', '付款代號', '付款通道', '分配帳戶', '提交時間']
+    const rows = filteredOrders.map((order) => [
+      order.orderKind === 'shop' ? '商城' : '課程',
+      order.orderNumber,
+      order.studentName,
+      order.email,
+      order.courseName,
+      order.amountText,
+      statusLabels[order.status],
+      order.items.join('、'),
+      order.notes,
+      orderReviewNotes[order.id] || order.reviewNote || '',
+      order.paymentReference,
+      order.paymentChannelLabel,
+      order.assignedAccount,
+      formatDate(order.submittedAt),
+    ])
+    const csv = [headers, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n')
+    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `好運跑班訂單-${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   async function runAction(id: string, action: Record<string, unknown>) {
     setUpdatingId(id)
     setError('')
@@ -375,17 +371,6 @@ export default function AdminDashboardClient() {
     } finally {
       setUpdatingId('')
     }
-  }
-
-  async function saveProduct(product: AdminProduct) {
-    const priceTwd = Number(productPriceEdits[product.id] || 0)
-    await runAction(`product-${product.id}`, {
-      action: 'update_product',
-      productId: product.id,
-      stockQuantity: Number(productStockEdits[product.id] ?? product.stockQuantity),
-      price: Number.isFinite(priceTwd) ? Math.round(priceTwd * 100) : -1,
-      active: productActiveEdits[product.id] ?? product.active,
-    })
   }
 
   async function createPaymentAccount() {
@@ -452,7 +437,7 @@ export default function AdminDashboardClient() {
                 集中管理網站內容、商城商品、課程、活動、訂單與收款資料。
               </p>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-apple-gray-500">
-                訂單審核僅限超級管理員；買家端不會顯示完整收款帳戶，後五碼只用於人工對帳參考。
+                訂單審核與收款帳戶僅限超級管理員；戶名、帳號與分配結果不會顯示在買家端。
               </p>
             </div>
 
@@ -479,7 +464,6 @@ export default function AdminDashboardClient() {
                   >
                     <Icon className="h-4 w-4" />
                     {tab.label}
-                    {!tab.ready ? <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11px]">預留</span> : null}
                   </button>
                 )
               })}
@@ -714,7 +698,7 @@ export default function AdminDashboardClient() {
           {activeTab === 'orders' && data ? (
             <section className="grid gap-4">
               <div className="apple-card p-5">
-                <div className="grid gap-3 md:grid-cols-[1fr_220px]">
+                <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_auto]">
 	                  <input
 	                    value={orderQuery}
 	                    onChange={(event) => setOrderQuery(event.target.value)}
@@ -731,6 +715,10 @@ export default function AdminDashboardClient() {
                       <option key={value} value={value}>{label}</option>
                     ))}
                   </select>
+                  <button type="button" onClick={downloadOrders} disabled={filteredOrders.length === 0} className="apple-button-outline gap-2 px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-40">
+                    <Download className="h-4 w-4" />
+                    匯出目前結果
+                  </button>
                 </div>
               </div>
 	              {data.orders.length === 0 ? (
@@ -761,7 +749,7 @@ export default function AdminDashboardClient() {
                       <button
                         type="button"
                         disabled={updatingId === order.id || order.status === 'approved'}
-	                        onClick={() => runAction(order.id, { action: 'review_order', orderId: order.id, orderKind: order.orderKind, status: 'approved' })}
+	                        onClick={() => runAction(order.id, { action: 'review_order', orderId: order.id, orderKind: order.orderKind, status: 'approved', reviewNote: orderReviewNotes[order.id] || order.reviewNote || '' })}
                         className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <CheckCircle2 className="h-4 w-4" />
@@ -770,7 +758,7 @@ export default function AdminDashboardClient() {
                       <button
                         type="button"
                         disabled={updatingId === order.id || order.status === 'rejected'}
-	                        onClick={() => runAction(order.id, { action: 'review_order', orderId: order.id, orderKind: order.orderKind, status: 'rejected' })}
+	                        onClick={() => runAction(order.id, { action: 'review_order', orderId: order.id, orderKind: order.orderKind, status: 'rejected', reviewNote: orderReviewNotes[order.id] || order.reviewNote || '' })}
                         className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-white px-5 py-2.5 text-sm font-bold text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <RotateCcw className="h-4 w-4" />
@@ -801,87 +789,32 @@ export default function AdminDashboardClient() {
 	                      <p className="mt-1 text-sm leading-6 text-apple-gray-600">備註：{order.notes || order.reviewNote || '暫無備註'}</p>
 	                    </div>
 	                  ) : null}
+	                  <label className="mt-3 block">
+	                    <span className="mb-2 block text-xs font-bold text-apple-gray-500">管理備註</span>
+	                    <textarea
+	                      value={orderReviewNotes[order.id] ?? order.reviewNote ?? ''}
+	                      onChange={(event) => setOrderReviewNotes((current) => ({ ...current, [order.id]: event.target.value }))}
+	                      className="apple-input min-h-20 resize-y"
+	                      placeholder="記錄核對結果、聯絡狀況或後續處理"
+	                    />
+	                  </label>
 	                </article>
               ))}
 	            </section>
 	          ) : null}
 
 	          {activeTab === 'products' && data ? (
-	            <section className="apple-card overflow-hidden">
+	            <section className="space-y-5">
 	              <AdminProductCreator runAction={runAction} />
-	              <div className="border-b border-black/10 p-5">
-	                <h2 className="text-xl font-black text-apple-gray-900">商城商品</h2>
-		                <p className="mt-1 text-sm text-apple-gray-600">先設定新台幣售價再上架。訂單成立時會保留庫存，付款異常時會退回。</p>
+	              <div className="px-1">
+	                <h2 className="text-xl font-black text-apple-gray-900">商品資料與庫存</h2>
+	                <p className="mt-1 text-sm text-apple-gray-600">直接修改商品內容、圖片、款式、售價、庫存與上架狀態。</p>
 	              </div>
 	              {data.products.length === 0 ? (
-	                <div className="p-10 text-center text-sm font-semibold text-apple-gray-500">
-		                  尚未讀取到商品資料。請先執行商城資料庫升級。
-	                </div>
-	              ) : (
-	                <div className="overflow-x-auto">
-	                  <table className="w-full min-w-[860px] text-left text-sm">
-	                    <thead className="bg-apple-gray-100 text-apple-gray-600">
-	                      <tr>
-	                        {['商品', '分類', '價格', '狀態', '庫存', '操作'].map((header) => (
-	                          <th key={header} className="px-4 py-3 font-bold">{header}</th>
-	                        ))}
-	                      </tr>
-	                    </thead>
-	                    <tbody className="divide-y divide-black/10">
-	                      {data.products.map((product) => (
-	                        <tr key={product.id}>
-	                          <td className="px-4 py-4">
-	                            <p className="font-bold text-apple-gray-900">{product.name}</p>
-	                            <p className="mt-1 text-xs text-apple-gray-500">ID {product.id}</p>
-	                          </td>
-	                          <td className="px-4 py-4 text-apple-gray-600">{product.category || '-'}</td>
-	                          <td className="px-4 py-4 font-semibold text-apple-gray-800">
-		                            <div className="flex items-center gap-2">
-		                              <span className="font-bold">NT$</span>
-		                              <input
-		                                value={productPriceEdits[product.id] ?? ''}
-		                                onChange={(event) => setProductPriceEdits((current) => ({ ...current, [product.id]: event.target.value.replace(/\D/g, '') }))}
-		                                className="apple-input w-28 py-2 text-sm"
-		                                inputMode="numeric"
-		                                placeholder="尚未設定"
-		                              />
-		                            </div>
-	                          </td>
-	                          <td className="px-4 py-4">
-		                            <label className="inline-flex items-center gap-2 text-xs font-bold text-apple-gray-700">
-		                              <input
-		                                type="checkbox"
-		                                checked={productActiveEdits[product.id] ?? product.active}
-		                                onChange={(event) => setProductActiveEdits((current) => ({ ...current, [product.id]: event.target.checked }))}
-		                                className="h-4 w-4"
-		                              />
-		                              {(productActiveEdits[product.id] ?? product.active) ? '上架' : '下架'}
-		                            </label>
-	                          </td>
-	                          <td className="px-4 py-4">
-	                            <input
-	                              value={productStockEdits[product.id] ?? String(product.stockQuantity)}
-	                              onChange={(event) => setProductStockEdits((current) => ({ ...current, [product.id]: event.target.value.replace(/\D/g, '') }))}
-	                              className="apple-input w-28 py-2 text-sm"
-	                              inputMode="numeric"
-	                            />
-	                          </td>
-	                          <td className="px-4 py-4">
-	                            <button
-	                              type="button"
-	                              disabled={updatingId === `product-${product.id}`}
-		                              onClick={() => saveProduct(product)}
-	                              className="rounded-full bg-black px-4 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
-	                            >
-		                              儲存商品
-	                            </button>
-	                          </td>
-	                        </tr>
-	                      ))}
-	                    </tbody>
-	                  </table>
-	                </div>
-	              )}
+	                <div className="apple-card p-10 text-center text-sm font-semibold text-apple-gray-500">目前沒有商品，請使用上方表單建立第一件商品。</div>
+	              ) : data.products.map((product) => (
+	                <AdminProductEditor key={product.id} product={product} runAction={runAction} />
+	              ))}
 	            </section>
 	          ) : null}
 
@@ -893,7 +826,7 @@ export default function AdminDashboardClient() {
 	            <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
 	              <div className="apple-card p-5">
 	                <h2 className="text-xl font-black text-apple-gray-900">新增收款帳戶</h2>
-	                <p className="mt-1 text-sm leading-6 text-apple-gray-600">這些資料只在管理員後台顯示。買家下單時只會看到付款通道名和付款代號。</p>
+	                <p className="mt-1 text-sm leading-6 text-apple-gray-600">這些資料只在管理員後台顯示，不會把戶名、帳號或分配結果提供給買家。</p>
 	                <div className="mt-5 grid gap-3">
 	                  {[
 	                    ['label', '通道名稱，例如 A 帳戶'],
@@ -969,13 +902,6 @@ export default function AdminDashboardClient() {
 	            </section>
 	          ) : null}
 
-	          {!tabs.find((tab) => tab.id === activeTab)?.ready ? (
-            <section className="apple-card p-10 text-center">
-              <Settings className="mx-auto h-10 w-10 text-apple-gray-400" />
-              <h2 className="mt-4 text-2xl font-black text-apple-gray-900">後續階段開放</h2>
-              <p className="mt-2 text-apple-gray-600">這個入口已預留，第一階段先保證管理員權限、學員、教練和訂單審核可用。</p>
-            </section>
-          ) : null}
         </div>
       </section>
     </main>

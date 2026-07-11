@@ -108,7 +108,7 @@ type AdminPatchBody =
   | { action?: 'review_order'; orderId?: string; orderKind?: 'course' | 'shop'; status?: PaymentOrderStatus; reviewNote?: string }
   | { action?: 'bind_student'; studentId?: string; coachId?: string }
   | { action?: 'unbind_student'; bindingId?: string }
-  | { action?: 'update_product'; productId?: string; stockQuantity?: number; price?: number; active?: boolean }
+  | { action?: 'update_product'; productId?: string; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; tags?: string; sizes?: string; variants?: Array<{ id?: string; name?: string; image?: string }> }
   | { action?: 'create_product'; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; tags?: string; sizes?: string }
   | { action?: 'save_site_content'; section?: string; value?: unknown }
   | { action?: 'create_payment_account'; label?: string; accountName?: string; bankName?: string; bankCode?: string; accountNumber?: string; weight?: number }
@@ -134,7 +134,7 @@ function cleanText(value: unknown) {
 
 function commaSeparated(value: unknown) {
   return cleanText(value)
-    .split(/[,，]/)
+    .split(/[,，、]/)
     .map((item) => item.trim())
     .filter(Boolean)
     .slice(0, 20)
@@ -508,6 +508,7 @@ export async function GET(request: NextRequest) {
       feeNote: course.feeNote,
       targetAudience: course.targetAudience,
       focus: course.focus,
+      signupUrl: course.signupUrl || '',
     })),
     coachOptions: coaches
       .filter((coach) => coach.coachEnabled)
@@ -682,12 +683,29 @@ export async function PATCH(request: NextRequest) {
 
   if (body.action === 'update_product') {
     const productId = cleanText(body.productId)
+    const name = cleanText(body.name).slice(0, 180)
+    const category = cleanText(body.category).slice(0, 100)
+    const image = cleanText(body.image)
     const stockQuantity = Number(body.stockQuantity)
     const price = Number(body.price)
     const active = body.active === true
+    const rawVariants = Array.isArray(body.variants) ? body.variants.slice(0, 20) : []
+    const variants = rawVariants.flatMap((item) => {
+      const id = cleanText(item.id).slice(0, 100)
+      const variantName = cleanText(item.name).slice(0, 100)
+      const variantImage = cleanText(item.image)
+      if (!/^[a-zA-Z0-9_-]+$/.test(id) || !variantName || !variantImage || !isSafePublicUrl(variantImage) || !isSafeProductImage(variantImage)) return []
+      return [{ id, name: variantName, image: variantImage }]
+    })
 
-    if (!productId) {
-      return json({ error: '缺少商品 ID。' }, { status: 400 })
+    if (!productId || !name || !category || !image) {
+      return json({ error: '請完整填寫商品名稱、分類與主圖。' }, { status: 400 })
+    }
+    if (!isSafePublicUrl(image) || !isSafeProductImage(image)) {
+      return json({ error: '商品圖片網址無效。' }, { status: 400 })
+    }
+    if (variants.length !== rawVariants.length) {
+      return json({ error: '請完整填寫每一個商品款式及款式圖片。' }, { status: 400 })
     }
 
     if (!Number.isInteger(stockQuantity) || stockQuantity < 0) {
@@ -701,9 +719,15 @@ export async function PATCH(request: NextRequest) {
     const { data: product, error } = await supabaseAdmin!
       .from('shop_products')
       .update({
+        name,
+        category,
         stock_quantity: stockQuantity,
         price,
-        price_label: price > 0 ? `NT$${Math.round(price / 100)}` : '暫未開放購買',
+        price_label: price > 0 ? `NT$${Math.round(price / 100)}` : '洽詢售價',
+        image,
+        tags: commaSeparated(body.tags),
+        sizes: commaSeparated(body.sizes),
+        variants,
         active,
       })
       .eq('id', productId)
@@ -714,7 +738,7 @@ export async function PATCH(request: NextRequest) {
       return json({ error: error?.message || '更新商品失敗。' }, { status: 500 })
     }
 
-    return json({ product, message: '商品售價、庫存與上架狀態已更新。' })
+    return json({ product, message: '商品內容、圖片、售價與庫存已更新。' })
   }
 
   if (body.action === 'create_product') {
@@ -745,7 +769,7 @@ export async function PATCH(request: NextRequest) {
         name,
         category,
         price,
-        price_label: price > 0 ? `NT$${Math.round(price / 100)}` : '暫未開放購買',
+        price_label: price > 0 ? `NT$${Math.round(price / 100)}` : '洽詢售價',
         image,
         video: '',
         rating: 5,

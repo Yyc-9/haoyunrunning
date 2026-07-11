@@ -24,6 +24,7 @@ function applyCourseOverrides(content: SiteContent) {
       const classTime = override.classTime || course.classTime
       const focus = override.focus || course.focus
       const feeNote = override.feeNote || course.feeNote
+      const signupUrl = override.signupUrl || course.signupUrl
 
       return {
         ...course,
@@ -39,6 +40,7 @@ function applyCourseOverrides(content: SiteContent) {
         trainingGoals: focus ? [focus] : course.trainingGoals,
         feeNote,
         priceNote: feeNote,
+        signupUrl,
         targetAudience: override.targetAudience || course.targetAudience,
       }
     })

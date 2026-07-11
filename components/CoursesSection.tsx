@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ChevronRight, Clock, MapPin, Target, Users } from 'lucide-react'
+import { ChevronRight, Clock, MapPin, Target, TicketCheck, Users } from 'lucide-react'
 import CoursePaymentInfo from '@/components/CoursePaymentInfo'
 import CoursesTable from '@/components/CoursesTable'
 import { useLanguage } from '@/app/language-context'
@@ -80,15 +80,13 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
                   <ChevronRight className="h-4 w-4" />
                 </Link>
               )}
-              <a
-                href="https://www.instagram.com/nurture.running.team/"
-                target="_blank"
-                rel="noreferrer"
+              <Link
+                href="/join"
                 className="apple-button-secondary gap-2 px-5 py-2.5 text-sm"
               >
-                {t.courses.consultCta}
-                <ChevronRight className="h-4 w-4" />
-              </a>
+                <TicketCheck className="h-4 w-4" />
+                立即報名
+              </Link>
             </div>
           </div>
         </motion.div>

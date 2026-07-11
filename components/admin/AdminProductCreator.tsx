@@ -9,7 +9,7 @@ type AdminProductCreatorProps = {
   runAction: (id: string, action: Record<string, unknown>) => Promise<boolean>
 }
 
-async function uploadProductImage(file: File) {
+export async function uploadProductImage(file: File) {
   if (!supabase) throw new Error('圖片服務尚未設定。')
   const { data: { session } } = await supabase.auth.getSession()
   if (!session?.access_token) throw new Error('請重新登入管理員帳號。')
@@ -37,7 +37,7 @@ export default function AdminProductCreator({ runAction }: AdminProductCreatorPr
     image: '',
     tags: '',
     sizes: '',
-    active: true,
+    active: false,
   })
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
@@ -71,16 +71,16 @@ export default function AdminProductCreator({ runAction }: AdminProductCreatorPr
     })
 
     if (created) {
-      setForm({ name: '', category: '跑者配件', price: '', stockQuantity: '0', image: '', tags: '', sizes: '', active: true })
+      setForm({ name: '', category: '跑者配件', price: '', stockQuantity: '0', image: '', tags: '', sizes: '', active: false })
     }
   }
 
   return (
-    <div className="border-b border-black/10 p-5">
+    <div className="apple-card p-5">
       <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
         <div>
           <h2 className="text-xl font-black text-apple-gray-900">新增商城商品</h2>
-          <p className="mt-1 text-sm leading-6 text-apple-gray-600">上傳主圖並填寫商品資料，儲存後會直接加入商城與庫存管理。</p>
+          <p className="mt-1 text-sm leading-6 text-apple-gray-600">上傳主圖並填寫商品資料。可先儲存為下架狀態，確認完成後再公開。</p>
         </div>
         <label title="上傳商品主圖" className="apple-button-outline inline-flex cursor-pointer items-center justify-center gap-2 px-5 py-3">
           {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
@@ -98,7 +98,7 @@ export default function AdminProductCreator({ runAction }: AdminProductCreatorPr
       {uploadError ? <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">{uploadError}</p> : null}
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[220px_1fr]">
-        <div className="relative aspect-square overflow-hidden rounded-2xl border border-black/10 bg-apple-gray-100">
+        <div className="relative aspect-square overflow-hidden rounded-lg border border-black/10 bg-apple-gray-100">
           {form.image ? (
             <Image src={form.image} alt="新商品主圖預覽" fill sizes="220px" className="object-contain p-3" />
           ) : (
@@ -114,7 +114,7 @@ export default function AdminProductCreator({ runAction }: AdminProductCreatorPr
           <input value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))} placeholder="商品分類" className="apple-input" />
           <div className="flex items-center gap-2">
             <span className="font-bold">NT$</span>
-            <input value={form.price} onChange={(event) => setForm((current) => ({ ...current, price: event.target.value.replace(/\D/g, '') }))} placeholder="售價，可稍後設定" inputMode="numeric" className="apple-input" />
+            <input value={form.price} onChange={(event) => setForm((current) => ({ ...current, price: event.target.value.replace(/\D/g, '') }))} placeholder="售價；洽詢商品可留空" inputMode="numeric" className="apple-input" />
           </div>
           <input value={form.stockQuantity} onChange={(event) => setForm((current) => ({ ...current, stockQuantity: event.target.value.replace(/\D/g, '') }))} placeholder="庫存數量" inputMode="numeric" className="apple-input" />
           <input value={form.tags} onChange={(event) => setForm((current) => ({ ...current, tags: event.target.value }))} placeholder="標籤，以逗號分隔" className="apple-input" />

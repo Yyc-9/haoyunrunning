@@ -16,8 +16,8 @@ export default function Footer() {
       title: '參加好運',
       links: [
         { name: '訓練課程', href: '/courses' },
+        { name: '課程報名', href: '/join' },
         { name: '團練報名', href: '/group-signup' },
-        { name: '活動登記', href: '/anniversary' },
       ],
     },
     {

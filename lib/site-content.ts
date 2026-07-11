@@ -26,6 +26,7 @@ export type CourseOverride = {
   feeNote?: string
   targetAudience?: string
   focus?: string
+  signupUrl?: string
 }
 
 export type ContentCard = {
@@ -109,9 +110,9 @@ export type SiteContent = {
 }
 
 export const defaultHeroSlides = [
-  '/20250605[好運]三周年慶-7089.jpg',
-  '/20250605[好運]三周年慶-7096.jpg',
-  '/LINE_ALBUM_四週年手機桌布_260515_1.jpg',
+  '/goodluck-anniversary-7089.jpg',
+  '/goodluck-anniversary-7096.jpg',
+  '/goodluck-fourth-anniversary-wallpaper.jpg',
 ]
 
 export const defaultHomeActivities: HomeActivity[] = [
@@ -218,10 +219,10 @@ export const defaultTestimonialsContent: TestimonialsContent = {
 }
 
 export const defaultPageMedia: PageMedia = {
-  aboutHero: '/LINE_ALBUM_四週年手機桌布_260515_1.jpg',
-  testimonialsHero: '/20250605[好運]三周年慶-7089.jpg',
-  shopHero: '/20250605[好運]三周年慶-7096.jpg',
-  anniversaryHero: '/LINE_ALBUM_四週年手機桌布_260515_1.jpg',
+  aboutHero: '/goodluck-fourth-anniversary-wallpaper.jpg',
+  testimonialsHero: '/goodluck-anniversary-7089.jpg',
+  shopHero: '/goodluck-anniversary-7096.jpg',
+  anniversaryHero: '/goodluck-fourth-anniversary-wallpaper.jpg',
   shopTitle: '好運商店',
   shopSubtitle: '跑班裝備與訓練補給，先把真正會用上的東西整理好。',
 }
@@ -242,6 +243,16 @@ function cleanString(value: unknown, maxLength = 500) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : ''
 }
 
+const legacyPublicAssets: Record<string, string> = {
+  '/20250605[好運]三周年慶-7089.jpg': '/goodluck-anniversary-7089.jpg',
+  '/20250605[好運]三周年慶-7096.jpg': '/goodluck-anniversary-7096.jpg',
+  '/LINE_ALBUM_四週年手機桌布_260515_1.jpg': '/goodluck-fourth-anniversary-wallpaper.jpg',
+}
+
+function stablePublicAsset(value: string) {
+  return legacyPublicAssets[value] || value
+}
+
 export function isSafePublicUrl(value: string) {
   if (value.startsWith('/') && !value.startsWith('//')) return true
 
@@ -256,7 +267,7 @@ export function isSafePublicUrl(value: string) {
 export function normalizeHeroSlides(value: unknown) {
   if (!Array.isArray(value)) return defaultHeroSlides
   const slides = value
-    .map((item) => cleanString(item, 2000))
+    .map((item) => stablePublicAsset(cleanString(item, 2000)))
     .filter((item) => item && isSafePublicUrl(item))
     .slice(0, 8)
   return slides.length > 0 ? slides : defaultHeroSlides
@@ -303,6 +314,7 @@ export function normalizeCourseOverrides(value: unknown): Record<string, CourseO
   Object.entries(value as Record<string, unknown>).slice(0, 100).forEach(([slug, rawOverride]) => {
     if (!/^[a-z0-9-]{1,120}$/.test(slug) || !rawOverride || typeof rawOverride !== 'object') return
     const override = rawOverride as CourseOverride
+    const signupUrl = cleanString(override.signupUrl, 2000)
     result[slug] = {
       active: override.active !== false,
       name: cleanString(override.name, 180),
@@ -314,6 +326,7 @@ export function normalizeCourseOverrides(value: unknown): Record<string, CourseO
       feeNote: cleanString(override.feeNote, 300),
       targetAudience: cleanString(override.targetAudience, 500),
       focus: cleanString(override.focus, 300),
+      signupUrl: signupUrl && isSafePublicUrl(signupUrl) ? signupUrl : '',
     }
   })
   return result
@@ -416,7 +429,7 @@ export function normalizeTestimonialsContent(value: unknown): TestimonialsConten
 export function normalizePageMedia(value: unknown): PageMedia {
   const source = value && typeof value === 'object' ? value as Partial<PageMedia> : {}
   const image = (candidate: unknown, fallback: string) => {
-    const url = cleanString(candidate, 2000)
+    const url = stablePublicAsset(cleanString(candidate, 2000))
     return url && isSafePublicUrl(url) ? url : fallback
   }
   return {

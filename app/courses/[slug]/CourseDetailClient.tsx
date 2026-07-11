@@ -6,7 +6,7 @@ import {
   CalendarDays,
   ChevronRight,
   Clock,
-  CreditCard,
+  ExternalLink,
   Instagram,
   MapPin,
   Navigation,
@@ -77,7 +77,7 @@ function getTrainingDescription(title: string, language: string) {
 
 export default function CourseDetailClient({ course }: CourseDetailClientProps) {
   const { language, t } = useLanguage()
-  const { courses, isLoading } = useSiteContent()
+  const { courses, brand, isLoading } = useSiteContent()
   const courseSlug = course?.slug
   const managedCourse = courseSlug ? courses.find((item) => item.slug === courseSlug) ?? (isLoading ? course : null) : null
 
@@ -108,8 +108,8 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
   course = managedCourse
 
   const text = (value: string) => localizeText(value, language)
-  const instagramUrl = course.instagramUrl || 'https://www.instagram.com/nurture.running.team/'
-  const paymentHref = `/payment?course=${encodeURIComponent(course.slug)}`
+  const instagramUrl = brand.instagramUrl || course.instagramUrl || 'https://www.instagram.com/nurture.running.team/'
+  const signupUrl = course.signupUrl || '/join'
   const courseCoaches = course.coaches.map((coach) => localizeCoach(coach, language))
 
   return (
@@ -208,13 +208,15 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
                   </div>
 
                   <div className="mt-5 flex flex-col gap-3">
-                    <Link
-                      href={paymentHref}
+                    <a
+                      href={signupUrl}
+                      target={course.signupUrl ? '_blank' : undefined}
+                      rel={course.signupUrl ? 'noreferrer' : undefined}
                       className="apple-button-primary inline-flex w-full items-center justify-center gap-2 px-6 py-3"
                     >
-                      <CreditCard className="h-5 w-5" />
-                      {t.courseDetail.siteSignup}
-                    </Link>
+                      <ExternalLink className="h-5 w-5" />
+                      立即報名
+                    </a>
                     <a
                       href={instagramUrl}
                       target="_blank"

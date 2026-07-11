@@ -106,12 +106,12 @@ function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: 
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 space-y-3 max-w-md">
+    <div aria-live="polite" className="pointer-events-none fixed inset-x-3 top-20 z-[70] max-w-md space-y-3 sm:inset-x-auto sm:bottom-4 sm:right-4 sm:top-auto sm:w-full">
       {toasts.map(toast => (
         <div
           key={toast.id}
           className={`
-            animate-slide-up border rounded-lg p-4 flex items-start gap-3
+            pointer-events-auto animate-slide-up border rounded-lg p-4 flex items-start gap-3 shadow-lg
             ${getBgColor(toast.type)}
           `}
         >
@@ -120,8 +120,10 @@ function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: 
             {toast.message}
           </p>
           <button
+            type="button"
             onClick={() => onRemove(toast.id)}
             className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="關閉提示"
           >
             <X className="h-4 w-4" />
           </button>

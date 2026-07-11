@@ -1,10 +1,10 @@
-import PaymentPageClient from './PaymentPageClient'
+import { redirect } from 'next/navigation'
 
 export const metadata = {
-  title: '課程付款 - 好運跑班',
-  description: '好運跑班課程付款方式資訊頁，實際付款請先透過 Instagram 確認。',
+  title: '課程報名 - 好運跑班',
+  description: '查看好運跑班本期課程並前往官方報名表。',
 }
 
 export default function PaymentPage() {
-  return <PaymentPageClient />
+  redirect('/join')
 }

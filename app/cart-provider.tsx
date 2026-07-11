@@ -26,6 +26,14 @@ export interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
+function cleanLegacyCartName(name: string, size?: string) {
+  if (!size) return name
+  const escapedSize = size.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return name
+    .replace(new RegExp(`\\s*\\/\\s*尺寸\\s+${escapedSize}$`), '')
+    .replace(new RegExp(`\\s*-\\s*尺寸\\s+${escapedSize}$`), '')
+}
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
 
@@ -38,10 +46,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (Array.isArray(parsed)) {
         setItems(
           parsed
-            .filter((item) => item.id && item.name && item.quantity > 0)
+            .filter((item) => item.id && item.name && item.quantity > 0 && Number(item.price) > 0)
             .map((item) => ({
               ...item,
               productId: item.productId || item.id.split('-')[0] || item.id,
+              name: cleanLegacyCartName(item.name, item.size),
             }))
         )
       }
