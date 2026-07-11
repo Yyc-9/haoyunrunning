@@ -76,8 +76,8 @@ export const recentActivities = [
 export const courseGroups: CourseGroup[] = [
   {
     title: '好運初心補習班',
-    description: '從認識跑步開始，建立穩定習慣、基礎體能與正確訓練觀念。',
-    audience: '適合新手小白、剛開始規律跑步、想安全建立基礎的跑者。',
+    description: '專為零基礎跑者設計，從走跑交替、呼吸節奏、熱身收操與基礎肌力開始，循序建立第一個穩定跑步週期。',
+    audience: '適合沒有跑步經驗、久未運動，或擔心跟不上一般跑班的跑者；不需要配速門檻。',
     courses: [
       {
         slug: 'hsinchu-beginner-tuesday',
@@ -85,7 +85,7 @@ export const courseGroups: CourseGroup[] = [
         weekday: '週二',
         location: '新竹市',
         period: '7/14 - 9/29',
-        focus: '跑步入門、基礎體能、姿勢與節奏建立',
+        focus: '零基礎走跑入門、呼吸節奏、跑姿觀念與運動習慣建立',
         signupUrl: 'https://forms.gle/nFGgHrLcQmKdYZoN9',
       },
     ],
@@ -205,6 +205,7 @@ export const coachProfiles = {
     name: '劉丞恩教練',
     nickname: '恩恩教練',
     role: '企業跑班與初中高階跑者訓練',
+    imageUrl: '/coaches/liu-cheng-en.jpg',
     bio: '曾任 NIKE NRC PACER、好運跑班教練、台灣應用材料跑班教練、寶礦力路跑初階訓練課程教練，並長期投入學校田徑與企業跑班教學。',
     specialties: ['企業跑班', '初、中、高階跑者訓練', '競技運動員訓練', '幼兒體能運動', '1 對 1 教學'],
     style: '兼顧基礎動作、訓練紀律與個別化調整，能陪跑者從入門走到進階。',
@@ -245,6 +246,7 @@ export const coachProfiles = {
   luoPeiCi: {
     name: '羅珮慈教練',
     role: '初中階跑者週期訓練規劃',
+    imageUrl: '/coaches/luo-pei-ci.jpg',
     bio: 'GarminRun 跑步教練與好運跑班教練，具國立臺灣師範大學體育學系背景。',
     specialties: ['初、中階跑者週期訓練規劃', '跑步基礎能力建立', '配速與訓練節奏引導'],
     style: '把週期訓練拆成清楚可執行的步驟，協助跑者穩定完成課表。',
@@ -275,6 +277,7 @@ export const coachProfiles = {
   yangShengHao: {
     name: '楊陞豪教練',
     role: '初階跑姿建立與社團課程規劃',
+    imageUrl: '/coaches/yang-sheng-hao.jpg',
     bio: '長庚路跑社教練與好運跑班教練，具國立體育大學陸上運動技術學系背景。',
     specialties: ['初階跑者跑姿建立', '企業跑班課程規劃', '社團課程規劃'],
     style: '以跑姿基礎和團練節奏建立訓練秩序，幫助跑者穩定累積。',
@@ -285,6 +288,7 @@ export const coachProfiles = {
     name: '羅閔耀教練',
     nickname: 'CC教練',
     role: '跑步生理學、戰術與個別化訓練',
+    imageUrl: '/coaches/luo-min-yao.jpg',
     bio: '好運跑班教練，曾任丹鳳高中、八里國中、金山高中田徑教練，以及 NIKE RUN CLUB PACER、NIKE FAST42 臺灣北區助教。',
     specialties: ['跑步生理學與訓練原則', '跑步訓練技巧與戰術', '個別化訓練計畫', '運動員合作與帶領'],
     style: '以訓練原理為基礎，結合戰術和個別化安排，讓跑者清楚知道每堂課目的。',
@@ -292,8 +296,10 @@ export const coachProfiles = {
     certifications: ['教育部學校專任運動教練證', '亞洲核心訓練師', '中華民國田徑協會 C 級教練', '中華民國田徑協會 C 級裁判'],
   },
   xiaoHe: {
-    name: '小赫助教',
+    name: '赫嵐妮助教',
+    nickname: '小赫助教',
     role: '好運跑班助教',
+    imageUrl: '/coaches/xiao-he.jpg',
     bio: '好運跑班助教，協助課堂示範、動作觀察與團練節奏維持。',
     specialties: ['課堂協助', '動作觀察', '團練陪跑'],
     style: '在課堂中即時協助學員理解訓練內容，讓團練執行更順暢。',
@@ -311,8 +317,9 @@ export const coachProfiles = {
   },
   zhengYiQun: {
     name: '鄭以群助教',
-    nickname: '以群助教',
+    nickname: '螞蟻助教',
     role: '好運跑班助教',
+    imageUrl: '/coaches/zheng-yi-qun.jpg',
     bio: '好運跑班助教，協助團練分組、訓練執行與學員回饋觀察。',
     specialties: ['團練協助', '訓練執行觀察', '課堂節奏維持'],
     style: '協助教練掌握不同程度跑者的課堂狀態，讓訓練更有秩序。',
@@ -321,6 +328,7 @@ export const coachProfiles = {
   yongXin: {
     name: '詠馨助教',
     role: '好運跑班助教',
+    imageUrl: '/coaches/yong-xin.jpg',
     bio: '好運跑班助教，協助課堂示範、團練陪跑與學員狀態觀察。',
     specialties: ['課堂協助', '團練陪跑', '學員狀態觀察'],
     style: '用清楚提醒與陪伴協助跑者完成當日訓練。',
@@ -356,7 +364,17 @@ export function courseSlug(course: Course) {
 }
 
 function getDefaultTrainingItems(course: Course): string[] {
-  if (course.name.includes('初心') || course.name.includes('初階')) {
+  if (course.name.includes('初心')) {
+    return [
+      '課前狀態確認與新手動態熱身',
+      '走跑交替與輕鬆跑入門',
+      '呼吸節奏、RPE 與強度辨識',
+      '基礎跑姿與步頻觀念',
+      '新手肌力、平衡與穩定訓練',
+      '收操恢復與自主練習安排',
+    ]
+  }
+  if (course.name.includes('初階')) {
     return [
       '動態熱身與跑姿檢測',
       '基礎有氧訓練',
@@ -387,7 +405,17 @@ function getDefaultTrainingItems(course: Course): string[] {
 }
 
 function getDefaultBenefits(course: Course): string[] {
-  if (course.name.includes('初心') || course.name.includes('初階')) {
+  if (course.name.includes('初心')) {
+    return [
+      '在沒有配速壓力下開始跑步',
+      '學會判斷輕鬆、適中與過強的運動強度',
+      '建立每週可持續的走跑與練習習慣',
+      '掌握新手需要的熱身、收操與恢復方法',
+      '降低一開始跑太快、跑太多的常見風險',
+      '累積銜接一般跑班所需的信心與基礎體能',
+    ]
+  }
+  if (course.name.includes('初階')) {
     return [
       '建立穩定跑步習慣',
       '打好基礎有氧能力',
@@ -442,10 +470,18 @@ function getDefaultBenefits(course: Course): string[] {
 }
 
 function getDefaultSuitableFor(course: Course): string[] {
-  if (course.name.includes('初心') || course.name.includes('初階')) {
+  if (course.name.includes('初心')) {
+    return [
+      '沒有跑步經驗，想知道第一步怎麼開始',
+      '久未運動，希望用走跑交替安全恢復體能',
+      '一跑就容易喘，還不會判斷適合自己的速度',
+      '擔心跟不上一般團練，希望先建立信心與習慣',
+    ]
+  }
+  if (course.name.includes('初階')) {
     return [
       '想建立規律跑步習慣',
-      '想從零開始學習正確跑步',
+      '已能完成短距離慢跑，想打好跑姿與有氧基礎',
       '希望在安全的環境下漸進式訓練',
       '想加入團練社群獲得支援與動力',
     ]
@@ -467,11 +503,15 @@ function getDefaultNotSuitableFor(): string[] {
   ]
 }
 
-function getDefaultFaq(): Array<{ question: string; answer: string }> {
+function getDefaultFaq(course: Course): Array<{ question: string; answer: string }> {
   return [
     {
       question: '新手可以參加嗎？',
-      answer: '當然可以！我們有專門為新手設計的初心補習班和初階班，從零開始教起。只要有興趣學習跑步，都歡迎加入。',
+      answer: course.name.includes('初心')
+        ? '可以。初心補習班就是為零基礎或久未運動的跑者設計，會從走跑交替、呼吸強度、熱身收操與基礎肌力開始，不需要配速門檻。'
+        : course.name.includes('初階')
+          ? '可以。初階班適合已能完成短距離慢跑、希望建立規律訓練的跑者；若目前完全沒有跑步經驗，建議優先選擇初心補習班。'
+          : '各班級強度與目標不同。若目前完全沒有跑步經驗，建議優先選擇初心補習班；已有規律跑步習慣者可依目標選擇夜跑、早鳥或 PB 班。',
     },
     {
       question: '下雨怎麼辦？',
@@ -551,7 +591,7 @@ export const allCourses = courseGroups.flatMap((group) =>
       benefits: course.benefits || getDefaultBenefits(course),
       suitableFor: course.suitableFor || getDefaultSuitableFor(course),
       notSuitableFor: course.notSuitableFor || getDefaultNotSuitableFor(),
-      faq: course.faq || getDefaultFaq(),
+      faq: course.faq || getDefaultFaq(course),
       instagramUrl: course.instagramUrl || 'https://www.instagram.com/nurture.running.team/',
       coach,
       coaches,

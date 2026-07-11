@@ -34,12 +34,12 @@ export default function CoachCard({ coach, labels }: CoachCardProps) {
             <Image
               src={coach.imageUrl}
               alt={coach.name}
-              width={192}
-              height={192}
-              className="h-40 w-40 rounded-full object-cover object-center ring-8 ring-white md:h-48 md:w-48"
+              width={384}
+              height={480}
+              className="h-48 w-40 rounded-lg object-cover object-top shadow-sm ring-1 ring-apple-gray-200 md:h-56 md:w-44"
             />
           ) : (
-            <div className="flex h-36 w-36 items-center justify-center rounded-full bg-apple-gray-200 text-apple-gray-400 ring-8 ring-white md:h-44 md:w-44">
+            <div className="flex h-48 w-40 items-center justify-center rounded-lg bg-apple-gray-200 text-apple-gray-400 ring-1 ring-apple-gray-300 md:h-56 md:w-44">
               <UserRound className="h-20 w-20 md:h-24 md:w-24" />
             </div>
           )}
