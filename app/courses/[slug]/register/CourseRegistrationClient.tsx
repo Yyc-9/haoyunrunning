@@ -193,11 +193,23 @@ export default function CourseRegistrationClient({ slug, returnedFromGoogle = fa
               <div>
                 <span className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-apple-blue/10 text-apple-blue"><FileText className="h-5 w-5" /></span>
                 <h2 className="mt-5 text-2xl font-black text-apple-gray-950">官方 Google 報名表</h2>
-                <p className="mt-3 max-w-xl text-base leading-7 text-apple-gray-600">使用與網站帳號相同的電子信箱填寫。送出後，從 Google 完成頁返回本站即可查看待付款狀態。</p>
+                <p className="mt-3 max-w-xl text-base leading-7 text-apple-gray-600">使用與網站帳號相同的電子信箱填寫。送出表單並返回本站後，請點擊下方按鈕建立待付款記錄。</p>
               </div>
-              <a href={course.signupUrl} target="_blank" rel="noreferrer" className="apple-button-primary w-full gap-2 px-6 py-3 sm:w-fit">
-                填寫 Google 報名表 <ExternalLink className="h-4 w-4" />
-              </a>
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                <a href={course.signupUrl} target="_blank" rel="noreferrer" className="apple-button-primary w-full gap-2 px-6 py-3 sm:w-fit">
+                  填寫 Google 報名表 <ExternalLink className="h-4 w-4" />
+                </a>
+                {isLoggedIn ? (
+                  <button type="button" disabled={isConfirmingReturn || Boolean(enrollment)} onClick={confirmGoogleFormReturn} className="apple-button-outline w-full gap-2 px-6 py-3 disabled:cursor-not-allowed disabled:opacity-50 sm:w-fit">
+                    {isConfirmingReturn ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                    {enrollment ? '已建立報名記錄' : '我已完成表單'}
+                  </button>
+                ) : (
+                  <Link href={`/courses/${course.slug}/register?submitted=1&auth=login`} className="apple-button-outline w-full gap-2 px-6 py-3 sm:w-fit">
+                    <CheckCircle2 className="h-4 w-4" />我已完成表單
+                  </Link>
+                )}
+              </div>
             </div>
           ) : (
             <div className="py-10 text-center text-apple-gray-600">管理員尚未設定這門課程的 Google 表單。</div>
@@ -238,9 +250,13 @@ export default function CourseRegistrationClient({ slug, returnedFromGoogle = fa
                 <p className="text-sm leading-6 text-apple-gray-600">
                   {returnedFromGoogle
                     ? `尚未建立 ${user?.email} 的待付款記錄，請重新確認。`
-                    : `尚未找到 ${user?.email} 的報名記錄。完成 Google 表單後，請從完成頁返回本站。`}
+                    : `尚未找到 ${user?.email} 的報名記錄。完成 Google 表單後，請點擊「我已完成表單」。`}
                 </p>
-                <button type="button" onClick={returnedFromGoogle ? confirmGoogleFormReturn : loadRegistration} className="apple-button-outline mt-4 w-full gap-2"><RefreshCw className="h-4 w-4" />重新檢查</button>
+                <button type="button" disabled={isConfirmingReturn} onClick={confirmGoogleFormReturn} className="apple-button-primary mt-4 w-full gap-2 disabled:cursor-not-allowed disabled:opacity-50">
+                  {isConfirmingReturn ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                  我已完成表單
+                </button>
+                <button type="button" onClick={loadRegistration} className="apple-button-outline mt-3 w-full gap-2"><RefreshCw className="h-4 w-4" />重新檢查狀態</button>
               </div>
             ) : (
               <div className="mt-5">
