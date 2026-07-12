@@ -9,6 +9,59 @@ type AccountUpdateBody = {
   name?: string
   phone?: string
   pb?: string
+  nickname?: string
+  bio?: string
+  city?: string
+  runningSince?: string
+  favoriteDistance?: string
+  targetEvent?: string
+  instagram?: string
+  goal?: string
+}
+
+function cleanText(value: unknown, maxLength: number) {
+  return typeof value === 'string' ? value.trim().slice(0, maxLength) : ''
+}
+
+async function getAchievementCollection(profileId: string) {
+  if (!supabaseAdmin) return []
+
+  const [badgesResult, earnedResult] = await Promise.all([
+    supabaseAdmin
+      .from('achievement_badges')
+      .select('id, slug, name, description, unlock_hint, icon, category, rarity, display_order')
+      .eq('active', true)
+      .order('display_order', { ascending: true }),
+    supabaseAdmin
+      .from('profile_achievements')
+      .select('badge_id, reason, awarded_at')
+      .eq('profile_id', profileId),
+  ])
+
+  if (badgesResult.error) throw badgesResult.error
+  if (earnedResult.error) throw earnedResult.error
+
+  const earnedByBadge = new Map((earnedResult.data ?? []).map((item) => [item.badge_id, item]))
+  return (badgesResult.data ?? []).map((badge) => {
+    const earned = earnedByBadge.get(badge.id)
+    return {
+      slug: badge.slug,
+      name: badge.name,
+      description: badge.description,
+      unlockHint: badge.unlock_hint,
+      icon: badge.icon,
+      category: badge.category,
+      rarity: badge.rarity,
+      earned: Boolean(earned),
+      reason: earned?.reason ?? '',
+      awardedAt: earned?.awarded_at ?? null,
+    }
+  })
+}
+
+async function accountResponse(profile: Record<string, unknown>) {
+  const achievements = await getAchievementCollection(String(profile.id))
+  return NextResponse.json({ profile, achievements }, { headers: noStoreHeaders })
 }
 
 async function ensurePreferredCoachBinding(user: Awaited<ReturnType<typeof getAuthedUser>>) {
@@ -102,10 +155,10 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: updateError.message }, { status: 500 })
       }
 
-      return NextResponse.json({ profile: updatedProfile }, { headers: noStoreHeaders })
+      return accountResponse(updatedProfile)
     }
 
-    return NextResponse.json({ profile: existingProfile }, { headers: noStoreHeaders })
+    return accountResponse(existingProfile)
   }
 
   const { data: profile, error } = await supabaseAdmin
@@ -133,7 +186,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: coachBindingError.message }, { status: 500 })
   }
 
-  return NextResponse.json({ profile }, { headers: noStoreHeaders })
+  return accountResponse(profile)
 }
 
 export async function PATCH(request: NextRequest) {
@@ -150,7 +203,10 @@ export async function PATCH(request: NextRequest) {
   }
 
   const body = (await request.json().catch(() => ({}))) as AccountUpdateBody
-  const nextName = body.name?.trim()
+  const nextName = cleanText(body.name, 120)
+  const nickname = cleanText(body.nickname, 80)
+  const city = cleanText(body.city, 80)
+  const favoriteDistance = cleanText(body.favoriteDistance, 80)
 
   if (!nextName) {
     return NextResponse.json({ error: '請填寫姓名。' }, { status: 400 })
@@ -160,8 +216,16 @@ export async function PATCH(request: NextRequest) {
     .from('profiles')
     .update({
       name: nextName,
-      phone: body.phone?.trim() ?? '',
-      pb: body.pb?.trim() ?? '',
+      phone: cleanText(body.phone, 80),
+      pb: cleanText(body.pb, 120),
+      nickname,
+      bio: cleanText(body.bio, 600),
+      city,
+      running_since: cleanText(body.runningSince, 40),
+      favorite_distance: favoriteDistance,
+      target_event: cleanText(body.targetEvent, 160),
+      instagram: cleanText(body.instagram, 120).replace(/^@/, ''),
+      goal: cleanText(body.goal, 300),
       email: user.email ?? '',
     })
     .eq('id', user.id)
@@ -179,5 +243,25 @@ export async function PATCH(request: NextRequest) {
     },
   })
 
-  return NextResponse.json({ profile }, { headers: noStoreHeaders })
+  if (nickname && city && favoriteDistance) {
+    const { data: profileBadge } = await supabaseAdmin
+      .from('achievement_badges')
+      .select('id')
+      .eq('slug', 'runner-profile')
+      .eq('active', true)
+      .maybeSingle()
+
+    if (profileBadge) {
+      await supabaseAdmin.from('profile_achievements').upsert(
+        {
+          profile_id: user.id,
+          badge_id: profileBadge.id,
+          reason: '完成個人跑者資料',
+        },
+        { onConflict: 'profile_id,badge_id', ignoreDuplicates: true }
+      )
+    }
+  }
+
+  return accountResponse(profile)
 }

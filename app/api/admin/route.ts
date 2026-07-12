@@ -67,6 +67,26 @@ function payloadText(payload: Record<string, unknown> | null, key: string) {
   return typeof value === 'string' ? value.trim() : ''
 }
 
+async function awardAchievementByEmail(email: string, badgeSlug: string, reason: string, awardedBy: string) {
+  if (!supabaseAdmin || !email) return
+
+  const [{ data: profile }, { data: badge }] = await Promise.all([
+    supabaseAdmin.from('profiles').select('id').ilike('email', email.trim()).maybeSingle(),
+    supabaseAdmin.from('achievement_badges').select('id').eq('slug', badgeSlug).eq('active', true).maybeSingle(),
+  ])
+
+  if (!profile || !badge) return
+  await supabaseAdmin.from('profile_achievements').upsert(
+    {
+      profile_id: profile.id,
+      badge_id: badge.id,
+      reason,
+      awarded_by: awardedBy,
+    },
+    { onConflict: 'profile_id,badge_id', ignoreDuplicates: true }
+  )
+}
+
 type ShopOrderRow = {
   id: string
   order_number: string
@@ -875,6 +895,7 @@ export async function PATCH(request: NextRequest) {
 
     let emailMessage = ''
     if (status === 'approved' && order.email) {
+      await awardAchievementByEmail(order.email, 'first-course', `完成 ${order.preferred_course} 報名`, auth.adminProfile.id)
       emailMessage = await sendOptionalEnrollmentEmail({
         to: order.email,
         studentName: order.name,

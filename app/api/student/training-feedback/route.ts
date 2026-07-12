@@ -29,6 +29,22 @@ async function getStudent(request: NextRequest) {
   return user
 }
 
+async function awardBadge(profileId: string, slug: string, reason: string) {
+  if (!supabaseAdmin) return
+  const { data: badge } = await supabaseAdmin
+    .from('achievement_badges')
+    .select('id')
+    .eq('slug', slug)
+    .eq('active', true)
+    .maybeSingle()
+  if (!badge) return
+
+  await supabaseAdmin.from('profile_achievements').upsert(
+    { profile_id: profileId, badge_id: badge.id, reason },
+    { onConflict: 'profile_id,badge_id', ignoreDuplicates: true }
+  )
+}
+
 export async function GET(request: NextRequest) {
   if (!supabaseAdmin) {
     return NextResponse.json({ error: 'Supabase 尚未設定。' }, { status: 500 })
@@ -133,6 +149,17 @@ export async function POST(request: NextRequest) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  await awardBadge(user.id, 'first-feedback', '完成第一次訓練回報')
+
+  const { data: distances } = await supabaseAdmin
+    .from('training_feedback')
+    .select('distance_km')
+    .eq('student_id', user.id)
+  const totalDistance = (distances ?? []).reduce((sum, item) => sum + (Number(item.distance_km) || 0), 0)
+  if (totalDistance >= 100) {
+    await awardBadge(user.id, 'hundred-km', `累積訓練里程 ${totalDistance.toFixed(1)} 公里`)
   }
 
   return NextResponse.json({ feedback })

@@ -544,6 +544,13 @@ function getDefaultCoach(course: Course): Coach {
   return coachProfiles.chenShengQi
 }
 
+function getDefaultClassTime(course: Course) {
+  const isMorningClass = course.name.includes('早鳥') || course.name.includes('早晨')
+  if (isMorningClass && course.weekday.includes('六')) return '06:37'
+  if (isMorningClass) return '05:37'
+  return '19:27'
+}
+
 export const allCourses = courseGroups.flatMap((group) =>
   group.courses.map((course) => {
     const slug = courseSlug(course)
@@ -552,11 +559,7 @@ export const allCourses = courseGroups.flatMap((group) =>
     const classTime =
       course.classTime ||
       course.time ||
-      (course.name.includes('早鳥') || course.name.includes('早鳥')
-        ? '早晨團練，實際集合時間請以開課通知為準'
-        : course.name.includes('夜跑')
-          ? '晚間團練，實際集合時間請以開課通知為準'
-          : '固定每週團練，實際集合時間請以開課通知為準')
+      getDefaultClassTime(course)
     const beginnerFriendly =
       typeof course.beginnerFriendly === 'boolean'
         ? course.beginnerFriendly

@@ -12,6 +12,14 @@ export interface User {
   gender: 'male' | 'female' | 'other'
   pb: string
   avatar?: string
+  nickname?: string
+  bio?: string
+  city?: string
+  runningSince?: string
+  favoriteDistance?: string
+  targetEvent?: string
+  instagram?: string
+  goal?: string
   role?: 'student' | 'coach' | 'admin'
 }
 
@@ -37,6 +45,14 @@ type ProfilePayload = {
   phone?: string | null
   pb?: string | null
   avatar_url?: string | null
+  nickname?: string | null
+  bio?: string | null
+  city?: string | null
+  running_since?: string | null
+  favorite_distance?: string | null
+  target_event?: string | null
+  instagram?: string | null
+  goal?: string | null
 }
 
 class AccountSessionError extends Error {
@@ -149,6 +165,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       gender: 'other',
       pb: data.pb || '',
       avatar: data.avatar_url || undefined,
+      nickname: data.nickname || '',
+      bio: data.bio || '',
+      city: data.city || '',
+      runningSince: data.running_since || '',
+      favoriteDistance: data.favorite_distance || '',
+      targetEvent: data.target_event || '',
+      instagram: data.instagram || '',
+      goal: data.goal || '',
       role: data.role,
     }
 
