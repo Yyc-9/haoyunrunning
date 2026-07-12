@@ -3,6 +3,7 @@ import CourseRegistrationClient from './CourseRegistrationClient'
 
 type CourseRegistrationPageProps = {
   params: Promise<{ slug: string }>
+  searchParams: Promise<{ submitted?: string | string[] }>
 }
 
 export function generateStaticParams() {
@@ -18,7 +19,8 @@ export async function generateMetadata({ params }: CourseRegistrationPageProps) 
   }
 }
 
-export default async function CourseRegistrationPage({ params }: CourseRegistrationPageProps) {
+export default async function CourseRegistrationPage({ params, searchParams }: CourseRegistrationPageProps) {
   const { slug } = await params
-  return <CourseRegistrationClient slug={slug} />
+  const query = await searchParams
+  return <CourseRegistrationClient slug={slug} returnedFromGoogle={query.submitted === '1'} />
 }

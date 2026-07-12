@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { CheckCircle2, ExternalLink, FileText, Loader2, RefreshCw, ShieldCheck, WalletCards } from 'lucide-react'
 import { useAuth } from '@/app/providers'
@@ -22,18 +22,20 @@ const statusTone = {
   rejected: 'border-red-200 bg-red-50 text-red-800',
 } as const
 
-export default function CourseRegistrationClient({ slug }: { slug: string }) {
+export default function CourseRegistrationClient({ slug, returnedFromGoogle = false }: { slug: string; returnedFromGoogle?: boolean }) {
   const { courses } = useSiteContent()
   const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth()
   const course = useMemo(() => courses.find((item) => item.slug === slug), [courses, slug])
   const [availability, setAvailability] = useState<CourseAvailability | null>(null)
   const [enrollment, setEnrollment] = useState<MyCourseEnrollment | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isConfirmingReturn, setIsConfirmingReturn] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [transferLastFive, setTransferLastFive] = useState('')
   const [notes, setNotes] = useState('')
+  const confirmationAttemptedRef = useRef(false)
 
   const loadRegistration = useCallback(async () => {
     if (!course) return
@@ -62,8 +64,59 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
     if (!course || isAuthLoading) return
     loadRegistration()
     const timer = window.setInterval(loadRegistration, 20_000)
-    return () => window.clearInterval(timer)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') loadRegistration()
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [course, isAuthLoading, loadRegistration, user?.email])
+
+  const confirmGoogleFormReturn = useCallback(async () => {
+    if (!course) return
+    setError('')
+    setSuccess('')
+    setIsConfirmingReturn(true)
+
+    try {
+      const { data: { session } } = supabase ? await supabase.auth.getSession() : { data: { session: null } }
+      if (!session?.access_token) throw new Error('請先登入後再建立待付款記錄。')
+
+      const response = await fetch('/api/course-enrollments', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ intent: 'confirm_form_submission', courseSlug: course.slug }),
+      })
+      const payload = (await response.json().catch(() => ({}))) as RegistrationPayload
+      if (!response.ok || !payload.enrollment) throw new Error(payload.error || '建立待付款記錄失敗。')
+
+      setEnrollment(payload.enrollment)
+      setSuccess('已建立待付款記錄。完成匯款後，請填寫付款帳號後五碼。')
+    } catch (confirmError) {
+      setError(confirmError instanceof Error ? confirmError.message : '建立待付款記錄失敗。')
+    } finally {
+      setIsConfirmingReturn(false)
+    }
+  }, [course])
+
+  useEffect(() => {
+    if (
+      !returnedFromGoogle ||
+      isAuthLoading ||
+      !isLoggedIn ||
+      isLoading ||
+      enrollment ||
+      confirmationAttemptedRef.current
+    ) return
+
+    confirmationAttemptedRef.current = true
+    confirmGoogleFormReturn()
+  }, [confirmGoogleFormReturn, enrollment, isAuthLoading, isLoading, isLoggedIn, returnedFromGoogle])
 
   async function submitTransfer() {
     if (!enrollment) return
@@ -163,7 +216,17 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
               </button>
             </div>
 
-            {isAuthLoading || isLoading ? (
+            {returnedFromGoogle ? (
+              <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-bold leading-6 text-blue-800">
+                {isConfirmingReturn
+                  ? '正在建立待付款記錄…'
+                  : isLoggedIn
+                    ? '已從 Google 表單返回，系統會以目前登入信箱建立待付款記錄。'
+                    : '已從 Google 表單返回，登入後即可建立待付款記錄。'}
+              </div>
+            ) : null}
+
+            {isAuthLoading || isLoading || isConfirmingReturn ? (
               <div className="mt-5 flex items-center gap-2 text-sm text-apple-gray-600"><Loader2 className="h-4 w-4 animate-spin" />正在同步狀態</div>
             ) : !isLoggedIn ? (
               <div className="mt-5">
@@ -172,8 +235,12 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
               </div>
             ) : !enrollment ? (
               <div className="mt-5">
-                <p className="text-sm leading-6 text-apple-gray-600">尚未找到 {user?.email} 的報名記錄。完成 Google 表單後通常會在數秒內同步。</p>
-                <button type="button" onClick={loadRegistration} className="apple-button-outline mt-4 w-full gap-2"><RefreshCw className="h-4 w-4" />重新檢查</button>
+                <p className="text-sm leading-6 text-apple-gray-600">
+                  {returnedFromGoogle
+                    ? `尚未建立 ${user?.email} 的待付款記錄，請重新確認。`
+                    : `尚未找到 ${user?.email} 的報名記錄。完成 Google 表單後，請從完成頁返回本站。`}
+                </p>
+                <button type="button" onClick={returnedFromGoogle ? confirmGoogleFormReturn : loadRegistration} className="apple-button-outline mt-4 w-full gap-2"><RefreshCw className="h-4 w-4" />重新檢查</button>
               </div>
             ) : (
               <div className="mt-5">

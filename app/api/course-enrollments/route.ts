@@ -88,6 +88,99 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ availability, enrollment: data ? enrollmentPayload(data) : null })
 }
 
+export async function POST(request: NextRequest) {
+  if (!supabaseAdmin) {
+    return NextResponse.json({ error: 'Supabase 尚未設定。' }, { status: 500 })
+  }
+
+  const user = await getAuthedUser(request.headers.get('authorization'))
+  if (!user?.email) {
+    return NextResponse.json({ error: '請先使用與 Google 表單相同的信箱登入。' }, { status: 401 })
+  }
+
+  const body = (await request.json().catch(() => ({}))) as {
+    intent?: string
+    courseSlug?: string
+  }
+  const intent = cleanText(body.intent, 80)
+  const courseSlug = cleanText(body.courseSlug, 120)
+  const course = allCourses.find((item) => item.slug === courseSlug)
+
+  if (intent !== 'confirm_form_submission' || !course) {
+    return NextResponse.json({ error: '無法確認這筆課程報名。' }, { status: 400 })
+  }
+
+  const email = user.email.trim().toLowerCase()
+  const { data: activeLead, error: activeLeadError } = await supabaseAdmin
+    .from('signup_leads')
+    .select('id, course_slug, preferred_course, status, amount_text, transfer_last_five, review_note, created_at, payment_submitted_at')
+    .eq('source', 'course_payment')
+    .eq('course_slug', courseSlug)
+    .eq('email', email)
+    .in('status', ['pending_transfer', 'pending_review', 'approved'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (activeLeadError) {
+    return NextResponse.json({ error: activeLeadError.message }, { status: 500 })
+  }
+  if (activeLead) {
+    return NextResponse.json({ enrollment: enrollmentPayload(activeLead), duplicate: true })
+  }
+
+  const { count: paidCount, error: paidCountError } = await supabaseAdmin
+    .from('signup_leads')
+    .select('id', { count: 'exact', head: true })
+    .eq('source', 'course_payment')
+    .eq('course_slug', courseSlug)
+    .eq('status', 'approved')
+
+  if (paidCountError) {
+    return NextResponse.json({ error: paidCountError.message }, { status: 500 })
+  }
+  if ((paidCount ?? 0) >= COURSE_CAPACITY) {
+    return NextResponse.json({ error: '本班目前已額滿，暫時無法建立新的付款記錄。' }, { status: 409 })
+  }
+
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('name, phone')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  const formSubmittedAt = new Date().toISOString()
+  const { data, error } = await supabaseAdmin
+    .from('signup_leads')
+    .insert({
+      source: 'course_payment',
+      name:
+        cleanText(profile?.name, 200) ||
+        cleanText(user.user_metadata?.name, 200) ||
+        email.split('@')[0],
+      phone: cleanText(profile?.phone, 80),
+      email,
+      preferred_course: course.name,
+      course_slug: course.slug,
+      amount_text: course.feeNote || '依 Google 表單所示金額',
+      status: 'pending_transfer',
+      form_submitted_at: formSubmittedAt,
+      payload: {
+        provider: 'google_form_return_link',
+        confirmationMethod: 'authenticated_return_link',
+        formSubmissionVerified: false,
+      },
+    })
+    .select('id, course_slug, preferred_course, status, amount_text, transfer_last_five, review_note, created_at, payment_submitted_at')
+    .single()
+
+  if (error || !data) {
+    return NextResponse.json({ error: error?.message || '建立待付款記錄失敗。' }, { status: 500 })
+  }
+
+  return NextResponse.json({ enrollment: enrollmentPayload(data) }, { status: 201 })
+}
+
 export async function PATCH(request: NextRequest) {
   if (!supabaseAdmin) {
     return NextResponse.json({ error: 'Supabase 尚未設定。' }, { status: 500 })

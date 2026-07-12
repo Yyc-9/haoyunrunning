@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://nurturerunningteam.com').replace(/\/$/, '')
   const webhookUrl = `${siteUrl}/api/integrations/google-forms`
-  const returnUrl = `${siteUrl}/courses/${course.slug}/register?submitted=1`
+  const returnUrl = `${siteUrl}/courses/${course.slug}/register?submitted=1&auth=login`
   const courseSecret = createHmac('sha256', secret).update(course.slug).digest('hex')
   const config = JSON.stringify({ courseSlug: course.slug, webhookUrl, returnUrl, secret: courseSecret }, null, 2)
 

@@ -383,10 +383,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Supabase 尚未設定。')
     }
 
+    let redirectTo: string | undefined
+    if (typeof window !== 'undefined') {
+      const currentUrl = new URL(window.location.href)
+      currentUrl.searchParams.delete('auth')
+      redirectTo = currentUrl.pathname === '/'
+        ? `${window.location.origin}/profile`
+        : currentUrl.toString()
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/profile` : undefined,
+        redirectTo,
       },
     })
 
