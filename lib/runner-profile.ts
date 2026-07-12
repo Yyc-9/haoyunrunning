@@ -224,13 +224,23 @@ export function getTargetEventLabel(value: string) {
   return value
 }
 
-export function getRaceCountdown(race: RaceEvent, today = new Date()) {
-  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()
+export function getRaceCountdown(race: RaceEvent, now = new Date()) {
   const raceTime = new Date(`${race.date}T00:00:00+08:00`).getTime()
-  const days = Math.ceil((raceTime - todayStart) / 86_400_000)
-  if (days < 0) return { days, label: '賽事已結束' }
-  if (days === 0) return { days, label: '今天開跑' }
-  return { days, label: `倒數 ${days} 天` }
+  const raceDayEnd = new Date(`${race.date}T23:59:59+08:00`).getTime()
+  const remainingSeconds = Math.floor((raceTime - now.getTime()) / 1000)
+
+  if (remainingSeconds <= 0) {
+    if (now.getTime() <= raceDayEnd) return { days: 0, hours: 0, minutes: 0, seconds: 0, label: '今天開跑' }
+    return { days: -1, hours: 0, minutes: 0, seconds: 0, label: '賽事已結束' }
+  }
+
+  const days = Math.floor(remainingSeconds / 86_400)
+  const hours = Math.floor((remainingSeconds % 86_400) / 3_600)
+  const minutes = Math.floor((remainingSeconds % 3_600) / 60)
+  const seconds = remainingSeconds % 60
+  const time = [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':')
+
+  return { days, hours, minutes, seconds, label: `倒數 ${days} 天 ${time}` }
 }
 
 export function parsePhone(value: string) {

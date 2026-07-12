@@ -554,6 +554,14 @@ function getDefaultClassTime(course: Course) {
   return '19:27（1.5-2 小時）'
 }
 
+function getDefaultMeetingPoint(course: Course) {
+  if (course.location.includes('台北')) return '台大田徑場'
+  if (course.location === '竹北') return '竹縣第一運動場'
+  if (course.location === '竹南') return '竹南運動公園田徑場'
+  if (course.location === '新竹' || course.location === '新竹市') return '竹市體育場'
+  return `${course.location} 指定集合點，報名後通知`
+}
+
 export const allCourses = courseGroups.flatMap((group) =>
   group.courses.map((course) => {
     const slug = courseSlug(course)
@@ -583,7 +591,7 @@ export const allCourses = courseGroups.flatMap((group) =>
       trainingGoals,
       classTime,
       time: course.time || classTime,
-      meetingPoint: course.meetingPoint || `${course.location} 指定集合點，報名後通知`,
+      meetingPoint: course.meetingPoint || getDefaultMeetingPoint(course),
       beginnerFriendly,
       isBeginnerFriendly: beginnerFriendly,
       priceNote: course.priceNote || course.feeNote || '費用與名額請透過 Instagram 諮詢',

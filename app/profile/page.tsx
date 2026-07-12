@@ -53,6 +53,7 @@ export default function ProfilePage() {
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [isAccountLoading, setIsAccountLoading] = useState(true)
   const [error, setError] = useState('')
+  const [countdownNow, setCountdownNow] = useState<Date | null>(null)
 
   const loadAccount = useCallback(async () => {
     if (!supabase || !isLoggedIn) return
@@ -77,11 +78,17 @@ export default function ProfilePage() {
     if (!isLoading && isLoggedIn) loadAccount()
   }, [isLoading, isLoggedIn, loadAccount])
 
+  useEffect(() => {
+    setCountdownNow(new Date())
+    const timer = window.setInterval(() => setCountdownNow(new Date()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+
   const earnedCount = useMemo(() => achievements.filter((badge) => badge.earned).length, [achievements])
   const completion = achievements.length ? Math.round((earnedCount / achievements.length) * 100) : 0
   const displayName = profile.nickname || profile.name || user?.name || '好運會員'
   const race = getRaceEvent(profile.target_event)
-  const raceCountdown = race ? getRaceCountdown(race) : null
+  const raceCountdown = race && countdownNow ? getRaceCountdown(race, countdownNow) : null
   const profileFields = [profile.nickname, profile.city, profile.running_since, profile.favorite_distance, profile.pb, profile.goal, profile.bio]
   const profileCompletion = Math.round((profileFields.filter(Boolean).length / profileFields.length) * 100)
 
@@ -139,7 +146,7 @@ export default function ProfilePage() {
 
         <section className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-6">
-            <div className="flex flex-wrap items-end justify-between gap-2"><div><p className="text-xs font-black text-apple-blue">NEXT RACE</p><h2 className="mt-1 text-xl font-black text-black sm:text-2xl">目標賽事</h2></div>{raceCountdown ? <span className="rounded-full bg-black px-3 py-1.5 text-xs font-black text-white">{raceCountdown.label}</span> : null}</div>
+            <div className="flex flex-wrap items-end justify-between gap-2"><div><p className="text-xs font-black text-apple-blue">NEXT RACE</p><h2 className="mt-1 text-xl font-black text-black sm:text-2xl">目標賽事</h2></div>{raceCountdown ? <span className="whitespace-nowrap rounded-full bg-black px-3 py-1.5 font-mono text-xs font-black tabular-nums text-white">{raceCountdown.label}</span> : null}</div>
             <p className="mt-3 text-sm leading-6 text-apple-gray-600">{getTargetEventLabel(profile.target_event) || '尚未選擇目標賽事。可到修改頁從最新賽事目錄中選擇。'}</p>
             {race ? <a href={race.officialUrl} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 text-sm font-black text-black">查看官方資訊<ExternalLink className="h-4 w-4" /></a> : null}
           </div>
