@@ -7,13 +7,6 @@ import { useLanguage } from '@/app/language-context'
 import { useSiteContent } from '@/app/site-content-provider'
 
 const weekdays = ['週一', '週二', '週三', '週四', '週五', '週六', '週日'] as const
-const scheduleRows = [
-  { period: '上午', time: '05:37' },
-  { period: '上午', time: '06:37' },
-  { period: '中午', time: '12:00' },
-  { period: '晚上', time: '19:07' },
-  { period: '晚上', time: '19:27' },
-] as const
 
 type LevelFilter = 'all' | 'beginner' | 'advanced' | 'elite'
 
@@ -37,6 +30,18 @@ function getCourseTone(level: Exclude<LevelFilter, 'all'>) {
   return 'border-emerald-200 bg-emerald-50 text-emerald-950'
 }
 
+function getCourseTime(classTime: string) {
+  return classTime.match(/(?:[01]\d|2[0-3]):[0-5]\d/)?.[0] ?? null
+}
+
+function getSchedulePeriod(time: string) {
+  const hour = Number(time.slice(0, 2))
+  if (hour < 12) return '上午'
+  if (hour < 14) return '中午'
+  if (hour < 18) return '下午'
+  return '晚上'
+}
+
 export default function CoursesTable() {
   const { language } = useLanguage()
   const { courses } = useSiteContent()
@@ -51,11 +56,23 @@ export default function CoursesTable() {
     return true
   }), [cityFilter, courses, levelFilter])
 
+  const scheduleRows = useMemo(() => {
+    const times = new Set<string>()
+    filteredCourses.forEach((course) => {
+      const time = getCourseTime(course.classTime)
+      if (time) times.add(time)
+    })
+    return [...times]
+      .sort((a, b) => a.localeCompare(b))
+      .map((time) => ({ period: getSchedulePeriod(time), time }))
+  }, [filteredCourses])
+
   const coursesBySlot = useMemo(() => {
     const slots = new Map<string, typeof courses>()
     filteredCourses.forEach((course) => {
       const weekday = course.weekday.replace('周', '週')
-      const time = course.classTime.match(/\d{2}:\d{2}/)?.[0] ?? '19:27'
+      const time = getCourseTime(course.classTime)
+      if (!time) return
       const key = `${weekday}-${time}`
       slots.set(key, [...(slots.get(key) ?? []), course])
     })
@@ -127,7 +144,10 @@ export default function CoursesTable() {
                               <p className="text-sm font-black leading-5">{localeText(getCourseShortName(course.name))}</p>
                               <ArrowUpRight className="h-4 w-4 shrink-0 opacity-45 transition group-hover:opacity-100" />
                             </div>
-                            <p className="mt-2 flex items-center gap-1 text-xs font-bold opacity-70"><MapPin className="h-3.5 w-3.5" />{localeText(course.location)}</p>
+                            <p className="mt-2 flex items-start gap-1 text-xs font-bold leading-4 opacity-70">
+                              <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                              <span>{localeText(course.location)} · {localeText(course.meetingPoint)}</span>
+                            </p>
                             {duration ? <p className="mt-1 text-[11px] font-bold opacity-65">{duration}</p> : null}
                             <p className="mt-2 text-[11px] font-semibold opacity-60">{localeText(course.period)}</p>
                           </Link>

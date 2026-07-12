@@ -146,6 +146,7 @@ export default function AdminContentManager({ content, courses, runAction }: Adm
   const [localError, setLocalError] = useState('')
   const [scriptLoading, setScriptLoading] = useState(false)
   const [scriptMessage, setScriptMessage] = useState('')
+  const [courseMessage, setCourseMessage] = useState('')
 
   useEffect(() => {
     setSlides(content.heroSlides)
@@ -233,9 +234,21 @@ export default function AdminContentManager({ content, courses, runAction }: Adm
 
   async function saveCourse() {
     if (!selectedCourse) return
+    setLocalError('')
+    setCourseMessage('')
+    if (!/^週[一二三四五六日]$/.test(String(draft.weekday ?? '').replace('周', '週'))) {
+      setLocalError('請選擇正確的上課星期。')
+      return
+    }
+    if (!/(?:[01]\d|2[0-3]):[0-5]\d/.test(String(draft.classTime ?? ''))) {
+      setLocalError('上課時間請包含 24 小時制時間，例如 19:27（1.5-2 小時）。')
+      return
+    }
     const nextOverrides = { ...courseOverrides, [selectedCourse.slug]: draft }
+    const saved = await runAction(`course-${selectedCourse.slug}`, { action: 'save_site_content', section: 'course_overrides', value: nextOverrides })
+    if (!saved) return
     setCourseOverrides(nextOverrides)
-    await runAction(`course-${selectedCourse.slug}`, { action: 'save_site_content', section: 'course_overrides', value: nextOverrides })
+    setCourseMessage('已發布至訓練課程、訓練日程表、課程詳情與報名頁。')
   }
 
   const saveButton = (id: string, section: string, value: unknown, label = '儲存並發布') => (
@@ -313,7 +326,28 @@ export default function AdminContentManager({ content, courses, runAction }: Adm
 
         {mode === 'testimonials' ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('學員見證','管理見證頁首屏、成長路徑與 Instagram 引導文案。','/testimonials')}<div className="grid gap-4 p-5 md:grid-cols-2">{([['eyebrow','首屏小標'],['title','首屏標題'],['description','首屏說明'],['pathLabel','成長路徑小標'],['pathTitle','成長路徑標題'],['pathDescription','成長路徑說明'],['ctaLabel','結尾小標'],['ctaTitle','結尾標題'],['ctaDescription','結尾說明']] as const).map(([key,label])=><Field key={key} label={label} wide={['description','pathTitle','pathDescription','ctaTitle','ctaDescription'].includes(key)}>{['description','pathDescription','ctaDescription'].includes(key)?<textarea rows={4} value={testimonials[key]} onChange={(e)=>setTestimonials((c)=>({...c,[key]:e.target.value}))} className="apple-input resize-y" />:<input value={testimonials[key]} onChange={(e)=>setTestimonials((c)=>({...c,[key]:e.target.value}))} className="apple-input" />}</Field>)}<div className="md:col-span-2"><h3 className="mb-3 font-black">三段成長路徑</h3>{testimonials.themes.map((item,index)=><div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2"><input value={item.title} onChange={(e)=>setTestimonials((c)=>({...c,themes:c.themes.map((x,i)=>i===index?{...x,title:e.target.value}:x)}))} className="apple-input" /><input value={item.description} onChange={(e)=>setTestimonials((c)=>({...c,themes:c.themes.map((x,i)=>i===index?{...x,description:e.target.value}:x)}))} className="apple-input" /></div>)}</div></div><div className="border-t border-black/10 p-5 text-right">{saveButton('save-testimonials','testimonials_content',testimonials)}</div></div> : null}
 
-        {mode === 'courses' && selectedCourse ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('課程資料管理','修改會同步到首頁課程預覽、課程列表、報名入口與課程詳情頁。','/courses')}<div className="grid gap-4 p-5 md:grid-cols-2"><Field label="選擇課程" wide><select value={selectedSlug} onChange={(e)=>setSelectedSlug(e.target.value)} className="apple-input">{courses.map((course)=><option key={course.slug} value={course.slug}>{course.name}</option>)}</select></Field>{([['name','課程名稱'],['weekday','星期'],['location','城市 / 地點'],['period','課程週期'],['classTime','上課時間'],['meetingPoint','集合地點'],['feeNote','費用說明'],['targetAudience','適合對象'],['focus','訓練方向'],['signupUrl','線上報名連結']] as const).map(([field,label])=><Field key={field} label={label} wide={['meetingPoint','targetAudience','focus','signupUrl'].includes(field)}><input type={field === 'signupUrl' ? 'url' : 'text'} value={String(draft[field]??'')} onChange={(e)=>setDraft((c)=>({...c,[field]:e.target.value}))} className="apple-input" placeholder={field === 'signupUrl' ? 'https://forms.gle/...' : undefined} /></Field>)}<label className="flex items-center gap-3 text-sm font-bold"><input type="checkbox" checked={draft.active!==false} onChange={(e)=>setDraft((c)=>({...c,active:e.target.checked}))} className="h-4 w-4" />這門課程對外顯示</label><div className="flex flex-wrap gap-2"><button type="button" onClick={saveCourse} className="apple-button-primary gap-2"><Save className="h-4 w-4" />儲存課程資料</button><button type="button" disabled={scriptLoading} onClick={copyGoogleFormsScript} className="apple-button-outline gap-2"><Copy className="h-4 w-4" />{scriptLoading?'正在產生':'複製 Apps Script'}</button></div>{scriptMessage?<p className="md:col-span-2 text-sm font-bold text-emerald-700">{scriptMessage}</p>:null}</div></div> : null}
+        {mode === 'courses' && selectedCourse ? (
+          <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
+            {panelHeader('課程資料管理', '在這裡儲存後，會同步發布到首頁課程預覽、訓練課程、訓練日程表、課程詳情與報名頁。', '/courses')}
+            <div className="grid gap-4 p-5 md:grid-cols-2">
+              <Field label="選擇課程" wide><select value={selectedSlug} onChange={(e) => { setSelectedSlug(e.target.value); setCourseMessage('') }} className="apple-input">{courses.map((course) => <option key={course.slug} value={course.slug}>{course.name}</option>)}</select></Field>
+              <Field label="課程名稱"><input value={String(draft.name ?? '')} onChange={(e) => setDraft((current) => ({ ...current, name: e.target.value }))} className="apple-input" /></Field>
+              <Field label="星期"><select value={String(draft.weekday ?? '').replace('周', '週')} onChange={(e) => setDraft((current) => ({ ...current, weekday: e.target.value }))} className="apple-input"><option value="">請選擇星期</option>{['週一', '週二', '週三', '週四', '週五', '週六', '週日'].map((weekday) => <option key={weekday} value={weekday}>{weekday}</option>)}</select></Field>
+              <Field label="城市 / 地點"><input value={String(draft.location ?? '')} onChange={(e) => setDraft((current) => ({ ...current, location: e.target.value }))} className="apple-input" /></Field>
+              <Field label="課程週期"><input value={String(draft.period ?? '')} onChange={(e) => setDraft((current) => ({ ...current, period: e.target.value }))} className="apple-input" placeholder="例如 7/14 - 9/29" /></Field>
+              <Field label="上課時間"><input value={String(draft.classTime ?? '')} onChange={(e) => setDraft((current) => ({ ...current, classTime: e.target.value }))} className="apple-input" placeholder="例如 19:27（1.5-2 小時）" /></Field>
+              <Field label="集合地點" wide><input value={String(draft.meetingPoint ?? '')} onChange={(e) => setDraft((current) => ({ ...current, meetingPoint: e.target.value }))} className="apple-input" /></Field>
+              <Field label="費用說明"><input value={String(draft.feeNote ?? '')} onChange={(e) => setDraft((current) => ({ ...current, feeNote: e.target.value }))} className="apple-input" /></Field>
+              <Field label="適合對象" wide><input value={String(draft.targetAudience ?? '')} onChange={(e) => setDraft((current) => ({ ...current, targetAudience: e.target.value }))} className="apple-input" /></Field>
+              <Field label="訓練方向" wide><input value={String(draft.focus ?? '')} onChange={(e) => setDraft((current) => ({ ...current, focus: e.target.value }))} className="apple-input" /></Field>
+              <Field label="線上報名連結" wide><input type="url" value={String(draft.signupUrl ?? '')} onChange={(e) => setDraft((current) => ({ ...current, signupUrl: e.target.value }))} className="apple-input" placeholder="https://forms.gle/..." /></Field>
+              <label className="flex items-center gap-3 text-sm font-bold"><input type="checkbox" checked={draft.active !== false} onChange={(e) => setDraft((current) => ({ ...current, active: e.target.checked }))} className="h-4 w-4" />這門課程對外顯示</label>
+              <div className="flex flex-wrap gap-2"><button type="button" onClick={saveCourse} className="apple-button-primary gap-2"><Save className="h-4 w-4" />儲存並發布至課程與日程表</button><button type="button" disabled={scriptLoading} onClick={copyGoogleFormsScript} className="apple-button-outline gap-2"><Copy className="h-4 w-4" />{scriptLoading ? '正在產生' : '複製 Apps Script'}</button></div>
+              {courseMessage ? <p className="md:col-span-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">{courseMessage}</p> : null}
+              {scriptMessage ? <p className="md:col-span-2 text-sm font-bold text-emerald-700">{scriptMessage}</p> : null}
+            </div>
+          </div>
+        ) : null}
       </div>
     </section>
   )
