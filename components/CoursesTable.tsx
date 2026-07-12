@@ -11,6 +11,7 @@ const scheduleRows = [
   { period: '上午', time: '05:37' },
   { period: '上午', time: '06:37' },
   { period: '中午', time: '12:00' },
+  { period: '晚上', time: '19:07' },
   { period: '晚上', time: '19:27' },
 ] as const
 
@@ -119,6 +120,7 @@ export default function CoursesTable() {
                     <div className="space-y-2">
                       {slotCourses.map((course) => {
                         const level = getCourseLevel(course.name)
+                        const duration = course.classTime.match(/（(.+?)）/)?.[1] ?? ''
                         return (
                           <Link key={course.slug} href={`/courses/${course.slug}`} className={`group block rounded-lg border p-3 transition hover:-translate-y-0.5 hover:shadow-md ${getCourseTone(level)}`}>
                             <div className="flex items-start justify-between gap-2">
@@ -126,6 +128,7 @@ export default function CoursesTable() {
                               <ArrowUpRight className="h-4 w-4 shrink-0 opacity-45 transition group-hover:opacity-100" />
                             </div>
                             <p className="mt-2 flex items-center gap-1 text-xs font-bold opacity-70"><MapPin className="h-3.5 w-3.5" />{localeText(course.location)}</p>
+                            {duration ? <p className="mt-1 text-[11px] font-bold opacity-65">{duration}</p> : null}
                             <p className="mt-2 text-[11px] font-semibold opacity-60">{localeText(course.period)}</p>
                           </Link>
                         )

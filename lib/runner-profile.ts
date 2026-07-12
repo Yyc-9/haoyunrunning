@@ -13,6 +13,10 @@ export type AccountProfile = {
   favorite_distance: string
   target_event: string
   instagram: string
+  facebook: string
+  invoice_type: 'none' | 'carrier' | 'tax_id'
+  invoice_carrier: string
+  tax_id: string
 }
 
 export type Achievement = {
@@ -36,6 +40,7 @@ export type RaceEvent = {
   distances: string
   officialUrl: string
   source: string
+  region: '台灣' | '亞洲' | '大洋洲' | '歐洲' | '北美洲'
 }
 
 export const emptyProfile: AccountProfile = {
@@ -53,6 +58,10 @@ export const emptyProfile: AccountProfile = {
   favorite_distance: '',
   target_event: '',
   instagram: '',
+  facebook: '',
+  invoice_type: 'none',
+  invoice_carrier: '',
+  tax_id: '',
 }
 
 export const countryCodes = [
@@ -83,6 +92,36 @@ export const goalOptions = [
 
 export const raceEvents: RaceEvent[] = [
   {
+    id: 'sydney-marathon-2026',
+    name: '2026 TCS 雪梨馬拉松',
+    date: '2026-08-30',
+    city: '澳洲雪梨',
+    distances: '42.195K',
+    officialUrl: 'https://www.tcssydneymarathon.com/',
+    source: 'TCS Sydney Marathon 官方資訊',
+    region: '大洋洲',
+  },
+  {
+    id: 'berlin-marathon-2026',
+    name: '2026 BMW 柏林馬拉松',
+    date: '2026-09-27',
+    city: '德國柏林',
+    distances: '42.195K',
+    officialUrl: 'https://www.bmw-berlin-marathon.com/en/',
+    source: 'BMW BERLIN-MARATHON 官方資訊',
+    region: '歐洲',
+  },
+  {
+    id: 'chicago-marathon-2026',
+    name: '2026 芝加哥馬拉松',
+    date: '2026-10-11',
+    city: '美國芝加哥',
+    distances: '42.195K',
+    officialUrl: 'https://www.chicagomarathon.com/runners/runner-information/future-event-dates/',
+    source: 'Bank of America Chicago Marathon 官方資訊',
+    region: '北美洲',
+  },
+  {
     id: 'taiwan-national-park-2026',
     name: '2026 臺灣國家公園馬拉松－陽明山',
     date: '2026-11-01',
@@ -90,6 +129,17 @@ export const raceEvents: RaceEvent[] = [
     distances: '馬拉松／路跑組',
     officialUrl: 'https://www.taiwan.nps.gov.tw/home/zh-tw/news/33509.html',
     source: '臺灣國家公園官方資訊',
+    region: '台灣',
+  },
+  {
+    id: 'new-york-city-marathon-2026',
+    name: '2026 紐約市馬拉松',
+    date: '2026-11-01',
+    city: '美國紐約',
+    distances: '42.195K',
+    officialUrl: 'https://www.nyrr.org/tcsnycmarathon',
+    source: 'New York Road Runners 官方資訊',
+    region: '北美洲',
   },
   {
     id: 'garmin-run-taipei-2026',
@@ -99,6 +149,7 @@ export const raceEvents: RaceEvent[] = [
     distances: '5K／10K／21K',
     officialUrl: 'https://www.garmin.com.tw/news/newscenter/news-2026-may-garmin-run/',
     source: 'Garmin 台灣官方資訊',
+    region: '台灣',
   },
   {
     id: 'hsinchu-city-marathon-2026',
@@ -108,6 +159,17 @@ export const raceEvents: RaceEvent[] = [
     distances: '4K／9K／21K／42.195K',
     officialUrl: 'https://hsinchucitymarathon.com/tw/competition-introduction/registration-information',
     source: '新竹城市馬拉松官方資訊',
+    region: '台灣',
+  },
+  {
+    id: 'valencia-marathon-2026',
+    name: '2026 瓦倫西亞馬拉松',
+    date: '2026-12-06',
+    city: '西班牙瓦倫西亞',
+    distances: '42.195K',
+    officialUrl: 'https://www.valenciaciudaddelrunning.com/en/evento/maraton-valencia/',
+    source: 'Valencia Ciudad del Running 官方資訊',
+    region: '歐洲',
   },
   {
     id: 'taipei-marathon-2026',
@@ -117,6 +179,7 @@ export const raceEvents: RaceEvent[] = [
     distances: '21K／42.195K',
     officialUrl: 'https://www.taipeicitymarathon.com/',
     source: '臺北馬拉松官方資訊',
+    region: '台灣',
   },
   {
     id: 'kinmen-marathon-2027',
@@ -126,8 +189,21 @@ export const raceEvents: RaceEvent[] = [
     distances: '4K／10K／21K／42.195K',
     officialUrl: 'https://www.sportsnet.org.tw/20270117_web/',
     source: '中華民國路跑協會官方資訊',
+    region: '台灣',
+  },
+  {
+    id: 'tokyo-marathon-2027',
+    name: '2027 東京馬拉松',
+    date: '2027-03-07',
+    city: '日本東京',
+    distances: '42.195K',
+    officialUrl: 'https://www.marathon.tokyo/en/about/outline/',
+    source: 'Tokyo Marathon Foundation 官方資訊',
+    region: '亞洲',
   },
 ]
+
+export const raceRegionOptions: RaceEvent['region'][] = ['台灣', '亞洲', '大洋洲', '歐洲', '北美洲']
 
 export function getUpcomingRaceEvents(today = new Date()) {
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()
@@ -146,6 +222,15 @@ export function getTargetEventLabel(value: string) {
   if (race) return `${race.name} · ${race.date.replaceAll('-', '/')} · ${race.city}`
   if (value.startsWith('custom:')) return value.slice(7)
   return value
+}
+
+export function getRaceCountdown(race: RaceEvent, today = new Date()) {
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()
+  const raceTime = new Date(`${race.date}T00:00:00+08:00`).getTime()
+  const days = Math.ceil((raceTime - todayStart) / 86_400_000)
+  if (days < 0) return { days, label: '賽事已結束' }
+  if (days === 0) return { days, label: '今天開跑' }
+  return { days, label: `倒數 ${days} 天` }
 }
 
 export function parsePhone(value: string) {

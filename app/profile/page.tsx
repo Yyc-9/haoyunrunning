@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/app/providers'
 import {
-  emptyProfile, getRaceEvent, getTargetEventLabel, type AccountProfile, type Achievement,
+  emptyProfile, getRaceCountdown, getRaceEvent, getTargetEventLabel, type AccountProfile, type Achievement,
 } from '@/lib/runner-profile'
 import { supabase } from '@/lib/supabase'
 
@@ -81,6 +81,7 @@ export default function ProfilePage() {
   const completion = achievements.length ? Math.round((earnedCount / achievements.length) * 100) : 0
   const displayName = profile.nickname || profile.name || user?.name || '好運會員'
   const race = getRaceEvent(profile.target_event)
+  const raceCountdown = race ? getRaceCountdown(race) : null
   const profileFields = [profile.nickname, profile.city, profile.running_since, profile.favorite_distance, profile.pb, profile.goal, profile.bio]
   const profileCompletion = Math.round((profileFields.filter(Boolean).length / profileFields.length) * 100)
 
@@ -138,14 +139,13 @@ export default function ProfilePage() {
 
         <section className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-6">
-            <p className="text-xs font-black text-apple-blue">NEXT RACE</p>
-            <h2 className="mt-1 text-xl font-black text-black sm:text-2xl">目標賽事</h2>
+            <div className="flex flex-wrap items-end justify-between gap-2"><div><p className="text-xs font-black text-apple-blue">NEXT RACE</p><h2 className="mt-1 text-xl font-black text-black sm:text-2xl">目標賽事</h2></div>{raceCountdown ? <span className="rounded-full bg-black px-3 py-1.5 text-xs font-black text-white">{raceCountdown.label}</span> : null}</div>
             <p className="mt-3 text-sm leading-6 text-apple-gray-600">{getTargetEventLabel(profile.target_event) || '尚未選擇目標賽事。可到修改頁從最新賽事目錄中選擇。'}</p>
             {race ? <a href={race.officialUrl} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 text-sm font-black text-black">查看官方資訊<ExternalLink className="h-4 w-4" /></a> : null}
           </div>
           <div className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-6">
             <p className="text-xs font-black text-apple-blue">CONTACT</p><h2 className="mt-1 text-xl font-black text-black sm:text-2xl">聯絡資料</h2>
-            <div className="mt-3 space-y-2 text-sm text-apple-gray-600"><p>{profile.phone || '尚未填寫電話'}</p><p>{profile.instagram ? `@${profile.instagram}` : '尚未填寫 Instagram'}</p></div>
+            <div className="mt-3 space-y-2 text-sm text-apple-gray-600"><p>{profile.phone || '尚未填寫電話'}</p><p>{profile.instagram ? `Instagram · @${profile.instagram}` : '尚未填寫 Instagram'}</p><p>{profile.facebook ? `Facebook · ${profile.facebook}` : '尚未填寫 Facebook'}</p></div>
           </div>
         </section>
 

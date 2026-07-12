@@ -7,8 +7,8 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/app/providers'
 import {
   cityOptions, countryCodes, emptyProfile, favoriteDistanceOptions, formatPb, formatPhone,
-  getRaceEvent, getUpcomingRaceEvents, goalOptions, parsePb, parsePhone, pbCategoryOptions,
-  runningExperienceOptions, type AccountProfile,
+  getRaceCountdown, getRaceEvent, getUpcomingRaceEvents, goalOptions, parsePb, parsePhone,
+  pbCategoryOptions, raceRegionOptions, runningExperienceOptions, type AccountProfile,
 } from '@/lib/runner-profile'
 import { supabase } from '@/lib/supabase'
 
@@ -110,6 +110,10 @@ export default function EditProfilePage() {
           targetEvent,
           goal,
           instagram: profile.instagram,
+          facebook: profile.facebook,
+          invoiceType: profile.invoice_type,
+          invoiceCarrier: profile.invoice_carrier,
+          taxId: profile.tax_id,
           bio: profile.bio,
         }),
       })
@@ -152,9 +156,12 @@ export default function EditProfilePage() {
 
             <div className="md:col-span-2"><FieldLabel>近期跑步目標</FieldLabel><select value={goalChoice} onChange={(event) => setGoalChoice(event.target.value)} className="apple-input min-h-12"><option value="">請選擇</option>{goalOptions.map((item) => <option key={item} value={item}>{item}</option>)}<option value="other">其他目標</option></select>{goalChoice === 'other' ? <input value={customGoal} onChange={(event) => setCustomGoal(event.target.value)} className="apple-input mt-2 min-h-12" placeholder="輸入你的目標" /> : null}</div>
 
-            <div className="md:col-span-2"><FieldLabel>目標賽事</FieldLabel><div className="relative"><Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-apple-gray-400" /><select value={raceChoice} onChange={(event) => setRaceChoice(event.target.value)} className="apple-input min-h-12 pl-11"><option value="">尚未決定</option>{upcomingRaces.map((race) => <option key={race.id} value={`race:${race.id}`}>{race.date.replaceAll('-', '/')} · {race.name}</option>)}<option value="custom">其他賽事</option></select></div>{raceChoice === 'custom' ? <input value={customRace} onChange={(event) => setCustomRace(event.target.value)} className="apple-input mt-2 min-h-12" placeholder="輸入賽事名稱與日期" /> : null}{selectedRace ? <div className="mt-3 rounded-md bg-emerald-50 p-3 text-sm text-emerald-950"><p className="font-black">{selectedRace.name}</p><p className="mt-1 leading-6">{selectedRace.date} · {selectedRace.city} · {selectedRace.distances}</p><a href={selectedRace.officialUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 font-black">官方資訊<ExternalLink className="h-3.5 w-3.5" /></a></div> : null}<p className="mt-2 text-xs leading-5 text-apple-gray-400">只顯示尚未結束的賽事；目錄最後核對於 2026/07/12。</p></div>
+            <div className="md:col-span-2"><FieldLabel>目標賽事</FieldLabel><div className="relative"><Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-apple-gray-400" /><select value={raceChoice} onChange={(event) => setRaceChoice(event.target.value)} className="apple-input min-h-12 pl-11"><option value="">尚未決定</option>{raceRegionOptions.map((region) => <optgroup key={region} label={region}>{upcomingRaces.filter((race) => race.region === region).map((race) => <option key={race.id} value={`race:${race.id}`}>{race.date.replaceAll('-', '/')} · {race.name}</option>)}</optgroup>)}<option value="custom">其他賽事</option></select></div>{raceChoice === 'custom' ? <input value={customRace} onChange={(event) => setCustomRace(event.target.value)} className="apple-input mt-2 min-h-12" placeholder="輸入賽事名稱與日期" /> : null}{selectedRace ? <div className="mt-3 rounded-md bg-emerald-50 p-3 text-sm text-emerald-950"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-black">{selectedRace.name}</p><span className="rounded-full bg-black px-3 py-1 text-xs font-black text-white">{getRaceCountdown(selectedRace).label}</span></div><p className="mt-1 leading-6">{selectedRace.date} · {selectedRace.city} · {selectedRace.distances}</p><a href={selectedRace.officialUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 font-black">官方資訊<ExternalLink className="h-3.5 w-3.5" /></a></div> : null}<p className="mt-2 text-xs leading-5 text-apple-gray-400">依地區整理全球賽事，只顯示尚未結束的項目；目錄最後核對於 2026/07/13。</p></div>
 
             <label><FieldLabel>Instagram</FieldLabel><div className="relative"><span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-bold text-apple-gray-400">@</span><input autoCapitalize="none" value={profile.instagram} onChange={(event) => updateField('instagram', event.target.value.replace(/^@/, ''))} className="apple-input min-h-12 pl-9" /></div></label>
+            <label><FieldLabel>Facebook</FieldLabel><input autoCapitalize="none" value={profile.facebook} onChange={(event) => updateField('facebook', event.target.value)} className="apple-input min-h-12" placeholder="名稱或個人頁連結" /></label>
+
+            <div className="md:col-span-2"><FieldLabel>發票資訊</FieldLabel><select value={profile.invoice_type} onChange={(event) => updateField('invoice_type', event.target.value as AccountProfile['invoice_type'])} className="apple-input min-h-12"><option value="none">暫不設定</option><option value="carrier">手機條碼載具</option><option value="tax_id">統一編號</option></select>{profile.invoice_type === 'carrier' ? <input value={profile.invoice_carrier} onChange={(event) => updateField('invoice_carrier', event.target.value.toUpperCase().slice(0, 8))} className="apple-input mt-2 min-h-12 font-mono" placeholder="/ABC1234" /> : null}{profile.invoice_type === 'tax_id' ? <input inputMode="numeric" value={profile.tax_id} onChange={(event) => updateField('tax_id', event.target.value.replace(/\D/g, '').slice(0, 8))} className="apple-input mt-2 min-h-12" placeholder="8 位統一編號" /> : null}<p className="mt-2 text-xs leading-5 text-apple-gray-400">這些帳務資料只會在你的登入帳戶與結帳流程中使用，不會顯示給教練或其他會員。</p></div>
             <label className="md:col-span-2"><FieldLabel>跑者自我介紹</FieldLabel><textarea maxLength={600} value={profile.bio} onChange={(event) => updateField('bio', event.target.value)} className="apple-input min-h-28 resize-y" placeholder="分享你的跑步故事" /><span className="mt-2 block text-right text-xs text-apple-gray-400">{profile.bio.length} / 600</span></label>
           </div>
 

@@ -16,7 +16,11 @@ type AccountUpdateBody = {
   favoriteDistance?: string
   targetEvent?: string
   instagram?: string
+  facebook?: string
   goal?: string
+  invoiceType?: string
+  invoiceCarrier?: string
+  taxId?: string
 }
 
 function cleanText(value: unknown, maxLength: number) {
@@ -60,8 +64,29 @@ async function getAchievementCollection(profileId: string) {
 }
 
 async function accountResponse(profile: Record<string, unknown>) {
-  const achievements = await getAchievementCollection(String(profile.id))
-  return NextResponse.json({ profile, achievements }, { headers: noStoreHeaders })
+  if (!supabaseAdmin) return NextResponse.json({ profile, achievements: [] }, { headers: noStoreHeaders })
+
+  const [achievements, billingResult] = await Promise.all([
+    getAchievementCollection(String(profile.id)),
+    supabaseAdmin
+      .from('profile_billing_preferences')
+      .select('invoice_type, invoice_carrier, tax_id')
+      .eq('profile_id', String(profile.id))
+      .maybeSingle(),
+  ])
+
+  if (billingResult.error) throw billingResult.error
+
+  return NextResponse.json({
+    profile: {
+      ...profile,
+      facebook: typeof profile.facebook === 'string' ? profile.facebook : '',
+      invoice_type: billingResult.data?.invoice_type ?? 'none',
+      invoice_carrier: billingResult.data?.invoice_carrier ?? '',
+      tax_id: billingResult.data?.tax_id ?? '',
+    },
+    achievements,
+  }, { headers: noStoreHeaders })
 }
 
 async function ensurePreferredCoachBinding(user: Awaited<ReturnType<typeof getAuthedUser>>) {
@@ -207,9 +232,24 @@ export async function PATCH(request: NextRequest) {
   const nickname = cleanText(body.nickname, 80)
   const city = cleanText(body.city, 80)
   const favoriteDistance = cleanText(body.favoriteDistance, 80)
+  const invoiceType = cleanText(body.invoiceType, 20) || 'none'
+  const invoiceCarrier = cleanText(body.invoiceCarrier, 20).toUpperCase()
+  const taxId = cleanText(body.taxId, 20)
 
   if (!nextName) {
     return NextResponse.json({ error: '請填寫姓名。' }, { status: 400 })
+  }
+
+  if (!['none', 'carrier', 'tax_id'].includes(invoiceType)) {
+    return NextResponse.json({ error: '發票選項無效。' }, { status: 400 })
+  }
+
+  if (invoiceType === 'carrier' && !/^\/[0-9A-Z.+-]{7}$/.test(invoiceCarrier)) {
+    return NextResponse.json({ error: '手機條碼載具格式應為「/」加 7 位英數字。' }, { status: 400 })
+  }
+
+  if (invoiceType === 'tax_id' && !/^\d{8}$/.test(taxId)) {
+    return NextResponse.json({ error: '統一編號必須是 8 位數字。' }, { status: 400 })
   }
 
   const { data: profile, error } = await supabaseAdmin
@@ -225,6 +265,7 @@ export async function PATCH(request: NextRequest) {
       favorite_distance: favoriteDistance,
       target_event: cleanText(body.targetEvent, 160),
       instagram: cleanText(body.instagram, 120).replace(/^@/, ''),
+      facebook: cleanText(body.facebook, 240),
       goal: cleanText(body.goal, 300),
       email: user.email ?? '',
     })
@@ -234,6 +275,20 @@ export async function PATCH(request: NextRequest) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  const { error: billingError } = await supabaseAdmin
+    .from('profile_billing_preferences')
+    .upsert({
+      profile_id: user.id,
+      invoice_type: invoiceType,
+      invoice_carrier: invoiceType === 'carrier' ? invoiceCarrier : '',
+      tax_id: invoiceType === 'tax_id' ? taxId : '',
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'profile_id' })
+
+  if (billingError) {
+    return NextResponse.json({ error: billingError.message }, { status: 500 })
   }
 
   await supabaseAdmin.auth.admin.updateUserById(user.id, {

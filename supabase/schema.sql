@@ -16,9 +16,29 @@ create table public.profiles (
   goal text default '',
   pb text default '',
   avatar_url text default '',
+  facebook text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+create table public.profile_billing_preferences (
+  profile_id uuid primary key references public.profiles(id) on delete cascade,
+  invoice_type text not null default 'none'
+    check (invoice_type in ('none', 'carrier', 'tax_id')),
+  invoice_carrier text not null default '',
+  tax_id text not null default '',
+  updated_at timestamptz not null default now()
+);
+
+alter table public.profile_billing_preferences enable row level security;
+revoke all on table public.profile_billing_preferences from anon, authenticated;
+grant select, insert, update, delete on table public.profile_billing_preferences to service_role;
+create policy "Service role manages billing preferences"
+on public.profile_billing_preferences
+for all
+to service_role
+using (true)
+with check (true);
 
 create unique index profiles_email_unique_ci_idx
 on public.profiles (lower(email))

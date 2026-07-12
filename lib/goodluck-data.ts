@@ -548,7 +548,10 @@ function getDefaultClassTime(course: Course) {
   const isMorningClass = course.name.includes('早鳥') || course.name.includes('早晨')
   if (isMorningClass && course.weekday.includes('六')) return '06:37'
   if (isMorningClass) return '05:37'
-  return '19:27'
+  const isTaipeiNightClass = course.location.includes('台北')
+  const isTuesdayHsinchuCityClass = course.weekday.includes('二') && course.location === '新竹市'
+  if (isTaipeiNightClass || isTuesdayHsinchuCityClass) return '19:07（1.5-2 小時）'
+  return '19:27（1.5-2 小時）'
 }
 
 export const allCourses = courseGroups.flatMap((group) =>
