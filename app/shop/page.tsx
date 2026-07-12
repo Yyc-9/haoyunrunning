@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, Package, Search } from 'lucide-react'
 import ShopCartDrawer from '@/components/ShopCartDrawer'
 import { defaultShopProducts, type ShopProduct } from '@/lib/shop-products'
+import { useSiteContent } from '@/app/site-content-provider'
 
 type SortOption = 'featured' | 'price-low' | 'price-high'
 
@@ -16,6 +17,7 @@ function formatPrice(product: ShopProduct) {
 }
 
 export default function ShopPage() {
+  const { pageMedia } = useSiteContent()
   const [products, setProducts] = useState<ShopProduct[]>(defaultShopProducts)
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('')
@@ -53,14 +55,19 @@ export default function ShopPage() {
   return (
     <main className="min-h-screen bg-white pt-20 sm:pt-24">
       <section className="border-b border-black/10 bg-apple-gray-50">
-        <div className="container mx-auto px-4 py-10 sm:py-14">
-          <p className="text-sm font-bold text-apple-gray-500">GOOD LUCK RUNNING SHOP</p>
-          <div className="mt-2 flex flex-col justify-between gap-4 md:flex-row md:items-end">
-            <div>
-              <h1 className="text-3xl font-black text-apple-gray-950 sm:text-4xl">好運商店</h1>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-apple-gray-600 sm:text-base">跑班服飾、配件與訓練補給。點進商品即可查看完整圖片、規格、庫存與購買選項。</p>
+        <div className="container mx-auto grid gap-6 px-4 py-8 md:grid-cols-[minmax(0,1fr)_360px] md:items-center sm:py-10">
+          <div>
+            <p className="text-sm font-bold text-apple-gray-500">GOOD LUCK RUNNING SHOP</p>
+            <div className="mt-2 flex flex-col justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-black text-apple-gray-950 sm:text-4xl">{pageMedia.shopTitle}</h1>
+                <p className="mt-3 max-w-2xl text-sm leading-7 text-apple-gray-600 sm:text-base">{pageMedia.shopSubtitle}</p>
+              </div>
+              <p className="text-sm font-semibold text-apple-gray-500">目前共 {products.length} 件商品</p>
             </div>
-            <p className="text-sm font-semibold text-apple-gray-500">目前共 {products.length} 件商品</p>
+          </div>
+          <div className="relative aspect-[16/7] overflow-hidden rounded-md border border-black/10 bg-white md:aspect-[4/3]">
+            <Image src={pageMedia.shopHero} alt={pageMedia.shopTitle} fill priority sizes="(min-width: 768px) 360px, 100vw" className="object-cover" />
           </div>
         </div>
       </section>

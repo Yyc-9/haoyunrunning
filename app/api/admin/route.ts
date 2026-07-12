@@ -4,6 +4,7 @@ import { getAdminProfile } from '@/lib/admin-auth'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { shopProductFromRow, type ShopProductRow } from '@/lib/shop-products'
 import { allCourses } from '@/lib/goodluck-data'
+import { applyCourseOverrides } from '@/lib/managed-courses'
 import {
   defaultSiteContent,
   isSafePublicUrl,
@@ -430,6 +431,7 @@ export async function GET(request: NextRequest) {
   const shopOrderItems = shopOrderItemsResult.error ? [] : (shopOrderItemsResult.data ?? []) as ShopOrderItemRow[]
   const paymentAccounts = paymentAccountsResult.error ? [] : (paymentAccountsResult.data ?? []) as PaymentAccountRow[]
   const siteContent = siteContentResult.error ? defaultSiteContent : siteContentFromRows(siteContentResult.data)
+  const managedCourses = applyCourseOverrides(siteContent.courseOverrides, { includeInactive: true })
   const coachInvites = (coachInvitesResult.data ?? []) as CoachInviteRow[]
   const coursePaymentOrders = orders.filter((order) => order.source === 'course_payment')
 
@@ -598,7 +600,7 @@ export async function GET(request: NextRequest) {
     paymentAccountCount: paymentAccounts.filter((account) => account.active).length,
   }
 
-  const courseCapacity = allCourses.map((course) => {
+  const courseCapacity = managedCourses.map((course) => {
     const courseOrders = coursePaymentOrders.filter((order) => order.course_slug === course.slug)
     const paidCount = courseOrders.filter((order) => order.status === 'approved').length
     return {
@@ -622,7 +624,7 @@ export async function GET(request: NextRequest) {
     products: shopProducts,
     paymentAccounts,
     siteContent,
-    courses: allCourses.map((course) => ({
+    courses: managedCourses.map((course) => ({
       slug: course.slug,
       name: course.name,
       weekday: course.weekday,

@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
-import { allCourses } from '@/lib/goodluck-data'
+import { getManagedCourses } from '@/lib/managed-courses-server'
 import { supabaseAdmin } from '@/lib/supabase-server'
 
 type GoogleFormWebhookBody = {
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => ({}))) as GoogleFormWebhookBody
   const courseSlug = cleanText(body.courseSlug, 120)
   const responseId = cleanText(body.responseId, 300)
-  const course = allCourses.find((item) => item.slug === courseSlug)
+  const course = (await getManagedCourses({ includeInactive: true })).find((item) => item.slug === courseSlug)
   if (!course || !responseId) {
     return NextResponse.json({ error: '課程或 Google 表單回覆編號無效。' }, { status: 400 })
   }

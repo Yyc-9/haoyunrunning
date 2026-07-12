@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminProfile } from '@/lib/admin-auth'
-import { allCourses } from '@/lib/goodluck-data'
+import { getManagedCourses } from '@/lib/managed-courses-server'
 import { getAuthedUser } from '@/lib/supabase-server'
 
 function cleanText(value: unknown, maxLength = 200) {
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
 
   const body = (await request.json().catch(() => ({}))) as { courseSlug?: string }
   const courseSlug = cleanText(body.courseSlug, 120)
-  const course = allCourses.find((item) => item.slug === courseSlug)
+  const course = (await getManagedCourses({ includeInactive: true })).find((item) => item.slug === courseSlug)
   if (!course) {
     return NextResponse.json({ error: '找不到這個課程。' }, { status: 404 })
   }

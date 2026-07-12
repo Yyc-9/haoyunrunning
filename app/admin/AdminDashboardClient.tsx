@@ -246,13 +246,14 @@ async function adminAction(body: Record<string, unknown>) {
     throw new Error(payload.error || '操作失敗。')
   }
 
-  return payload.message || '操作已完成。'
+  return payload
 }
 
 export default function AdminDashboardClient() {
   const [activeTab, setActiveTab] = useState<AdminTab>('overview')
   const [data, setData] = useState<AdminDashboardPayload | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [updatingId, setUpdatingId] = useState('')
@@ -273,23 +274,35 @@ export default function AdminDashboardClient() {
     weight: '1',
   })
 
-  const loadDashboard = useCallback(async () => {
-    setIsLoading(true)
+  const loadDashboard = useCallback(async (background = false) => {
+    if (background) setIsRefreshing(true)
+    else setIsLoading(true)
     setError('')
 
     try {
       setData(await fetchAdminDashboard())
     } catch (loadError) {
-      setData(null)
+      if (!background) setData(null)
+      else setMessage('')
       setError(loadError instanceof Error ? loadError.message : '讀取管理員後台失敗。')
     } finally {
-      setIsLoading(false)
+      if (background) setIsRefreshing(false)
+      else setIsLoading(false)
     }
   }, [])
 
   useEffect(() => {
     loadDashboard()
   }, [loadDashboard])
+
+  useEffect(() => {
+    if (!message && !(error && data)) return
+    const timer = window.setTimeout(() => {
+      setMessage('')
+      if (data) setError('')
+    }, 5000)
+    return () => window.clearTimeout(timer)
+  }, [data, error, message])
 
   const pendingOrders = useMemo(
     () => data?.orders.filter((order) => order.status === 'pending_review') ?? [],
@@ -387,9 +400,9 @@ export default function AdminDashboardClient() {
     setMessage('')
 
     try {
-      const nextMessage = await adminAction(action)
-      setMessage(nextMessage)
-      await loadDashboard()
+      const result = await adminAction(action)
+      setMessage(result.message || '操作已完成。')
+      await loadDashboard(true)
       return true
     } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : '操作失敗。')
@@ -490,9 +503,9 @@ export default function AdminDashboardClient() {
               </p>
             </div>
 
-            <button type="button" onClick={loadDashboard} className="apple-button-outline inline-flex items-center justify-center gap-2 px-5 py-3">
-              <RefreshCw className="h-4 w-4" />
-              重新整理資料
+            <button type="button" disabled={isRefreshing} onClick={() => loadDashboard(true)} className="apple-button-outline inline-flex items-center justify-center gap-2 px-5 py-3 disabled:opacity-60">
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? '正在同步' : '重新整理資料'}
             </button>
           </div>
 
@@ -520,12 +533,14 @@ export default function AdminDashboardClient() {
           </nav>
 
           {message ? (
-            <div className="mb-6 rounded-2xl bg-emerald-50 px-5 py-4 text-sm font-semibold text-emerald-700">
+            <div role="status" className="fixed right-4 top-24 z-[70] flex max-w-sm items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 shadow-lg sm:right-6">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
               {message}
             </div>
           ) : null}
           {error ? (
-            <div className="mb-6 rounded-2xl bg-red-50 px-5 py-4 text-sm font-semibold text-red-600">
+            <div role="alert" className="fixed right-4 top-24 z-[70] flex max-w-sm items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 shadow-lg sm:right-6">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
               {error}
             </div>
           ) : null}

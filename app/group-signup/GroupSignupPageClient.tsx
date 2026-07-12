@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { ArrowLeft, BookOpenCheck, CalendarDays, Instagram, UsersRound } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
 import LeadCollectionForm from '@/components/LeadCollectionForm'
-import { allCourses } from '@/lib/goodluck-data'
 import { useSiteContent } from '@/app/site-content-provider'
 
 function localizeCourseTitle(title: string, language: string) {
@@ -22,8 +21,8 @@ function localizeCourseTitle(title: string, language: string) {
 
 export default function GroupSignupPageClient() {
   const { language, t } = useLanguage()
-  const { brand } = useSiteContent()
-  const courseOptions = allCourses.map((course) => localizeCourseTitle(course.title, language))
+  const { brand, courses } = useSiteContent()
+  const courseOptions = courses.map((course) => localizeCourseTitle(course.title, language))
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">

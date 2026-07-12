@@ -5,7 +5,7 @@ import {
   registrationAmounts,
   type DirectCourseRegistration,
 } from '@/lib/course-registration-form'
-import { allCourses } from '@/lib/goodluck-data'
+import { getManagedCourses } from '@/lib/managed-courses-server'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 
 function cleanText(value: unknown, maxLength = 1000) {
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url)
   const courseSlug = cleanText(searchParams.get('courseSlug'), 120)
-  const course = allCourses.find((item) => item.slug === courseSlug)
+  const course = (await getManagedCourses()).find((item) => item.slug === courseSlug)
   if (!course) {
     return NextResponse.json({ error: '找不到這個課程。' }, { status: 404 })
   }
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
   }
   const intent = cleanText(body.intent, 80)
   const courseSlug = cleanText(body.courseSlug, 120)
-  const course = allCourses.find((item) => item.slug === courseSlug)
+  const course = (await getManagedCourses()).find((item) => item.slug === courseSlug)
 
   if (!['confirm_form_submission', 'direct_site_registration'].includes(intent) || !course) {
     return NextResponse.json({ error: '無法確認這筆課程報名。' }, { status: 400 })

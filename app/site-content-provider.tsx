@@ -1,10 +1,8 @@
 'use client'
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { allCourses } from '@/lib/goodluck-data'
 import { defaultSiteContent, type SiteContent } from '@/lib/site-content'
-
-type ManagedCourse = (typeof allCourses)[number]
+import { applyCourseOverrides, type ManagedCourse } from '@/lib/managed-courses'
 
 type SiteContentContextValue = SiteContent & {
   courses: ManagedCourse[]
@@ -12,40 +10,6 @@ type SiteContentContextValue = SiteContent & {
 }
 
 const SiteContentContext = createContext<SiteContentContextValue | null>(null)
-
-function applyCourseOverrides(content: SiteContent) {
-  return allCourses
-    .map((course) => {
-      const override = content.courseOverrides[course.slug]
-      if (!override) return course
-
-      const name = override.name || course.name
-      const location = override.location || course.location
-      const classTime = override.classTime || course.classTime
-      const focus = override.focus || course.focus
-      const feeNote = override.feeNote || course.feeNote
-      const signupUrl = override.signupUrl || course.signupUrl
-
-      return {
-        ...course,
-        ...override,
-        name,
-        title: override.name || course.title,
-        location,
-        city: location,
-        classTime,
-        time: classTime,
-        focus,
-        trainingGoal: focus,
-        trainingGoals: focus ? [focus] : course.trainingGoals,
-        feeNote,
-        priceNote: feeNote,
-        signupUrl,
-        targetAudience: override.targetAudience || course.targetAudience,
-      }
-    })
-    .filter((course) => content.courseOverrides[course.slug]?.active !== false)
-}
 
 export function SiteContentProvider({ children }: { children: React.ReactNode }) {
   const [content, setContent] = useState<SiteContent>(defaultSiteContent)
@@ -73,7 +37,7 @@ export function SiteContentProvider({ children }: { children: React.ReactNode })
   }, [])
 
   const value = useMemo(
-    () => ({ ...content, courses: applyCourseOverrides(content), isLoading }),
+    () => ({ ...content, courses: applyCourseOverrides(content.courseOverrides), isLoading }),
     [content, isLoading]
   )
 
