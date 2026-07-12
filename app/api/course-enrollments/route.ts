@@ -8,6 +8,16 @@ import {
 import { getManagedCourses } from '@/lib/managed-courses-server'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 
+async function getLegacyStudent(email: string) {
+  const { data, error } = await supabaseAdmin!
+    .from('legacy_students')
+    .select('name')
+    .eq('email', email)
+    .maybeSingle()
+
+  return { data, error }
+}
+
 function cleanText(value: unknown, maxLength = 1000) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : ''
 }
@@ -73,24 +83,35 @@ export async function GET(request: NextRequest) {
 
   const user = await getAuthedUser(request.headers.get('authorization'))
   if (!user?.email) {
-    return NextResponse.json({ availability, enrollment: null })
+    return NextResponse.json({ availability, enrollment: null, legacyStudent: null })
   }
 
-  const { data, error } = await supabaseAdmin
-    .from('signup_leads')
-    .select('id, course_slug, preferred_course, status, amount_text, transfer_last_five, review_note, created_at, payment_submitted_at')
-    .eq('source', 'course_payment')
-    .eq('course_slug', courseSlug)
-    .eq('email', user.email.trim().toLowerCase())
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  const email = user.email.trim().toLowerCase()
+  const [enrollmentResult, legacyResult] = await Promise.all([
+    supabaseAdmin
+      .from('signup_leads')
+      .select('id, course_slug, preferred_course, status, amount_text, transfer_last_five, review_note, created_at, payment_submitted_at')
+      .eq('source', 'course_payment')
+      .eq('course_slug', courseSlug)
+      .eq('email', email)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    getLegacyStudent(email),
+  ])
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  if (enrollmentResult.error || legacyResult.error) {
+    return NextResponse.json({ error: enrollmentResult.error?.message || legacyResult.error?.message }, { status: 500 })
   }
 
-  return NextResponse.json({ availability, enrollment: data ? enrollmentPayload(data) : null })
+  return NextResponse.json({
+    availability,
+    enrollment: enrollmentResult.data ? enrollmentPayload(enrollmentResult.data) : null,
+    legacyStudent: {
+      matched: Boolean(legacyResult.data),
+      name: cleanText(legacyResult.data?.name, 200),
+    },
+  })
 }
 
 export async function POST(request: NextRequest) {
@@ -159,8 +180,12 @@ export async function POST(request: NextRequest) {
 
   if (intent === 'direct_site_registration') {
     const registration = body.registration ?? {}
-    const studentType = registration.studentType === 'returning' ? 'returning' : registration.studentType === 'new' ? 'new' : ''
-    const studentName = cleanText(registration.studentName, 200)
+    const legacyResult = await getLegacyStudent(email)
+    if (legacyResult.error) {
+      return NextResponse.json({ error: legacyResult.error.message }, { status: 500 })
+    }
+    const studentType = legacyResult.data ? 'returning' : 'new'
+    const studentName = cleanText(registration.studentName, 200) || cleanText(legacyResult.data?.name, 200)
     const phone = cleanText(registration.phone, 80)
     const lineId = cleanText(registration.lineId, 120)
     const emergencyContactName = cleanText(registration.emergencyContactName, 200)
@@ -186,7 +211,9 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json({ error: '請完成所有新生必填資料。' }, { status: 400 })
     }
-    if (!registrationAmounts.includes(amount as (typeof registrationAmounts)[number])) {
+    const expectedAmount = studentType === 'returning' ? registrationAmounts[0] : registrationAmounts[1]
+    const insertAmount = registrationAmounts[2]
+    if (amount !== expectedAmount && amount !== insertAmount) {
       return NextResponse.json({ error: '請選擇正確的匯款金額。' }, { status: 400 })
     }
     if (!/^\d{5}$/.test(transferLastFive)) {
@@ -228,6 +255,7 @@ export async function POST(request: NextRequest) {
         payload: {
           provider: 'website_direct_form',
           studentType,
+          legacyStudentMatched: Boolean(legacyResult.data),
           lineId,
           emergencyContactName,
           emergencyContactPhone,

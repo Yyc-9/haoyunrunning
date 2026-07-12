@@ -18,7 +18,6 @@ export const coursePolicyRules = [
   '本課程教練配置基本為：一位教練，如總教練為培育其他助教，則將安排一位（或以上）助教協助課程。',
   '以上事項如有未盡事宜，得隨時修訂之，本活動單位保有更動修改之權利。',
   '完成報名繳費之參加者，視為同意以上聲明。',
-  '任何報名相關疑問，歡迎私訊洽詢：好運官方 IG、【陳盛琦】臉書專頁、【chichi_moment】IG 粉專。',
 ] as const
 
 export const registrationAmounts = ['舊生價 $4950', '新生價 $5500', '插班生（小編為您計算）'] as const

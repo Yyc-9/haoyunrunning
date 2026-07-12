@@ -5,8 +5,8 @@ import Image from 'next/image'
 import {
   ArrowLeft,
   ArrowRight,
-  BadgeCheck,
   CheckCircle2,
+  ExternalLink,
   Loader2,
   LockKeyhole,
   ReceiptText,
@@ -16,7 +16,7 @@ import {
   WalletCards,
 } from 'lucide-react'
 import type { Course } from '@/lib/goodluck-data'
-import type { MyCourseEnrollment } from '@/lib/course-registration'
+import type { LegacyStudentStatus, MyCourseEnrollment } from '@/lib/course-registration'
 import {
   coursePolicyRules,
   invoiceDeliveryOptions,
@@ -28,6 +28,7 @@ import { supabase } from '@/lib/supabase'
 type DirectCourseRegistrationFormProps = {
   course: Course
   userEmail: string
+  legacyStudent: LegacyStudentStatus
   onSubmitted: (enrollment: MyCourseEnrollment) => void
 }
 
@@ -70,14 +71,22 @@ function FieldLabel({ children, optional = false }: { children: React.ReactNode;
   )
 }
 
-export default function DirectCourseRegistrationForm({ course, userEmail, onSubmitted }: DirectCourseRegistrationFormProps) {
+export default function DirectCourseRegistrationForm({ course, userEmail, legacyStudent, onSubmitted }: DirectCourseRegistrationFormProps) {
   const [step, setStep] = useState(0)
-  const [form, setForm] = useState(initialForm)
+  const [form, setForm] = useState<DirectCourseRegistration>(() => ({
+    ...initialForm,
+    studentType: legacyStudent.matched ? 'returning' : 'new',
+    studentName: legacyStudent.name,
+    amount: legacyStudent.matched ? registrationAmounts[0] : registrationAmounts[1],
+  }))
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const topRef = useRef<HTMLDivElement>(null)
 
   const coaches = useMemo(() => course.coaches ?? (course.coach ? [course.coach] : []), [course])
+  const availableAmounts = legacyStudent.matched
+    ? [registrationAmounts[0], registrationAmounts[2]]
+    : [registrationAmounts[1], registrationAmounts[2]]
   const progress = ((step + 1) / steps.length) * 100
 
   function update<K extends keyof DirectCourseRegistration>(key: K, value: DirectCourseRegistration[K]) {
@@ -194,7 +203,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, onSubm
               <h3 className="mt-2 text-xl font-black leading-7 text-apple-gray-950">{course.name}</h3>
               <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                 <div><dt className="text-apple-gray-500">日期</dt><dd className="mt-1 font-bold">{course.period}</dd></div>
-                <div><dt className="text-apple-gray-500">地點</dt><dd className="mt-1 font-bold">{course.location}</dd></div>
+                <div><dt className="text-apple-gray-500">地點</dt><dd className="mt-1 font-bold">{course.location}{course.meetingPoint ? ` · ${course.meetingPoint}` : ''}</dd></div>
                 <div><dt className="text-apple-gray-500">上課日</dt><dd className="mt-1 font-bold">{course.weekday}</dd></div>
                 <div><dt className="text-apple-gray-500">訓練重點</dt><dd className="mt-1 font-bold">{course.focus}</dd></div>
               </dl>
@@ -205,8 +214,18 @@ export default function DirectCourseRegistrationForm({ course, userEmail, onSubm
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 {coaches.map((coach) => (
                   <div key={coach.name} className="flex min-w-0 items-center gap-3 rounded-lg border border-black/10 p-3">
-                    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full bg-apple-gray-100">
-                      {coach.imageUrl ? <Image src={coach.imageUrl} alt={coach.name} fill sizes="56px" className="object-cover" /> : <UserRound className="m-4 h-6 w-6 text-apple-gray-400" />}
+                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-apple-gray-100">
+                      {coach.imageUrl ? (
+                        <Image
+                          src={coach.imageUrl}
+                          alt={coach.name}
+                          fill
+                          sizes="64px"
+                          className={/zheng-yi-qun|chen-yi-ting|luo-pei-ci/.test(coach.imageUrl)
+                            ? 'origin-top scale-[2.45] object-contain object-top'
+                            : 'object-cover object-[center_15%]'}
+                        />
+                      ) : <UserRound className="m-5 h-6 w-6 text-apple-gray-400" />}
                     </div>
                     <div className="min-w-0"><p className="truncate font-black text-apple-gray-950">{coach.name}</p><p className="mt-1 line-clamp-2 text-xs leading-5 text-apple-gray-500">{coach.role}</p></div>
                   </div>
@@ -214,10 +233,6 @@ export default function DirectCourseRegistrationForm({ course, userEmail, onSubm
               </div>
             </div>
 
-            <div className="mt-7 flex items-center gap-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full border border-black/10 bg-white"><Image src="/goodluck-logo-nav.jpg" alt="好運榮耀徽章" fill sizes="56px" className="object-cover" /></div>
-              <div><div className="flex items-center gap-2 font-black text-emerald-900"><BadgeCheck className="h-5 w-5" />好運榮耀徽章</div><p className="mt-1 text-sm leading-6 text-emerald-800">完成訓練、一起累積屬於跑者的進步紀錄。</p></div>
-            </div>
           </div>
         ) : null}
 
@@ -228,6 +243,16 @@ export default function DirectCourseRegistrationForm({ course, userEmail, onSubm
               {coursePolicyRules.map((rule, index) => (
                 <p key={rule} className="whitespace-pre-line"><span className="mr-2 font-black text-apple-gray-950">（{index + 1}）</span>{rule}</p>
               ))}
+            </div>
+
+            <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+              <p className="font-black text-blue-950">報名相關疑問</p>
+              <p className="mt-1 text-sm leading-6 text-blue-800">可直接私訊以下任一聯絡窗口，我們會協助確認課程與報名資訊。</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <a href="https://www.instagram.com/nurture.running.team/" target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-blue-300 bg-white px-3 text-sm font-black text-blue-900">好運官方 IG<ExternalLink className="h-3.5 w-3.5" /></a>
+                <a href="https://www.facebook.com/77Coach.tw/" target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-blue-300 bg-white px-3 text-sm font-black text-blue-900">陳盛琦 Facebook<ExternalLink className="h-3.5 w-3.5" /></a>
+                <a href="https://www.instagram.com/chichi_moment/" target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-blue-300 bg-white px-3 text-sm font-black text-blue-900">chichi_moment IG<ExternalLink className="h-3.5 w-3.5" /></a>
+              </div>
             </div>
 
             <div className="mt-6 space-y-3">
@@ -245,11 +270,15 @@ export default function DirectCourseRegistrationForm({ course, userEmail, onSubm
 
         {step === 2 ? (
           <div>
-            <div className="flex items-center gap-2"><UserRound className="h-5 w-5 text-apple-blue" /><h3 className="text-lg font-black">請問你是？</h3></div>
-            <div className="mt-4 grid grid-cols-2 gap-2 rounded-lg bg-apple-gray-100 p-1.5">
-              {[['returning', '我是舊生'], ['new', '我是新生']].map(([value, label]) => (
-                <button key={value} type="button" onClick={() => update('studentType', value as 'returning' | 'new')} className={`min-h-12 rounded-lg px-3 text-sm font-black transition ${form.studentType === value ? 'bg-white text-black shadow-sm' : 'text-apple-gray-500'}`}>{label}</button>
-              ))}
+            <div className="flex items-center gap-2"><UserRound className="h-5 w-5 text-apple-blue" /><h3 className="text-lg font-black">學員身份</h3></div>
+            <div className={`mt-4 rounded-lg border p-4 ${legacyStudent.matched ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-blue-200 bg-blue-50 text-blue-900'}`}>
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+                <div>
+                  <p className="font-black">{legacyStudent.matched ? '已辨識為好運舊生' : '本次將以新生身份報名'}</p>
+                  <p className="mt-1 text-sm leading-6 opacity-80">系統依登入信箱 {userEmail} 自動核對，身份與對應價格無需手動選擇。</p>
+                </div>
+              </div>
             </div>
 
             <p className="mt-5 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-800">資料僅供好運跑班進行課程聯絡、付款核對與安全照護使用。</p>
@@ -283,16 +312,15 @@ export default function DirectCourseRegistrationForm({ course, userEmail, onSubm
         {step === 3 ? (
           <div>
             <div className="flex items-center gap-2"><WalletCards className="h-5 w-5 text-apple-blue" /><h3 className="text-lg font-black">匯款資訊</h3></div>
-            <div className="mt-4 rounded-lg border border-black/10 bg-apple-gray-950 p-5 text-white">
-              <p className="text-xs font-bold text-white/55">匯款帳號</p>
-              <p className="mt-2 break-all text-xl font-black">（822）0000554540468221</p>
-              <div className="mt-4 flex items-start gap-2 border-t border-white/15 pt-4 text-xs leading-5 text-white/70"><LockKeyhole className="mt-0.5 h-4 w-4 shrink-0" />網站只記錄帳號後五碼，不會要求信用卡號、網銀密碼或完整付款帳號。</div>
+            <div className="mt-4 overflow-hidden rounded-lg border border-black/10 bg-[#f5f1eb] p-2">
+              <Image src="/course-registration/payment-info.jpg" alt="好運跑班匯款資料" width={958} height={472} className="h-auto w-full rounded-md" priority unoptimized />
             </div>
+            <div className="mt-3 flex items-start gap-2 rounded-lg border border-black/10 bg-apple-gray-50 px-4 py-3 text-xs leading-5 text-apple-gray-600"><LockKeyhole className="mt-0.5 h-4 w-4 shrink-0" />網站只記錄匯款帳號後五碼，不會要求信用卡號、網銀密碼或完整付款帳號。</div>
 
             <fieldset className="mt-6">
               <legend><FieldLabel>您的匯款總金額</FieldLabel></legend>
               <div className="space-y-2">
-                {registrationAmounts.map((amount) => (
+                {availableAmounts.map((amount) => (
                   <label key={amount} className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm font-bold ${form.amount === amount ? 'border-black bg-apple-gray-950 text-white' : 'border-black/10 bg-white'}`}>
                     <input type="radio" name="amount" checked={form.amount === amount} onChange={() => update('amount', amount)} className="h-4 w-4 accent-black" />{amount}
                   </label>

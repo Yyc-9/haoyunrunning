@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { CheckCircle2, ExternalLink, FileText, Loader2, RefreshCw, ShieldCheck, WalletCards } from 'lucide-react'
 import { useAuth } from '@/app/providers'
 import { useSiteContent } from '@/app/site-content-provider'
-import { COURSE_CAPACITY, type CourseAvailability, type MyCourseEnrollment } from '@/lib/course-registration'
+import { COURSE_CAPACITY, type CourseAvailability, type LegacyStudentStatus, type MyCourseEnrollment } from '@/lib/course-registration'
 import { paymentOrderStatusLabels } from '@/lib/payment'
 import { supabase } from '@/lib/supabase'
 import DirectCourseRegistrationForm from './DirectCourseRegistrationForm'
@@ -13,6 +13,7 @@ import DirectCourseRegistrationForm from './DirectCourseRegistrationForm'
 type RegistrationPayload = {
   availability?: CourseAvailability
   enrollment?: MyCourseEnrollment | null
+  legacyStudent?: LegacyStudentStatus | null
   error?: string
 }
 
@@ -29,6 +30,7 @@ export default function CourseRegistrationClient({ slug, returnedFromGoogle = fa
   const course = useMemo(() => courses.find((item) => item.slug === slug), [courses, slug])
   const [availability, setAvailability] = useState<CourseAvailability | null>(null)
   const [enrollment, setEnrollment] = useState<MyCourseEnrollment | null>(null)
+  const [legacyStudent, setLegacyStudent] = useState<LegacyStudentStatus>({ matched: false, name: '' })
   const [isLoading, setIsLoading] = useState(true)
   const [isConfirmingReturn, setIsConfirmingReturn] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -53,6 +55,7 @@ export default function CourseRegistrationClient({ slug, returnedFromGoogle = fa
 
       setAvailability(payload.availability)
       setEnrollment(payload.enrollment ?? null)
+      setLegacyStudent(payload.legacyStudent ?? { matched: false, name: '' })
       if (payload.enrollment?.transferLastFive) setTransferLastFive(payload.enrollment.transferLastFive)
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : '讀取報名狀態失敗。')
@@ -172,7 +175,7 @@ export default function CourseRegistrationClient({ slug, returnedFromGoogle = fa
           <Link href={`/courses/${course.slug}`} className="text-sm font-bold text-apple-blue">返回課程詳情</Link>
           <div className="mt-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
-              <p className="text-sm font-bold text-apple-gray-500">{course.weekday} · {course.location} · {course.period}</p>
+              <p className="text-sm font-bold text-apple-gray-500">{course.weekday} · {course.location}{course.meetingPoint ? ` · ${course.meetingPoint}` : ''} · {course.period}</p>
               <h1 className="mt-2 text-2xl font-black text-apple-gray-950 sm:text-4xl">{course.name}報名</h1>
             </div>
             <div className={`shrink-0 rounded-lg border px-4 py-3 ${isFull ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
@@ -208,8 +211,10 @@ export default function CourseRegistrationClient({ slug, returnedFromGoogle = fa
               </div>
             ) : (
               <DirectCourseRegistrationForm
+                key={`${user?.email ?? ''}:${legacyStudent.matched}:${legacyStudent.name}`}
                 course={course}
                 userEmail={user?.email ?? ''}
+                legacyStudent={legacyStudent}
                 onSubmitted={(submittedEnrollment) => {
                   setEnrollment(submittedEnrollment)
                   setSuccess('報名與付款資料已送出，管理員核對後會更新為已付款。')

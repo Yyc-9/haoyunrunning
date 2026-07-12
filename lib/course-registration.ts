@@ -11,6 +11,11 @@ export type CourseAvailability = {
   full: boolean
 }
 
+export type LegacyStudentStatus = {
+  matched: boolean
+  name: string
+}
+
 export type MyCourseEnrollment = {
   id: string
   courseSlug: string
