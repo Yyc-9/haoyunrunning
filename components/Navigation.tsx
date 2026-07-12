@@ -1,13 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronDown, Globe2, Menu, X, User, LogOut, LogIn, ShoppingBag } from 'lucide-react'
+import { ChevronDown, CircleUserRound, ClipboardList, Globe2, Menu, X, User, LogOut, LogIn, ShieldCheck, ShoppingBag } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useSiteContent } from '@/app/site-content-provider'
-import { useSearchParams } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/app/providers'
 import { useLanguage } from '@/app/language-context'
 import { languages } from '@/lib/dictionary'
@@ -17,12 +17,14 @@ export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isLanguageOpen, setIsLanguageOpen] = useState(false)
+  const [isAccountOpen, setIsAccountOpen] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
   const { user, isLoggedIn, isLoading, logout } = useAuth()
   const { language, setLanguage, t } = useLanguage()
   const { brand } = useSiteContent()
   const searchParams = useSearchParams()
+  const pathname = usePathname()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -43,6 +45,27 @@ export default function Navigation() {
     }
   }, [searchParams])
 
+  useEffect(() => {
+    setIsAccountOpen(false)
+    setIsMenuOpen(false)
+  }, [pathname])
+
+  useEffect(() => {
+    const closeAccountMenu = (event: PointerEvent) => {
+      if (!(event.target as HTMLElement).closest('[data-account-menu-root]')) setIsAccountOpen(false)
+    }
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsAccountOpen(false)
+    }
+
+    document.addEventListener('pointerdown', closeAccountMenu)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('pointerdown', closeAccountMenu)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [])
+
   const navItems = [
     { key: 'home', name: t.navigation.home, href: '/' },
     { key: 'courses', name: t.navigation.courses, href: '/courses' },
@@ -53,7 +76,74 @@ export default function Navigation() {
 
   const currentLanguage = languages.find((item) => item.code === language) ?? languages[0]
   const canSwitchLanguage = languages.length > 1
-  const accountHref = user?.role === 'admin' ? '/admin' : '/profile'
+  const roleLabel = user?.role === 'admin' ? '超級管理員' : user?.role === 'coach' ? '教練' : '個人會員'
+  const accountEntries = [
+    ...(user?.role === 'admin' ? [{ href: '/admin', label: '超級管理員', description: '管理網站、訂單與內容', icon: ShieldCheck }] : []),
+    ...(user?.role === 'admin' || user?.role === 'coach' ? [{ href: '/coach', label: '教練', description: '管理學員與訓練工作', icon: ClipboardList }] : []),
+    { href: '/profile', label: '個人', description: '編輯跑者資料與查看勳章', icon: CircleUserRound },
+  ]
+
+  const isAccountEntryActive = (href: string) => pathname === href || (href !== '/profile' && pathname.startsWith(`${href}/`))
+
+  const renderAccountMenu = (mobile = false) => (
+    <AnimatePresence>
+      {isAccountOpen ? (
+        <motion.div
+          initial={{ opacity: 0, y: -6, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -6, scale: 0.98 }}
+          transition={{ duration: 0.16 }}
+          className={clsx('absolute right-0 top-full z-50 pt-2', mobile ? 'w-[min(19rem,calc(100vw-2rem))]' : 'w-72')}
+        >
+          <div className="overflow-hidden rounded-lg border border-black/10 bg-white shadow-2xl">
+            <div className="border-b border-black/10 bg-apple-gray-100 px-4 py-4">
+              <p className="truncate font-black text-black">{user?.name || '好運會員'}</p>
+              <p className="mt-1 truncate text-xs text-apple-gray-500">{user?.email}</p>
+              <span className="mt-3 inline-flex rounded-full bg-black px-2.5 py-1 text-[11px] font-bold text-white">{roleLabel}</span>
+            </div>
+            <div className="p-2">
+              {accountEntries.map((entry) => {
+                const active = isAccountEntryActive(entry.href)
+                const Icon = entry.icon
+                return (
+                  <Link
+                    key={entry.href}
+                    href={entry.href}
+                    onClick={() => setIsAccountOpen(false)}
+                    className={clsx(
+                      'flex min-h-14 items-center gap-3 rounded-md px-3 py-2.5 transition-colors',
+                      active ? 'bg-black text-white' : 'text-black hover:bg-apple-gray-100'
+                    )}
+                  >
+                    <span className={clsx('flex h-9 w-9 shrink-0 items-center justify-center rounded-full', active ? 'bg-white/15' : 'bg-apple-gray-100')}>
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 text-left">
+                      <span className="block text-sm font-black">{entry.label}</span>
+                      <span className={clsx('mt-0.5 block truncate text-xs', active ? 'text-white/65' : 'text-apple-gray-500')}>{entry.description}</span>
+                    </span>
+                  </Link>
+                )
+              })}
+            </div>
+            <div className="border-t border-black/10 p-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAccountOpen(false)
+                  logout()
+                }}
+                className="flex min-h-11 w-full items-center gap-3 rounded-md px-3 text-sm font-bold text-apple-gray-700 transition-colors hover:bg-apple-gray-100 hover:text-black"
+              >
+                <LogOut className="h-4 w-4" />
+                {t.common.logoutFull}
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  )
 
   const languageSwitcher = canSwitchLanguage ? (
     <div className="relative">
@@ -201,28 +291,29 @@ export default function Navigation() {
               {isLoading ? (
                 <div className="h-9 w-28 animate-pulse rounded-full bg-white/70 ring-1 ring-black/10" />
               ) : isLoggedIn ? (
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="flex items-center space-x-3"
+                <div
+                  data-account-menu-root
+                  onMouseEnter={() => setIsAccountOpen(true)}
+                  onMouseLeave={() => setIsAccountOpen(false)}
+                  className="relative"
                 >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-black/10">
-                    <User className="h-4 w-4 text-apple-gray-700" />
-                  </div>
-                  <Link
-                    href={accountHref}
-                    className="text-sm font-semibold text-apple-gray-950 transition-colors duration-200 hover:text-apple-blue"
+                  <motion.button
+                    type="button"
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => {
+                      setIsLanguageOpen(false)
+                      setIsAccountOpen((open) => !open)
+                    }}
+                    aria-expanded={isAccountOpen}
+                    aria-haspopup="menu"
+                    className="inline-flex min-h-10 items-center gap-2 rounded-full border border-black/10 bg-white px-3 text-sm font-bold text-black shadow-sm transition-colors hover:bg-apple-gray-100"
                   >
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-black text-white"><User className="h-3.5 w-3.5" /></span>
                     {t.common.myAccount}
-                  </Link>
-                   <button
-                     onClick={() => logout()}
-                     className="apple-button-outline text-sm px-4 py-2 hover:scale-105 active:scale-95 transition-transform duration-200"
-                   >
-                     <LogOut className="h-4 w-4 inline-block mr-1" />
-                     {t.common.logout}
-                   </button>
-                </motion.div>
+                    <ChevronDown className={clsx('h-4 w-4 transition-transform', isAccountOpen && 'rotate-180')} />
+                  </motion.button>
+                  {renderAccountMenu()}
+                </div>
               ) : (
                 <>
                   <motion.button
@@ -261,12 +352,22 @@ export default function Navigation() {
               {isLoading ? (
                 <div className="h-10 w-20 animate-pulse rounded-full bg-apple-gray-100 ring-1 ring-black/10" />
               ) : isLoggedIn ? (
-                <Link
-                  href={accountHref}
-                  className="inline-flex h-9 items-center justify-center rounded-full border border-black/10 bg-white px-3 text-sm font-bold text-apple-gray-950 shadow-sm transition-colors duration-200 hover:text-apple-blue sm:h-10 sm:px-4"
-                >
-                  {t.common.myAccount}
-                </Link>
+                <div data-account-menu-root className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMenuOpen(false)
+                      setIsAccountOpen((open) => !open)
+                    }}
+                    aria-expanded={isAccountOpen}
+                    aria-haspopup="menu"
+                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-black/10 bg-white px-3 text-sm font-bold text-black shadow-sm transition-colors duration-200 hover:bg-apple-gray-100 sm:h-10 sm:px-4"
+                  >
+                    {t.common.myAccount}
+                    <ChevronDown className={clsx('h-3.5 w-3.5 transition-transform', isAccountOpen && 'rotate-180')} />
+                  </button>
+                  {renderAccountMenu(true)}
+                </div>
               ) : (
                 <motion.button
                   whileTap={{ scale: 0.95 }}
@@ -284,7 +385,10 @@ export default function Navigation() {
               <motion.button
                 type="button"
                 whileTap={{ scale: 0.95 }}
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                onClick={() => {
+                  setIsAccountOpen(false)
+                  setIsMenuOpen(!isMenuOpen)
+                }}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white text-apple-gray-700 shadow-sm transition-colors duration-200 hover:bg-apple-gray-100 sm:h-10 sm:w-10"
                 aria-label={isMenuOpen ? '關閉選單' : '開啟選單'}
               >
@@ -365,14 +469,23 @@ export default function Navigation() {
                     <div className="h-11 w-full animate-pulse rounded-full bg-apple-gray-200" />
                   ) : isLoggedIn ? (
                     <>
-                      <Link href={accountHref} className="block">
-                        <motion.button
-                          whileTap={{ scale: 0.95 }}
-                          className="w-full apple-button-outline"
-                        >
-                          {t.common.myAccount}
-                        </motion.button>
-                      </Link>
+                      <div className="space-y-2">
+                        <p className="px-2 text-xs font-bold uppercase text-apple-gray-500">切換工作空間</p>
+                        {accountEntries.map((entry) => {
+                          const Icon = entry.icon
+                          return (
+                            <Link
+                              key={entry.href}
+                              href={entry.href}
+                              onClick={() => setIsMenuOpen(false)}
+                              className="flex min-h-12 items-center gap-3 rounded-lg border border-black/10 bg-white px-4 font-bold text-black shadow-sm"
+                            >
+                              <Icon className="h-4 w-4" />
+                              {entry.label}
+                            </Link>
+                          )
+                        })}
+                      </div>
                       <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => logout()}
