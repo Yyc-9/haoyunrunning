@@ -120,7 +120,7 @@ async function updateLeadStatus(id: string, status: SignupLead['status'], review
 
 export default function CoachSignupsClient() {
   const [leads, setLeads] = useState<SignupLead[]>([])
-  const [source, setSource] = useState<'all' | SignupLead['source']>('all')
+  const [source, setSource] = useState<'all' | SignupLead['source']>('group_class')
   const [status, setStatus] = useState<'all' | SignupLead['status']>('all')
   const [query, setQuery] = useState('')
   const [isLoading, setIsLoading] = useState(true)
@@ -232,7 +232,7 @@ export default function CoachSignupsClient() {
       '匯款金額',
       '後五碼',
       '同行人數',
-      '跑步经验',
+      '跑步經驗',
       '目標',
       '備註',
       '提交時間',
@@ -270,7 +270,7 @@ export default function CoachSignupsClient() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
-      <section className="px-4 py-10 sm:px-6 lg:px-8">
+      <section className="px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
         <div className="container mx-auto max-w-7xl">
           <CoachSubNav />
 
@@ -279,9 +279,9 @@ export default function CoachSignupsClient() {
               <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
                 報名名單
               </p>
-              <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">報名資料看板</h1>
-              <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
-                集中查看 4 週年活動與團練報名表單，篩選來源、更新跟進狀態，並匯出 CSV 名單。
+              <h1 className="text-3xl font-black text-apple-gray-900 sm:text-5xl">團練報名看板</h1>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-apple-gray-600 sm:text-base sm:leading-7">
+                優先查看團練報名，也可篩選其他活動與課程付款資料。
               </p>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-apple-gray-500">
                 付款核對僅供教練或管理員人工對帳；後五碼只是轉帳資料參考，不代表系統已完成真實支付驗證。
@@ -307,7 +307,7 @@ export default function CoachSignupsClient() {
 
           <CoachAccessPanel />
 
-          <div className="mt-8 grid gap-4 md:grid-cols-5">
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:mt-8 md:grid-cols-5 md:gap-4">
             {[
               ['全部資料', stats.total],
               ['4 週年活動', stats.anniversary],
@@ -315,14 +315,14 @@ export default function CoachSignupsClient() {
               ['課程付款', stats.coursePayment],
               ['已核准', stats.approved],
             ].map(([label, value]) => (
-              <div key={label} className="apple-card p-5">
-                <p className="text-sm text-apple-gray-500">{label}</p>
-                <p className="mt-2 text-3xl font-black text-apple-gray-900">{value}</p>
+              <div key={label} className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-5">
+                <p className="text-xs text-apple-gray-500 sm:text-sm">{label}</p>
+                <p className="mt-2 text-2xl font-black text-apple-gray-900 sm:text-3xl">{value}</p>
               </div>
             ))}
           </div>
 
-          <section className="mt-8 apple-card p-5">
+          <section className="mt-6 rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:mt-8 sm:p-5">
             <div className="grid gap-4 lg:grid-cols-[1fr_180px_180px]">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-apple-gray-400" />
@@ -378,7 +378,7 @@ export default function CoachSignupsClient() {
             ) : (
               <div className="grid gap-4">
                 {filteredLeads.map((lead) => (
-                  <article key={lead.id} className="apple-card p-5">
+                  <article key={lead.id} className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
                     <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
                       <div>
                         <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -457,7 +457,7 @@ export default function CoachSignupsClient() {
                         ['想報名', lead.preferred_course || lead.companion_count],
                         ['匯款金額', lead.amount_text],
                         ['後五碼（人工對帳參考）', lead.transfer_last_five],
-                        ['跑步经验', lead.running_experience],
+                        ['跑步經驗', lead.running_experience],
                         ['目標', lead.goal],
                         ['備註', lead.notes],
                       ]
