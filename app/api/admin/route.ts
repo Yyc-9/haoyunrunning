@@ -47,15 +47,24 @@ type SignupLeadRow = {
   source: string
   name: string
   email: string
+  phone: string
   preferred_course: string
   course_slug: string
   amount_text: string
   transfer_last_five: string
   status: string
   notes: string
+  running_experience: string
+  goal: string
+  payload: Record<string, unknown> | null
   review_note: string | null
   created_at: string
   payment_submitted_at: string | null
+}
+
+function payloadText(payload: Record<string, unknown> | null, key: string) {
+  const value = payload?.[key]
+  return typeof value === 'string' ? value.trim() : ''
 }
 
 type ShopOrderRow = {
@@ -478,26 +487,47 @@ export async function GET(request: NextRequest) {
     }
   })
 
-  const courseDashboardOrders = coursePaymentOrders.map((order) => ({
-    id: order.id,
-    orderKind: 'course' as const,
-    orderNumber: '',
-    studentName: order.name,
-    email: order.email,
-    courseName: order.preferred_course,
-    courseSlug: order.course_slug || '',
-    amountText: order.amount_text,
-    transferLastFive: order.transfer_last_five,
-    status: isPaymentOrderStatus(order.status) ? order.status : 'pending_review',
-    submittedAt: order.payment_submitted_at || order.created_at,
-    notes: order.notes,
-    reviewNote: order.review_note,
-    paymentReference: '',
-    paymentChannelLabel: '',
-    assignedAccount: '',
-    inventoryReserved: false,
-    items: [] as string[],
-  }))
+  const courseDashboardOrders = coursePaymentOrders.map((order) => {
+    const studentType = payloadText(order.payload, 'studentType')
+    const emergencyContactName = payloadText(order.payload, 'emergencyContactName')
+    const emergencyContactPhone = payloadText(order.payload, 'emergencyContactPhone')
+    const registrationDetails = [
+      { label: '學員身分', value: studentType === 'returning' ? '舊生' : studentType === 'new' ? '新生' : '' },
+      { label: '手機電話', value: order.phone || '' },
+      { label: 'LINE ID', value: payloadText(order.payload, 'lineId') },
+      { label: '緊急聯絡人', value: [emergencyContactName, emergencyContactPhone].filter(Boolean).join('｜') },
+      { label: '推薦人', value: payloadText(order.payload, 'referrer') },
+      { label: '近期挑戰', value: payloadText(order.payload, 'recentChallenge') },
+      { label: '近期目標', value: payloadText(order.payload, 'recentGoal') || order.goal || '' },
+      { label: '病史或運動傷害', value: payloadText(order.payload, 'injuryHistory') },
+      { label: '跑步近況', value: payloadText(order.payload, 'runningStatus') },
+      { label: '發票方式', value: payloadText(order.payload, 'invoiceDelivery') },
+      { label: '載具或信箱', value: payloadText(order.payload, 'invoiceDetail') },
+      { label: '統編與抬頭', value: payloadText(order.payload, 'taxInvoiceInfo') },
+    ].filter((detail) => detail.value)
+
+    return {
+      id: order.id,
+      orderKind: 'course' as const,
+      orderNumber: '',
+      studentName: order.name,
+      email: order.email,
+      courseName: order.preferred_course,
+      courseSlug: order.course_slug || '',
+      amountText: order.amount_text,
+      transferLastFive: order.transfer_last_five,
+      status: isPaymentOrderStatus(order.status) ? order.status : 'pending_review',
+      submittedAt: order.payment_submitted_at || order.created_at,
+      notes: order.notes,
+      reviewNote: order.review_note,
+      paymentReference: '',
+      paymentChannelLabel: '',
+      assignedAccount: '',
+      inventoryReserved: false,
+      items: [] as string[],
+      registrationDetails,
+    }
+  })
 
   const shopDashboardOrders = shopOrders.map((order) => {
     const account = order.payment_account_id ? paymentAccountsById.get(order.payment_account_id) : null
@@ -527,6 +557,7 @@ export async function GET(request: NextRequest) {
         const option = [item.variant_id, item.size ? `尺碼 ${item.size}` : ''].filter(Boolean).join(' / ')
         return `${item.name}${option ? ` - ${option}` : ''} x ${item.quantity}`
       }),
+      registrationDetails: [] as Array<{ label: string; value: string }>,
     }
   })
 

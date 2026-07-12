@@ -134,6 +134,7 @@ type AdminOrder = {
   assignedAccount: string
   inventoryReserved: boolean
   items: string[]
+  registrationDetails: Array<{ label: string; value: string }>
 }
 
 type AdminProduct = AdminEditableProduct
@@ -912,6 +913,19 @@ export default function AdminDashboardClient() {
 	                      </div>
 	                    ))}
 	                  </div>
+	                  {order.registrationDetails.length > 0 ? (
+	                    <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
+	                      <p className="text-sm font-black text-blue-950">網站報名資料</p>
+	                      <dl className="mt-3 grid gap-3 md:grid-cols-2">
+	                        {order.registrationDetails.map((detail) => (
+	                          <div key={detail.label} className="rounded-xl bg-white p-3 ring-1 ring-blue-100">
+	                            <dt className="text-xs font-bold text-apple-gray-500">{detail.label}</dt>
+	                            <dd className="mt-1 whitespace-pre-wrap break-words text-sm font-semibold leading-6 text-apple-gray-900">{detail.value}</dd>
+	                          </div>
+	                        ))}
+	                      </dl>
+	                    </div>
+	                  ) : null}
 	                  {order.items.length > 0 || order.notes || order.reviewNote ? (
 	                    <div className="mt-3 rounded-2xl bg-white p-4 ring-1 ring-black/10">
 	                      {order.items.length > 0 ? (

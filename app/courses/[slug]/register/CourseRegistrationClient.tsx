@@ -8,6 +8,7 @@ import { useSiteContent } from '@/app/site-content-provider'
 import { COURSE_CAPACITY, type CourseAvailability, type MyCourseEnrollment } from '@/lib/course-registration'
 import { paymentOrderStatusLabels } from '@/lib/payment'
 import { supabase } from '@/lib/supabase'
+import DirectCourseRegistrationForm from './DirectCourseRegistrationForm'
 
 type RegistrationPayload = {
   availability?: CourseAvailability
@@ -162,6 +163,7 @@ export default function CourseRegistrationClient({ slug, returnedFromGoogle = fa
   const remaining = availability?.remaining ?? COURSE_CAPACITY
   const isFull = availability?.full === true
   const canSubmitTransfer = enrollment && ['pending_transfer', 'rejected'].includes(enrollment.status)
+  const usesDirectRegistration = course.slug === 'zhubei-night-run-monday'
 
   return (
     <main className="min-h-screen bg-apple-gray-50 pt-20">
@@ -182,12 +184,38 @@ export default function CourseRegistrationClient({ slug, returnedFromGoogle = fa
       </header>
 
       <div className="mx-auto grid max-w-5xl gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
-        <section className="rounded-lg border border-black/10 bg-white p-6 sm:p-8">
+        <section className={`rounded-lg border border-black/10 bg-white ${usesDirectRegistration ? 'overflow-hidden' : 'p-6 sm:p-8'}`}>
           {isFull ? (
             <div className="py-10 text-center">
               <h2 className="text-xl font-black text-apple-gray-950">本班目前已額滿</h2>
               <p className="mt-2 text-sm text-apple-gray-600">如有釋出名額，這裡會自動恢復報名。</p>
             </div>
+          ) : usesDirectRegistration ? (
+            isAuthLoading || isLoading ? (
+              <div className="flex min-h-[360px] items-center justify-center gap-2 text-sm font-bold text-apple-gray-500"><Loader2 className="h-5 w-5 animate-spin" />正在準備報名表</div>
+            ) : !isLoggedIn ? (
+              <div className="px-6 py-12 text-center sm:px-10">
+                <ShieldCheck className="mx-auto h-10 w-10 text-apple-blue" />
+                <h2 className="mt-5 text-2xl font-black">登入後填寫網站報名表</h2>
+                <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-apple-gray-600">網站會使用登入信箱建立報名記錄，避免重複報名並讓你隨時查看付款審核狀態。</p>
+                <Link href={`/courses/${course.slug}/register?auth=login`} className="apple-button-primary mt-6 w-full sm:w-fit">登入並開始填寫</Link>
+              </div>
+            ) : enrollment ? (
+              <div className="px-6 py-12 text-center sm:px-10">
+                <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600" />
+                <h2 className="mt-5 text-2xl font-black">已收到你的報名資料</h2>
+                <p className="mt-3 text-sm leading-6 text-apple-gray-600">目前狀態可在右側查看，管理員核對款項後會更新結果。</p>
+              </div>
+            ) : (
+              <DirectCourseRegistrationForm
+                course={course}
+                userEmail={user?.email ?? ''}
+                onSubmitted={(submittedEnrollment) => {
+                  setEnrollment(submittedEnrollment)
+                  setSuccess('報名與付款資料已送出，管理員核對後會更新為已付款。')
+                }}
+              />
+            )
           ) : course.signupUrl ? (
             <div className="flex min-h-[320px] flex-col justify-between gap-8">
               <div>
@@ -228,7 +256,7 @@ export default function CourseRegistrationClient({ slug, returnedFromGoogle = fa
               </button>
             </div>
 
-            {returnedFromGoogle ? (
+            {returnedFromGoogle && !usesDirectRegistration ? (
               <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-bold leading-6 text-blue-800">
                 {isConfirmingReturn
                   ? '正在建立待付款記錄…'
@@ -242,21 +270,25 @@ export default function CourseRegistrationClient({ slug, returnedFromGoogle = fa
               <div className="mt-5 flex items-center gap-2 text-sm text-apple-gray-600"><Loader2 className="h-4 w-4 animate-spin" />正在同步狀態</div>
             ) : !isLoggedIn ? (
               <div className="mt-5">
-                <p className="text-sm leading-6 text-apple-gray-600">填完表單後，請使用表單內相同的信箱登入，系統才會顯示你的付款狀態。</p>
-                <Link href={`/courses/${course.slug}/register?submitted=1&auth=login`} className="apple-button-primary mt-4 w-full">登入查看狀態</Link>
+                <p className="text-sm leading-6 text-apple-gray-600">{usesDirectRegistration ? '請先登入，再於網站內填寫報名與付款資料。' : '填完表單後，請使用表單內相同的信箱登入，系統才會顯示你的付款狀態。'}</p>
+                <Link href={usesDirectRegistration ? `/courses/${course.slug}/register?auth=login` : `/courses/${course.slug}/register?submitted=1&auth=login`} className="apple-button-primary mt-4 w-full">登入查看狀態</Link>
               </div>
             ) : !enrollment ? (
               <div className="mt-5">
                 <p className="text-sm leading-6 text-apple-gray-600">
-                  {returnedFromGoogle
+                  {usesDirectRegistration
+                    ? `尚未收到 ${user?.email} 的報名資料，完成左側網站表單後會顯示在這裡。`
+                    : returnedFromGoogle
                     ? `尚未建立 ${user?.email} 的待付款記錄，請重新確認。`
                     : `尚未找到 ${user?.email} 的報名記錄。完成 Google 表單後，請點擊「我已完成表單」。`}
                 </p>
-                <button type="button" disabled={isConfirmingReturn} onClick={confirmGoogleFormReturn} className="apple-button-primary mt-4 w-full gap-2 disabled:cursor-not-allowed disabled:opacity-50">
-                  {isConfirmingReturn ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                  我已完成表單
-                </button>
-                <button type="button" onClick={loadRegistration} className="apple-button-outline mt-3 w-full gap-2"><RefreshCw className="h-4 w-4" />重新檢查狀態</button>
+                {usesDirectRegistration ? null : (
+                  <button type="button" disabled={isConfirmingReturn} onClick={confirmGoogleFormReturn} className="apple-button-primary mt-4 w-full gap-2 disabled:cursor-not-allowed disabled:opacity-50">
+                    {isConfirmingReturn ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                    我已完成表單
+                  </button>
+                )}
+                <button type="button" onClick={loadRegistration} className={`apple-button-outline w-full gap-2 ${usesDirectRegistration ? 'mt-4' : 'mt-3'}`}><RefreshCw className="h-4 w-4" />重新檢查狀態</button>
               </div>
             ) : (
               <div className="mt-5">

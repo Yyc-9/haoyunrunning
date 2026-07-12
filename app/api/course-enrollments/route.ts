@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { COURSE_CAPACITY } from '@/lib/course-registration'
+import {
+  invoiceDeliveryOptions,
+  registrationAmounts,
+  type DirectCourseRegistration,
+} from '@/lib/course-registration-form'
 import { allCourses } from '@/lib/goodluck-data'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 
@@ -95,18 +100,19 @@ export async function POST(request: NextRequest) {
 
   const user = await getAuthedUser(request.headers.get('authorization'))
   if (!user?.email) {
-    return NextResponse.json({ error: '請先使用與 Google 表單相同的信箱登入。' }, { status: 401 })
+    return NextResponse.json({ error: '請先登入後再提交課程報名。' }, { status: 401 })
   }
 
   const body = (await request.json().catch(() => ({}))) as {
     intent?: string
     courseSlug?: string
+    registration?: Partial<DirectCourseRegistration>
   }
   const intent = cleanText(body.intent, 80)
   const courseSlug = cleanText(body.courseSlug, 120)
   const course = allCourses.find((item) => item.slug === courseSlug)
 
-  if (intent !== 'confirm_form_submission' || !course) {
+  if (!['confirm_form_submission', 'direct_site_registration'].includes(intent) || !course) {
     return NextResponse.json({ error: '無法確認這筆課程報名。' }, { status: 400 })
   }
 
@@ -150,6 +156,106 @@ export async function POST(request: NextRequest) {
     .maybeSingle()
 
   const formSubmittedAt = new Date().toISOString()
+
+  if (intent === 'direct_site_registration') {
+    const registration = body.registration ?? {}
+    const studentType = registration.studentType === 'returning' ? 'returning' : registration.studentType === 'new' ? 'new' : ''
+    const studentName = cleanText(registration.studentName, 200)
+    const phone = cleanText(registration.phone, 80)
+    const lineId = cleanText(registration.lineId, 120)
+    const emergencyContactName = cleanText(registration.emergencyContactName, 200)
+    const emergencyContactPhone = cleanText(registration.emergencyContactPhone, 80)
+    const referrer = cleanText(registration.referrer, 200)
+    const recentChallenge = cleanText(registration.recentChallenge, 1500)
+    const recentGoal = cleanText(registration.recentGoal, 1500)
+    const injuryHistory = cleanText(registration.injuryHistory, 1500)
+    const runningStatus = cleanText(registration.runningStatus, 1500)
+    const amount = cleanText(registration.amount, 100)
+    const transferLastFive = cleanText(registration.transferLastFive, 5)
+    const invoiceDelivery = cleanText(registration.invoiceDelivery, 120)
+    const invoiceDetail = cleanText(registration.invoiceDetail, 320)
+    const notes = cleanText(registration.notes, 1000)
+    const taxInvoiceInfo = cleanText(registration.taxInvoiceInfo, 300)
+
+    if (!studentType || !studentName || !emergencyContactName || !emergencyContactPhone) {
+      return NextResponse.json({ error: '請完成學員與緊急聯絡人資料。' }, { status: 400 })
+    }
+    if (
+      studentType === 'new' &&
+      (!phone || !lineId || !recentChallenge || !recentGoal || !injuryHistory || !runningStatus)
+    ) {
+      return NextResponse.json({ error: '請完成所有新生必填資料。' }, { status: 400 })
+    }
+    if (!registrationAmounts.includes(amount as (typeof registrationAmounts)[number])) {
+      return NextResponse.json({ error: '請選擇正確的匯款金額。' }, { status: 400 })
+    }
+    if (!/^\d{5}$/.test(transferLastFive)) {
+      return NextResponse.json({ error: '請填寫正確的匯款帳號後五碼。' }, { status: 400 })
+    }
+    if (!invoiceDeliveryOptions.includes(invoiceDelivery as (typeof invoiceDeliveryOptions)[number]) || !invoiceDetail) {
+      return NextResponse.json({ error: '請完成電子發票資料。' }, { status: 400 })
+    }
+    if (!registration.coachSubstituteConsent || !registration.rulesConsent || !registration.finalConsent) {
+      return NextResponse.json({ error: '請閱讀並同意課程規範後再送出。' }, { status: 400 })
+    }
+    if (containsSensitiveLongNumber(notes)) {
+      return NextResponse.json({ error: '備註中請勿填寫完整帳號、信用卡號或身分證號。' }, { status: 400 })
+    }
+
+    const runningExperience = [
+      recentChallenge ? `近期挑戰：${recentChallenge}` : '',
+      runningStatus ? `跑步近況：${runningStatus}` : '',
+      injuryHistory ? `病史或運動傷害：${injuryHistory}` : '',
+    ].filter(Boolean).join('\n')
+
+    const { data, error } = await supabaseAdmin
+      .from('signup_leads')
+      .insert({
+        source: 'course_payment',
+        name: studentName,
+        phone: phone || cleanText(profile?.phone, 80),
+        email,
+        preferred_course: course.name,
+        course_slug: course.slug,
+        running_experience: runningExperience,
+        goal: recentGoal,
+        amount_text: amount,
+        notes,
+        transfer_last_five: transferLastFive,
+        status: 'pending_review',
+        form_submitted_at: formSubmittedAt,
+        payment_submitted_at: formSubmittedAt,
+        payload: {
+          provider: 'website_direct_form',
+          studentType,
+          lineId,
+          emergencyContactName,
+          emergencyContactPhone,
+          referrer,
+          recentChallenge,
+          recentGoal,
+          injuryHistory,
+          runningStatus,
+          invoiceDelivery,
+          invoiceDetail,
+          taxInvoiceInfo,
+          agreements: {
+            coachSubstituteConsent: true,
+            rulesConsent: true,
+            finalConsent: true,
+          },
+        },
+      })
+      .select('id, course_slug, preferred_course, status, amount_text, transfer_last_five, review_note, created_at, payment_submitted_at')
+      .single()
+
+    if (error || !data) {
+      return NextResponse.json({ error: error?.message || '建立網站報名記錄失敗。' }, { status: 500 })
+    }
+
+    return NextResponse.json({ enrollment: enrollmentPayload(data) }, { status: 201 })
+  }
+
   const { data, error } = await supabaseAdmin
     .from('signup_leads')
     .insert({
@@ -188,7 +294,7 @@ export async function PATCH(request: NextRequest) {
 
   const user = await getAuthedUser(request.headers.get('authorization'))
   if (!user?.email) {
-    return NextResponse.json({ error: '請先使用與 Google 表單相同的信箱登入。' }, { status: 401 })
+    return NextResponse.json({ error: '請先登入後再提交付款資料。' }, { status: 401 })
   }
 
   const body = (await request.json().catch(() => ({}))) as {
