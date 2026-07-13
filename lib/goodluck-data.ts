@@ -222,16 +222,14 @@ export const coachProfiles = {
     achievements: ['我型我速萬金石 2024-2026 教練', '博仲法律事務所跑步社教練', '天主教輔仁大學體育系碩士班'],
     certifications: ['中華民國田徑協會 C 級教練', '中華民國田徑協會 C 級裁判', '中華民國體適能健身 C 級指導員證', 'DR ACADEMY 功能性運動表現專家 L1'],
   },
-  chenYiTing: {
-    name: '陳怡婷教練',
-    nickname: '扁扁教練',
-    role: '初階跑者、特殊族群與肌力訓練',
-    imageUrl: '/coaches/chen-yi-ting.jpg',
-    bio: '好運跑班教練，具伊甸鬆山視障中心視多障運動課教師、臺師大體適能與適應體育 TA 經歷。',
-    specialties: ['初階跑者訓練', '特殊族群功能性訓練', '肌力訓練'],
-    style: '細膩觀察身體狀態，用功能性訓練與肌力基礎降低跑步風險。',
-    achievements: ['伊甸鬆山視障中心視多障運動課教師', '國立臺灣師範大學運動與科學學系碩士'],
-    certifications: ['中華民國田徑協會 C 級教練', '中華民國田徑協會 C 級裁判', 'C 級健身體適能教練', '國民體適能檢測員', '丙級運動防護員'],
+  bianbian: {
+    name: 'bianbian',
+    role: '跑步基礎與肌力訓練',
+    imageUrl: '/coaches/bianbian.jpg',
+    bio: '好運跑班教練，協助跑者建立安全、穩定的跑步與肌力訓練基礎。',
+    specialties: ['初階跑者訓練', '功能性訓練', '肌力訓練'],
+    style: '細膩觀察跑者狀態，透過清楚的動作提示與肌力基礎協助學員穩定進步。',
+    achievements: ['好運跑班課程教練'],
   },
   wuWeiQiao: {
     name: '鄔惟喬教練',
@@ -341,12 +339,12 @@ function getCourseCoaches(course: Course): Coach[] {
   if (course.coach) return [course.coach]
 
   const coachesBySlug: Record<string, Coach[]> = {
-    'zhubei-night-run-monday': [coachProfiles.liuChengEn, coachProfiles.chenYiTing, coachProfiles.luoPeiCi],
+    'zhubei-night-run-monday': [coachProfiles.liuChengEn, coachProfiles.bianbian, coachProfiles.luoPeiCi],
     'taipei-pb-tuesday': [coachProfiles.chenShengQi, coachProfiles.wuWeiQiao, coachProfiles.wuPeiCi, coachProfiles.yongXin],
-    'hsinchu-beginner-tuesday': [coachProfiles.chenYiTing],
+    'hsinchu-beginner-tuesday': [coachProfiles.bianbian],
     'hsinchu-morning-run-wednesday': [coachProfiles.chenShengQi, coachProfiles.liuChengEn, coachProfiles.xiaoHe],
     'taipei-night-run-wednesday': [coachProfiles.wuWeiQiao],
-    'zhubei-night-run-wednesday': [coachProfiles.chenShengQi, coachProfiles.liuChengEn, coachProfiles.chenYiTing, coachProfiles.zhouXianFeng, coachProfiles.zhengYiQun],
+    'zhubei-night-run-wednesday': [coachProfiles.chenShengQi, coachProfiles.liuChengEn, coachProfiles.bianbian, coachProfiles.zhouXianFeng, coachProfiles.zhengYiQun],
     'hsinchu-night-run-thursday': [coachProfiles.liuChengEn, coachProfiles.xiaoHe, coachProfiles.zhongLiChen],
     'zhunan-beginner-thursday': [coachProfiles.zhouXianFeng, coachProfiles.yangShengHao],
     'taipei-morning-run-saturday': [coachProfiles.luoMinYao],
