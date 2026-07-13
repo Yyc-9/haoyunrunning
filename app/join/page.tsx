@@ -5,11 +5,9 @@ import Link from 'next/link'
 import { ArrowRight, Instagram, MapPin, ShoppingBag } from 'lucide-react'
 import { useSiteContent } from '@/app/site-content-provider'
 
-const weekdayOrder = ['週一', '週二', '週三', '週四', '週五', '週六', '週日']
-
 export default function JoinPage() {
   const { brand, courses } = useSiteContent()
-  const sortedCourses = [...courses].sort((a, b) => weekdayOrder.indexOf(a.weekday) - weekdayOrder.indexOf(b.weekday))
+  const sortedCourses = courses
 
   return (
     <main className="min-h-screen bg-apple-gray-50 pt-24">

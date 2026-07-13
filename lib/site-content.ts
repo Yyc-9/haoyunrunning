@@ -27,6 +27,7 @@ export type CourseOverride = {
   targetAudience?: string
   focus?: string
   signupUrl?: string
+  coachKeys?: string[]
 }
 
 export type ContentCard = {
@@ -107,6 +108,7 @@ export type SiteContent = {
   about: AboutContent
   testimonials: TestimonialsContent
   pageMedia: PageMedia
+  coachProfiles: CoachPublicProfileMap
 }
 
 export const defaultHeroSlides = [
@@ -237,6 +239,7 @@ export const defaultSiteContent: SiteContent = {
   about: defaultAboutContent,
   testimonials: defaultTestimonialsContent,
   pageMedia: defaultPageMedia,
+  coachProfiles: defaultCoachPublicProfiles,
 }
 
 function cleanString(value: unknown, maxLength = 500) {
@@ -315,6 +318,9 @@ export function normalizeCourseOverrides(value: unknown): Record<string, CourseO
     if (!/^[a-z0-9-]{1,120}$/.test(slug) || !rawOverride || typeof rawOverride !== 'object') return
     const override = rawOverride as CourseOverride
     const signupUrl = cleanString(override.signupUrl, 2000)
+    const coachKeys = Array.isArray(override.coachKeys)
+      ? [...new Set(override.coachKeys.map((item) => cleanString(item, 80)).filter((item) => /^[A-Za-z0-9-]+$/.test(item)))].slice(0, 20)
+      : undefined
     result[slug] = {
       active: override.active !== false,
       name: cleanString(override.name, 180),
@@ -327,6 +333,7 @@ export function normalizeCourseOverrides(value: unknown): Record<string, CourseO
       targetAudience: cleanString(override.targetAudience, 500),
       focus: cleanString(override.focus, 300),
       signupUrl: signupUrl && isSafePublicUrl(signupUrl) ? signupUrl : '',
+      coachKeys,
     }
   })
   return result
@@ -455,5 +462,7 @@ export function siteContentFromRows(rows: Array<{ key: string; value: unknown }>
     about: normalizeAboutContent(values.get('about_content')),
     testimonials: normalizeTestimonialsContent(values.get('testimonials_content')),
     pageMedia: normalizePageMedia(values.get('page_media')),
+    coachProfiles: defaultCoachPublicProfiles,
   }
 }
+import { defaultCoachPublicProfiles, type CoachPublicProfileMap } from '@/lib/coach-profiles'

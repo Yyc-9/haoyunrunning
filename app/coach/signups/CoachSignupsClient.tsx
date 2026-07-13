@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, Download, Filter, Inbox, RefreshCw, RotateCcw, Search } from 'lucide-react'
-import CoachAccessPanel from '@/components/CoachAccessPanel'
 import CoachSubNav from '@/components/CoachSubNav'
 import { paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
 import { supabase } from '@/lib/supabase'
@@ -304,8 +303,6 @@ export default function CoachSignupsClient() {
               </button>
             </div>
           </div>
-
-          <CoachAccessPanel />
 
           <div className="mt-6 grid grid-cols-2 gap-3 sm:mt-8 md:grid-cols-5 md:gap-4">
             {[

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CalendarDays, Mail, MessageSquareText, Search, UsersRound } from 'lucide-react'
-import CoachAccessPanel from '@/components/CoachAccessPanel'
 import CoachSubNav from '@/components/CoachSubNav'
 import { supabase } from '@/lib/supabase'
 import { getStudentDisplayEmail, getStudentDisplayName, hasStudentName } from '@/lib/student-display'
@@ -137,12 +136,8 @@ export default function CoachStudentsClient() {
             </div>
           </div>
 
-          <div className="mb-8">
-            <CoachAccessPanel onStudentBound={loadStudents} />
-          </div>
-
           {error && (
-            <div className="mb-6 rounded-3xl bg-amber-50 p-4 text-sm leading-6 text-amber-800">
+            <div className="mb-6 rounded-lg bg-amber-50 p-4 text-sm leading-6 text-amber-800">
 目前無法讀取學員綁定資料。請確認帳號已啟用教練權限。資訊：{error}
             </div>
           )}

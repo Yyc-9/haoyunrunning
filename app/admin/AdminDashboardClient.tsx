@@ -22,7 +22,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import type { CourseSeason } from '@/lib/course-seasons'
-import type { SiteContent } from '@/lib/site-content'
+import type { CourseOverride, SiteContent } from '@/lib/site-content'
 import AdminContentManager from '@/components/admin/AdminContentManager'
 import AdminEnrollmentAnalytics from '@/components/admin/AdminEnrollmentAnalytics'
 import AdminProductCreator from '@/components/admin/AdminProductCreator'
@@ -57,6 +57,7 @@ type AdminDashboardPayload = {
   courses: AdminCourseSummary[]
   coachOptions: Array<{ id: string; name: string; email: string }>
   coachInvites: CoachInvite[]
+  coachPublicProfiles: Array<{ coachKey: string; displayName: string; ownerProfileId: string | null }>
 }
 
 type CoachInvite = {
@@ -92,6 +93,7 @@ type AdminCourseSummary = {
   targetAudience: string
   focus: string
   signupUrl: string
+  coachKeys: string[]
 }
 
 type AdminStudent = {
@@ -116,6 +118,8 @@ type AdminCoach = {
   coachEnabled: boolean
   boundStudentCount: number
   courses: string
+  publicCoachKey: string
+  publicProfileName: string
   createdAt: string
 }
 
@@ -239,6 +243,7 @@ async function adminAction(body: Record<string, unknown>) {
     message?: string
     siteContent?: SiteContent
     courses?: AdminCourseSummary[]
+    seasonCourse?: { season_id: string; course_slug: string; course_data: CourseOverride; capacity: number }
   }
   if (!response.ok) {
     throw new Error(payload.error || '操作失敗。')
@@ -331,7 +336,7 @@ export default function AdminDashboardClient() {
       if (coachRoleFilter !== 'all' && coach.role !== coachRoleFilter) return false
       if (!text) return true
 
-      return [coach.name, coach.email, coach.role, coach.courses]
+      return [coach.name, coach.email, coach.role, coach.courses, coach.publicProfileName]
         .filter(Boolean)
         .some((value) => value.toLowerCase().includes(text))
     })
@@ -351,6 +356,17 @@ export default function AdminDashboardClient() {
           courses: result.courses!,
         } : current)
         announceSiteContentUpdated(result.siteContent)
+      } else if (action.action === 'save_season_course' && result.seasonCourse) {
+        const saved = result.seasonCourse
+        setData((current) => current ? {
+          ...current,
+          courseSeasons: current.courseSeasons.map((season) => season.id === saved.season_id ? {
+            ...season,
+            courseOverrides: { ...season.courseOverrides, [saved.course_slug]: saved.course_data },
+            courseCapacities: { ...season.courseCapacities, [saved.course_slug]: saved.capacity },
+          } : season),
+        } : current)
+        announceSiteContentUpdated()
       } else {
         await loadDashboard(true)
       }
@@ -692,10 +708,10 @@ export default function AdminDashboardClient() {
                 </div>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[960px] text-left text-sm">
+                <table className="w-full min-w-[1120px] text-left text-sm">
                   <thead className="bg-apple-gray-100 text-apple-gray-600">
                     <tr>
-                      {['姓名', '信箱', '權限狀態', '綁定學員數', '負責課程', '建立時間', '操作'].map((header) => (
+                      {['姓名', '信箱', '權限狀態', '公開教練身份', '綁定學員數', '負責課程', '建立時間', '操作'].map((header) => (
                         <th key={header} className="px-4 py-3 font-bold">{header}</th>
                       ))}
                     </tr>
@@ -709,6 +725,18 @@ export default function AdminDashboardClient() {
                           <span className={`rounded-full px-3 py-1 text-xs font-bold ${coach.coachEnabled ? 'bg-emerald-50 text-emerald-700' : 'bg-apple-gray-100 text-apple-gray-600'}`}>
                             {coach.role === 'admin' ? '管理員' : coach.coachEnabled ? '教練已啟用' : '未啟用'}
                           </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <select
+                            value={coach.publicCoachKey}
+                            disabled={!coach.coachEnabled || updatingId === `coach-profile-${coach.id}`}
+                            onChange={(event) => runAction(`coach-profile-${coach.id}`, { action: 'link_coach_public_profile', userId: coach.id, coachKey: event.target.value })}
+                            className="apple-input min-w-44 py-2 text-xs disabled:opacity-50"
+                            aria-label={`設定 ${coach.name} 的公開教練身份`}
+                          >
+                            <option value="">尚未連結</option>
+                            {data.coachPublicProfiles.map((profile) => <option key={profile.coachKey} value={profile.coachKey}>{profile.displayName}{profile.ownerProfileId && profile.ownerProfileId !== coach.id ? '（已連結其他帳號）' : ''}</option>)}
+                          </select>
                         </td>
                         <td className="px-4 py-4 text-apple-gray-700">{coach.boundStudentCount}</td>
                         <td className="px-4 py-4 text-apple-gray-600">{coach.courses || '暫無資料'}</td>

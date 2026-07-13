@@ -4,6 +4,11 @@ export type Coach = {
   role: string
   bio: string
   imageUrl?: string
+  fullBodyImageUrl?: string
+  avatarFocusX?: number
+  avatarFocusY?: number
+  fullBodyFocusX?: number
+  fullBodyFocusY?: number
   specialties: string[]
   style: string
   achievements: string[]

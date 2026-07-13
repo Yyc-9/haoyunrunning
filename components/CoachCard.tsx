@@ -7,6 +7,11 @@ interface Coach {
   role: string
   bio: string
   imageUrl?: string
+  fullBodyImageUrl?: string
+  avatarFocusX?: number
+  avatarFocusY?: number
+  fullBodyFocusX?: number
+  fullBodyFocusY?: number
   specialties: string[]
   style: string
   achievements: string[]
@@ -30,20 +35,23 @@ export default function CoachCard({ coach, labels }: CoachCardProps) {
     <div className="apple-card overflow-hidden p-0 md:flex md:gap-8">
       <div className="flex flex-shrink-0 items-center justify-center bg-gradient-to-br from-apple-gray-100 to-white p-8 md:min-h-72 md:w-64">
         <div className="flex flex-col items-center justify-center">
-          {coach.imageUrl ? (
+          {coach.fullBodyImageUrl || coach.imageUrl ? (
             <Image
-              src={coach.imageUrl}
+              src={coach.fullBodyImageUrl || coach.imageUrl || ''}
               alt={coach.name}
               width={384}
               height={480}
-              className="h-48 w-40 rounded-lg object-cover object-top shadow-sm ring-1 ring-apple-gray-200 md:h-56 md:w-44"
+              quality={95}
+              loading="eager"
+              className="h-48 w-40 rounded-lg object-cover shadow-sm ring-1 ring-apple-gray-200 md:h-56 md:w-44"
+              style={{ objectPosition: `${coach.fullBodyFocusX ?? 50}% ${coach.fullBodyFocusY ?? 18}%` }}
             />
           ) : (
             <div className="flex h-48 w-40 items-center justify-center rounded-lg bg-apple-gray-200 text-apple-gray-400 ring-1 ring-apple-gray-300 md:h-56 md:w-44">
               <UserRound className="h-20 w-20 md:h-24 md:w-24" />
             </div>
           )}
-          {coach.imageUrl && <p className="mt-4 text-sm font-semibold text-apple-gray-500">{labels.photo}</p>}
+          {(coach.fullBodyImageUrl || coach.imageUrl) && <p className="mt-4 text-sm font-semibold text-apple-gray-500">{labels.photo}</p>}
         </div>
       </div>
 

@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { courseSeasonStatusLabels, type CourseSeason, type CourseSeasonStatus } from '@/lib/course-seasons'
+import { orderedWeekdays } from '@/lib/course-sort'
 import type {
   AboutContent,
   BrandContent,
@@ -50,6 +51,7 @@ type CourseSummary = {
   targetAudience: string
   focus: string
   signupUrl: string
+  coachKeys: string[]
 }
 
 type AdminContentManagerProps = {
@@ -130,6 +132,7 @@ function courseDraft(course: CourseSummary, override?: CourseOverride): CourseOv
     targetAudience: override?.targetAudience || course.targetAudience,
     focus: override?.focus || course.focus,
     signupUrl: override?.signupUrl || course.signupUrl,
+    coachKeys: override?.coachKeys?.length ? override.coachKeys : course.coachKeys,
   }
 }
 
@@ -241,6 +244,10 @@ export default function AdminContentManager({ content, courses, seasons, scope =
     }
     if (!Number.isInteger(draftCapacity) || draftCapacity < 1 || draftCapacity > 500) {
       setLocalError('班級名額請設定為 1 至 500 之間。')
+      return
+    }
+    if (!draft.coachKeys?.length) {
+      setLocalError('請至少選擇一位本課程教練。')
       return
     }
     const nextOverrides = { ...courseOverrides, [selectedCourse.slug]: draft }
@@ -400,7 +407,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
               <Field label="管理季度" wide><select value={selectedSeasonId} onChange={(e) => { setSelectedSeasonId(e.target.value); setCourseMessage('') }} className="apple-input">{seasons.map((season) => <option key={season.id} value={season.id}>{season.name}{season.isCurrent ? '（前台招生）' : ''}</option>)}</select></Field>
               <Field label="選擇課程" wide><select value={selectedSlug} onChange={(e) => { setSelectedSlug(e.target.value); setCourseMessage('') }} className="apple-input">{courses.map((course) => <option key={course.slug} value={course.slug}>{course.name}</option>)}</select></Field>
               <Field label="課程名稱"><input value={String(draft.name ?? '')} onChange={(e) => setDraft((current) => ({ ...current, name: e.target.value }))} className="apple-input" /></Field>
-              <Field label="星期"><select value={String(draft.weekday ?? '').replace('周', '週')} onChange={(e) => setDraft((current) => ({ ...current, weekday: e.target.value }))} className="apple-input"><option value="">請選擇星期</option>{['週一', '週二', '週三', '週四', '週五', '週六', '週日'].map((weekday) => <option key={weekday} value={weekday}>{weekday}</option>)}</select></Field>
+              <Field label="星期"><select value={String(draft.weekday ?? '').replace('周', '週')} onChange={(e) => setDraft((current) => ({ ...current, weekday: e.target.value }))} className="apple-input"><option value="">請選擇星期</option>{orderedWeekdays.map((weekday) => <option key={weekday} value={weekday}>{weekday}</option>)}</select></Field>
               <Field label="城市 / 地點"><input value={String(draft.location ?? '')} onChange={(e) => setDraft((current) => ({ ...current, location: e.target.value }))} className="apple-input" /></Field>
               <Field label="課程週期"><input value={String(draft.period ?? '')} onChange={(e) => setDraft((current) => ({ ...current, period: e.target.value }))} className="apple-input" placeholder="例如 7/14 - 9/29" /></Field>
               <Field label="上課時間"><input value={String(draft.classTime ?? '')} onChange={(e) => setDraft((current) => ({ ...current, classTime: e.target.value }))} className="apple-input" placeholder="例如 19:27（1.5-2 小時）" /></Field>
@@ -409,6 +416,31 @@ export default function AdminContentManager({ content, courses, seasons, scope =
               <Field label="班級名額"><input type="number" min={1} max={500} value={draftCapacity} onChange={(e) => setDraftCapacity(Number(e.target.value))} className="apple-input" /></Field>
               <Field label="適合對象" wide><input value={String(draft.targetAudience ?? '')} onChange={(e) => setDraft((current) => ({ ...current, targetAudience: e.target.value }))} className="apple-input" /></Field>
               <Field label="訓練方向" wide><input value={String(draft.focus ?? '')} onChange={(e) => setDraft((current) => ({ ...current, focus: e.target.value }))} className="apple-input" /></Field>
+              <fieldset className="md:col-span-2">
+                <legend className="mb-2 text-xs font-bold text-apple-gray-500">本課程教練</legend>
+                <div className="grid gap-2 border-y border-black/10 py-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {Object.values(content.coachProfiles).map((coach) => {
+                    const checked = draft.coachKeys?.includes(coach.coachKey) ?? false
+                    return (
+                      <label key={coach.coachKey} className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm font-bold transition ${checked ? 'border-black bg-black text-white' : 'border-black/10 bg-white text-apple-gray-700 hover:bg-apple-gray-50'}`}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(event) => setDraft((current) => ({
+                            ...current,
+                            coachKeys: event.target.checked
+                              ? [...(current.coachKeys ?? []), coach.coachKey]
+                              : (current.coachKeys ?? []).filter((coachKey) => coachKey !== coach.coachKey),
+                          }))}
+                          className="h-4 w-4"
+                        />
+                        <span className="min-w-0 truncate">{coach.displayName}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+                <p className="mt-2 text-xs leading-5 text-apple-gray-500">只在這裡設定課程歸屬；教練本人更新公開資料後，課程介紹會自動同步。</p>
+              </fieldset>
               <div className="md:col-span-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3"><p className="text-sm font-black text-emerald-900">報名方式：網站內建報名表</p><p className="mt-1 text-sm leading-6 text-emerald-800">發布後，「立即報名」會進入本課程的網站報名頁，不再使用 Google 表單。</p></div>
               <label className="flex items-center gap-3 text-sm font-bold"><input type="checkbox" checked={draft.active !== false} onChange={(e) => setDraft((current) => ({ ...current, active: e.target.checked }))} className="h-4 w-4" />這門課程對外顯示</label>
               <div className="flex flex-wrap gap-2"><button type="button" onClick={saveCourse} className="apple-button-primary gap-2"><Save className="h-4 w-4" />{selectedSeason.isCurrent ? '儲存並發布至課程與日程表' : '儲存這季課程'}</button></div>

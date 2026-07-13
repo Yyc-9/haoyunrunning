@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ClipboardList, LayoutDashboard, UsersRound } from 'lucide-react'
+import { ClipboardList, LayoutDashboard, UserRound, UsersRound } from 'lucide-react'
 
 const coachNavItems = [
   { href: '/coach', label: '工作台', icon: LayoutDashboard },
   { href: '/coach/students', label: '學員列表', icon: UsersRound },
   { href: '/coach/signups', label: '團練報名', icon: ClipboardList },
+  { href: '/coach/profile', label: '公開資料', icon: UserRound },
 ]
 
 function isActivePath(pathname: string, href: string) {

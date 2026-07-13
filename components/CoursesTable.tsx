@@ -5,8 +5,9 @@ import Link from 'next/link'
 import { ArrowUpRight, Clock3, MapPin } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
 import { useSiteContent } from '@/app/site-content-provider'
+import { compareCourseLocations, compareCourses, orderedWeekdays } from '@/lib/course-sort'
 
-const weekdays = ['週一', '週二', '週三', '週四', '週五', '週六', '週日'] as const
+const weekdays = orderedWeekdays
 
 type LevelFilter = 'all' | 'beginner' | 'advanced' | 'elite'
 
@@ -49,12 +50,12 @@ export default function CoursesTable() {
   const [cityFilter, setCityFilter] = useState('all')
 
   const localeText = (text: string) => language === 'zh-CN' ? text.replaceAll('週', '周') : text.replaceAll('周', '週')
-  const cities = useMemo(() => [...new Set(courses.map((course) => course.location))].sort(), [courses])
+  const cities = useMemo(() => [...new Set(courses.map((course) => course.location))].sort(compareCourseLocations), [courses])
   const filteredCourses = useMemo(() => courses.filter((course) => {
     if (levelFilter !== 'all' && getCourseLevel(course.name) !== levelFilter) return false
     if (cityFilter !== 'all' && course.location !== cityFilter) return false
     return true
-  }), [cityFilter, courses, levelFilter])
+  }).sort(compareCourses), [cityFilter, courses, levelFilter])
 
   const scheduleRows = useMemo(() => {
     const times = new Set<string>()
@@ -74,7 +75,7 @@ export default function CoursesTable() {
       const time = getCourseTime(course.classTime)
       if (!time) return
       const key = `${weekday}-${time}`
-      slots.set(key, [...(slots.get(key) ?? []), course])
+      slots.set(key, [...(slots.get(key) ?? []), course].sort(compareCourses))
     })
     return slots
   }, [filteredCourses])

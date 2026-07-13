@@ -4,6 +4,7 @@ import { getAdminProfile } from '@/lib/admin-auth'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { shopProductFromRow, type ShopProductRow } from '@/lib/shop-products'
 import { allCourses } from '@/lib/goodluck-data'
+import { coachPublicProfilesFromRows, getDefaultCourseCoachKeys, type CoachPublicProfileRow } from '@/lib/coach-profiles'
 import { applyCourseSeasonToContent, nextCourseSeasonIdentity, type CourseSeasonStatus } from '@/lib/course-seasons'
 import { getCourseSeasons } from '@/lib/course-seasons-server'
 import { applyCourseOverrides } from '@/lib/managed-courses'
@@ -150,6 +151,7 @@ type CoachInviteRow = {
 
 type AdminPatchBody =
   | { action?: 'set_coach_role'; userId?: string; enabled?: boolean }
+  | { action?: 'link_coach_public_profile'; userId?: string; coachKey?: string }
   | { action?: 'create_coach_invite' }
   | { action?: 'review_order'; orderId?: string; orderKind?: 'course' | 'shop'; status?: PaymentOrderStatus; reviewNote?: string }
   | { action?: 'delete_order'; orderId?: string; orderKind?: 'course' | 'shop' }
@@ -357,6 +359,7 @@ export async function GET(request: NextRequest) {
     paymentAccountsResult,
     siteContentResult,
     coachInvitesResult,
+    coachPublicProfilesResult,
   ] = await Promise.all([
     supabaseAdmin!
       .from('profiles')
@@ -410,6 +413,9 @@ export async function GET(request: NextRequest) {
       .is('used_at', null)
       .order('created_at', { ascending: false })
       .limit(30),
+    supabaseAdmin!
+      .from('coach_public_profiles')
+      .select('*'),
   ])
 
   const firstError = [
@@ -424,6 +430,7 @@ export async function GET(request: NextRequest) {
     isOptionalSchemaError(paymentAccountsResult.error) ? null : paymentAccountsResult.error,
     isOptionalSchemaError(siteContentResult.error) ? null : siteContentResult.error,
     coachInvitesResult.error,
+    coachPublicProfilesResult.error,
   ].find(Boolean)
 
   if (firstError) {
@@ -442,8 +449,13 @@ export async function GET(request: NextRequest) {
   const courseSeasons = await getCourseSeasons()
   const currentSeason = courseSeasons.find((season) => season.isCurrent) ?? null
   const baseSiteContent = siteContentResult.error ? defaultSiteContent : siteContentFromRows(siteContentResult.data)
-  const siteContent = applyCourseSeasonToContent(baseSiteContent, currentSeason)
-  const managedCourses = applyCourseOverrides(siteContent.courseOverrides, { includeInactive: true })
+  const publicCoachProfiles = coachPublicProfilesFromRows(coachPublicProfilesResult.data as CoachPublicProfileRow[] | null)
+  const publicCoachRows = (coachPublicProfilesResult.data ?? []) as CoachPublicProfileRow[]
+  const siteContent = {
+    ...applyCourseSeasonToContent(baseSiteContent, currentSeason),
+    coachProfiles: publicCoachProfiles,
+  }
+  const managedCourses = applyCourseOverrides(siteContent.courseOverrides, { includeInactive: true, coachProfiles: publicCoachProfiles })
   const coachInvites = (coachInvitesResult.data ?? []) as CoachInviteRow[]
   const coursePaymentOrders = orders.filter((order) => order.source === 'course_payment')
 
@@ -503,11 +515,14 @@ export async function GET(request: NextRequest) {
 
   const coaches = coachProfiles.map((coach) => {
     const coachBindings = bindingsByCoach.get(coach.id) ?? []
-    const studentPrograms = new Set(
-      coachBindings
-        .map((binding) => profilesById.get(binding.student_id)?.program)
-        .filter(Boolean) as string[]
-    )
+    const publicProfileRow = publicCoachRows.find((row) => row.owner_profile_id === coach.id)
+    const assignedCourses = publicProfileRow
+      ? managedCourses.filter((course) => {
+          const coachKeys = siteContent.courseOverrides[course.slug]?.coachKeys
+            ?? getDefaultCourseCoachKeys(course.slug)
+          return coachKeys.includes(publicProfileRow.coach_key)
+        })
+      : []
 
     return {
       id: coach.id,
@@ -516,7 +531,9 @@ export async function GET(request: NextRequest) {
       role: coach.role,
       coachEnabled: coach.role === 'coach' || coach.role === 'admin',
       boundStudentCount: coachBindings.length,
-      courses: Array.from(studentPrograms).join('、'),
+      courses: assignedCourses.map((course) => course.name).join('、'),
+      publicCoachKey: publicProfileRow?.coach_key ?? '',
+      publicProfileName: publicProfileRow ? publicCoachProfiles[publicProfileRow.coach_key]?.displayName ?? publicProfileRow.display_name ?? '' : '',
       createdAt: coach.created_at,
     }
   })
@@ -606,7 +623,7 @@ export async function GET(request: NextRequest) {
   const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
   const overview = {
     studentCount: students.length,
-    coachCount: coaches.filter((coach) => coach.role === 'coach').length,
+    coachCount: coaches.filter((coach) => coach.coachEnabled).length,
     pendingOrderCount: dashboardOrders.filter((order) => order.status === 'pending_review').length,
     approvedOrderCount: dashboardOrders.filter((order) => order.status === 'approved').length,
     unopenedPlanCount: students.filter((student) => !student.planEnabled).length,
@@ -660,6 +677,8 @@ export async function GET(request: NextRequest) {
       targetAudience: course.targetAudience,
       focus: course.focus,
       signupUrl: course.signupUrl || '',
+      coachKeys: siteContent.courseOverrides[course.slug]?.coachKeys
+        ?? getDefaultCourseCoachKeys(course.slug),
     })),
     coachOptions: coaches
       .filter((coach) => coach.coachEnabled)
@@ -673,6 +692,11 @@ export async function GET(request: NextRequest) {
       usedAt: invite.used_at,
       expiresAt: invite.expires_at,
       createdAt: invite.created_at,
+    })),
+    coachPublicProfiles: publicCoachRows.map((row) => ({
+      coachKey: row.coach_key,
+      displayName: publicCoachProfiles[row.coach_key]?.displayName || row.display_name || row.coach_key,
+      ownerProfileId: row.owner_profile_id ?? null,
     })),
   })
 }
@@ -872,6 +896,55 @@ export async function PATCH(request: NextRequest) {
     }
 
     return json({ profile, message: enabled ? '已授予教練權限。' : '已取消教練權限。' })
+  }
+
+  if (body.action === 'link_coach_public_profile') {
+    const userId = cleanText(body.userId)
+    const coachKey = cleanText(body.coachKey)
+    if (!userId) return json({ error: '缺少使用者 ID。' }, { status: 400 })
+
+    const { data: target, error: targetError } = await supabaseAdmin!
+      .from('profiles')
+      .select('id, role')
+      .eq('id', userId)
+      .single()
+    if (targetError || !target) return json({ error: targetError?.message || '找不到使用者。' }, { status: 404 })
+    if (!['coach', 'admin'].includes(target.role)) return json({ error: '請先授予這個帳號教練權限。' }, { status: 400 })
+
+    if (coachKey) {
+      const { data: publicProfile, error: publicProfileError } = await supabaseAdmin!
+        .from('coach_public_profiles')
+        .select('coach_key')
+        .eq('coach_key', coachKey)
+        .maybeSingle()
+      if (publicProfileError || !publicProfile) {
+        return json({ error: publicProfileError?.message || '找不到要連結的公開教練資料。' }, { status: 404 })
+      }
+    }
+
+    const { error: clearOwnerError } = await supabaseAdmin!
+      .from('coach_public_profiles')
+      .update({ owner_profile_id: null })
+      .eq('owner_profile_id', userId)
+    if (clearOwnerError) return json({ error: clearOwnerError.message }, { status: 500 })
+
+    if (coachKey) {
+      const { error: clearSelectedError } = await supabaseAdmin!
+        .from('coach_public_profiles')
+        .update({ owner_profile_id: null })
+        .eq('coach_key', coachKey)
+      if (clearSelectedError) return json({ error: clearSelectedError.message }, { status: 500 })
+
+      const { data: linked, error: linkError } = await supabaseAdmin!
+        .from('coach_public_profiles')
+        .update({ owner_profile_id: userId })
+        .eq('coach_key', coachKey)
+        .select('coach_key')
+        .single()
+      if (linkError || !linked) return json({ error: linkError?.message || '找不到要連結的公開教練資料。' }, { status: 404 })
+    }
+
+    return json({ message: coachKey ? '教練帳號與公開資料已連結。' : '已解除公開教練資料連結。' })
   }
 
   if (body.action === 'delete_order') {
@@ -1283,12 +1356,23 @@ export async function PATCH(request: NextRequest) {
       return json({ error: contentRowsError.message || '內容已儲存，但重新讀取失敗。' }, { status: 500 })
     }
 
+    const { data: coachRows, error: coachRowsError } = await supabaseAdmin!
+      .from('coach_public_profiles')
+      .select('*')
+    if (coachRowsError) {
+      return json({ error: coachRowsError.message || '內容已儲存，但教練資料重新讀取失敗。' }, { status: 500 })
+    }
+
     const seasons = await getCourseSeasons()
-    const siteContent = applyCourseSeasonToContent(
-      siteContentFromRows(contentRows),
-      seasons.find((season) => season.isCurrent) ?? null
-    )
-    const courses = applyCourseOverrides(siteContent.courseOverrides, { includeInactive: true }).map((course) => ({
+    const publicCoachProfiles = coachPublicProfilesFromRows(coachRows as CoachPublicProfileRow[] | null)
+    const siteContent = {
+      ...applyCourseSeasonToContent(
+        siteContentFromRows(contentRows),
+        seasons.find((season) => season.isCurrent) ?? null
+      ),
+      coachProfiles: publicCoachProfiles,
+    }
+    const courses = applyCourseOverrides(siteContent.courseOverrides, { includeInactive: true, coachProfiles: publicCoachProfiles }).map((course) => ({
       slug: course.slug,
       name: course.name,
       weekday: course.weekday,
@@ -1300,6 +1384,8 @@ export async function PATCH(request: NextRequest) {
       targetAudience: course.targetAudience,
       focus: course.focus,
       signupUrl: course.signupUrl || '',
+      coachKeys: siteContent.courseOverrides[course.slug]?.coachKeys
+        ?? getDefaultCourseCoachKeys(course.slug),
     }))
 
     return json({ content, siteContent, courses, message: '網站內容已儲存並同步發布。' })

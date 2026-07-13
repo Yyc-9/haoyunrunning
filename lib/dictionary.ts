@@ -458,7 +458,7 @@ export const dictionary = {
       backToCourseList: '返回課程列表',
       enrollmentSteps: [
         {
-          title: '通過 Instagram 私讯咨詢',
+          title: '透過 Instagram 私訊諮詢',
           description: '告訴我們您的跑齡、目標和可訓練時間，我們會推薦最適合的班級。',
         },
         {

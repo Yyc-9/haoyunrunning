@@ -1,13 +1,15 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowRight, CalendarCheck2, ClipboardList, Mail, MessageSquareText, RefreshCw, UsersRound } from 'lucide-react'
+import { ArrowRight, CalendarCheck2, ClipboardList, Mail, MessageSquareText, PencilLine, RefreshCw, UserRound, UsersRound } from 'lucide-react'
 import CoachAccessPanel from '@/components/CoachAccessPanel'
 import CoachSubNav from '@/components/CoachSubNav'
 import { paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
 import { supabase } from '@/lib/supabase'
 import { getStudentDisplayEmail, getStudentDisplayName, hasStudentName } from '@/lib/student-display'
+import type { CoachPublicProfile } from '@/lib/coach-profiles'
 
 type RecentFeedback = {
   id: string
@@ -55,18 +57,21 @@ async function fetchCoachWorkspace() {
   if (!token) throw new Error('請先登入教練或超級管理員帳號。')
 
   const headers = { Authorization: `Bearer ${token}` }
-  const [studentsResponse, signupsResponse] = await Promise.all([
+  const [studentsResponse, signupsResponse, profileResponse] = await Promise.all([
     fetch('/api/coach/students', { cache: 'no-store', headers }),
     fetch('/api/signup-leads?source=group_class', { cache: 'no-store', headers }),
+    fetch('/api/coach/profile', { cache: 'no-store', headers }),
   ])
 
   const studentsPayload = (await studentsResponse.json().catch(() => ({}))) as { students?: BoundStudentRow[]; error?: string }
   const signupsPayload = (await signupsResponse.json().catch(() => ({}))) as { leads?: GroupSignup[]; error?: string }
+  const profilePayload = (await profileResponse.json().catch(() => ({}))) as { profile?: CoachPublicProfile; error?: string }
 
   if (!studentsResponse.ok) throw new Error(studentsPayload.error || '讀取學員失敗。')
   if (!signupsResponse.ok) throw new Error(signupsPayload.error || '讀取團練報名失敗。')
+  if (!profileResponse.ok) throw new Error(profilePayload.error || '讀取教練資料失敗。')
 
-  return { students: studentsPayload.students ?? [], signups: signupsPayload.leads ?? [] }
+  return { students: studentsPayload.students ?? [], signups: signupsPayload.leads ?? [], profile: profilePayload.profile ?? null }
 }
 
 function formatDate(value: string) {
@@ -76,6 +81,7 @@ function formatDate(value: string) {
 export default function CoachDashboardClient() {
   const [students, setStudents] = useState<BoundStudentRow[]>([])
   const [groupSignups, setGroupSignups] = useState<GroupSignup[]>([])
+  const [coachProfile, setCoachProfile] = useState<CoachPublicProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -86,6 +92,7 @@ export default function CoachDashboardClient() {
       const data = await fetchCoachWorkspace()
       setStudents(data.students)
       setGroupSignups(data.signups)
+      setCoachProfile(data.profile)
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : '讀取教練工作台失敗。')
     } finally {
@@ -103,7 +110,10 @@ export default function CoachDashboardClient() {
     .slice(0, 5), [students])
 
   const pendingSignups = groupSignups.filter((signup) => signup.status !== 'approved').length
-  const statusLabels = paymentOrderStatusLabels['zh-CN']
+  const statusLabels = paymentOrderStatusLabels['zh-TW']
+  const hour = new Date().getHours()
+  const greeting = hour < 11 ? '早安' : hour < 18 ? '午安' : '晚安'
+  const coachName = coachProfile?.displayName || '教練'
 
   return (
     <main className="min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
@@ -111,17 +121,25 @@ export default function CoachDashboardClient() {
         <div className="container mx-auto max-w-7xl">
           <CoachSubNav />
 
-          <header className="mb-6 flex flex-col justify-between gap-4 sm:mb-8 lg:flex-row lg:items-end">
-            <div>
-              <p className="text-xs font-bold uppercase text-apple-blue sm:text-sm">教練工作台</p>
-              <h1 className="mt-2 text-3xl font-black leading-tight text-black sm:text-5xl">學員與團練，一頁掌握</h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-apple-gray-600 sm:text-base sm:leading-7">
-                綁定名下學員、查看近期回饋與團練報名。課表功能目前暫時隱藏。
-              </p>
+          <header className="mb-6 border-b border-black/10 pb-6 sm:mb-8 sm:pb-8">
+            <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
+              <div className="flex min-w-0 items-center gap-4">
+                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-white ring-1 ring-black/10 sm:h-20 sm:w-20">
+                  {coachProfile?.avatarUrl ? <Image src={coachProfile.avatarUrl} alt={coachName} fill quality={95} sizes="80px" className="object-cover" style={{ objectPosition: `${coachProfile.avatarFocusX}% ${coachProfile.avatarFocusY}%` }} /> : <UserRound className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 text-apple-gray-300" />}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-apple-blue sm:text-sm">教練工作台</p>
+                  <h1 className="mt-1 truncate text-2xl font-black text-black sm:text-4xl">{greeting}，{coachName}</h1>
+                  <p className="mt-2 text-sm leading-6 text-apple-gray-600">今天有 {students.length} 位名下學員，{pendingSignups} 項團練報名待跟進。</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Link href="/coach/profile" className="apple-button-secondary min-h-10 gap-2 px-4 py-2 text-sm"><PencilLine className="h-4 w-4" />公開資料</Link>
+                <button type="button" title="重新整理" onClick={loadWorkspace} className="apple-button-secondary min-h-10 gap-2 px-4 py-2 text-sm">
+                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /><span className="hidden sm:inline">重新整理</span>
+                </button>
+              </div>
             </div>
-            <button type="button" onClick={loadWorkspace} className="apple-button-secondary min-h-10 gap-2 px-4 py-2 text-sm">
-              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />重新整理
-            </button>
           </header>
 
           {error ? <p className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-800">{error}</p> : null}

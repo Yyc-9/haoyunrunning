@@ -14,7 +14,7 @@ const allowedTypes: Record<string, { extension: string; kind: 'image' | 'video';
   'video/quicktime': { extension: 'mov', kind: 'video', maxSize: 50 * 1024 * 1024 },
 }
 
-const allowedFolders = new Set(['products', 'hero', 'activities', 'brand', 'pages'])
+const allowedFolders = new Set(['products', 'hero', 'activities', 'brand', 'pages', 'coaches'])
 
 function json(data: unknown, init?: ResponseInit) {
   return NextResponse.json(data, {
@@ -27,9 +27,12 @@ export async function POST(request: NextRequest) {
   if (!supabaseAdmin) return json({ error: '媒體服務尚未設定。' }, { status: 500 })
 
   const user = await getAuthedUser(request.headers.get('authorization'))
-  if (!user || !(await getAdminProfile(user))) {
-    return json({ error: '只有超級管理員可以上傳網站媒體。' }, { status: 403 })
-  }
+  if (!user) return json({ error: '請先登入。' }, { status: 401 })
+  const [adminProfile, profileResult] = await Promise.all([
+    getAdminProfile(user),
+    supabaseAdmin.from('profiles').select('role').eq('id', user.id).single(),
+  ])
+  const canUploadCoachMedia = ['coach', 'admin'].includes(profileResult.data?.role ?? '')
 
   if (request.headers.get('content-type')?.includes('application/json')) {
     const payload = (await request.json().catch(() => null)) as {
@@ -41,6 +44,8 @@ export async function POST(request: NextRequest) {
     const fileSize = Number(payload?.fileSize)
     const requestedFolder = String(payload?.folder ?? '')
     const folder = allowedFolders.has(requestedFolder) ? requestedFolder : 'activities'
+
+    if (!adminProfile) return json({ error: '只有超級管理員可以上傳商品影片。' }, { status: 403 })
 
     if (!mediaType || mediaType.kind !== 'video') {
       return json({ error: '影片僅支援 MP4、WebM 或 MOV。' }, { status: 400 })
@@ -72,6 +77,10 @@ export async function POST(request: NextRequest) {
   const requestedFolder = String(formData?.get('folder') ?? '')
   const folder = allowedFolders.has(requestedFolder) ? requestedFolder : 'activities'
 
+  if (folder === 'coaches' ? !canUploadCoachMedia : !adminProfile) {
+    return json({ error: folder === 'coaches' ? '目前帳號沒有教練媒體上傳權限。' : '只有超級管理員可以上傳網站媒體。' }, { status: 403 })
+  }
+
   if (!(file instanceof File)) {
     return json({ error: '請選擇要上傳的圖片。' }, { status: 400 })
   }
@@ -81,8 +90,9 @@ export async function POST(request: NextRequest) {
     return json({ error: '圖片僅支援 JPG、PNG 或 WebP。' }, { status: 400 })
   }
 
-  if (file.size <= 0 || file.size > mediaType.maxSize) {
-    return json({ error: '圖片大小必須小於 8 MB。' }, { status: 400 })
+  const maxImageSize = folder === 'coaches' ? 15 * 1024 * 1024 : mediaType.maxSize
+  if (file.size <= 0 || file.size > maxImageSize) {
+    return json({ error: `圖片大小必須小於 ${folder === 'coaches' ? 15 : 8} MB。` }, { status: 400 })
   }
 
   const path = `${folder}/${new Date().toISOString().slice(0, 10)}/${randomUUID()}.${mediaType.extension}`

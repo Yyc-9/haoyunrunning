@@ -12,18 +12,10 @@ type CoursesSectionProps = {
   preview?: boolean
 }
 
-const weekdayOrder = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
-
-function normalizeWeekday(weekday: string) {
-  return weekday.replace('週', '周')
-}
-
 export default function CoursesSection({ preview = false }: CoursesSectionProps) {
   const { language, t } = useLanguage()
   const { courses: managedCourses, home } = useSiteContent()
-  const sortedCourses = [...managedCourses].sort(
-    (a, b) => weekdayOrder.indexOf(normalizeWeekday(a.weekday)) - weekdayOrder.indexOf(normalizeWeekday(b.weekday))
-  )
+  const sortedCourses = managedCourses
   const courses = preview ? sortedCourses.slice(0, 4) : sortedCourses
 
   const localeText = (text: string) => {
@@ -56,13 +48,7 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
   return (
     <section id="courses" className="bg-white py-16">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          viewport={{ once: true }}
-          className="mb-10"
-        >
+        <motion.div initial={false} className="mb-10">
           <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">{preview ? home.coursesLabel : t.courses.sectionLabel}</p>
           <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
             <div>
