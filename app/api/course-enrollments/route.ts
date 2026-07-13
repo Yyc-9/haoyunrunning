@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
   const courseSlug = cleanText(body.courseSlug, 120)
   const course = (await getManagedCourses()).find((item) => item.slug === courseSlug)
 
-  if (!['confirm_form_submission', 'direct_site_registration'].includes(intent) || !course) {
+  if (intent !== 'direct_site_registration' || !course) {
     return NextResponse.json({ error: '無法確認這筆課程報名。' }, { status: 400 })
   }
 
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
 
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('name, phone')
+    .select('phone')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -284,35 +284,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ enrollment: enrollmentPayload(data) }, { status: 201 })
   }
 
-  const { data, error } = await supabaseAdmin
-    .from('signup_leads')
-    .insert({
-      source: 'course_payment',
-      name:
-        cleanText(profile?.name, 200) ||
-        cleanText(user.user_metadata?.name, 200) ||
-        email.split('@')[0],
-      phone: cleanText(profile?.phone, 80),
-      email,
-      preferred_course: course.name,
-      course_slug: course.slug,
-      amount_text: course.feeNote || '依 Google 表單所示金額',
-      status: 'pending_transfer',
-      form_submitted_at: formSubmittedAt,
-      payload: {
-        provider: 'google_form_return_link',
-        confirmationMethod: 'authenticated_return_link',
-        formSubmissionVerified: false,
-      },
-    })
-    .select('id, course_slug, preferred_course, status, amount_text, transfer_last_five, review_note, created_at, payment_submitted_at')
-    .single()
-
-  if (error || !data) {
-    return NextResponse.json({ error: error?.message || '建立待付款記錄失敗。' }, { status: 500 })
-  }
-
-  return NextResponse.json({ enrollment: enrollmentPayload(data) }, { status: 201 })
+  return NextResponse.json({ error: '請使用網站課程報名表。' }, { status: 400 })
 }
 
 export async function PATCH(request: NextRequest) {

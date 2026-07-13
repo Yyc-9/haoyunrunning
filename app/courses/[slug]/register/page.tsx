@@ -3,7 +3,6 @@ import CourseRegistrationClient from './CourseRegistrationClient'
 
 type CourseRegistrationPageProps = {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ submitted?: string | string[] }>
 }
 
 export function generateStaticParams() {
@@ -15,12 +14,11 @@ export async function generateMetadata({ params }: CourseRegistrationPageProps) 
   const course = getCourseBySlug(slug)
   return {
     title: course ? `${course.name}報名 - 好運跑班` : '課程報名 - 好運跑班',
-    description: course ? `填寫 ${course.name} 官方報名表並查看付款狀態。` : '好運跑班課程報名。',
+    description: course ? `在好運網站填寫 ${course.name} 報名資料並查看付款狀態。` : '好運跑班課程報名。',
   }
 }
 
-export default async function CourseRegistrationPage({ params, searchParams }: CourseRegistrationPageProps) {
+export default async function CourseRegistrationPage({ params }: CourseRegistrationPageProps) {
   const { slug } = await params
-  const query = await searchParams
-  return <CourseRegistrationClient slug={slug} returnedFromGoogle={query.submitted === '1'} />
+  return <CourseRegistrationClient slug={slug} />
 }

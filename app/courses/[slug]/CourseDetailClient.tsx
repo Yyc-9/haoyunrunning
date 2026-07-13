@@ -126,7 +126,7 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
 
       <section className="overflow-hidden border-b border-black/5 bg-white px-4 py-8 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-7xl">
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-stretch">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
             <div className="rounded-[2rem] border border-black/5 bg-apple-gray-50 p-6 shadow-sm md:p-8">
               <p className="text-sm font-semibold uppercase tracking-wide text-apple-blue">{t.courseDetail.heroLabel}</p>
               <h1 className="mt-3 max-w-4xl text-3xl font-black leading-tight text-apple-gray-900 md:text-5xl">
@@ -148,6 +148,18 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
                     {text(value)}
                   </span>
                 ))}
+              </div>
+
+              <div className="mt-8 hidden border-t border-black/10 pt-6 lg:block">
+                <p className="text-xs font-bold uppercase text-apple-gray-400">本期訓練重點</p>
+                <div className="mt-4 grid grid-cols-3 divide-x divide-black/10">
+                  {course.trainingItems.slice(0, 3).map((item, index) => (
+                    <div key={item} className={index === 0 ? 'pr-5' : 'px-5'}>
+                      <span className="text-xs font-black text-apple-blue">0{index + 1}</span>
+                      <p className="mt-2 text-sm font-black leading-6 text-apple-gray-900">{text(item)}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -185,21 +197,22 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
                     </div>
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                  <div className="grid gap-3 sm:grid-cols-[0.8fr_1.4fr_1fr]">
                     {[
-                      [CalendarDays, t.courseDetail.courseWeekday, course.weekday],
-                      [Clock, t.courseDetail.classTime, course.time],
-                      [Route, t.courseDetail.coursePeriod, course.period],
-                    ].map(([Icon, label, value]) => {
+                      [CalendarDays, t.courseDetail.courseWeekday, '星期', course.weekday],
+                      [Clock, t.courseDetail.classTime, '時間', course.time],
+                      [Route, t.courseDetail.coursePeriod, '週期', course.period],
+                    ].map(([Icon, label, shortLabel, value]) => {
                       const CardIcon = Icon as typeof CalendarDays
 
                       return (
                         <div key={`${label}-${value}`} className="rounded-2xl border border-white/10 bg-white/10 p-3">
-                          <div className="flex items-center gap-2 text-xs font-bold text-white/45">
-                            <CardIcon className="h-4 w-4" />
-                            {label as string}
+                          <div className="flex items-center gap-1 text-xs font-bold text-white/45">
+                            <CardIcon className="h-3.5 w-3.5 shrink-0" />
+                            <span className="sm:hidden">{label as string}</span>
+                            <span className="hidden whitespace-nowrap sm:inline">{shortLabel as string}</span>
                           </div>
-                          <p className="mt-2 text-sm font-black leading-5 text-white">{text(value as string)}</p>
+                          <p className="mt-2 text-sm font-black leading-5 text-white sm:text-xs">{text(value as string)}</p>
                         </div>
                       )
                     })}
