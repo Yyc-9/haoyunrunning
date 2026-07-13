@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { BarChart3, CalendarRange, ChevronLeft, ChevronRight, Download, Search, X } from 'lucide-react'
+import { BarChart3, CalendarRange, CheckCircle2, ChevronLeft, ChevronRight, Download, Loader2, Package, RotateCcw, Search, Trash2, X } from 'lucide-react'
 import type { CourseSeason } from '@/lib/course-seasons'
 
 type PaymentStatus = 'pending_transfer' | 'pending_review' | 'approved' | 'rejected'
@@ -9,6 +9,7 @@ type PaymentStatus = 'pending_transfer' | 'pending_review' | 'approved' | 'rejec
 type Enrollment = {
   id: string
   orderKind: 'course' | 'shop'
+  orderNumber: string
   studentName: string
   email: string
   courseName: string
@@ -21,6 +22,11 @@ type Enrollment = {
   submittedAt: string
   notes: string
   reviewNote: string | null
+  paymentReference: string
+  paymentChannelLabel: string
+  assignedAccount: string
+  inventoryReserved: boolean
+  items: string[]
   registrationDetails: Array<{ label: string; value: string }>
 }
 
@@ -40,6 +46,8 @@ type Props = {
   orders: Enrollment[]
   courseCapacity: Capacity[]
   seasons: CourseSeason[]
+  runAction: (id: string, action: Record<string, unknown>) => Promise<boolean>
+  updatingId: string
 }
 
 const statusLabels: Record<PaymentStatus, string> = {
@@ -89,7 +97,7 @@ function csvCell(value: unknown) {
   return `"${text.replaceAll('"', '""')}"`
 }
 
-export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seasons }: Props) {
+export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seasons, runAction, updatingId }: Props) {
   const initialSeasonId = seasons.find((season) => season.code === '2026-Q3')?.id
     ?? seasons.find((season) => season.isCurrent)?.id
     ?? seasons[0]?.id
@@ -99,8 +107,10 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
   const [courseFilter, setCourseFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState<'all' | 'new' | 'returning'>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | PaymentStatus>('all')
+  const [listKind, setListKind] = useState<'course' | 'shop'>('course')
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<Enrollment | null>(null)
+  const [reviewNote, setReviewNote] = useState('')
   const pageSize = 25
 
   const season = seasons.find((item) => item.id === seasonId)
@@ -112,6 +122,7 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
     () => courseCapacity.filter((course) => course.seasonId === seasonId),
     [courseCapacity, seasonId]
   )
+  const shopOrders = useMemo(() => orders.filter((order) => order.orderKind === 'shop'), [orders])
 
   const summary = useMemo(() => {
     const approved = seasonOrders.filter((order) => order.status === 'approved').length
@@ -152,41 +163,96 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
 
   const filtered = useMemo(() => {
     const text = query.trim().toLowerCase()
-    return seasonOrders.filter((order) => {
-      if (courseFilter !== 'all' && order.courseSlug !== courseFilter) return false
-      if (typeFilter !== 'all' && studentType(order) !== typeFilter) return false
+    const source = listKind === 'course' ? seasonOrders : shopOrders
+    return source.filter((order) => {
+      if (listKind === 'course' && courseFilter !== 'all' && order.courseSlug !== courseFilter) return false
+      if (listKind === 'course' && typeFilter !== 'all' && studentType(order) !== typeFilter) return false
       if (statusFilter !== 'all' && order.status !== statusFilter) return false
-      return !text || [order.studentName, order.email, order.courseName, order.transferLastFive]
+      return !text || [order.studentName, order.email, order.courseName, order.orderNumber, order.transferLastFive, order.items.join(' ')]
         .filter(Boolean)
         .some((value) => value.toLowerCase().includes(text))
     })
-  }, [courseFilter, query, seasonOrders, statusFilter, typeFilter])
+  }, [courseFilter, listKind, query, seasonOrders, shopOrders, statusFilter, typeFilter])
 
-  useEffect(() => setPage(1), [courseFilter, query, seasonId, statusFilter, typeFilter])
+  useEffect(() => setPage(1), [courseFilter, listKind, query, seasonId, statusFilter, typeFilter])
+  useEffect(() => setReviewNote(selected?.reviewNote ?? ''), [selected])
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize))
   const visible = filtered.slice((page - 1) * pageSize, page * pageSize)
 
   function exportRoster() {
-    const headers = ['季度', '姓名', '信箱', '班級', '身分', '金額', '後五碼', '狀態', '報名時間']
+    const headers = ['類型', '季度', '訂單編號', '姓名', '信箱', '班級或商品', '身分', '金額', '後五碼', '狀態', '管理備註', '提交時間']
     const rows = filtered.map((order) => [
+      order.orderKind === 'shop' ? '商城' : '課程',
       order.seasonName,
+      order.orderNumber,
       order.studentName,
       order.email,
-      order.courseName,
-      studentType(order) === 'new' ? '新生' : studentType(order) === 'returning' ? '舊生' : '',
+      order.orderKind === 'shop' ? order.items.join('、') : order.courseName,
+      order.orderKind === 'course' ? (studentType(order) === 'new' ? '新生' : studentType(order) === 'returning' ? '舊生' : '') : '',
       order.amountText,
       order.transferLastFive,
       statusLabels[order.status],
+      order.reviewNote ?? '',
       order.submittedAt,
     ])
     const csv = [headers, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n')
     const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }))
     const link = document.createElement('a')
     link.href = url
-    link.download = `${season?.name || '季度'}-學員名單.csv`
+    link.download = listKind === 'course' ? `${season?.name || '季度'}-學員名單.csv` : '好運商城訂單.csv'
     link.click()
     URL.revokeObjectURL(url)
   }
+
+  async function reviewOrder(status: 'approved' | 'rejected') {
+    if (!selected) return
+    const saved = await runAction(selected.id, {
+      action: 'review_order',
+      orderId: selected.id,
+      orderKind: selected.orderKind,
+      status,
+      reviewNote,
+    })
+    if (saved) setSelected(null)
+  }
+
+  async function deleteOrder() {
+    if (!selected || selected.status === 'approved') return
+    const inventoryMessage = selected.orderKind === 'shop' && selected.inventoryReserved
+      ? ' 系統會同時歸還這筆訂單預留的商品庫存。'
+      : ''
+    if (!window.confirm(`確定刪除「${selected.studentName}」的${selected.orderKind === 'shop' ? '商城訂單' : '課程報名'}？${inventoryMessage} 此操作無法復原。`)) return
+    const deleted = await runAction(`delete-${selected.id}`, {
+      action: 'delete_order',
+      orderId: selected.id,
+      orderKind: selected.orderKind,
+    })
+    if (deleted) setSelected(null)
+  }
+
+  const selectedSummary = selected
+    ? selected.orderKind === 'shop'
+      ? [
+          ['訂單編號', selected.orderNumber],
+          ['商品', selected.items.join('、')],
+          ['金額', selected.amountText],
+          ['匯款後五碼', selected.transferLastFive],
+          ['狀態', statusLabels[selected.status]],
+          ['提交時間', formatDate(selected.submittedAt)],
+          ['付款代號', selected.paymentReference],
+          ['付款通道', selected.paymentChannelLabel],
+          ['分配帳戶（僅後台）', selected.assignedAccount],
+          ['庫存', selected.inventoryReserved ? '已預留' : '未預留'],
+        ]
+      : [
+          ['報名班級', selected.courseName],
+          ['學員身分', detail(selected, '學員身分')],
+          ['金額', selected.amountText],
+          ['匯款後五碼', selected.transferLastFive],
+          ['狀態', statusLabels[selected.status]],
+          ['報名時間', formatDate(selected.submittedAt)],
+        ]
+    : []
 
   return (
     <section className="space-y-5">
@@ -227,24 +293,53 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
       </div>
 
       <section className="overflow-hidden rounded-lg border border-black/10 bg-white">
-        <div className="grid gap-3 border-b border-black/10 p-4 lg:grid-cols-[minmax(220px,1fr)_180px_130px_130px_auto]">
-          <label className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-apple-gray-400" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜尋姓名、信箱或後五碼" className="apple-input pl-10" /></label>
-          <select value={courseFilter} onChange={(event) => setCourseFilter(event.target.value)} className="apple-input"><option value="all">全部班級</option>{capacities.map((course) => <option key={course.slug} value={course.slug}>{course.name}</option>)}</select>
-          <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as typeof typeFilter)} className="apple-input"><option value="all">全部身分</option><option value="new">新生</option><option value="returning">舊生</option></select>
+        <div className="flex flex-col gap-3 border-b border-black/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-base font-black text-apple-gray-950">名單與審核</h3>
+            <p className="mt-1 text-xs font-semibold text-apple-gray-500">在同一份緊湊名單中查看資料、核對付款與處理異常。</p>
+          </div>
+          <div className="grid grid-cols-2 rounded-lg bg-apple-gray-100 p-1">
+            <button type="button" onClick={() => setListKind('course')} className={`inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-bold ${listKind === 'course' ? 'bg-white text-black shadow-sm' : 'text-apple-gray-500'}`}><CalendarRange className="h-4 w-4" />課程報名</button>
+            <button type="button" onClick={() => setListKind('shop')} className={`inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-bold ${listKind === 'shop' ? 'bg-white text-black shadow-sm' : 'text-apple-gray-500'}`}><Package className="h-4 w-4" />商城訂單</button>
+          </div>
+        </div>
+        <div className={`grid gap-3 border-b border-black/10 p-4 ${listKind === 'course' ? 'lg:grid-cols-[minmax(220px,1fr)_180px_130px_130px_auto]' : 'lg:grid-cols-[minmax(220px,1fr)_160px_auto]'}`}>
+          <label className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-apple-gray-400" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={listKind === 'course' ? '搜尋姓名、信箱或後五碼' : '搜尋顧客、訂單編號或商品'} className="apple-input pl-10" /></label>
+          {listKind === 'course' ? <select value={courseFilter} onChange={(event) => setCourseFilter(event.target.value)} className="apple-input"><option value="all">全部班級</option>{capacities.map((course) => <option key={course.slug} value={course.slug}>{course.name}</option>)}</select> : null}
+          {listKind === 'course' ? <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as typeof typeFilter)} className="apple-input"><option value="all">全部身分</option><option value="new">新生</option><option value="returning">舊生</option></select> : null}
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} className="apple-input"><option value="all">全部狀態</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
           <button type="button" onClick={exportRoster} disabled={!filtered.length} className="apple-button-outline gap-2 px-4 py-2.5 text-sm disabled:opacity-40"><Download className="h-4 w-4" />匯出</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[920px] text-left text-sm">
-            <thead className="bg-apple-gray-100 text-xs text-apple-gray-600"><tr>{['學員', '班級', '身分', '金額', '後五碼', '狀態', '報名時間', ''].map((label) => <th key={label || 'action'} className="px-3 py-2.5 font-bold">{label}</th>)}</tr></thead>
-            <tbody className="divide-y divide-black/5">{visible.map((order) => <tr key={order.id} className="hover:bg-apple-gray-50"><td className="px-3 py-2.5"><p className="font-bold">{order.studentName}</p><p className="max-w-52 truncate text-xs text-apple-gray-500">{order.email}</p></td><td className="max-w-64 truncate px-3 py-2.5 font-semibold text-apple-gray-700">{order.courseName}</td><td className="px-3 py-2.5">{studentType(order) === 'new' ? '新生' : studentType(order) === 'returning' ? '舊生' : '-'}</td><td className="px-3 py-2.5 font-semibold">{order.amountText}</td><td className="px-3 py-2.5 font-mono">{order.transferLastFive || '-'}</td><td className="px-3 py-2.5"><span className={`rounded-full px-2 py-1 text-xs font-bold ${statusTone[order.status]}`}>{statusLabels[order.status]}</span></td><td className="whitespace-nowrap px-3 py-2.5 text-xs text-apple-gray-500">{formatDate(order.submittedAt)}</td><td className="px-3 py-2.5 text-right"><button type="button" onClick={() => setSelected(order)} className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-black hover:text-white" aria-label={`查看 ${order.studentName} 的報名資料`}><ChevronRight className="h-4 w-4" /></button></td></tr>)}</tbody>
+            <thead className="bg-apple-gray-100 text-xs text-apple-gray-600"><tr>{[listKind === 'course' ? '學員' : '顧客', listKind === 'course' ? '班級' : '訂單 / 商品', listKind === 'course' ? '身分' : '類型', '金額', '後五碼', '狀態', '提交時間', ''].map((label) => <th key={label || 'action'} className="px-3 py-2.5 font-bold">{label}</th>)}</tr></thead>
+            <tbody className="divide-y divide-black/5">{visible.map((order) => <tr key={order.id} className="hover:bg-apple-gray-50"><td className="px-3 py-2.5"><p className="font-bold">{order.studentName}</p><p className="max-w-52 truncate text-xs text-apple-gray-500">{order.email}</p></td><td className="max-w-64 px-3 py-2.5 font-semibold text-apple-gray-700">{order.orderKind === 'shop' ? <><p className="truncate">{order.orderNumber}</p><p className="mt-1 truncate text-xs font-medium text-apple-gray-500">{order.items.join('、') || '未載入商品'}</p></> : <p className="truncate">{order.courseName}</p>}</td><td className="px-3 py-2.5">{order.orderKind === 'shop' ? '商城' : studentType(order) === 'new' ? '新生' : studentType(order) === 'returning' ? '舊生' : '-'}</td><td className="px-3 py-2.5 font-semibold">{order.amountText}</td><td className="px-3 py-2.5 font-mono">{order.transferLastFive || '-'}</td><td className="px-3 py-2.5"><span className={`rounded-full px-2 py-1 text-xs font-bold ${statusTone[order.status]}`}>{statusLabels[order.status]}</span></td><td className="whitespace-nowrap px-3 py-2.5 text-xs text-apple-gray-500">{formatDate(order.submittedAt)}</td><td className="px-3 py-2.5 text-right"><button type="button" onClick={() => setSelected(order)} className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-black hover:text-white" aria-label={`查看 ${order.studentName} 的${order.orderKind === 'shop' ? '訂單' : '報名資料'}`}><ChevronRight className="h-4 w-4" /></button></td></tr>)}</tbody>
           </table>
         </div>
-        {!filtered.length ? <p className="p-10 text-center text-sm font-semibold text-apple-gray-500">沒有符合條件的學員。</p> : null}
+        {!filtered.length ? <p className="p-10 text-center text-sm font-semibold text-apple-gray-500">沒有符合條件的{listKind === 'course' ? '學員' : '商城訂單'}。</p> : null}
         <div className="flex flex-col gap-3 border-t border-black/10 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"><p className="font-semibold text-apple-gray-500">共 {filtered.length} 筆，第 {page} / {pageCount} 頁</p><div className="flex gap-2"><button type="button" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))} className="inline-flex h-9 items-center gap-1 rounded-full border px-3 font-bold disabled:opacity-30"><ChevronLeft className="h-4 w-4" />上一頁</button><button type="button" disabled={page >= pageCount} onClick={() => setPage((current) => Math.min(pageCount, current + 1))} className="inline-flex h-9 items-center gap-1 rounded-full border px-3 font-bold disabled:opacity-30">下一頁<ChevronRight className="h-4 w-4" /></button></div></div>
       </section>
 
-      {selected ? <div className="fixed inset-0 z-[90] bg-black/35" role="dialog" aria-modal="true" aria-label="學員報名詳情" onClick={() => setSelected(null)}><aside className="ml-auto flex h-full w-full max-w-xl flex-col bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}><div className="flex items-start justify-between border-b p-5"><div><p className="text-xs font-bold text-apple-gray-500">{selected.seasonName}</p><h3 className="mt-1 text-2xl font-black">{selected.studentName}</h3><p className="mt-1 text-sm text-apple-gray-600">{selected.email}</p></div><button type="button" onClick={() => setSelected(null)} className="inline-flex h-9 w-9 items-center justify-center rounded-full border" aria-label="關閉"><X className="h-4 w-4" /></button></div><div className="flex-1 overflow-y-auto p-5"><div className="grid gap-3 sm:grid-cols-2">{[['報名班級', selected.courseName], ['學員身分', detail(selected, '學員身分')], ['金額', selected.amountText], ['匯款後五碼', selected.transferLastFive], ['狀態', statusLabels[selected.status]], ['報名時間', formatDate(selected.submittedAt)]].map(([label, value]) => <div key={label} className="rounded-lg bg-apple-gray-100 p-3"><p className="text-xs font-bold text-apple-gray-500">{label}</p><p className="mt-1 break-words text-sm font-bold">{value || '-'}</p></div>)}</div><dl className="mt-5 divide-y border-y">{selected.registrationDetails.filter((item) => item.label !== '學員身分').map((item) => <div key={item.label} className="py-3"><dt className="text-xs font-bold text-apple-gray-500">{item.label}</dt><dd className="mt-1 whitespace-pre-wrap break-words text-sm font-semibold leading-6">{item.value}</dd></div>)}{selected.notes ? <div className="py-3"><dt className="text-xs font-bold text-apple-gray-500">備註</dt><dd className="mt-1 whitespace-pre-wrap text-sm font-semibold">{selected.notes}</dd></div> : null}</dl></div></aside></div> : null}
+      {selected ? (
+        <div className="fixed inset-0 z-[90] bg-black/35" role="dialog" aria-modal="true" aria-label={selected.orderKind === 'shop' ? '商城訂單詳情' : '學員報名詳情'} onClick={() => setSelected(null)}>
+          <aside className="ml-auto flex h-full w-full max-w-xl flex-col bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between border-b p-5">
+              <div><p className="text-xs font-bold text-apple-gray-500">{selected.orderKind === 'shop' ? `商城訂單 ${selected.orderNumber}` : selected.seasonName}</p><h3 className="mt-1 text-2xl font-black">{selected.studentName}</h3><p className="mt-1 text-sm text-apple-gray-600">{selected.email}</p></div>
+              <button type="button" onClick={() => setSelected(null)} className="inline-flex h-9 w-9 items-center justify-center rounded-full border" aria-label="關閉"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5">
+              <div className="grid gap-3 sm:grid-cols-2">{selectedSummary.map(([label, value]) => <div key={label} className="rounded-lg bg-apple-gray-100 p-3"><p className="text-xs font-bold text-apple-gray-500">{label}</p><p className="mt-1 break-words text-sm font-bold">{value || '-'}</p></div>)}</div>
+              <dl className="mt-5 divide-y border-y">{selected.registrationDetails.filter((item) => item.label !== '學員身分').map((item) => <div key={item.label} className="py-3"><dt className="text-xs font-bold text-apple-gray-500">{item.label}</dt><dd className="mt-1 whitespace-pre-wrap break-words text-sm font-semibold leading-6">{item.value}</dd></div>)}{selected.notes ? <div className="py-3"><dt className="text-xs font-bold text-apple-gray-500">客戶備註</dt><dd className="mt-1 whitespace-pre-wrap text-sm font-semibold">{selected.notes}</dd></div> : null}</dl>
+              <label className="mt-5 block"><span className="mb-2 block text-xs font-bold text-apple-gray-500">管理備註</span><textarea value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} className="apple-input min-h-24 resize-y" placeholder="記錄核對結果或需要補充的資料" /></label>
+            </div>
+            <div className="grid gap-2 border-t bg-white p-4 sm:grid-cols-3">
+              <button type="button" disabled={updatingId === selected.id || selected.status === 'approved'} onClick={() => reviewOrder('approved')} className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-40">{updatingId === selected.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}核准付款</button>
+              <button type="button" disabled={updatingId === selected.id || selected.status === 'rejected'} onClick={() => reviewOrder('rejected')} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40"><RotateCcw className="h-4 w-4" />標記異常</button>
+              <button type="button" disabled={updatingId === `delete-${selected.id}` || selected.status === 'approved'} onClick={deleteOrder} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40">{updatingId === `delete-${selected.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}刪除記錄</button>
+            </div>
+          </aside>
+        </div>
+      ) : null}
     </section>
   )
 }

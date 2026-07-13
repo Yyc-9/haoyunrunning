@@ -8,16 +8,12 @@ import {
   Boxes,
   CalendarRange,
   CheckCircle2,
-  ClipboardList,
   Copy,
   CreditCard,
-  Download,
   LayoutDashboard,
   Loader2,
   RefreshCw,
-  RotateCcw,
   ShieldCheck,
-  Trash2,
   Landmark,
   KeyRound,
   PanelsTopLeft,
@@ -35,7 +31,7 @@ import { announceSiteContentUpdated } from '@/lib/site-content-sync'
 
 type PaymentOrderStatus = 'pending_transfer' | 'pending_review' | 'approved' | 'rejected'
 
-type AdminTab = 'overview' | 'students' | 'coaches' | 'orders' | 'seasons' | 'products' | 'content' | 'paymentAccounts'
+type AdminTab = 'overview' | 'students' | 'coaches' | 'seasons' | 'products' | 'content' | 'paymentAccounts'
 
 type AdminDashboardPayload = {
   admin: { id: string; email: string; name: string; role: string }
@@ -169,18 +165,10 @@ const statusLabels: Record<PaymentOrderStatus, string> = {
   rejected: '核對未透過或需補充資料',
 }
 
-const statusTone: Record<PaymentOrderStatus, string> = {
-  pending_transfer: 'bg-amber-50 text-amber-700',
-  pending_review: 'bg-blue-50 text-blue-700',
-  approved: 'bg-emerald-50 text-emerald-700',
-  rejected: 'bg-red-50 text-red-700',
-}
-
 const tabs: Array<{ id: AdminTab; label: string; icon: typeof LayoutDashboard }> = [
   { id: 'overview', label: '總覽', icon: LayoutDashboard },
   { id: 'students', label: '學員管理', icon: UsersRound },
   { id: 'coaches', label: '教練管理', icon: UserCog },
-  { id: 'orders', label: '訂單審核', icon: ClipboardList },
   { id: 'seasons', label: '季度管理', icon: CalendarRange },
   { id: 'products', label: '商城商品', icon: Boxes },
   { id: 'content', label: '內容中心', icon: PanelsTopLeft },
@@ -197,12 +185,6 @@ function formatDate(value: string | null | undefined) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value))
-}
-
-function csvCell(value: unknown) {
-  let text = String(value ?? '')
-  if (/^[=+\-@]/.test(text)) text = `'${text}`
-  return `"${text.replaceAll('"', '""')}"`
 }
 
 async function getAccessToken() {
@@ -273,16 +255,12 @@ export default function AdminDashboardClient() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [updatingId, setUpdatingId] = useState('')
-  const [seasonView, setSeasonView] = useState<'settings' | 'students'>('settings')
+  const [seasonView, setSeasonView] = useState<'settings' | 'students'>('students')
   const [selectedCoachByStudent, setSelectedCoachByStudent] = useState<Record<string, string>>({})
   const [studentQuery, setStudentQuery] = useState('')
   const [coachQuery, setCoachQuery] = useState('')
-  const [orderQuery, setOrderQuery] = useState('')
-  const [orderSeasonFilter, setOrderSeasonFilter] = useState('all')
   const [studentPlanFilter, setStudentPlanFilter] = useState<'all' | 'enabled' | 'missing'>('all')
   const [coachRoleFilter, setCoachRoleFilter] = useState<'all' | 'coach' | 'student' | 'admin'>('all')
-  const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | PaymentOrderStatus>('all')
-  const [orderReviewNotes, setOrderReviewNotes] = useState<Record<string, string>>({})
   const [accountForm, setAccountForm] = useState({
     label: '',
     accountName: '',
@@ -358,67 +336,6 @@ export default function AdminDashboardClient() {
         .some((value) => value.toLowerCase().includes(text))
     })
   }, [coachQuery, coachRoleFilter, data?.coaches])
-  const filteredOrders = useMemo(() => {
-    const text = orderQuery.trim().toLowerCase()
-
-    return (data?.orders ?? []).filter((order) => {
-      if (orderStatusFilter !== 'all' && order.status !== orderStatusFilter) return false
-      if (orderSeasonFilter !== 'all' && (order.orderKind !== 'course' || order.seasonId !== orderSeasonFilter)) return false
-      if (!text) return true
-
-      return [
-        order.orderKind,
-        order.orderNumber,
-        order.studentName,
-        order.email,
-        order.courseName,
-        order.amountText,
-        order.transferLastFive,
-        order.paymentReference,
-        order.paymentChannelLabel,
-        order.assignedAccount,
-        order.items.join(' '),
-        order.notes,
-        order.reviewNote ?? '',
-      ]
-        .filter(Boolean)
-        .some((value) => value.toLowerCase().includes(text))
-    })
-  }, [data?.orders, orderQuery, orderSeasonFilter, orderStatusFilter])
-  const visibleCourseCapacity = useMemo(() => {
-    const currentSeasonId = data?.courseSeasons.find((season) => season.isCurrent)?.id ?? ''
-    const seasonId = orderSeasonFilter === 'all' ? currentSeasonId : orderSeasonFilter
-    return (data?.courseCapacity ?? []).filter((course) => course.seasonId === seasonId)
-  }, [data?.courseCapacity, data?.courseSeasons, orderSeasonFilter])
-
-  function downloadOrders() {
-    const headers = ['類型', '訂單編號', '姓名', '信箱', '課程或商城訂單', '季度', '金額', '狀態', '商品', '取貨與客戶備註', '管理備註', '付款代號', '付款通道', '分配帳戶', '提交時間']
-    const rows = filteredOrders.map((order) => [
-      order.orderKind === 'shop' ? '商城' : '課程',
-      order.orderNumber,
-      order.studentName,
-      order.email,
-      order.courseName,
-      order.seasonName,
-      order.amountText,
-      statusLabels[order.status],
-      order.items.join('、'),
-      order.notes,
-      orderReviewNotes[order.id] || order.reviewNote || '',
-      order.paymentReference,
-      order.paymentChannelLabel,
-      order.assignedAccount,
-      formatDate(order.submittedAt),
-    ])
-    const csv = [headers, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n')
-    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }))
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `好運跑班訂單-${new Date().toISOString().slice(0, 10)}.csv`
-    link.click()
-    URL.revokeObjectURL(url)
-  }
-
   async function runAction(id: string, action: Record<string, unknown>) {
     setUpdatingId(id)
     setError('')
@@ -443,29 +360,6 @@ export default function AdminDashboardClient() {
       return false
     } finally {
       setUpdatingId('')
-    }
-  }
-
-  async function deleteOrder(order: AdminOrder) {
-    const inventoryMessage = order.orderKind === 'shop' && order.inventoryReserved
-      ? ' 系統會同時歸還這筆訂單預留的商品庫存。'
-      : ''
-    const confirmed = window.confirm(
-      `確定刪除「${order.studentName}」的${order.orderKind === 'shop' ? '商城訂單' : '課程報名'}？${inventoryMessage} 此操作無法復原。`
-    )
-    if (!confirmed) return
-
-    const deleted = await runAction(`delete-${order.id}`, {
-      action: 'delete_order',
-      orderId: order.id,
-      orderKind: order.orderKind,
-    })
-    if (deleted) {
-      setOrderReviewNotes((current) => {
-        const next = { ...current }
-        delete next[order.id]
-        return next
-      })
     }
   }
 
@@ -533,7 +427,7 @@ export default function AdminDashboardClient() {
                 集中管理網站內容、商城商品、課程、活動、訂單與收款資料。
               </p>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-apple-gray-500">
-                訂單審核與收款帳戶僅限超級管理員；戶名、帳號與分配結果不會顯示在買家端。
+                付款核對已整合至季度學員名單；收款帳戶與分配結果只會顯示在超級管理員後台。
               </p>
             </div>
 
@@ -842,176 +736,7 @@ export default function AdminDashboardClient() {
             </section>
           ) : null}
 
-          {activeTab === 'orders' && data ? (
-            <section className="grid gap-4">
-              <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
-                <div className="border-b border-black/10 px-5 py-4">
-                  <h2 className="text-lg font-black text-apple-gray-900">班級名額</h2>
-                  <p className="mt-1 text-sm font-semibold text-apple-gray-500">{visibleCourseCapacity[0]?.seasonName || '當前招生季度'}</p>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[760px] text-left text-sm">
-                    <thead className="bg-apple-gray-100 text-apple-gray-600">
-                      <tr>{['課程', '已付款', '待核對', '待付款', '剩餘'].map((label) => <th key={label} className="px-4 py-3 font-bold">{label}</th>)}</tr>
-                    </thead>
-                    <tbody className="divide-y divide-black/10">
-                      {visibleCourseCapacity.map((course) => (
-                        <tr key={`${course.seasonId}-${course.slug}`}>
-                          <td className="px-4 py-3 font-bold text-apple-gray-900">{course.name}</td>
-                          <td className="px-4 py-3 text-apple-gray-700">{course.paidCount} / {course.capacity}</td>
-                          <td className="px-4 py-3 text-blue-700">{course.pendingReviewCount}</td>
-                          <td className="px-4 py-3 text-amber-700">{course.pendingTransferCount}</td>
-                          <td className={`px-4 py-3 font-black ${course.remaining === 0 ? 'text-red-600' : 'text-emerald-700'}`}>{course.remaining}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              <div className="apple-card p-5">
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_190px_190px_auto]">
-	                  <input
-	                    value={orderQuery}
-	                    onChange={(event) => setOrderQuery(event.target.value)}
-	                    placeholder="搜尋姓名、信箱、訂單編號、後五碼、付款通道或商品"
-	                    className="apple-input"
-	                  />
-                  <select
-                    value={orderStatusFilter}
-                    onChange={(event) => setOrderStatusFilter(event.target.value as typeof orderStatusFilter)}
-                    className="apple-input"
-                  >
-                    <option value="all">全部狀態</option>
-                    {Object.entries(statusLabels).map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={orderSeasonFilter}
-                    onChange={(event) => setOrderSeasonFilter(event.target.value)}
-                    className="apple-input"
-                  >
-                    <option value="all">全部季度與商城</option>
-                    {data.courseSeasons.map((season) => (
-                      <option key={season.id} value={season.id}>{season.name}{season.isCurrent ? '（前台招生）' : ''}</option>
-                    ))}
-                  </select>
-                  <button type="button" onClick={downloadOrders} disabled={filteredOrders.length === 0} className="apple-button-outline gap-2 px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-40">
-                    <Download className="h-4 w-4" />
-                    匯出目前結果
-                  </button>
-                </div>
-              </div>
-	              {data.orders.length === 0 ? (
-	                <div className="apple-card p-10 text-center text-apple-gray-600">暫無訂單。</div>
-              ) : filteredOrders.length === 0 ? (
-                <div className="apple-card p-10 text-center text-apple-gray-600">沒有符合條件的訂單。</div>
-              ) : filteredOrders.map((order) => (
-                <article key={order.id} className="apple-card p-5">
-                  <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
-                    <div>
-	                      <div className="mb-3 flex flex-wrap items-center gap-2">
-	                        <span className="rounded-full bg-black px-3 py-1 text-xs font-bold text-white">
-	                          {order.orderKind === 'shop' ? '商城' : '課程'}
-	                        </span>
-	                        <span className={`rounded-full px-3 py-1 text-xs font-bold ${statusTone[order.status]}`}>
-	                          {statusLabels[order.status]}
-	                        </span>
-	                        {order.orderKind === 'course' ? (
-	                          <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">{order.seasonName}</span>
-	                        ) : null}
-	                        {order.inventoryReserved ? (
-	                          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">庫存已保留</span>
-	                        ) : null}
-	                        <span className="text-xs font-semibold text-apple-gray-500">{formatDate(order.submittedAt)}</span>
-	                      </div>
-	                      <h2 className="text-2xl font-black text-apple-gray-900">{order.studentName}</h2>
-	                      <p className="mt-2 text-sm text-apple-gray-600">{order.email || '未填寫信箱'}</p>
-	                      {order.orderNumber ? <p className="mt-1 text-sm font-semibold text-apple-gray-500">{order.orderNumber}</p> : null}
-                    </div>
-                    <div className="flex flex-col gap-3 sm:flex-row">
-                      <button
-                        type="button"
-                        disabled={updatingId === order.id || order.status === 'approved'}
-	                        onClick={() => runAction(order.id, { action: 'review_order', orderId: order.id, orderKind: order.orderKind, status: 'approved', reviewNote: orderReviewNotes[order.id] || order.reviewNote || '' })}
-                        className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <CheckCircle2 className="h-4 w-4" />
-                        核准透過
-                      </button>
-                      <button
-                        type="button"
-                        disabled={updatingId === order.id || order.status === 'rejected'}
-	                        onClick={() => runAction(order.id, { action: 'review_order', orderId: order.id, orderKind: order.orderKind, status: 'rejected', reviewNote: orderReviewNotes[order.id] || order.reviewNote || '' })}
-                        className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-white px-5 py-2.5 text-sm font-bold text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <RotateCcw className="h-4 w-4" />
-	                        標記異常
-	                      </button>
-                          {order.status !== 'approved' ? (
-                            <button
-                              type="button"
-                              disabled={updatingId === `delete-${order.id}`}
-                              onClick={() => deleteOrder(order)}
-                              className="inline-flex items-center justify-center gap-2 rounded-full border border-red-300 bg-white px-5 py-2.5 text-sm font-bold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              {updatingId === `delete-${order.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                              刪除記錄
-                            </button>
-                          ) : null}
-	                    </div>
-                  </div>
-	                  <div className="mt-5 grid gap-3 md:grid-cols-3">
-	                    {[
-	                      [order.orderKind === 'shop' ? '商城訂單' : '報名課程', order.courseName],
-	                      ['應付金額', order.amountText],
-	                      ['後五碼（人工對帳參考）', order.transferLastFive],
-	                      ['付款代號', order.paymentReference],
-	                      ['付款通道', order.paymentChannelLabel || '-'],
-	                      ['分配帳戶（僅後台）', order.assignedAccount || '-'],
-	                    ].map(([label, value]) => (
-	                      <div key={label} className="rounded-2xl bg-apple-gray-100 p-4">
-	                        <p className="text-xs font-semibold text-apple-gray-500">{label}</p>
-	                        <p className="mt-2 break-words text-sm font-bold text-apple-gray-900">{value || '-'}</p>
-	                      </div>
-	                    ))}
-	                  </div>
-	                  {order.registrationDetails.length > 0 ? (
-	                    <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
-	                      <p className="text-sm font-black text-blue-950">網站報名資料</p>
-	                      <dl className="mt-3 grid gap-3 md:grid-cols-2">
-	                        {order.registrationDetails.map((detail) => (
-	                          <div key={detail.label} className="rounded-xl bg-white p-3 ring-1 ring-blue-100">
-	                            <dt className="text-xs font-bold text-apple-gray-500">{detail.label}</dt>
-	                            <dd className="mt-1 whitespace-pre-wrap break-words text-sm font-semibold leading-6 text-apple-gray-900">{detail.value}</dd>
-	                          </div>
-	                        ))}
-	                      </dl>
-	                    </div>
-	                  ) : null}
-	                  {order.items.length > 0 || order.notes || order.reviewNote ? (
-	                    <div className="mt-3 rounded-2xl bg-white p-4 ring-1 ring-black/10">
-	                      {order.items.length > 0 ? (
-	                        <p className="text-sm leading-6 text-apple-gray-700">商品：{order.items.join('、')}</p>
-	                      ) : null}
-	                      <p className="mt-1 text-sm leading-6 text-apple-gray-600">備註：{order.notes || order.reviewNote || '暫無備註'}</p>
-	                    </div>
-	                  ) : null}
-	                  <label className="mt-3 block">
-	                    <span className="mb-2 block text-xs font-bold text-apple-gray-500">管理備註</span>
-	                    <textarea
-	                      value={orderReviewNotes[order.id] ?? order.reviewNote ?? ''}
-	                      onChange={(event) => setOrderReviewNotes((current) => ({ ...current, [order.id]: event.target.value }))}
-	                      className="apple-input min-h-20 resize-y"
-	                      placeholder="記錄核對結果、聯絡狀況或後續處理"
-	                    />
-	                  </label>
-	                </article>
-              ))}
-	            </section>
-	          ) : null}
-
-	          {activeTab === 'products' && data ? (
+          {activeTab === 'products' && data ? (
 	            <section className="space-y-5">
 	              <AdminProductCreator runAction={runAction} />
 	              <div className="px-1">
@@ -1038,14 +763,14 @@ export default function AdminDashboardClient() {
                       <p className="mt-1 text-sm font-semibold text-apple-gray-500">季度設定、課程資料、歷史學員與招生統計集中在這裡。</p>
                     </div>
                     <div className="grid grid-cols-2 rounded-lg bg-apple-gray-100 p-1" role="tablist" aria-label="季度管理內容">
-                      <button type="button" role="tab" aria-selected={seasonView === 'settings'} onClick={() => setSeasonView('settings')} className={`inline-flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold transition ${seasonView === 'settings' ? 'bg-white text-black shadow-sm' : 'text-apple-gray-500 hover:text-black'}`}><CalendarRange className="h-4 w-4" />季度設定</button>
                       <button type="button" role="tab" aria-selected={seasonView === 'students'} onClick={() => setSeasonView('students')} className={`inline-flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold transition ${seasonView === 'students' ? 'bg-white text-black shadow-sm' : 'text-apple-gray-500 hover:text-black'}`}><BarChart3 className="h-4 w-4" />學員與統計</button>
+                      <button type="button" role="tab" aria-selected={seasonView === 'settings'} onClick={() => setSeasonView('settings')} className={`inline-flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold transition ${seasonView === 'settings' ? 'bg-white text-black shadow-sm' : 'text-apple-gray-500 hover:text-black'}`}><CalendarRange className="h-4 w-4" />季度設定</button>
                     </div>
                   </div>
-                  {seasonView === 'settings' ? (
-                    <AdminContentManager content={data.siteContent} courses={data.courses} seasons={data.courseSeasons} scope="seasons" runAction={runAction} />
+                  {seasonView === 'students' ? (
+                    <AdminEnrollmentAnalytics orders={data.orders} courseCapacity={data.courseCapacity} seasons={data.courseSeasons} runAction={runAction} updatingId={updatingId} />
                   ) : (
-                    <AdminEnrollmentAnalytics orders={data.orders} courseCapacity={data.courseCapacity} seasons={data.courseSeasons} />
+                    <AdminContentManager content={data.siteContent} courses={data.courses} seasons={data.courseSeasons} scope="seasons" runAction={runAction} />
                   )}
                 </section>
               ) : null}
