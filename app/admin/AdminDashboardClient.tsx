@@ -35,7 +35,7 @@ import { announceSiteContentUpdated } from '@/lib/site-content-sync'
 
 type PaymentOrderStatus = 'pending_transfer' | 'pending_review' | 'approved' | 'rejected'
 
-type AdminTab = 'overview' | 'students' | 'coaches' | 'enrollments' | 'orders' | 'seasons' | 'products' | 'content' | 'paymentAccounts'
+type AdminTab = 'overview' | 'students' | 'coaches' | 'orders' | 'seasons' | 'products' | 'content' | 'paymentAccounts'
 
 type AdminDashboardPayload = {
   admin: { id: string; email: string; name: string; role: string }
@@ -180,7 +180,6 @@ const tabs: Array<{ id: AdminTab; label: string; icon: typeof LayoutDashboard }>
   { id: 'overview', label: '總覽', icon: LayoutDashboard },
   { id: 'students', label: '學員管理', icon: UsersRound },
   { id: 'coaches', label: '教練管理', icon: UserCog },
-  { id: 'enrollments', label: '季度學員', icon: BarChart3 },
   { id: 'orders', label: '訂單審核', icon: ClipboardList },
   { id: 'seasons', label: '季度管理', icon: CalendarRange },
   { id: 'products', label: '商城商品', icon: Boxes },
@@ -274,6 +273,7 @@ export default function AdminDashboardClient() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [updatingId, setUpdatingId] = useState('')
+  const [seasonView, setSeasonView] = useState<'settings' | 'students'>('settings')
   const [selectedCoachByStudent, setSelectedCoachByStudent] = useState<Record<string, string>>({})
   const [studentQuery, setStudentQuery] = useState('')
   const [coachQuery, setCoachQuery] = useState('')
@@ -842,14 +842,6 @@ export default function AdminDashboardClient() {
             </section>
           ) : null}
 
-          {activeTab === 'enrollments' && data ? (
-            <AdminEnrollmentAnalytics
-              orders={data.orders}
-              courseCapacity={data.courseCapacity}
-              seasons={data.courseSeasons}
-            />
-          ) : null}
-
           {activeTab === 'orders' && data ? (
             <section className="grid gap-4">
               <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
@@ -1035,11 +1027,27 @@ export default function AdminDashboardClient() {
 	          ) : null}
 
               {activeTab === 'content' && data ? (
-                <AdminContentManager content={data.siteContent} courses={data.courses} seasons={data.courseSeasons} runAction={runAction} />
+                <AdminContentManager content={data.siteContent} courses={data.courses} seasons={data.courseSeasons} scope="content" runAction={runAction} />
               ) : null}
 
               {activeTab === 'seasons' && data ? (
-                <AdminContentManager content={data.siteContent} courses={data.courses} seasons={data.courseSeasons} initialMode="seasons" runAction={runAction} />
+                <section className="space-y-5">
+                  <div className="flex flex-col gap-4 border-b border-black/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h2 className="text-2xl font-black text-apple-gray-950">季度管理</h2>
+                      <p className="mt-1 text-sm font-semibold text-apple-gray-500">季度設定、課程資料、歷史學員與招生統計集中在這裡。</p>
+                    </div>
+                    <div className="grid grid-cols-2 rounded-lg bg-apple-gray-100 p-1" role="tablist" aria-label="季度管理內容">
+                      <button type="button" role="tab" aria-selected={seasonView === 'settings'} onClick={() => setSeasonView('settings')} className={`inline-flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold transition ${seasonView === 'settings' ? 'bg-white text-black shadow-sm' : 'text-apple-gray-500 hover:text-black'}`}><CalendarRange className="h-4 w-4" />季度設定</button>
+                      <button type="button" role="tab" aria-selected={seasonView === 'students'} onClick={() => setSeasonView('students')} className={`inline-flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold transition ${seasonView === 'students' ? 'bg-white text-black shadow-sm' : 'text-apple-gray-500 hover:text-black'}`}><BarChart3 className="h-4 w-4" />學員與統計</button>
+                    </div>
+                  </div>
+                  {seasonView === 'settings' ? (
+                    <AdminContentManager content={data.siteContent} courses={data.courses} seasons={data.courseSeasons} scope="seasons" runAction={runAction} />
+                  ) : (
+                    <AdminEnrollmentAnalytics orders={data.orders} courseCapacity={data.courseCapacity} seasons={data.courseSeasons} />
+                  )}
+                </section>
               ) : null}
 
 	          {activeTab === 'paymentAccounts' && data ? (

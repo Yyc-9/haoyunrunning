@@ -56,7 +56,7 @@ type AdminContentManagerProps = {
   content: SiteContent
   courses: CourseSummary[]
   seasons: CourseSeason[]
-  initialMode?: ContentMode
+  scope?: 'content' | 'seasons'
   runAction: (id: string, action: Record<string, unknown>) => Promise<boolean>
 }
 
@@ -133,8 +133,8 @@ function courseDraft(course: CourseSummary, override?: CourseOverride): CourseOv
   }
 }
 
-export default function AdminContentManager({ content, courses, seasons, initialMode = 'overview', runAction }: AdminContentManagerProps) {
-  const [mode, setMode] = useState<ContentMode>(initialMode)
+export default function AdminContentManager({ content, courses, seasons, scope = 'content', runAction }: AdminContentManagerProps) {
+  const [mode, setMode] = useState<ContentMode>(scope === 'seasons' ? 'seasons' : 'overview')
   const [slides, setSlides] = useState(content.heroSlides)
   const [activities, setActivities] = useState<HomeActivity[]>(content.activities)
   const [seasonal, setSeasonal] = useState<SeasonalUpdate>(content.seasonalUpdate)
@@ -186,19 +186,22 @@ export default function AdminContentManager({ content, courses, seasons, initial
     setDraftCapacity(selectedSeason ? seasonCapacities[selectedSeason.id]?.[selectedCourse.slug] ?? 40 : 40)
   }, [courseOverrides, seasonCapacities, selectedCourse, selectedSeason])
 
-  const modes = [
+  const allModes = [
     { id: 'overview' as const, label: '內容總覽', description: '查看可管理區域', destination: '全站', icon: LayoutGrid },
     { id: 'hero' as const, label: '首頁輪播', description: '圖片與排序', destination: '首頁首屏輪播', icon: GalleryHorizontalEnd },
     { id: 'home' as const, label: '首頁文案', description: '區塊標題與重點', destination: '首頁活動、特色與課程預覽', icon: Home },
     { id: 'activities' as const, label: '活動入口', description: '報名與活動連結', destination: '首頁近期報名入口', icon: Megaphone },
-    { id: 'seasonal' as const, label: '首頁季度公告', description: '對外公告', destination: '首頁季度公告區', icon: Megaphone },
-    { id: 'seasons' as const, label: '季度管理', description: '切換、複製與歷史資料', destination: '課程、日程表、報名與歷史報表', icon: CalendarRange },
+    { id: 'seasonal' as const, label: '首頁招生公告', description: '對外公告', destination: '首頁招生公告區', icon: Megaphone },
+    { id: 'seasons' as const, label: '季度設定', description: '切換、複製與歷史資料', destination: '課程、日程表、報名與歷史報表', icon: CalendarRange },
     { id: 'brand' as const, label: '品牌與聯絡', description: 'Logo、社群與頁尾', destination: '頂部導覽、頁尾與聯絡入口', icon: BadgeInfo },
     { id: 'media' as const, label: '各頁主視覺', description: '商店、關於與見證', destination: '商店、關於我們、學員見證與週年頁', icon: ImageIcon },
     { id: 'about' as const, label: '關於我們', description: '品牌故事與對象', destination: '關於我們完整頁面', icon: Sparkles },
     { id: 'testimonials' as const, label: '學員見證', description: '見證頁文案', destination: '學員見證完整頁面', icon: FileText },
     { id: 'courses' as const, label: '課程資料', description: '班級日期與內容', destination: '首頁、日程表、課程詳情與網站報名表', icon: ShoppingBag },
   ]
+  const modes = allModes.filter((item) => scope === 'seasons'
+    ? item.id === 'seasons' || item.id === 'courses'
+    : item.id !== 'seasons' && item.id !== 'courses')
 
   async function addHeroImage(file?: File) {
     if (!file) return
@@ -353,7 +356,7 @@ export default function AdminContentManager({ content, courses, seasons, initial
 
         {mode === 'seasons' ? (
           <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
-            {panelHeader('季度管理', '每一季獨立保留課程與報名資料。複製下一季後可先編輯草稿，確認後再切換前台。', '/courses')}
+            {panelHeader('季度設定', '每一季獨立保留課程與報名資料。複製下一季後可先編輯草稿，確認後再切換前台。', '/courses')}
             <div className="flex flex-col gap-3 border-b border-black/10 bg-apple-gray-50 p-5 sm:flex-row sm:items-end sm:justify-between">
               <Field label="作為複製來源的季度">
                 <select value={selectedSeasonId} onChange={(event) => setSelectedSeasonId(event.target.value)} className="apple-input min-w-56">
