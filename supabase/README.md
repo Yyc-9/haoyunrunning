@@ -14,12 +14,9 @@ Do not commit `.env.local`.
 
 ## 2. Database schema
 
-Open Supabase dashboard:
-
-1. Project > SQL Editor
-2. New query
-3. Paste `supabase/schema.sql`
-4. Run
+`schema.sql` is retained only as the original project baseline. Do not paste it
+into an existing production project. All new database changes belong in
+`supabase/migrations/` and must be applied in timestamp order.
 
 This creates:
 
@@ -40,11 +37,16 @@ This creates:
 - Coaches can read assigned students, plans, and feedback.
 - Admins can manage role assignment and coach/student relations.
 
-## 4. Coach invite test flow
+## 4. Seasonal course flow
 
-If the initial schema has already been run, also run:
+- `course_seasons` keeps each quarter independent.
+- `course_season_courses` stores the course copy and capacity for that quarter.
+- Course registrations reference both the season and its course offering.
+- Create the next quarter from Admin > Seasonal Management, edit it as a draft,
+  then activate it when the public site should switch enrollment.
+- Historical registrations remain attached to the original season.
 
-1. `supabase/coach-binding-policies.sql`
-2. `supabase/create-coach-invite.sql`
+## 5. Coach invite flow
 
-Then log in on `/coach`, enter `GOODLUCK-COACH-2026`, and bind a registered student by email.
+Coach invite codes are generated in the admin dashboard. They are single-use and
+expire automatically; there is no shared hard-coded invite code.

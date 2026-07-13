@@ -6,6 +6,7 @@ import {
   type DirectCourseRegistration,
 } from '@/lib/course-registration-form'
 import { getManagedCourses } from '@/lib/managed-courses-server'
+import { getCurrentCourseSeason } from '@/lib/course-seasons-server'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 
 async function getLegacyStudent(email: string) {
@@ -47,9 +48,13 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url)
   const courseSlug = cleanText(searchParams.get('courseSlug'), 120)
-  const course = (await getManagedCourses()).find((item) => item.slug === courseSlug)
+  const [managedCourses, currentSeason] = await Promise.all([getManagedCourses(), getCurrentCourseSeason()])
+  const course = managedCourses.find((item) => item.slug === courseSlug)
   if (!course) {
     return NextResponse.json({ error: '找不到這個課程。' }, { status: 404 })
+  }
+  if (!currentSeason) {
+    return NextResponse.json({ error: '目前尚未設定招生季度。' }, { status: 503 })
   }
 
   const [paidResult, pendingReviewResult] = await Promise.all([
@@ -57,12 +62,14 @@ export async function GET(request: NextRequest) {
       .from('signup_leads')
       .select('id', { count: 'exact', head: true })
       .eq('source', 'course_payment')
+      .eq('season_id', currentSeason.id)
       .eq('course_slug', courseSlug)
       .eq('status', 'approved'),
     supabaseAdmin
       .from('signup_leads')
       .select('id', { count: 'exact', head: true })
       .eq('source', 'course_payment')
+      .eq('season_id', currentSeason.id)
       .eq('course_slug', courseSlug)
       .eq('status', 'pending_review'),
   ])
@@ -71,14 +78,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: paidResult.error?.message || pendingReviewResult.error?.message }, { status: 500 })
   }
 
+  const capacity = currentSeason.courseCapacities[courseSlug] ?? COURSE_CAPACITY
   const paidCount = paidResult.count ?? 0
   const availability = {
     courseSlug,
-    capacity: COURSE_CAPACITY,
+    capacity,
     paidCount,
     pendingReviewCount: pendingReviewResult.count ?? 0,
-    remaining: Math.max(0, COURSE_CAPACITY - paidCount),
-    full: paidCount >= COURSE_CAPACITY,
+    remaining: Math.max(0, capacity - paidCount),
+    full: paidCount >= capacity,
   }
 
   const user = await getAuthedUser(request.headers.get('authorization'))
@@ -92,6 +100,7 @@ export async function GET(request: NextRequest) {
       .from('signup_leads')
       .select('id, course_slug, preferred_course, status, amount_text, transfer_last_five, review_note, created_at, payment_submitted_at')
       .eq('source', 'course_payment')
+      .eq('season_id', currentSeason.id)
       .eq('course_slug', courseSlug)
       .eq('email', email)
       .order('created_at', { ascending: false })
@@ -131,9 +140,10 @@ export async function POST(request: NextRequest) {
   }
   const intent = cleanText(body.intent, 80)
   const courseSlug = cleanText(body.courseSlug, 120)
-  const course = (await getManagedCourses()).find((item) => item.slug === courseSlug)
+  const [managedCourses, currentSeason] = await Promise.all([getManagedCourses(), getCurrentCourseSeason()])
+  const course = managedCourses.find((item) => item.slug === courseSlug)
 
-  if (intent !== 'direct_site_registration' || !course) {
+  if (intent !== 'direct_site_registration' || !course || !currentSeason) {
     return NextResponse.json({ error: '無法確認這筆課程報名。' }, { status: 400 })
   }
 
@@ -142,6 +152,7 @@ export async function POST(request: NextRequest) {
     .from('signup_leads')
     .select('id, course_slug, preferred_course, status, amount_text, transfer_last_five, review_note, created_at, payment_submitted_at')
     .eq('source', 'course_payment')
+    .eq('season_id', currentSeason.id)
     .eq('course_slug', courseSlug)
     .eq('email', email)
     .in('status', ['pending_transfer', 'pending_review', 'approved'])
@@ -160,13 +171,15 @@ export async function POST(request: NextRequest) {
     .from('signup_leads')
     .select('id', { count: 'exact', head: true })
     .eq('source', 'course_payment')
+    .eq('season_id', currentSeason.id)
     .eq('course_slug', courseSlug)
     .eq('status', 'approved')
 
   if (paidCountError) {
     return NextResponse.json({ error: paidCountError.message }, { status: 500 })
   }
-  if ((paidCount ?? 0) >= COURSE_CAPACITY) {
+  const courseCapacity = currentSeason.courseCapacities[courseSlug] ?? COURSE_CAPACITY
+  if ((paidCount ?? 0) >= courseCapacity) {
     return NextResponse.json({ error: '本班目前已額滿，暫時無法建立新的付款記錄。' }, { status: 409 })
   }
 
@@ -244,6 +257,9 @@ export async function POST(request: NextRequest) {
         email,
         preferred_course: course.name,
         course_slug: course.slug,
+        season_id: currentSeason.id,
+        course_season_course_id: currentSeason.courseOfferingIds[course.slug] ?? null,
+        course_capacity: courseCapacity,
         running_experience: runningExperience,
         goal: recentGoal,
         amount_text: amount,

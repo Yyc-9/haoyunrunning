@@ -4,6 +4,8 @@ import { getAdminProfile } from '@/lib/admin-auth'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { shopProductFromRow, type ShopProductRow } from '@/lib/shop-products'
 import { allCourses } from '@/lib/goodluck-data'
+import { applyCourseSeasonToContent, nextCourseSeasonIdentity, type CourseSeasonStatus } from '@/lib/course-seasons'
+import { getCourseSeasons } from '@/lib/course-seasons-server'
 import { applyCourseOverrides } from '@/lib/managed-courses'
 import {
   defaultSiteContent,
@@ -51,6 +53,9 @@ type SignupLeadRow = {
   phone: string
   preferred_course: string
   course_slug: string
+  season_id: string | null
+  course_season_course_id: string | null
+  course_capacity: number
   amount_text: string
   transfer_last_five: string
   status: string
@@ -153,6 +158,10 @@ type AdminPatchBody =
   | { action?: 'update_product'; productId?: string; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; variants?: Array<{ id?: string; name?: string; image?: string }>; summary?: string; description?: string; gallery?: string[]; highlights?: string; specifications?: Array<{ label?: string; value?: string }>; usageNotes?: string; externalUrl?: string }
   | { action?: 'create_product'; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; summary?: string; description?: string; gallery?: string[]; highlights?: string; specifications?: Array<{ label?: string; value?: string }>; usageNotes?: string; externalUrl?: string }
   | { action?: 'save_site_content'; section?: string; value?: unknown }
+  | { action?: 'save_season_course'; seasonId?: string; courseSlug?: string; value?: unknown; capacity?: number }
+  | { action?: 'create_next_course_season'; sourceSeasonId?: string }
+  | { action?: 'activate_course_season'; seasonId?: string }
+  | { action?: 'update_course_season_status'; seasonId?: string; status?: CourseSeasonStatus }
   | { action?: 'create_payment_account'; label?: string; accountName?: string; bankName?: string; bankCode?: string; accountNumber?: string; weight?: number }
   | { action?: 'toggle_payment_account'; accountId?: string; active?: boolean }
 
@@ -362,7 +371,7 @@ export async function GET(request: NextRequest) {
       .from('signup_leads')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(500),
+      .limit(3000),
     supabaseAdmin!
       .from('training_plans')
       .select('student_id, created_at')
@@ -430,7 +439,10 @@ export async function GET(request: NextRequest) {
   const shopOrders = shopOrdersResult.error ? [] : (shopOrdersResult.data ?? []) as ShopOrderRow[]
   const shopOrderItems = shopOrderItemsResult.error ? [] : (shopOrderItemsResult.data ?? []) as ShopOrderItemRow[]
   const paymentAccounts = paymentAccountsResult.error ? [] : (paymentAccountsResult.data ?? []) as PaymentAccountRow[]
-  const siteContent = siteContentResult.error ? defaultSiteContent : siteContentFromRows(siteContentResult.data)
+  const courseSeasons = await getCourseSeasons()
+  const currentSeason = courseSeasons.find((season) => season.isCurrent) ?? null
+  const baseSiteContent = siteContentResult.error ? defaultSiteContent : siteContentFromRows(siteContentResult.data)
+  const siteContent = applyCourseSeasonToContent(baseSiteContent, currentSeason)
   const managedCourses = applyCourseOverrides(siteContent.courseOverrides, { includeInactive: true })
   const coachInvites = (coachInvitesResult.data ?? []) as CoachInviteRow[]
   const coursePaymentOrders = orders.filter((order) => order.source === 'course_payment')
@@ -536,6 +548,8 @@ export async function GET(request: NextRequest) {
       email: order.email,
       courseName: order.preferred_course,
       courseSlug: order.course_slug || '',
+      seasonId: order.season_id || '',
+      seasonName: courseSeasons.find((season) => season.id === order.season_id)?.name || '舊版報名',
       amountText: order.amount_text,
       transferLastFive: order.transfer_last_five,
       status: isPaymentOrderStatus(order.status) ? order.status : 'pending_review',
@@ -563,6 +577,8 @@ export async function GET(request: NextRequest) {
       email: order.email || '',
       courseName: order.order_number,
       courseSlug: '',
+      seasonId: '',
+      seasonName: '',
       amountText: formatAmount(order.total_amount),
       transferLastFive: order.transfer_last_five || '',
       status: isPaymentOrderStatus(order.status) ? order.status : 'pending_transfer',
@@ -600,19 +616,26 @@ export async function GET(request: NextRequest) {
     paymentAccountCount: paymentAccounts.filter((account) => account.active).length,
   }
 
-  const courseCapacity = managedCourses.map((course) => {
-    const courseOrders = coursePaymentOrders.filter((order) => order.course_slug === course.slug)
-    const paidCount = courseOrders.filter((order) => order.status === 'approved').length
-    return {
-      slug: course.slug,
-      name: course.name,
-      capacity: 40,
-      paidCount,
-      pendingTransferCount: courseOrders.filter((order) => order.status === 'pending_transfer').length,
-      pendingReviewCount: courseOrders.filter((order) => order.status === 'pending_review').length,
-      remaining: Math.max(0, 40 - paidCount),
-    }
-  })
+  const courseCapacity = courseSeasons.flatMap((season) =>
+    applyCourseOverrides(season.courseOverrides, { includeInactive: true }).map((course) => {
+      const courseOrders = coursePaymentOrders.filter((order) =>
+        order.course_slug === course.slug && order.season_id === season.id
+      )
+      const paidCount = courseOrders.filter((order) => order.status === 'approved').length
+      const capacity = season.courseCapacities[course.slug] ?? 40
+      return {
+        slug: course.slug,
+        name: course.name,
+        seasonId: season.id,
+        seasonName: season.name,
+        capacity,
+        paidCount,
+        pendingTransferCount: courseOrders.filter((order) => order.status === 'pending_transfer').length,
+        pendingReviewCount: courseOrders.filter((order) => order.status === 'pending_review').length,
+        remaining: Math.max(0, capacity - paidCount),
+      }
+    })
+  )
 
   return json({
     admin: auth.adminProfile,
@@ -623,6 +646,7 @@ export async function GET(request: NextRequest) {
     courseCapacity,
     products: shopProducts,
     paymentAccounts,
+    courseSeasons,
     siteContent,
     courses: managedCourses.map((course) => ({
       slug: course.slug,
@@ -658,6 +682,141 @@ export async function PATCH(request: NextRequest) {
   if (auth.error) return auth.error
 
   const body = (await request.json().catch(() => ({}))) as AdminPatchBody
+
+  if (body.action === 'save_season_course') {
+    const seasonId = cleanText(body.seasonId)
+    const courseSlug = cleanText(body.courseSlug)
+    const capacity = Number(body.capacity)
+    const validSlugs = new Set(allCourses.map((course) => course.slug))
+    const normalized = normalizeCourseOverrides({ [courseSlug]: body.value })[courseSlug]
+
+    if (!seasonId || !validSlugs.has(courseSlug) || !normalized) {
+      return json({ error: '季度或課程資料無效。' }, { status: 400 })
+    }
+    if (!Number.isInteger(capacity) || capacity < 1 || capacity > 500) {
+      return json({ error: '班級名額必須是 1 至 500 之間的整數。' }, { status: 400 })
+    }
+
+    const { data: seasonCourse, error } = await supabaseAdmin!
+      .from('course_season_courses')
+      .upsert({
+        season_id: seasonId,
+        course_slug: courseSlug,
+        course_data: normalized,
+        capacity,
+      }, { onConflict: 'season_id,course_slug' })
+      .select('id, season_id, course_slug, course_data, capacity')
+      .single()
+
+    if (error || !seasonCourse) {
+      return json({ error: error?.message || '季度課程儲存失敗。' }, { status: 500 })
+    }
+
+    return json({ seasonCourse, message: '已儲存到這一季；若為當前招生季度，前台也已同步。' })
+  }
+
+  if (body.action === 'create_next_course_season') {
+    const sourceSeasonId = cleanText(body.sourceSeasonId)
+    const { data: sourceSeason, error: sourceError } = await supabaseAdmin!
+      .from('course_seasons')
+      .select('id, code, name')
+      .eq('id', sourceSeasonId)
+      .single()
+
+    if (sourceError || !sourceSeason) {
+      return json({ error: sourceError?.message || '找不到要複製的季度。' }, { status: 404 })
+    }
+
+    const identity = nextCourseSeasonIdentity(sourceSeason.code)
+    const { data: existing } = await supabaseAdmin!
+      .from('course_seasons')
+      .select('id')
+      .eq('code', identity.code)
+      .maybeSingle()
+
+    if (existing) {
+      return json({ error: `${identity.name} 已經存在，請直接切換管理。` }, { status: 409 })
+    }
+
+    const { data: newSeason, error: seasonError } = await supabaseAdmin!
+      .from('course_seasons')
+      .insert({
+        code: identity.code,
+        name: identity.name,
+        status: 'draft',
+        is_current: false,
+        created_by: auth.user.id,
+      })
+      .select('id, code, name')
+      .single()
+
+    if (seasonError || !newSeason) {
+      return json({ error: seasonError?.message || '建立下一季失敗。' }, { status: 500 })
+    }
+
+    const { data: sourceCourses, error: sourceCoursesError } = await supabaseAdmin!
+      .from('course_season_courses')
+      .select('course_slug, course_data, capacity')
+      .eq('season_id', sourceSeasonId)
+
+    if (sourceCoursesError) {
+      await supabaseAdmin!.from('course_seasons').delete().eq('id', newSeason.id)
+      return json({ error: sourceCoursesError.message || '讀取上一季課程失敗。' }, { status: 500 })
+    }
+
+    const copiedCourses = (sourceCourses ?? []).map((course) => ({
+      season_id: newSeason.id,
+      course_slug: course.course_slug,
+      course_data: course.course_data,
+      capacity: course.capacity,
+    }))
+
+    if (copiedCourses.length > 0) {
+      const { error: copyError } = await supabaseAdmin!.from('course_season_courses').insert(copiedCourses)
+      if (copyError) {
+        await supabaseAdmin!.from('course_seasons').delete().eq('id', newSeason.id)
+        return json({ error: copyError.message || '複製課程失敗。' }, { status: 500 })
+      }
+    }
+
+    return json({ season: newSeason, message: `${identity.name} 已建立為草稿，第三季資料仍完整保留。` })
+  }
+
+  if (body.action === 'activate_course_season') {
+    const seasonId = cleanText(body.seasonId)
+    if (!seasonId) return json({ error: '缺少季度 ID。' }, { status: 400 })
+
+    const { data: season, error } = await supabaseAdmin!.rpc('activate_course_season', { p_season_id: seasonId })
+    if (error || !season) {
+      return json({ error: error?.message || '切換前台招生季度失敗。' }, { status: 500 })
+    }
+    return json({ season, message: '前台訓練課程、日程表與報名頁已切換到新季度。' })
+  }
+
+  if (body.action === 'update_course_season_status') {
+    const seasonId = cleanText(body.seasonId)
+    const status = cleanText(body.status) as CourseSeasonStatus
+    const allowedStatuses = new Set<CourseSeasonStatus>(['draft', 'enrolling', 'active', 'completed', 'archived'])
+    if (!seasonId || !allowedStatuses.has(status)) {
+      return json({ error: '季度狀態無效。' }, { status: 400 })
+    }
+
+    const { data: current } = await supabaseAdmin!.from('course_seasons').select('is_current').eq('id', seasonId).single()
+    if (current?.is_current && status === 'archived') {
+      return json({ error: '請先將前台招生切換到其他季度，再封存這一季。' }, { status: 409 })
+    }
+
+    const { data: season, error } = await supabaseAdmin!
+      .from('course_seasons')
+      .update({ status })
+      .eq('id', seasonId)
+      .select('id, code, name, status, is_current')
+      .single()
+    if (error || !season) {
+      return json({ error: error?.message || '更新季度狀態失敗。' }, { status: 500 })
+    }
+    return json({ season, message: '季度狀態已更新，報名資料不會被刪除。' })
+  }
 
   if (body.action === 'create_coach_invite') {
     const code = `HYCOACH-${randomUUID().replaceAll('-', '').slice(0, 10).toUpperCase()}`
@@ -1124,7 +1283,11 @@ export async function PATCH(request: NextRequest) {
       return json({ error: contentRowsError.message || '內容已儲存，但重新讀取失敗。' }, { status: 500 })
     }
 
-    const siteContent = siteContentFromRows(contentRows)
+    const seasons = await getCourseSeasons()
+    const siteContent = applyCourseSeasonToContent(
+      siteContentFromRows(contentRows),
+      seasons.find((season) => season.isCurrent) ?? null
+    )
     const courses = applyCourseOverrides(siteContent.courseOverrides, { includeInactive: true }).map((course) => ({
       slug: course.slug,
       name: course.name,

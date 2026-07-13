@@ -5,6 +5,7 @@ import Link from 'next/link'
 import {
   AlertTriangle,
   Boxes,
+  CalendarRange,
   CheckCircle2,
   ClipboardList,
   Copy,
@@ -23,6 +24,7 @@ import {
   UsersRound,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import type { CourseSeason } from '@/lib/course-seasons'
 import type { SiteContent } from '@/lib/site-content'
 import AdminContentManager from '@/components/admin/AdminContentManager'
 import AdminProductCreator from '@/components/admin/AdminProductCreator'
@@ -31,7 +33,7 @@ import { announceSiteContentUpdated } from '@/lib/site-content-sync'
 
 type PaymentOrderStatus = 'pending_transfer' | 'pending_review' | 'approved' | 'rejected'
 
-type AdminTab = 'overview' | 'students' | 'coaches' | 'orders' | 'products' | 'content' | 'paymentAccounts'
+type AdminTab = 'overview' | 'students' | 'coaches' | 'orders' | 'seasons' | 'products' | 'content' | 'paymentAccounts'
 
 type AdminDashboardPayload = {
   admin: { id: string; email: string; name: string; role: string }
@@ -50,6 +52,7 @@ type AdminDashboardPayload = {
   coaches: AdminCoach[]
   orders: AdminOrder[]
   courseCapacity: CourseCapacityRow[]
+  courseSeasons: CourseSeason[]
   products: AdminProduct[]
   paymentAccounts: PaymentAccount[]
   siteContent: SiteContent
@@ -70,6 +73,8 @@ type CoachInvite = {
 type CourseCapacityRow = {
   slug: string
   name: string
+  seasonId: string
+  seasonName: string
   capacity: number
   paidCount: number
   pendingTransferCount: number
@@ -124,6 +129,8 @@ type AdminOrder = {
   email: string
   courseName: string
   courseSlug: string
+  seasonId: string
+  seasonName: string
   amountText: string
   transferLastFive: string
   status: PaymentOrderStatus
@@ -172,6 +179,7 @@ const tabs: Array<{ id: AdminTab; label: string; icon: typeof LayoutDashboard }>
   { id: 'students', label: '學員管理', icon: UsersRound },
   { id: 'coaches', label: '教練管理', icon: UserCog },
   { id: 'orders', label: '訂單審核', icon: ClipboardList },
+  { id: 'seasons', label: '季度管理', icon: CalendarRange },
   { id: 'products', label: '商城商品', icon: Boxes },
   { id: 'content', label: '內容中心', icon: PanelsTopLeft },
   { id: 'paymentAccounts', label: '收款帳戶', icon: Landmark },
@@ -267,6 +275,7 @@ export default function AdminDashboardClient() {
   const [studentQuery, setStudentQuery] = useState('')
   const [coachQuery, setCoachQuery] = useState('')
   const [orderQuery, setOrderQuery] = useState('')
+  const [orderSeasonFilter, setOrderSeasonFilter] = useState('all')
   const [studentPlanFilter, setStudentPlanFilter] = useState<'all' | 'enabled' | 'missing'>('all')
   const [coachRoleFilter, setCoachRoleFilter] = useState<'all' | 'coach' | 'student' | 'admin'>('all')
   const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | PaymentOrderStatus>('all')
@@ -351,6 +360,7 @@ export default function AdminDashboardClient() {
 
     return (data?.orders ?? []).filter((order) => {
       if (orderStatusFilter !== 'all' && order.status !== orderStatusFilter) return false
+      if (orderSeasonFilter !== 'all' && (order.orderKind !== 'course' || order.seasonId !== orderSeasonFilter)) return false
       if (!text) return true
 
       return [
@@ -371,16 +381,22 @@ export default function AdminDashboardClient() {
         .filter(Boolean)
         .some((value) => value.toLowerCase().includes(text))
     })
-  }, [data?.orders, orderQuery, orderStatusFilter])
+  }, [data?.orders, orderQuery, orderSeasonFilter, orderStatusFilter])
+  const visibleCourseCapacity = useMemo(() => {
+    const currentSeasonId = data?.courseSeasons.find((season) => season.isCurrent)?.id ?? ''
+    const seasonId = orderSeasonFilter === 'all' ? currentSeasonId : orderSeasonFilter
+    return (data?.courseCapacity ?? []).filter((course) => course.seasonId === seasonId)
+  }, [data?.courseCapacity, data?.courseSeasons, orderSeasonFilter])
 
   function downloadOrders() {
-    const headers = ['類型', '訂單編號', '姓名', '信箱', '課程或商城訂單', '金額', '狀態', '商品', '取貨與客戶備註', '管理備註', '付款代號', '付款通道', '分配帳戶', '提交時間']
+    const headers = ['類型', '訂單編號', '姓名', '信箱', '課程或商城訂單', '季度', '金額', '狀態', '商品', '取貨與客戶備註', '管理備註', '付款代號', '付款通道', '分配帳戶', '提交時間']
     const rows = filteredOrders.map((order) => [
       order.orderKind === 'shop' ? '商城' : '課程',
       order.orderNumber,
       order.studentName,
       order.email,
       order.courseName,
+      order.seasonName,
       order.amountText,
       statusLabels[order.status],
       order.items.join('、'),
@@ -828,6 +844,7 @@ export default function AdminDashboardClient() {
               <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
                 <div className="border-b border-black/10 px-5 py-4">
                   <h2 className="text-lg font-black text-apple-gray-900">班級名額</h2>
+                  <p className="mt-1 text-sm font-semibold text-apple-gray-500">{visibleCourseCapacity[0]?.seasonName || '當前招生季度'}</p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[760px] text-left text-sm">
@@ -835,8 +852,8 @@ export default function AdminDashboardClient() {
                       <tr>{['課程', '已付款', '待核對', '待付款', '剩餘'].map((label) => <th key={label} className="px-4 py-3 font-bold">{label}</th>)}</tr>
                     </thead>
                     <tbody className="divide-y divide-black/10">
-                      {data.courseCapacity.map((course) => (
-                        <tr key={course.slug}>
+                      {visibleCourseCapacity.map((course) => (
+                        <tr key={`${course.seasonId}-${course.slug}`}>
                           <td className="px-4 py-3 font-bold text-apple-gray-900">{course.name}</td>
                           <td className="px-4 py-3 text-apple-gray-700">{course.paidCount} / {course.capacity}</td>
                           <td className="px-4 py-3 text-blue-700">{course.pendingReviewCount}</td>
@@ -849,7 +866,7 @@ export default function AdminDashboardClient() {
                 </div>
               </div>
               <div className="apple-card p-5">
-                <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_auto]">
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_190px_190px_auto]">
 	                  <input
 	                    value={orderQuery}
 	                    onChange={(event) => setOrderQuery(event.target.value)}
@@ -864,6 +881,16 @@ export default function AdminDashboardClient() {
                     <option value="all">全部狀態</option>
                     {Object.entries(statusLabels).map(([value, label]) => (
                       <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={orderSeasonFilter}
+                    onChange={(event) => setOrderSeasonFilter(event.target.value)}
+                    className="apple-input"
+                  >
+                    <option value="all">全部季度與商城</option>
+                    {data.courseSeasons.map((season) => (
+                      <option key={season.id} value={season.id}>{season.name}{season.isCurrent ? '（前台招生）' : ''}</option>
                     ))}
                   </select>
                   <button type="button" onClick={downloadOrders} disabled={filteredOrders.length === 0} className="apple-button-outline gap-2 px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-40">
@@ -887,6 +914,9 @@ export default function AdminDashboardClient() {
 	                        <span className={`rounded-full px-3 py-1 text-xs font-bold ${statusTone[order.status]}`}>
 	                          {statusLabels[order.status]}
 	                        </span>
+	                        {order.orderKind === 'course' ? (
+	                          <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">{order.seasonName}</span>
+	                        ) : null}
 	                        {order.inventoryReserved ? (
 	                          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">庫存已保留</span>
 	                        ) : null}
@@ -994,7 +1024,11 @@ export default function AdminDashboardClient() {
 	          ) : null}
 
               {activeTab === 'content' && data ? (
-                <AdminContentManager content={data.siteContent} courses={data.courses} runAction={runAction} />
+                <AdminContentManager content={data.siteContent} courses={data.courses} seasons={data.courseSeasons} runAction={runAction} />
+              ) : null}
+
+              {activeTab === 'seasons' && data ? (
+                <AdminContentManager content={data.siteContent} courses={data.courses} seasons={data.courseSeasons} initialMode="seasons" runAction={runAction} />
               ) : null}
 
 	          {activeTab === 'paymentAccounts' && data ? (
