@@ -128,8 +128,13 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
           <Link href={`/courses/${course.slug}`} className="text-sm font-bold text-apple-blue">返回課程詳情</Link>
           <div className="mt-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
-              <p className="text-sm font-bold text-apple-gray-500">{course.weekday} · {course.location}{course.meetingPoint ? ` · ${course.meetingPoint}` : ''} · {course.period}</p>
+              <p className="text-sm font-bold leading-6 text-apple-gray-500">{course.weekday} · {course.classTime} · {course.location}{course.meetingPoint ? ` · ${course.meetingPoint}` : ''} · {course.period}</p>
               <h1 className="mt-2 text-2xl font-black text-apple-gray-950 sm:text-4xl">{course.name}報名</h1>
+              <div className="mt-3 grid max-w-2xl gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+                <p className="font-semibold leading-6 text-apple-gray-600"><span className="text-apple-gray-400">費用：</span>{course.feeNote}</p>
+                <p className="font-semibold leading-6 text-apple-gray-600"><span className="text-apple-gray-400">訓練重點：</span>{course.focus}</p>
+                <p className="font-semibold leading-6 text-apple-gray-600 sm:col-span-2"><span className="text-apple-gray-400">適合對象：</span>{course.targetAudience}</p>
+              </div>
             </div>
             <div className={`shrink-0 rounded-lg border px-4 py-3 ${isFull ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
               <p className="text-xs font-bold">班額 {COURSE_CAPACITY} 人</p>

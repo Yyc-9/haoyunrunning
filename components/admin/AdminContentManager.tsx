@@ -7,7 +7,6 @@ import {
   ArrowUp,
   BadgeInfo,
   CalendarRange,
-  Copy,
   ExternalLink,
   FileText,
   GalleryHorizontalEnd,
@@ -144,8 +143,6 @@ export default function AdminContentManager({ content, courses, runAction }: Adm
   const [draft, setDraft] = useState<CourseOverride>(() => courses[0] ? courseDraft(courses[0], content.courseOverrides[courses[0].slug]) : {})
   const [isUploading, setIsUploading] = useState(false)
   const [localError, setLocalError] = useState('')
-  const [scriptLoading, setScriptLoading] = useState(false)
-  const [scriptMessage, setScriptMessage] = useState('')
   const [courseMessage, setCourseMessage] = useState('')
 
   useEffect(() => {
@@ -166,16 +163,16 @@ export default function AdminContentManager({ content, courses, runAction }: Adm
   }, [courseOverrides, selectedCourse])
 
   const modes = [
-    { id: 'overview' as const, label: '內容總覽', description: '查看可管理區域', icon: LayoutGrid },
-    { id: 'hero' as const, label: '首頁輪播', description: '圖片與排序', icon: GalleryHorizontalEnd },
-    { id: 'home' as const, label: '首頁文案', description: '區塊標題與重點', icon: Home },
-    { id: 'activities' as const, label: '活動入口', description: '報名與活動連結', icon: Megaphone },
-    { id: 'seasonal' as const, label: '季度資訊', description: '首頁公告', icon: CalendarRange },
-    { id: 'brand' as const, label: '品牌與聯絡', description: 'Logo、社群與頁尾', icon: BadgeInfo },
-    { id: 'media' as const, label: '各頁主視覺', description: '商店、關於與見證', icon: ImageIcon },
-    { id: 'about' as const, label: '關於我們', description: '品牌故事與對象', icon: Sparkles },
-    { id: 'testimonials' as const, label: '學員見證', description: '見證頁文案', icon: FileText },
-    { id: 'courses' as const, label: '課程資料', description: '班級日期與內容', icon: ShoppingBag },
+    { id: 'overview' as const, label: '內容總覽', description: '查看可管理區域', destination: '全站', icon: LayoutGrid },
+    { id: 'hero' as const, label: '首頁輪播', description: '圖片與排序', destination: '首頁首屏輪播', icon: GalleryHorizontalEnd },
+    { id: 'home' as const, label: '首頁文案', description: '區塊標題與重點', destination: '首頁活動、特色與課程預覽', icon: Home },
+    { id: 'activities' as const, label: '活動入口', description: '報名與活動連結', destination: '首頁近期報名入口', icon: Megaphone },
+    { id: 'seasonal' as const, label: '季度資訊', description: '首頁公告', destination: '首頁季度公告區', icon: CalendarRange },
+    { id: 'brand' as const, label: '品牌與聯絡', description: 'Logo、社群與頁尾', destination: '頂部導覽、頁尾與聯絡入口', icon: BadgeInfo },
+    { id: 'media' as const, label: '各頁主視覺', description: '商店、關於與見證', destination: '商店、關於我們、學員見證與週年頁', icon: ImageIcon },
+    { id: 'about' as const, label: '關於我們', description: '品牌故事與對象', destination: '關於我們完整頁面', icon: Sparkles },
+    { id: 'testimonials' as const, label: '學員見證', description: '見證頁文案', destination: '學員見證完整頁面', icon: FileText },
+    { id: 'courses' as const, label: '課程資料', description: '班級日期與內容', destination: '首頁、日程表、課程詳情與網站報名表', icon: ShoppingBag },
   ]
 
   async function addHeroImage(file?: File) {
@@ -189,36 +186,6 @@ export default function AdminContentManager({ content, courses, runAction }: Adm
       setLocalError(error instanceof Error ? error.message : '圖片上傳失敗。')
     } finally {
       setIsUploading(false)
-    }
-  }
-
-  async function copyGoogleFormsScript() {
-    if (!supabase || !selectedCourse) return
-    setScriptLoading(true)
-    setLocalError('')
-    setScriptMessage('')
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.access_token) throw new Error('請重新登入管理員帳號。')
-
-      const response = await fetch('/api/admin/google-forms-script', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ courseSlug: selectedCourse.slug }),
-      })
-      const payload = (await response.json().catch(() => ({}))) as { script?: string; error?: string }
-      if (!response.ok || !payload.script) throw new Error(payload.error || '取得 Google 表單串接程式失敗。')
-
-      await navigator.clipboard.writeText(payload.script)
-      setScriptMessage('Apps Script 已複製。')
-    } catch (error) {
-      setLocalError(error instanceof Error ? error.message : '取得 Google 表單串接程式失敗。')
-    } finally {
-      setScriptLoading(false)
     }
   }
 
@@ -282,7 +249,7 @@ export default function AdminContentManager({ content, courses, runAction }: Adm
           <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
             {panelHeader('網站內容中心', '所有日常可替換的圖片與文案集中在這裡。商品本身請到「商城商品」管理。')}
             <div className="grid md:grid-cols-2">
-              {modes.filter((item) => item.id !== 'overview').map((item) => { const Icon = item.icon; return <button key={item.id} type="button" onClick={() => setMode(item.id)} className="flex items-center gap-4 border-b border-black/10 p-5 text-left transition hover:bg-apple-gray-50 md:odd:border-r"><span className="flex h-10 w-10 items-center justify-center rounded-lg bg-apple-gray-100"><Icon className="h-5 w-5" /></span><span><span className="block font-black text-apple-gray-900">{item.label}</span><span className="mt-1 block text-sm text-apple-gray-500">{item.description}</span></span></button> })}
+              {modes.filter((item) => item.id !== 'overview').map((item) => { const Icon = item.icon; return <button key={item.id} type="button" onClick={() => setMode(item.id)} className="flex items-start gap-4 border-b border-black/10 p-5 text-left transition hover:bg-apple-gray-50 md:odd:border-r"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-apple-gray-100"><Icon className="h-5 w-5" /></span><span className="min-w-0"><span className="block font-black text-apple-gray-900">{item.label}</span><span className="mt-1 block text-sm text-apple-gray-500">{item.description}</span><span className="mt-2 block text-xs font-bold text-apple-blue">發布位置：{item.destination}</span></span></button> })}
             </div>
           </div>
         ) : null}
@@ -340,11 +307,10 @@ export default function AdminContentManager({ content, courses, runAction }: Adm
               <Field label="費用說明"><input value={String(draft.feeNote ?? '')} onChange={(e) => setDraft((current) => ({ ...current, feeNote: e.target.value }))} className="apple-input" /></Field>
               <Field label="適合對象" wide><input value={String(draft.targetAudience ?? '')} onChange={(e) => setDraft((current) => ({ ...current, targetAudience: e.target.value }))} className="apple-input" /></Field>
               <Field label="訓練方向" wide><input value={String(draft.focus ?? '')} onChange={(e) => setDraft((current) => ({ ...current, focus: e.target.value }))} className="apple-input" /></Field>
-              <Field label="線上報名連結" wide><input type="url" value={String(draft.signupUrl ?? '')} onChange={(e) => setDraft((current) => ({ ...current, signupUrl: e.target.value }))} className="apple-input" placeholder="https://forms.gle/..." /></Field>
+              <div className="md:col-span-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3"><p className="text-sm font-black text-emerald-900">報名方式：網站內建報名表</p><p className="mt-1 text-sm leading-6 text-emerald-800">發布後，「立即報名」會進入本課程的網站報名頁，不再使用 Google 表單。</p></div>
               <label className="flex items-center gap-3 text-sm font-bold"><input type="checkbox" checked={draft.active !== false} onChange={(e) => setDraft((current) => ({ ...current, active: e.target.checked }))} className="h-4 w-4" />這門課程對外顯示</label>
-              <div className="flex flex-wrap gap-2"><button type="button" onClick={saveCourse} className="apple-button-primary gap-2"><Save className="h-4 w-4" />儲存並發布至課程與日程表</button><button type="button" disabled={scriptLoading} onClick={copyGoogleFormsScript} className="apple-button-outline gap-2"><Copy className="h-4 w-4" />{scriptLoading ? '正在產生' : '複製 Apps Script'}</button></div>
+              <div className="flex flex-wrap gap-2"><button type="button" onClick={saveCourse} className="apple-button-primary gap-2"><Save className="h-4 w-4" />儲存並發布至課程與日程表</button></div>
               {courseMessage ? <p className="md:col-span-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">{courseMessage}</p> : null}
-              {scriptMessage ? <p className="md:col-span-2 text-sm font-bold text-emerald-700">{scriptMessage}</p> : null}
             </div>
           </div>
         ) : null}

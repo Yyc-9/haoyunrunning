@@ -1115,7 +1115,31 @@ export async function PATCH(request: NextRequest) {
       return json({ error: error?.message || '網站內容儲存失敗。' }, { status: 500 })
     }
 
-    return json({ content, message: '網站內容已儲存並發布。' })
+    const { data: contentRows, error: contentRowsError } = await supabaseAdmin!
+      .from('site_content')
+      .select('key, value')
+      .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'testimonials_content', 'page_media'])
+
+    if (contentRowsError) {
+      return json({ error: contentRowsError.message || '內容已儲存，但重新讀取失敗。' }, { status: 500 })
+    }
+
+    const siteContent = siteContentFromRows(contentRows)
+    const courses = applyCourseOverrides(siteContent.courseOverrides, { includeInactive: true }).map((course) => ({
+      slug: course.slug,
+      name: course.name,
+      weekday: course.weekday,
+      location: course.location,
+      period: course.period,
+      classTime: course.classTime,
+      meetingPoint: course.meetingPoint,
+      feeNote: course.feeNote,
+      targetAudience: course.targetAudience,
+      focus: course.focus,
+      signupUrl: course.signupUrl || '',
+    }))
+
+    return json({ content, siteContent, courses, message: '網站內容已儲存並同步發布。' })
   }
 
   if (body.action === 'create_payment_account') {

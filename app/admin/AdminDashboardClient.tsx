@@ -27,6 +27,7 @@ import type { SiteContent } from '@/lib/site-content'
 import AdminContentManager from '@/components/admin/AdminContentManager'
 import AdminProductCreator from '@/components/admin/AdminProductCreator'
 import AdminProductEditor, { type AdminEditableProduct } from '@/components/admin/AdminProductEditor'
+import { announceSiteContentUpdated } from '@/lib/site-content-sync'
 
 type PaymentOrderStatus = 'pending_transfer' | 'pending_review' | 'approved' | 'rejected'
 
@@ -241,7 +242,12 @@ async function adminAction(body: Record<string, unknown>) {
     body: JSON.stringify(body),
   })
 
-  const payload = (await response.json().catch(() => ({}))) as { error?: string; message?: string }
+  const payload = (await response.json().catch(() => ({}))) as {
+    error?: string
+    message?: string
+    siteContent?: SiteContent
+    courses?: AdminCourseSummary[]
+  }
   if (!response.ok) {
     throw new Error(payload.error || '操作失敗。')
   }
@@ -402,7 +408,16 @@ export default function AdminDashboardClient() {
     try {
       const result = await adminAction(action)
       setMessage(result.message || '操作已完成。')
-      await loadDashboard(true)
+      if (action.action === 'save_site_content' && result.siteContent && result.courses) {
+        setData((current) => current ? {
+          ...current,
+          siteContent: result.siteContent!,
+          courses: result.courses!,
+        } : current)
+        announceSiteContentUpdated(result.siteContent)
+      } else {
+        await loadDashboard(true)
+      }
       return true
     } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : '操作失敗。')

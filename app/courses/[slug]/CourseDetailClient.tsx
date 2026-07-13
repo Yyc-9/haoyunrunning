@@ -135,6 +135,16 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
               <p className="mt-4 max-w-2xl text-base leading-7 text-apple-gray-600 md:text-lg">
                 {text(course.slogan)}
               </p>
+              <div className="mt-5 grid max-w-3xl gap-3 sm:grid-cols-2">
+                <div className="border-l-2 border-apple-blue pl-4">
+                  <p className="text-xs font-bold text-apple-gray-400">適合對象</p>
+                  <p className="mt-1 text-sm font-semibold leading-6 text-apple-gray-700">{text(course.targetAudience)}</p>
+                </div>
+                <div className="border-l-2 border-emerald-500 pl-4">
+                  <p className="text-xs font-bold text-apple-gray-400">費用說明</p>
+                  <p className="mt-1 text-sm font-semibold leading-6 text-apple-gray-700">{text(course.feeNote)}</p>
+                </div>
+              </div>
               <div className="mt-6 flex flex-wrap gap-3">
                 {[
                   [t.courseDetail.city, course.city],

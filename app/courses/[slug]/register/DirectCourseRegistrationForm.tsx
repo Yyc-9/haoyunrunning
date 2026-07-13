@@ -205,8 +205,14 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
                 <div><dt className="text-apple-gray-500">日期</dt><dd className="mt-1 font-bold">{course.period}</dd></div>
                 <div><dt className="text-apple-gray-500">地點</dt><dd className="mt-1 font-bold">{course.location}{course.meetingPoint ? ` · ${course.meetingPoint}` : ''}</dd></div>
                 <div><dt className="text-apple-gray-500">上課日</dt><dd className="mt-1 font-bold">{course.weekday}</dd></div>
+                <div><dt className="text-apple-gray-500">上課時間</dt><dd className="mt-1 font-bold">{course.classTime}</dd></div>
                 <div><dt className="text-apple-gray-500">訓練重點</dt><dd className="mt-1 font-bold">{course.focus}</dd></div>
+                <div><dt className="text-apple-gray-500">費用說明</dt><dd className="mt-1 font-bold">{course.feeNote}</dd></div>
               </dl>
+              <div className="mt-4 border-t border-black/10 pt-4">
+                <p className="text-xs font-bold text-apple-gray-500">適合對象</p>
+                <p className="mt-1 text-sm font-semibold leading-6 text-apple-gray-800">{course.targetAudience}</p>
+              </div>
             </div>
 
             <div className="mt-7">
