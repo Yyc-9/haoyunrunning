@@ -227,7 +227,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
                           alt={coach.name}
                           fill
                           sizes="64px"
-                          className={/zheng-yi-qun|luo-pei-ci/.test(coach.imageUrl)
+                          className={/zheng-yi-qun|chen-yi-ting|luo-pei-ci/.test(coach.imageUrl)
                             ? 'origin-top scale-[2.45] object-contain object-top'
                             : 'object-cover object-[center_15%]'}
                         />

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
   AlertTriangle,
+  BarChart3,
   Boxes,
   CalendarRange,
   CheckCircle2,
@@ -27,13 +28,14 @@ import { supabase } from '@/lib/supabase'
 import type { CourseSeason } from '@/lib/course-seasons'
 import type { SiteContent } from '@/lib/site-content'
 import AdminContentManager from '@/components/admin/AdminContentManager'
+import AdminEnrollmentAnalytics from '@/components/admin/AdminEnrollmentAnalytics'
 import AdminProductCreator from '@/components/admin/AdminProductCreator'
 import AdminProductEditor, { type AdminEditableProduct } from '@/components/admin/AdminProductEditor'
 import { announceSiteContentUpdated } from '@/lib/site-content-sync'
 
 type PaymentOrderStatus = 'pending_transfer' | 'pending_review' | 'approved' | 'rejected'
 
-type AdminTab = 'overview' | 'students' | 'coaches' | 'orders' | 'seasons' | 'products' | 'content' | 'paymentAccounts'
+type AdminTab = 'overview' | 'students' | 'coaches' | 'enrollments' | 'orders' | 'seasons' | 'products' | 'content' | 'paymentAccounts'
 
 type AdminDashboardPayload = {
   admin: { id: string; email: string; name: string; role: string }
@@ -178,6 +180,7 @@ const tabs: Array<{ id: AdminTab; label: string; icon: typeof LayoutDashboard }>
   { id: 'overview', label: '總覽', icon: LayoutDashboard },
   { id: 'students', label: '學員管理', icon: UsersRound },
   { id: 'coaches', label: '教練管理', icon: UserCog },
+  { id: 'enrollments', label: '季度學員', icon: BarChart3 },
   { id: 'orders', label: '訂單審核', icon: ClipboardList },
   { id: 'seasons', label: '季度管理', icon: CalendarRange },
   { id: 'products', label: '商城商品', icon: Boxes },
@@ -837,6 +840,14 @@ export default function AdminDashboardClient() {
                 </div>
               ) : null}
             </section>
+          ) : null}
+
+          {activeTab === 'enrollments' && data ? (
+            <AdminEnrollmentAnalytics
+              orders={data.orders}
+              courseCapacity={data.courseCapacity}
+              seasons={data.courseSeasons}
+            />
           ) : null}
 
           {activeTab === 'orders' && data ? (
