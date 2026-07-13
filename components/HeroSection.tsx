@@ -7,11 +7,16 @@ import { BookOpenCheck, ChevronDown, ChevronLeft, ChevronRight, Pause, Play, Sho
 import { useLanguage } from '@/app/language-context'
 import { useSiteContent } from '@/app/site-content-provider'
 
-export default function HeroSection() {
+type HeroSectionProps = {
+  initialImages: string[]
+}
+
+export default function HeroSection({ initialImages }: HeroSectionProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isAutoPlay, setIsAutoPlay] = useState(true)
   const { t } = useLanguage()
-  const { heroSlides: images } = useSiteContent()
+  const { heroSlides: syncedImages, hasSyncedContent } = useSiteContent()
+  const images = hasSyncedContent ? syncedImages : initialImages
   const entryCards = [
     {
       href: '/courses',
@@ -84,7 +89,7 @@ export default function HeroSection() {
         {images.map((image, index) => (
           <motion.div
             key={image}
-            initial={{ opacity: 0 }}
+            initial={false}
             animate={{
               opacity: index === currentImageIndex ? 1 : 0,
               scale: 1,

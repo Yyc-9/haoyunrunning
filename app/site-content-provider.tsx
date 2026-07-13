@@ -13,6 +13,7 @@ import {
 type SiteContentContextValue = SiteContent & {
   courses: ManagedCourse[]
   isLoading: boolean
+  hasSyncedContent: boolean
 }
 
 const SiteContentContext = createContext<SiteContentContextValue | null>(null)
@@ -21,6 +22,7 @@ export function SiteContentProvider({ children }: { children: React.ReactNode })
   const pathname = usePathname()
   const [content, setContent] = useState<SiteContent>(defaultSiteContent)
   const [isLoading, setIsLoading] = useState(true)
+  const [hasSyncedContent, setHasSyncedContent] = useState(false)
   const requestIdRef = useRef(0)
   const previousPathnameRef = useRef(pathname)
 
@@ -31,8 +33,11 @@ export function SiteContentProvider({ children }: { children: React.ReactNode })
     try {
       const response = await fetch('/api/site-content', { cache: 'no-store' })
       if (!response.ok) throw new Error('網站內容暫時無法更新。')
-      const payload = (await response.json()) as { content?: SiteContent }
-      if (requestId === requestIdRef.current && payload.content) setContent(payload.content)
+      const payload = (await response.json()) as { content?: SiteContent; source?: string }
+      if (requestId === requestIdRef.current && payload.content) {
+        setContent(payload.content)
+        setHasSyncedContent(payload.source === 'database')
+      }
     } catch (error) {
       console.error('Load site content failed:', error)
     } finally {
@@ -56,6 +61,7 @@ export function SiteContentProvider({ children }: { children: React.ReactNode })
       if (detail?.content) {
         requestIdRef.current += 1
         setContent(detail.content)
+        setHasSyncedContent(true)
         setIsLoading(false)
         return
       }
@@ -75,8 +81,8 @@ export function SiteContentProvider({ children }: { children: React.ReactNode })
   }, [loadContent])
 
   const value = useMemo(
-    () => ({ ...content, courses: applyCourseOverrides(content.courseOverrides), isLoading }),
-    [content, isLoading]
+    () => ({ ...content, courses: applyCourseOverrides(content.courseOverrides), isLoading, hasSyncedContent }),
+    [content, hasSyncedContent, isLoading]
   )
 
   return <SiteContentContext.Provider value={value}>{children}</SiteContentContext.Provider>
