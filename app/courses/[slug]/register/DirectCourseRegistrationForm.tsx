@@ -5,6 +5,7 @@ import Image from 'next/image'
 import {
   ArrowLeft,
   ArrowRight,
+  CalendarCheck2,
   CheckCircle2,
   ExternalLink,
   Loader2,
@@ -17,7 +18,7 @@ import {
 } from 'lucide-react'
 import type { Course } from '@/lib/goodluck-data'
 import type { LegacyStudentStatus, MyCourseEnrollment } from '@/lib/course-registration'
-import type { CourseRegistrationQuote } from '@/lib/course-pricing'
+import type { CoursePricingOptions, CourseRegistrationQuote } from '@/lib/course-pricing'
 import {
   coursePolicyRules,
   invoiceDeliveryOptions,
@@ -29,6 +30,7 @@ type DirectCourseRegistrationFormProps = {
   course: Course
   userEmail: string
   legacyStudent: LegacyStudentStatus
+  pricingOptions: CoursePricingOptions
   onSubmitted: (enrollment: MyCourseEnrollment) => void
 }
 
@@ -53,6 +55,8 @@ const initialForm: DirectCourseRegistration = {
   recentGoal: '',
   injuryHistory: '',
   runningStatus: '',
+  billingStartSessionDate: '',
+  priorAttendanceClaimed: false,
   quoteToken: '',
   transferLastFive: '',
   invoiceDelivery: '',
@@ -64,6 +68,48 @@ const initialForm: DirectCourseRegistration = {
   finalConsent: false,
 }
 
+function formatSessionDate(date: string) {
+  return new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+  }).format(new Date(`${date}T12:00:00+08:00`))
+}
+
+function formatQuoteExpiry(date: string) {
+  return new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(date))
+}
+
+function PricingQuoteSummary({ quote }: { quote: CourseRegistrationQuote }) {
+  return (
+    <div>
+      <p className="text-3xl font-black text-apple-gray-950">{quote.amountText}</p>
+      <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold">
+        <span className="rounded-full bg-apple-gray-100 px-3 py-1.5 text-apple-gray-700">{quote.studentType === 'returning' ? '舊生' : '新生'}</span>
+        <span className="rounded-full bg-blue-50 px-3 py-1.5 text-blue-800">{quote.enrollmentTiming === 'regular' ? '本期完整報名' : '插班報名'}</span>
+        <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-800">第 {quote.billingStartSessionNumber} 堂起，共 {quote.chargedSessionCount} 堂</span>
+      </div>
+      <p className="mt-4 text-sm font-semibold leading-6 text-apple-gray-700">
+        自 {formatSessionDate(quote.billingStartSessionDate)} 起計費；
+        {quote.enrollmentTiming === 'regular'
+          ? `本期共 ${quote.totalSessionCount} 堂，採整季價格。`
+          : `剩餘 ${quote.chargedSessionCount} 堂 × 每堂 ${quote.unitRate ? `NT$${quote.unitRate}` : ''}。`}
+      </p>
+      {quote.priorAttendanceClaimed ? <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold leading-6 text-amber-900">你已申報最近一堂有到課並補繳費用；管理員核對到課紀錄後才會核准。</p> : null}
+      {quote.referrerStatus === 'verified' ? <p className="mt-2 text-sm font-bold text-emerald-700">推薦資格已核對，插班費率為每堂 NT$450。</p> : null}
+      {quote.referrerStatus === 'not_verified' ? <p className="mt-2 text-sm font-semibold text-apple-gray-600">目前無法核對推薦資格，插班費率依每堂 NT$500 計算。</p> : null}
+      <p className="mt-3 text-xs leading-5 text-apple-gray-500">此金額保留至 {formatQuoteExpiry(quote.lockedUntil)}。選定的起始課次是本期計費承諾；之後若該堂請假，不會自動順延計費日期。</p>
+    </div>
+  )
+}
+
 function FieldLabel({ children, optional = false }: { children: React.ReactNode; optional?: boolean }) {
   return (
     <span className="mb-2 block text-sm font-black text-apple-gray-800">
@@ -73,18 +119,20 @@ function FieldLabel({ children, optional = false }: { children: React.ReactNode;
   )
 }
 
-export default function DirectCourseRegistrationForm({ course, userEmail, legacyStudent, onSubmitted }: DirectCourseRegistrationFormProps) {
+export default function DirectCourseRegistrationForm({ course, userEmail, legacyStudent, pricingOptions, onSubmitted }: DirectCourseRegistrationFormProps) {
   const [step, setStep] = useState(0)
   const [form, setForm] = useState<DirectCourseRegistration>(() => ({
     ...initialForm,
     studentType: legacyStudent.matched ? 'returning' : 'new',
     studentName: legacyStudent.name,
+    billingStartSessionDate: pricingOptions.automaticStartSessionDate ?? '',
   }))
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isQuoting, setIsQuoting] = useState(false)
   const [pricingQuote, setPricingQuote] = useState<CourseRegistrationQuote | null>(null)
   const topRef = useRef<HTMLDivElement>(null)
+  const quoteRequestRef = useRef(0)
 
   const coaches = useMemo(() => course.coaches ?? (course.coach ? [course.coach] : []), [course])
   const progress = ((step + 1) / steps.length) * 100
@@ -105,6 +153,10 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
     }
 
     if (currentStep === 2) {
+      if (pricingOptions.selectionRequired && !form.billingStartSessionDate) {
+        showError('請選擇本期計費起始課次。')
+        return false
+      }
       if (!form.studentName || !form.emergencyContactName || !form.emergencyContactPhone) {
         showError('請填寫學員姓名與緊急聯絡人資料。')
         return false
@@ -130,7 +182,12 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
     return true
   }
 
-  async function loadPricingQuote() {
+  async function loadPricingQuote(overrides?: {
+    billingStartSessionDate?: string
+    priorAttendanceClaimed?: boolean
+    referrer?: string
+  }) {
+    const requestId = ++quoteRequestRef.current
     setIsQuoting(true)
     setError('')
     try {
@@ -145,22 +202,38 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
         body: JSON.stringify({
           intent: 'course_pricing_quote',
           courseSlug: course.slug,
-          referrer: form.referrer,
+          referrer: overrides?.referrer ?? form.referrer,
+          billingStartSessionDate: overrides?.billingStartSessionDate ?? form.billingStartSessionDate,
+          priorAttendanceClaimed: overrides?.priorAttendanceClaimed ?? form.priorAttendanceClaimed,
         }),
       })
       const payload = (await response.json().catch(() => ({}))) as RegistrationResponse
       if (!response.ok || !payload.pricingQuote || !payload.quoteToken) {
         throw new Error(payload.error || '課程費用計算失敗。')
       }
+      if (requestId !== quoteRequestRef.current) return false
       setPricingQuote(payload.pricingQuote)
       update('quoteToken', payload.quoteToken)
       return true
     } catch (quoteError) {
-      showError(quoteError instanceof Error ? quoteError.message : '課程費用計算失敗。')
+      if (requestId === quoteRequestRef.current) {
+        showError(quoteError instanceof Error ? quoteError.message : '課程費用計算失敗。')
+      }
       return false
     } finally {
-      setIsQuoting(false)
+      if (requestId === quoteRequestRef.current) setIsQuoting(false)
     }
+  }
+
+  async function selectBillingStartSession(date: string, priorAttendanceClaimed: boolean) {
+    setForm((current) => ({
+      ...current,
+      billingStartSessionDate: date,
+      priorAttendanceClaimed,
+      quoteToken: '',
+    }))
+    setPricingQuote(null)
+    await loadPricingQuote({ billingStartSessionDate: date, priorAttendanceClaimed })
   }
 
   async function nextStep() {
@@ -241,7 +314,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
                 <div><dt className="text-apple-gray-500">上課日</dt><dd className="mt-1 font-bold">{course.weekday}</dd></div>
                 <div><dt className="text-apple-gray-500">上課時間</dt><dd className="mt-1 font-bold">{course.classTime}</dd></div>
                 <div><dt className="text-apple-gray-500">訓練重點</dt><dd className="mt-1 font-bold">{course.focus}</dd></div>
-                <div><dt className="text-apple-gray-500">費用說明</dt><dd className="mt-1 font-bold">{course.feeNote}</dd></div>
+                <div><dt className="text-apple-gray-500">費用說明</dt><dd className="mt-1 font-bold">系統依學員身分與本期計費起始課次自動核算</dd></div>
               </dl>
               <div className="mt-4 border-t border-black/10 pt-4">
                 <p className="text-xs font-bold text-apple-gray-500">適合對象</p>
@@ -322,6 +395,62 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
               </div>
             </div>
 
+            <section className="mt-6 rounded-lg border border-black/10 bg-white p-4 sm:p-5">
+              <div className="flex items-start gap-3">
+                <CalendarCheck2 className="mt-0.5 h-5 w-5 shrink-0 text-apple-blue" />
+                <div>
+                  <h3 className="font-black text-apple-gray-950">本期計費起始課次</h3>
+                  <p className="mt-1 text-sm leading-6 text-apple-gray-600">
+                    {pricingOptions.selectionRequired
+                      ? '課程已開始，請依你實際要開始上課的課次選擇。當日課程會計入堂數。'
+                      : '本班尚未開始或今天是第一堂，系統會自動從第一堂課開始計費。'}
+                  </p>
+                </div>
+              </div>
+
+              {pricingOptions.selectionRequired ? (
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  {pricingOptions.availableStartSessions.map((option) => {
+                    const selected = form.billingStartSessionDate === option.date && !form.priorAttendanceClaimed
+                    return (
+                      <button
+                        key={option.date}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => selectBillingStartSession(option.date, false)}
+                        className={`min-h-20 rounded-lg border p-3 text-left transition ${selected ? 'border-blue-500 bg-blue-50 text-blue-950' : 'border-black/10 bg-white text-apple-gray-800 hover:bg-apple-gray-50'}`}
+                      >
+                        <span className="block text-sm font-black">第 {option.sessionNumber} 堂 · {formatSessionDate(option.date)}</span>
+                        <span className="mt-1 block text-xs font-semibold opacity-70">從本堂起計 {option.remainingSessionCount} 堂</span>
+                      </button>
+                    )
+                  })}
+                  {pricingOptions.priorAttendanceSession ? (
+                    <button
+                      type="button"
+                      aria-pressed={form.priorAttendanceClaimed}
+                      onClick={() => selectBillingStartSession(pricingOptions.priorAttendanceSession!.date, true)}
+                      className={`min-h-20 rounded-lg border p-3 text-left transition sm:col-span-2 ${form.priorAttendanceClaimed ? 'border-amber-500 bg-amber-50 text-amber-950' : 'border-amber-200 bg-white text-amber-950 hover:bg-amber-50'}`}
+                    >
+                      <span className="block text-sm font-black">我已參加最近一堂，現在補繳</span>
+                      <span className="mt-1 block text-xs font-semibold leading-5 opacity-75">第 {pricingOptions.priorAttendanceSession.sessionNumber} 堂 · {formatSessionDate(pricingOptions.priorAttendanceSession.date)}；送出後由管理員核對到課紀錄。</span>
+                    </button>
+                  ) : null}
+                </div>
+              ) : pricingOptions.automaticStartSessionDate ? (
+                <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-950">
+                  <p className="text-sm font-black">第 1 堂 · {formatSessionDate(pricingOptions.automaticStartSessionDate)}</p>
+                  <p className="mt-1 text-xs font-semibold opacity-75">採本期完整課程價格。</p>
+                </div>
+              ) : null}
+
+              {isQuoting ? (
+                <div className="mt-4 flex items-center gap-2 border-t border-black/10 pt-4 text-sm font-bold text-apple-gray-600"><Loader2 className="h-4 w-4 animate-spin" />正在計算本次費用</div>
+              ) : pricingQuote ? (
+                <div className="mt-4 border-t border-black/10 pt-4"><PricingQuoteSummary quote={pricingQuote} /></div>
+              ) : null}
+            </section>
+
             <p className="mt-5 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-800">資料僅供好運跑班進行課程聯絡、付款核對與安全照護使用。</p>
 
             <div className="mt-6 space-y-5">
@@ -339,7 +468,14 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
 
               {form.studentType === 'new' ? (
                 <>
-                  <label className="block"><FieldLabel optional>推薦人信箱</FieldLabel><input type="email" inputMode="email" autoCapitalize="none" value={form.referrer} onChange={(event) => update('referrer', event.target.value)} className="apple-input min-h-12" placeholder="請填推薦人的好運報名信箱；若無可留白" /><span className="mt-2 block text-xs leading-5 text-apple-gray-500">插班新生的推薦資格會以舊生名單或已付款報名記錄自動核對。</span></label>
+                  <label className="block"><FieldLabel optional>推薦人信箱</FieldLabel><input type="email" inputMode="email" autoCapitalize="none" value={form.referrer} onChange={(event) => {
+                    quoteRequestRef.current += 1
+                    setForm((current) => ({ ...current, referrer: event.target.value, quoteToken: '' }))
+                    setPricingQuote(null)
+                    setIsQuoting(false)
+                  }} onBlur={() => {
+                    if (form.billingStartSessionDate) void loadPricingQuote({ referrer: form.referrer })
+                  }} className="apple-input min-h-12" placeholder="請填推薦人的好運報名信箱；若無可留白" /><span className="mt-2 block text-xs leading-5 text-apple-gray-500">插班新生的推薦資格會以舊生名單或已付款報名記錄自動核對。</span></label>
                   <label className="block"><FieldLabel>近期挑戰</FieldLabel><textarea value={form.recentChallenge} onChange={(event) => update('recentChallenge', event.target.value)} className="apple-input min-h-24 resize-y" placeholder="半年內 5K、10K、半馬或全馬成績；沒有可填「無」" /></label>
                   <label className="block"><FieldLabel>近期目標</FieldLabel><textarea value={form.recentGoal} onChange={(event) => update('recentGoal', event.target.value)} className="apple-input min-h-24 resize-y" placeholder="目標賽事、距離或完賽時間" /></label>
                   <label className="block"><FieldLabel>過去到現在是否有病史或運動傷害？</FieldLabel><textarea value={form.injuryHistory} onChange={(event) => update('injuryHistory', event.target.value)} className="apple-input min-h-24 resize-y" placeholder="沒有請填「無」" /></label>
@@ -362,24 +498,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
               <p className="text-xs font-bold text-apple-gray-500">系統核算匯款總金額</p>
               {isQuoting || !pricingQuote ? (
                 <div className="mt-3 flex items-center gap-2 text-sm font-bold text-apple-gray-600"><Loader2 className="h-4 w-4 animate-spin" />正在核對身份、課次與價格</div>
-              ) : (
-                <>
-                  <p className="mt-2 text-3xl font-black text-apple-gray-950">{pricingQuote.amountText}</p>
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold">
-                    <span className="rounded-full bg-apple-gray-100 px-3 py-1.5 text-apple-gray-700">{pricingQuote.studentType === 'returning' ? '舊生' : '新生'}</span>
-                    <span className="rounded-full bg-blue-50 px-3 py-1.5 text-blue-800">{pricingQuote.enrollmentTiming === 'regular' ? '本期正常報名' : '插班報名'}</span>
-                    <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-800">計費 {pricingQuote.chargedSessionCount} 堂</span>
-                  </div>
-                  <p className="mt-4 text-sm font-semibold leading-6 text-apple-gray-700">
-                    {pricingQuote.enrollmentTiming === 'regular'
-                      ? `目前仍在首堂課寬限期內，依本期完整 ${pricingQuote.totalSessionCount} 堂計費。`
-                      : `同日報名會包含當天課次；本次以剩餘 ${pricingQuote.chargedSessionCount} 堂 × 每堂 ${pricingQuote.unitRate ? `NT$${pricingQuote.unitRate}` : ''} 計算。`}
-                  </p>
-                  {pricingQuote.referrerStatus === 'verified' ? <p className="mt-2 text-sm font-bold text-emerald-700">推薦資格已核對，插班費率為每堂 NT$450。</p> : null}
-                  {pricingQuote.referrerStatus === 'not_verified' ? <p className="mt-2 text-sm font-semibold text-apple-gray-600">目前無法核對推薦資格，插班費率依每堂 NT$500 計算。</p> : null}
-                  <p className="mt-3 text-xs leading-5 text-apple-gray-500">此金額自核算時間起保留 24 小時；送出後會連同課次明細鎖定在報名記錄中。</p>
-                </>
-              )}
+              ) : <PricingQuoteSummary quote={pricingQuote} />}
             </section>
 
             <label className="mt-6 block"><FieldLabel>匯款後五碼</FieldLabel><input inputMode="numeric" maxLength={5} value={form.transferLastFive} onChange={(event) => update('transferLastFive', event.target.value.replace(/\D/g, '').slice(0, 5))} className="apple-input min-h-12 text-lg tracking-[0.25em]" placeholder="12345" /><span className="mt-2 block text-xs leading-5 text-apple-gray-500">匯款備註請保持空白，並保留轉帳截圖以利後續查詢。</span></label>
@@ -415,7 +534,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
         <div className="mt-8 flex gap-3 border-t border-black/10 pt-5">
           {step > 0 ? <button type="button" onClick={previousStep} className="apple-button-outline min-h-12 flex-1 gap-2"><ArrowLeft className="h-4 w-4" />上一步</button> : null}
           {step < steps.length - 1 ? (
-            <button type="button" onClick={nextStep} className="apple-button-primary min-h-12 flex-1 gap-2">下一步<ArrowRight className="h-4 w-4" /></button>
+            <button type="button" disabled={isQuoting} onClick={nextStep} className="apple-button-primary min-h-12 flex-1 gap-2 disabled:cursor-not-allowed disabled:opacity-50">下一步<ArrowRight className="h-4 w-4" /></button>
           ) : (
             <button type="button" disabled={isSubmitting || isQuoting || !pricingQuote} onClick={submitRegistration} className="apple-button-primary min-h-12 flex-1 gap-2 disabled:cursor-not-allowed disabled:opacity-50">
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}

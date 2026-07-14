@@ -22,6 +22,9 @@ export type MyCourseEnrollment = {
   courseName: string
   status: PaymentOrderStatus
   amountText: string
+  billingStartSessionDate: string
+  priorAttendanceClaimed: boolean
+  attendanceVerificationStatus: string
   transferLastFive: string
   reviewNote: string
   createdAt: string

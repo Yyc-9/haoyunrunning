@@ -6,7 +6,7 @@ import {
 } from '@/lib/course-registration-form'
 import { getManagedCourses } from '@/lib/managed-courses-server'
 import { getCurrentCourseSeason } from '@/lib/course-seasons-server'
-import { calculateCourseRegistrationQuote } from '@/lib/course-pricing'
+import { calculateCourseRegistrationQuote, getCoursePricingOptions } from '@/lib/course-pricing'
 import { createCourseQuoteToken, verifyCourseQuoteToken } from '@/lib/course-pricing-token'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 
@@ -63,6 +63,9 @@ function enrollmentPayload(row: Record<string, unknown>) {
     courseName: String(row.preferred_course ?? ''),
     status: String(row.status ?? 'pending_transfer'),
     amountText: String(row.amount_text ?? ''),
+    billingStartSessionDate: String(row.billing_start_session_date ?? ''),
+    priorAttendanceClaimed: row.prior_attendance_claimed === true,
+    attendanceVerificationStatus: String(row.attendance_verification_status ?? 'not_required'),
     transferLastFive: String(row.transfer_last_five ?? ''),
     reviewNote: String(row.review_note ?? ''),
     createdAt: String(row.created_at ?? ''),
@@ -117,17 +120,23 @@ export async function GET(request: NextRequest) {
     remaining: Math.max(0, capacity - paidCount),
     full: paidCount >= capacity,
   }
+  let pricingOptions
+  try {
+    pricingOptions = getCoursePricingOptions(currentSeason.courseBillingConfigs[courseSlug])
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : '課次設定讀取失敗。' }, { status: 400 })
+  }
 
   const user = await getAuthedUser(request.headers.get('authorization'))
   if (!user?.email) {
-    return NextResponse.json({ availability, enrollment: null, legacyStudent: null })
+    return NextResponse.json({ availability, pricingOptions, enrollment: null, legacyStudent: null })
   }
 
   const email = user.email.trim().toLowerCase()
   const [enrollmentResult, legacyResult] = await Promise.all([
     supabaseAdmin
       .from('signup_leads')
-      .select('id, course_slug, preferred_course, status, amount_text, transfer_last_five, review_note, created_at, payment_submitted_at')
+      .select('id, course_slug, preferred_course, status, amount_text, billing_start_session_date, prior_attendance_claimed, attendance_verification_status, transfer_last_five, review_note, created_at, payment_submitted_at')
       .eq('source', 'course_payment')
       .eq('season_id', currentSeason.id)
       .eq('course_slug', courseSlug)
@@ -144,6 +153,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     availability,
+    pricingOptions,
     enrollment: enrollmentResult.data ? enrollmentPayload(enrollmentResult.data) : null,
     legacyStudent: {
       matched: Boolean(legacyResult.data),
@@ -167,6 +177,8 @@ export async function POST(request: NextRequest) {
     courseSlug?: string
     registration?: Partial<DirectCourseRegistration>
     referrer?: string
+    billingStartSessionDate?: string
+    priorAttendanceClaimed?: boolean
   }
   const intent = cleanText(body.intent, 80)
   const courseSlug = cleanText(body.courseSlug, 120)
@@ -191,6 +203,8 @@ export async function POST(request: NextRequest) {
         isReturning: Boolean(legacyResult.data),
         referrerProvided: Boolean(referrer.email),
         referrerVerified: referrer.verified,
+        billingStartSessionDate: cleanText(body.billingStartSessionDate, 10),
+        priorAttendanceClaimed: body.priorAttendanceClaimed === true,
       })
       const quoteToken = createCourseQuoteToken({
         version: 1,
@@ -213,7 +227,7 @@ export async function POST(request: NextRequest) {
 
   const { data: activeLead, error: activeLeadError } = await supabaseAdmin
     .from('signup_leads')
-    .select('id, course_slug, preferred_course, status, amount_text, transfer_last_five, review_note, created_at, payment_submitted_at')
+    .select('id, course_slug, preferred_course, status, amount_text, billing_start_session_date, prior_attendance_claimed, attendance_verification_status, transfer_last_five, review_note, created_at, payment_submitted_at')
     .eq('source', 'course_payment')
     .eq('season_id', currentSeason.id)
     .eq('course_slug', courseSlug)
@@ -271,6 +285,8 @@ export async function POST(request: NextRequest) {
     const recentGoal = cleanText(registration.recentGoal, 1500)
     const injuryHistory = cleanText(registration.injuryHistory, 1500)
     const runningStatus = cleanText(registration.runningStatus, 1500)
+    const billingStartSessionDate = cleanText(registration.billingStartSessionDate, 10)
+    const priorAttendanceClaimed = registration.priorAttendanceClaimed === true
     const quoteToken = cleanText(registration.quoteToken, 12_000)
     const transferLastFive = cleanText(registration.transferLastFive, 5)
     const invoiceDelivery = cleanText(registration.invoiceDelivery, 120)
@@ -295,7 +311,9 @@ export async function POST(request: NextRequest) {
       tokenPayload.courseSlug !== courseSlug ||
       tokenPayload.seasonId !== currentSeason.id ||
       tokenPayload.referrer !== normalizedReferrer ||
-      tokenPayload.quote.studentType !== studentType
+      tokenPayload.quote.studentType !== studentType ||
+      tokenPayload.quote.billingStartSessionDate !== billingStartSessionDate ||
+      tokenPayload.quote.priorAttendanceClaimed !== priorAttendanceClaimed
     ) {
       return NextResponse.json({ error: '課程費用驗證失敗，請返回付款步驟重新計算。' }, { status: 409 })
     }
@@ -338,6 +356,9 @@ export async function POST(request: NextRequest) {
         calculated_amount: tokenPayload.quote.amount,
         pricing_snapshot: tokenPayload.quote,
         price_locked_until: tokenPayload.quote.lockedUntil,
+        billing_start_session_date: tokenPayload.quote.billingStartSessionDate,
+        prior_attendance_claimed: tokenPayload.quote.priorAttendanceClaimed,
+        attendance_verification_status: tokenPayload.quote.attendanceVerificationStatus,
         running_experience: runningExperience,
         goal: recentGoal,
         amount_text: tokenPayload.quote.amountText,
@@ -357,6 +378,9 @@ export async function POST(request: NextRequest) {
           referrer,
           referrerVerified: tokenPayload.quote.referrerStatus === 'verified',
           pricing: tokenPayload.quote,
+          billingStartSessionDate: tokenPayload.quote.billingStartSessionDate,
+          billingStartSessionNumber: tokenPayload.quote.billingStartSessionNumber,
+          priorAttendanceClaimed: tokenPayload.quote.priorAttendanceClaimed,
           recentChallenge,
           recentGoal,
           injuryHistory,
@@ -371,7 +395,7 @@ export async function POST(request: NextRequest) {
           },
         },
       })
-      .select('id, course_slug, preferred_course, status, amount_text, transfer_last_five, review_note, created_at, payment_submitted_at')
+      .select('id, course_slug, preferred_course, status, amount_text, billing_start_session_date, prior_attendance_claimed, attendance_verification_status, transfer_last_five, review_note, created_at, payment_submitted_at')
       .single()
 
     if (error || !data) {
@@ -422,7 +446,7 @@ export async function PATCH(request: NextRequest) {
     .eq('source', 'course_payment')
     .eq('email', user.email.trim().toLowerCase())
     .in('status', ['pending_transfer', 'pending_review', 'rejected'])
-    .select('id, course_slug, preferred_course, status, amount_text, transfer_last_five, review_note, created_at, payment_submitted_at')
+    .select('id, course_slug, preferred_course, status, amount_text, billing_start_session_date, prior_attendance_claimed, attendance_verification_status, transfer_last_five, review_note, created_at, payment_submitted_at')
     .maybeSingle()
 
   if (error) {

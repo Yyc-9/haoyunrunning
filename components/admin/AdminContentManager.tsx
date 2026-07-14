@@ -448,7 +448,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
               <Field label="訓練方向" wide><input value={String(draft.focus ?? '')} onChange={(e) => setDraft((current) => ({ ...current, focus: e.target.value }))} className="apple-input" /></Field>
               <div className="border-y border-black/10 py-5 md:col-span-2">
                 <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-                  <div><h3 className="font-black text-apple-gray-900">報名計價設定</h3><p className="mt-1 text-sm leading-6 text-apple-gray-500">實際收費課次會直接決定插班堂數；日期請使用台灣時間。</p></div>
+                  <div><h3 className="font-black text-apple-gray-900">報名計價設定</h3><p className="mt-1 text-sm leading-6 text-apple-gray-500">實際收費課次會直接決定插班堂數；課程開始後，學員必須選擇本期計費起始課次。</p></div>
                   <button type="button" onClick={rebuildBillingDates} className="apple-button-outline shrink-0 gap-2 px-4 py-2.5"><CalendarRange className="h-4 w-4" />依課程週期重建日期</button>
                 </div>
                 <div className="mt-5 grid gap-4 md:grid-cols-2">
@@ -458,7 +458,6 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                   <Field label="舊生插班每堂"><input type="number" min={0} step={50} value={draftBilling.returningLateRate} onChange={(e) => setDraftBilling((current) => ({ ...current, returningLateRate: Number(e.target.value) }))} className="apple-input" /></Field>
                   <Field label="有推薦人插班每堂"><input type="number" min={0} step={50} value={draftBilling.referredLateRate} onChange={(e) => setDraftBilling((current) => ({ ...current, referredLateRate: Number(e.target.value) }))} className="apple-input" /></Field>
                   <Field label="無推薦人插班每堂"><input type="number" min={0} step={50} value={draftBilling.standardLateRate} onChange={(e) => setDraftBilling((current) => ({ ...current, standardLateRate: Number(e.target.value) }))} className="apple-input" /></Field>
-                  <Field label="第幾堂開始當日視為插班"><input type="number" min={1} max={20} value={draftBilling.regularUntilSessionNumber} onChange={(e) => setDraftBilling((current) => ({ ...current, regularUntilSessionNumber: Number(e.target.value) }))} className="apple-input" /></Field>
                   <Field label="報價保留時數"><input type="number" min={1} max={168} value={draftBilling.priceLockHours} onChange={(e) => setDraftBilling((current) => ({ ...current, priceLockHours: Number(e.target.value) }))} className="apple-input" /></Field>
                   <label className="flex items-center gap-3 text-sm font-bold"><input type="checkbox" checked={draftBilling.scheduleReady} onChange={(e) => setDraftBilling((current) => ({ ...current, scheduleReady: e.target.checked }))} className="h-4 w-4" />啟用本班自動計價</label>
                 </div>

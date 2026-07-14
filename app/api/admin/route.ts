@@ -63,6 +63,9 @@ type SignupLeadRow = {
   calculated_amount: number | null
   pricing_snapshot: Record<string, unknown> | null
   price_locked_until: string | null
+  billing_start_session_date: string | null
+  prior_attendance_claimed: boolean
+  attendance_verification_status: string | null
   amount_text: string
   transfer_last_five: string
   status: string
@@ -568,11 +571,17 @@ export async function GET(request: NextRequest) {
       ? pricing.chargedSessionDates.filter((date): date is string => typeof date === 'string')
       : []
     const referrerStatus = recordText(pricing, 'referrerStatus')
+    const billingStartSessionDate = order.billing_start_session_date || recordText(pricing, 'billingStartSessionDate')
+    const billingStartSessionNumber = recordNumber(pricing, 'billingStartSessionNumber')
+    const priorAttendanceClaimed = order.prior_attendance_claimed || pricing?.priorAttendanceClaimed === true
+    const attendanceVerificationStatus = order.attendance_verification_status || recordText(pricing, 'attendanceVerificationStatus')
     const emergencyContactName = payloadText(order.payload, 'emergencyContactName')
     const emergencyContactPhone = payloadText(order.payload, 'emergencyContactPhone')
     const registrationDetails = [
       { label: '學員身分', value: studentType === 'returning' ? '舊生' : studentType === 'new' ? '新生' : '' },
       { label: '報名時點', value: enrollmentTiming === 'late' ? '插班報名' : enrollmentTiming === 'regular' ? '本期正常報名' : '' },
+      { label: '計費起始課次', value: billingStartSessionDate ? `${billingStartSessionNumber ? `第 ${billingStartSessionNumber} 堂｜` : ''}${billingStartSessionDate}` : '' },
+      { label: '最近一堂到課申報', value: priorAttendanceClaimed ? (attendanceVerificationStatus === 'verified' ? '已確認到課' : attendanceVerificationStatus === 'rejected' ? '未通過核對' : '待管理員確認；核准付款即代表確認到課') : '' },
       { label: '計價方式', value: chargedSessionCount ? (unitRate ? `${chargedSessionCount} 堂 × NT$${unitRate}` : `完整 ${chargedSessionCount} 堂`) : '' },
       { label: '收費課次', value: chargedSessionDates.map((date) => date.replace(/^\d{4}-/, '').replace('-', '/')).join('、') },
       { label: '推薦資格', value: referrerStatus === 'verified' ? '已核對' : referrerStatus === 'not_verified' ? '未通過核對' : '' },

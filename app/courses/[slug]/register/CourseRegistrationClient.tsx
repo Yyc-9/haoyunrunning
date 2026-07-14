@@ -6,12 +6,14 @@ import { CheckCircle2, Loader2, RefreshCw, ShieldCheck, WalletCards } from 'luci
 import { useAuth } from '@/app/providers'
 import { useSiteContent } from '@/app/site-content-provider'
 import { COURSE_CAPACITY, type CourseAvailability, type LegacyStudentStatus, type MyCourseEnrollment } from '@/lib/course-registration'
+import type { CoursePricingOptions } from '@/lib/course-pricing'
 import { paymentOrderStatusLabels } from '@/lib/payment'
 import { supabase } from '@/lib/supabase'
 import DirectCourseRegistrationForm from './DirectCourseRegistrationForm'
 
 type RegistrationPayload = {
   availability?: CourseAvailability
+  pricingOptions?: CoursePricingOptions
   enrollment?: MyCourseEnrollment | null
   legacyStudent?: LegacyStudentStatus | null
   error?: string
@@ -24,11 +26,23 @@ const statusTone = {
   rejected: 'border-red-200 bg-red-50 text-red-800',
 } as const
 
+function formatEnrollmentDate(date: string) {
+  if (!date) return ''
+  return new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+  }).format(new Date(`${date}T12:00:00+08:00`))
+}
+
 export default function CourseRegistrationClient({ slug }: { slug: string }) {
   const { courses } = useSiteContent()
   const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth()
   const course = useMemo(() => courses.find((item) => item.slug === slug), [courses, slug])
   const [availability, setAvailability] = useState<CourseAvailability | null>(null)
+  const [pricingOptions, setPricingOptions] = useState<CoursePricingOptions | null>(null)
   const [enrollment, setEnrollment] = useState<MyCourseEnrollment | null>(null)
   const [legacyStudent, setLegacyStudent] = useState<LegacyStudentStatus>({ matched: false, name: '' })
   const [isLoading, setIsLoading] = useState(true)
@@ -49,9 +63,10 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
         headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
       })
       const payload = (await response.json().catch(() => ({}))) as RegistrationPayload
-      if (!response.ok || !payload.availability) throw new Error(payload.error || '讀取報名狀態失敗。')
+      if (!response.ok || !payload.availability || !payload.pricingOptions) throw new Error(payload.error || '讀取報名狀態失敗。')
 
       setAvailability(payload.availability)
+      setPricingOptions(payload.pricingOptions)
       setEnrollment(payload.enrollment ?? null)
       setLegacyStudent(payload.legacyStudent ?? { matched: false, name: '' })
       if (payload.enrollment?.transferLastFive) setTransferLastFive(payload.enrollment.transferLastFive)
@@ -131,7 +146,7 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
               <p className="text-sm font-bold leading-6 text-apple-gray-500">{course.weekday} · {course.classTime} · {course.location}{course.meetingPoint ? ` · ${course.meetingPoint}` : ''} · {course.period}</p>
               <h1 className="mt-2 text-2xl font-black text-apple-gray-950 sm:text-4xl">{course.name}報名</h1>
               <div className="mt-3 grid max-w-2xl gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-                <p className="font-semibold leading-6 text-apple-gray-600"><span className="text-apple-gray-400">費用：</span>{course.feeNote}</p>
+                <p className="font-semibold leading-6 text-apple-gray-600"><span className="text-apple-gray-400">費用：</span>系統依學員身分與本期計費起始課次自動核算</p>
                 <p className="font-semibold leading-6 text-apple-gray-600"><span className="text-apple-gray-400">訓練重點：</span>{course.focus}</p>
                 <p className="font-semibold leading-6 text-apple-gray-600 sm:col-span-2"><span className="text-apple-gray-400">適合對象：</span>{course.targetAudience}</p>
               </div>
@@ -151,7 +166,7 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
               <h2 className="text-xl font-black text-apple-gray-950">本班目前已額滿</h2>
               <p className="mt-2 text-sm text-apple-gray-600">如有釋出名額，這裡會自動恢復報名。</p>
             </div>
-          ) : isAuthLoading || isLoading ? (
+          ) : isAuthLoading || isLoading || !pricingOptions ? (
             <div className="flex min-h-[360px] items-center justify-center gap-2 text-sm font-bold text-apple-gray-500"><Loader2 className="h-5 w-5 animate-spin" />正在準備報名表</div>
           ) : !isLoggedIn ? (
             <div className="px-6 py-12 text-center sm:px-10">
@@ -168,10 +183,11 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
             </div>
           ) : (
             <DirectCourseRegistrationForm
-              key={`${user?.email ?? ''}:${legacyStudent.matched}:${legacyStudent.name}`}
+              key={`${user?.email ?? ''}:${legacyStudent.matched}:${legacyStudent.name}:${pricingOptions.today}`}
               course={course}
               userEmail={user?.email ?? ''}
               legacyStudent={legacyStudent}
+              pricingOptions={pricingOptions}
               onSubmitted={(submittedEnrollment) => {
                 setEnrollment(submittedEnrollment)
                 setSuccess('報名與付款資料已送出，管理員核對後會更新為已付款。')
@@ -212,6 +228,8 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
                 <dl className="mt-4 space-y-3 text-sm">
                   <div><dt className="text-apple-gray-500">報名課程</dt><dd className="mt-1 font-bold text-apple-gray-900">{enrollment.courseName}</dd></div>
                   <div><dt className="text-apple-gray-500">應付金額</dt><dd className="mt-1 font-bold text-apple-gray-900">{enrollment.amountText || '依表單說明'}</dd></div>
+                  {enrollment.billingStartSessionDate ? <div><dt className="text-apple-gray-500">本期計費起始</dt><dd className="mt-1 font-bold text-apple-gray-900">{formatEnrollmentDate(enrollment.billingStartSessionDate)}</dd></div> : null}
+                  {enrollment.priorAttendanceClaimed ? <div><dt className="text-apple-gray-500">最近一堂到課申報</dt><dd className="mt-1 font-bold text-apple-gray-900">{enrollment.attendanceVerificationStatus === 'verified' ? '已確認到課' : enrollment.attendanceVerificationStatus === 'rejected' ? '未通過核對' : '待管理員核對'}</dd></div> : null}
                   {enrollment.reviewNote ? <div><dt className="text-apple-gray-500">核對說明</dt><dd className="mt-1 font-bold text-apple-gray-900">{enrollment.reviewNote}</dd></div> : null}
                 </dl>
               </div>

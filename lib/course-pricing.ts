@@ -13,6 +13,10 @@ export type CourseBillingConfig = {
 export type CourseRegistrationQuote = {
   studentType: 'returning' | 'new'
   enrollmentTiming: 'regular' | 'late'
+  billingStartSessionDate: string
+  billingStartSessionNumber: number
+  priorAttendanceClaimed: boolean
+  attendanceVerificationStatus: 'not_required' | 'pending'
   amount: number
   amountText: string
   totalSessionCount: number
@@ -23,7 +27,21 @@ export type CourseRegistrationQuote = {
   referrerStatus: 'not_applicable' | 'not_provided' | 'verified' | 'not_verified'
   calculatedAt: string
   lockedUntil: string
-  regularRegistrationEndsOn: string
+}
+
+export type CourseStartSessionOption = {
+  date: string
+  sessionNumber: number
+  remainingSessionCount: number
+}
+
+export type CoursePricingOptions = {
+  today: string
+  courseStarted: boolean
+  selectionRequired: boolean
+  automaticStartSessionDate: string | null
+  availableStartSessions: CourseStartSessionOption[]
+  priorAttendanceSession: CourseStartSessionOption | null
 }
 
 type CourseScheduleSource = {
@@ -116,30 +134,76 @@ export function formatTwd(amount: number) {
   return `NT$${Math.max(0, Math.round(amount)).toLocaleString('en-US')}`
 }
 
+function sessionOption(config: CourseBillingConfig, date: string): CourseStartSessionOption {
+  const index = config.sessionDates.indexOf(date)
+  return {
+    date,
+    sessionNumber: index + 1,
+    remainingSessionCount: config.sessionDates.length - index,
+  }
+}
+
+export function getCoursePricingOptions(config: CourseBillingConfig | undefined, now = new Date()): CoursePricingOptions {
+  if (!config?.scheduleReady || config.sessionDates.length === 0) {
+    throw new Error('本班尚未完成收費課次設定，請聯絡管理員。')
+  }
+
+  const today = dateKeyInTaipei(now)
+  const firstSessionDate = config.sessionDates[0]
+  const courseStarted = today > firstSessionDate
+  const availableStartSessions = config.sessionDates
+    .filter((date) => date >= today)
+    .map((date) => sessionOption(config, date))
+  const priorDate = [...config.sessionDates].reverse().find((date) => date < today)
+
+  return {
+    today,
+    courseStarted,
+    selectionRequired: courseStarted,
+    automaticStartSessionDate: courseStarted ? null : firstSessionDate,
+    availableStartSessions,
+    priorAttendanceSession: courseStarted && priorDate ? sessionOption(config, priorDate) : null,
+  }
+}
+
 export function calculateCourseRegistrationQuote(options: {
   config: CourseBillingConfig
   isReturning: boolean
   referrerProvided: boolean
   referrerVerified: boolean
+  billingStartSessionDate?: string
+  priorAttendanceClaimed?: boolean
   now?: Date
 }): CourseRegistrationQuote {
   const { config } = options
-  if (!config.scheduleReady || config.sessionDates.length === 0) {
+  if (!config?.scheduleReady || config.sessionDates.length === 0) {
     throw new Error('本班尚未完成收費課次設定，請聯絡管理員。')
   }
 
   const now = options.now ?? new Date()
-  const today = dateKeyInTaipei(now)
-  const graceIndex = Math.min(config.regularUntilSessionNumber - 1, config.sessionDates.length - 1)
-  const regularRegistrationEndsOn = config.sessionDates[graceIndex]
-  const enrollmentTiming = today < regularRegistrationEndsOn ? 'regular' : 'late'
+  const pricingOptions = getCoursePricingOptions(config, now)
+  const today = pricingOptions.today
+  const priorAttendanceClaimed = options.priorAttendanceClaimed === true
+  const billingStartSessionDate = options.billingStartSessionDate || pricingOptions.automaticStartSessionDate || ''
+  const billingStartIndex = config.sessionDates.indexOf(billingStartSessionDate)
+
+  if (billingStartIndex < 0) {
+    throw new Error('請選擇正確的本期計費起始課次。')
+  }
+  if (pricingOptions.selectionRequired && !options.billingStartSessionDate) {
+    throw new Error('課程已開始，請選擇本期計費起始課次。')
+  }
+  if (priorAttendanceClaimed) {
+    if (pricingOptions.priorAttendanceSession?.date !== billingStartSessionDate) {
+      throw new Error('補繳只能選擇最近一堂已結束的課次。')
+    }
+  } else if (billingStartSessionDate < today) {
+    throw new Error('過去的課次必須申明已到課補繳。')
+  }
+
+  const enrollmentTiming = billingStartIndex === 0 ? 'regular' : 'late'
   const studentType = options.isReturning ? 'returning' : 'new'
   const fullPriceCap = options.isReturning ? config.returningFullPrice : config.newFullPrice
-  const remainingDates = config.sessionDates.filter((date) => date >= today)
-
-  if (remainingDates.length === 0) {
-    throw new Error('本班本期收費課次已經結束。')
-  }
 
   let unitRate: number | null = null
   let amount = fullPriceCap
@@ -147,7 +211,7 @@ export function calculateCourseRegistrationQuote(options: {
   let referrerStatus: CourseRegistrationQuote['referrerStatus'] = 'not_applicable'
 
   if (enrollmentTiming === 'late') {
-    chargedSessionDates = remainingDates
+    chargedSessionDates = config.sessionDates.slice(billingStartIndex)
     if (options.isReturning) {
       unitRate = config.returningLateRate
     } else if (options.referrerVerified) {
@@ -166,6 +230,10 @@ export function calculateCourseRegistrationQuote(options: {
   return {
     studentType,
     enrollmentTiming,
+    billingStartSessionDate,
+    billingStartSessionNumber: billingStartIndex + 1,
+    priorAttendanceClaimed,
+    attendanceVerificationStatus: priorAttendanceClaimed ? 'pending' : 'not_required',
     amount,
     amountText: formatTwd(amount),
     totalSessionCount: config.sessionDates.length,
@@ -176,6 +244,5 @@ export function calculateCourseRegistrationQuote(options: {
     referrerStatus,
     calculatedAt,
     lockedUntil,
-    regularRegistrationEndsOn,
   }
 }

@@ -38,6 +38,8 @@ export type DirectCourseRegistration = {
   recentGoal: string
   injuryHistory: string
   runningStatus: string
+  billingStartSessionDate: string
+  priorAttendanceClaimed: boolean
   quoteToken: string
   transferLastFive: string
   invoiceDelivery: string
