@@ -9,16 +9,6 @@ function cleanText(value: unknown, maxLength: number) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : ''
 }
 
-function cleanList(value: unknown) {
-  if (!Array.isArray(value)) return []
-  return value.map((item) => cleanText(item, 180)).filter(Boolean).slice(0, 20)
-}
-
-function cleanFocus(value: unknown, fallback: number) {
-  const numeric = Number(value)
-  return Number.isFinite(numeric) ? Math.max(0, Math.min(100, Math.round(numeric))) : fallback
-}
-
 async function requireCoach(request: NextRequest) {
   if (!supabaseAdmin) return { response: NextResponse.json({ error: 'Supabase 尚未設定。' }, { status: 500 }) }
   const user = await getAuthedUser(request.headers.get('authorization'))
@@ -92,55 +82,29 @@ export async function PATCH(request: NextRequest) {
   if ('response' in auth) return auth.response
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
-  const displayName = cleanText(body.displayName, 120)
   const avatarUrl = cleanText(body.avatarUrl, 2000)
-  const fullBodyImageUrl = cleanText(body.fullBodyImageUrl, 2000)
-  if (!displayName) return NextResponse.json({ error: '請填寫對外顯示名稱。' }, { status: 400, headers })
-  if ((avatarUrl && !isSafePublicUrl(avatarUrl)) || (fullBodyImageUrl && !isSafePublicUrl(fullBodyImageUrl))) {
-    return NextResponse.json({ error: '教練照片網址格式無效。' }, { status: 400, headers })
+  if (!avatarUrl || !isSafePublicUrl(avatarUrl)) {
+    return NextResponse.json({ error: '教練頭像網址格式無效。' }, { status: 400, headers })
   }
 
   try {
     const owned = await ensureOwnedProfile(auth.account)
-    const values = {
-      display_name: displayName,
-      nickname: cleanText(body.nickname, 80),
-      role_title: cleanText(body.role, 180),
-      bio: cleanText(body.bio, 2000),
-      avatar_url: avatarUrl,
-      full_body_image_url: fullBodyImageUrl || avatarUrl,
-      avatar_focus_x: cleanFocus(body.avatarFocusX, 50),
-      avatar_focus_y: cleanFocus(body.avatarFocusY, 18),
-      full_body_focus_x: cleanFocus(body.fullBodyFocusX, 50),
-      full_body_focus_y: cleanFocus(body.fullBodyFocusY, 18),
-      specialties: cleanList(body.specialties),
-      style: cleanText(body.style, 1200),
-      achievements: cleanList(body.achievements),
-      certifications: cleanList(body.certifications),
-      profile_initialized: true,
-      published: body.published !== false,
-    }
     const { error } = await supabaseAdmin!
       .from('coach_public_profiles')
-      .update(values)
+      .update({ avatar_url: avatarUrl, profile_initialized: true })
       .eq('coach_key', owned.coach_key)
       .eq('owner_profile_id', auth.account.id)
     if (error) throw new Error(error.message)
 
     const { error: accountError } = await supabaseAdmin!
       .from('profiles')
-      .update({
-        name: displayName,
-        nickname: values.nickname,
-        bio: values.bio,
-        avatar_url: avatarUrl,
-      })
+      .update({ avatar_url: avatarUrl })
       .eq('id', auth.account.id)
     if (accountError) throw new Error(accountError.message)
 
     const profile = await loadMergedProfile(owned.coach_key)
-    return NextResponse.json({ profile, message: '公開資料已發布，相關課程介紹已同步更新。' }, { headers })
+    return NextResponse.json({ profile, message: '教練頭像已更新。' }, { headers })
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : '儲存教練公開資料失敗。' }, { status: 500, headers })
+    return NextResponse.json({ error: error instanceof Error ? error.message : '儲存教練頭像失敗。' }, { status: 500, headers })
   }
 }

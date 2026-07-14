@@ -1,7 +1,7 @@
 import CoachPublicProfileClient from './CoachPublicProfileClient'
 
 export const metadata = {
-  title: '教練公開資料 - 好運跑班',
+  title: '教練頭像設定 - 好運跑班',
   description: '管理教練姓名、照片、專長與公開經歷。',
 }
 

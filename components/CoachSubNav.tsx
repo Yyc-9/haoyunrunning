@@ -8,7 +8,7 @@ const coachNavItems = [
   { href: '/coach', label: '工作台', icon: LayoutDashboard },
   { href: '/coach/students', label: '學員列表', icon: UsersRound },
   { href: '/coach/signups', label: '團練報名', icon: ClipboardList },
-  { href: '/coach/profile', label: '公開資料', icon: UserRound },
+  { href: '/coach/profile', label: '頭像設定', icon: UserRound },
 ]
 
 function isActivePath(pathname: string, href: string) {

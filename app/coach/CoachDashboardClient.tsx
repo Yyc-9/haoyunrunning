@@ -134,7 +134,7 @@ export default function CoachDashboardClient() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Link href="/coach/profile" className="apple-button-secondary min-h-10 gap-2 px-4 py-2 text-sm"><PencilLine className="h-4 w-4" />公開資料</Link>
+                <Link href="/coach/profile" className="apple-button-secondary min-h-10 gap-2 px-4 py-2 text-sm"><PencilLine className="h-4 w-4" />更換頭像</Link>
                 <button type="button" title="重新整理" onClick={loadWorkspace} className="apple-button-secondary min-h-10 gap-2 px-4 py-2 text-sm">
                   <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /><span className="hidden sm:inline">重新整理</span>
                 </button>
