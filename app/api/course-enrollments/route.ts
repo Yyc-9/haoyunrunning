@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { COURSE_CAPACITY } from '@/lib/course-registration'
 import {
   invoiceDeliveryOptions,
-  registrationAmounts,
   type DirectCourseRegistration,
 } from '@/lib/course-registration-form'
 import { getManagedCourses } from '@/lib/managed-courses-server'
 import { getCurrentCourseSeason } from '@/lib/course-seasons-server'
+import { calculateCourseRegistrationQuote } from '@/lib/course-pricing'
+import { createCourseQuoteToken, verifyCourseQuoteToken } from '@/lib/course-pricing-token'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 
 async function getLegacyStudent(email: string) {
@@ -17,6 +18,34 @@ async function getLegacyStudent(email: string) {
     .maybeSingle()
 
   return { data, error }
+}
+
+async function getVerifiedReferrer(referrer: string, applicantEmail: string) {
+  const email = referrer.trim().toLowerCase()
+  if (!email || email === applicantEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { email, verified: false }
+  }
+
+  const [legacyResult, approvedResult] = await Promise.all([
+    supabaseAdmin!
+      .from('legacy_students')
+      .select('email')
+      .eq('email', email)
+      .maybeSingle(),
+    supabaseAdmin!
+      .from('signup_leads')
+      .select('id')
+      .eq('source', 'course_payment')
+      .eq('email', email)
+      .eq('status', 'approved')
+      .limit(1)
+      .maybeSingle(),
+  ])
+
+  if (legacyResult.error || approvedResult.error) {
+    throw legacyResult.error || approvedResult.error
+  }
+  return { email, verified: Boolean(legacyResult.data || approvedResult.data) }
 }
 
 function cleanText(value: unknown, maxLength = 1000) {
@@ -137,17 +166,51 @@ export async function POST(request: NextRequest) {
     intent?: string
     courseSlug?: string
     registration?: Partial<DirectCourseRegistration>
+    referrer?: string
   }
   const intent = cleanText(body.intent, 80)
   const courseSlug = cleanText(body.courseSlug, 120)
   const [managedCourses, currentSeason] = await Promise.all([getManagedCourses(), getCurrentCourseSeason()])
   const course = managedCourses.find((item) => item.slug === courseSlug)
 
-  if (intent !== 'direct_site_registration' || !course || !currentSeason) {
+  if (!course || !currentSeason) {
     return NextResponse.json({ error: '無法確認這筆課程報名。' }, { status: 400 })
   }
 
   const email = user.email.trim().toLowerCase()
+  if (intent === 'course_pricing_quote') {
+    const legacyResult = await getLegacyStudent(email)
+    if (legacyResult.error) {
+      return NextResponse.json({ error: legacyResult.error.message }, { status: 500 })
+    }
+
+    try {
+      const referrer = await getVerifiedReferrer(cleanText(body.referrer, 200), email)
+      const quote = calculateCourseRegistrationQuote({
+        config: currentSeason.courseBillingConfigs[courseSlug],
+        isReturning: Boolean(legacyResult.data),
+        referrerProvided: Boolean(referrer.email),
+        referrerVerified: referrer.verified,
+      })
+      const quoteToken = createCourseQuoteToken({
+        version: 1,
+        email,
+        courseSlug,
+        seasonId: currentSeason.id,
+        referrer: referrer.email,
+        quote,
+      })
+
+      return NextResponse.json({ pricingQuote: quote, quoteToken })
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : '課程費用計算失敗。' }, { status: 400 })
+    }
+  }
+
+  if (intent !== 'direct_site_registration') {
+    return NextResponse.json({ error: '無法確認這筆課程報名。' }, { status: 400 })
+  }
+
   const { data: activeLead, error: activeLeadError } = await supabaseAdmin
     .from('signup_leads')
     .select('id, course_slug, preferred_course, status, amount_text, transfer_last_five, review_note, created_at, payment_submitted_at')
@@ -208,7 +271,7 @@ export async function POST(request: NextRequest) {
     const recentGoal = cleanText(registration.recentGoal, 1500)
     const injuryHistory = cleanText(registration.injuryHistory, 1500)
     const runningStatus = cleanText(registration.runningStatus, 1500)
-    const amount = cleanText(registration.amount, 100)
+    const quoteToken = cleanText(registration.quoteToken, 12_000)
     const transferLastFive = cleanText(registration.transferLastFive, 5)
     const invoiceDelivery = cleanText(registration.invoiceDelivery, 120)
     const invoiceDetail = cleanText(registration.invoiceDetail, 320)
@@ -224,10 +287,20 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json({ error: '請完成所有新生必填資料。' }, { status: 400 })
     }
-    const expectedAmount = studentType === 'returning' ? registrationAmounts[0] : registrationAmounts[1]
-    const insertAmount = registrationAmounts[2]
-    if (amount !== expectedAmount && amount !== insertAmount) {
-      return NextResponse.json({ error: '請選擇正確的匯款金額。' }, { status: 400 })
+    const tokenPayload = quoteToken ? verifyCourseQuoteToken(quoteToken) : null
+    const normalizedReferrer = referrer.toLowerCase()
+    if (
+      !tokenPayload ||
+      tokenPayload.email !== email ||
+      tokenPayload.courseSlug !== courseSlug ||
+      tokenPayload.seasonId !== currentSeason.id ||
+      tokenPayload.referrer !== normalizedReferrer ||
+      tokenPayload.quote.studentType !== studentType
+    ) {
+      return NextResponse.json({ error: '課程費用驗證失敗，請返回付款步驟重新計算。' }, { status: 409 })
+    }
+    if (new Date(tokenPayload.quote.lockedUntil).getTime() <= Date.now()) {
+      return NextResponse.json({ error: '課程報價已超過保留時間，請返回付款步驟重新計算。' }, { status: 409 })
     }
     if (!/^\d{5}$/.test(transferLastFive)) {
       return NextResponse.json({ error: '請填寫正確的匯款帳號後五碼。' }, { status: 400 })
@@ -260,9 +333,14 @@ export async function POST(request: NextRequest) {
         season_id: currentSeason.id,
         course_season_course_id: currentSeason.courseOfferingIds[course.slug] ?? null,
         course_capacity: courseCapacity,
+        registration_identity: studentType,
+        enrollment_timing: tokenPayload.quote.enrollmentTiming,
+        calculated_amount: tokenPayload.quote.amount,
+        pricing_snapshot: tokenPayload.quote,
+        price_locked_until: tokenPayload.quote.lockedUntil,
         running_experience: runningExperience,
         goal: recentGoal,
-        amount_text: amount,
+        amount_text: tokenPayload.quote.amountText,
         notes,
         transfer_last_five: transferLastFive,
         status: 'pending_review',
@@ -271,11 +349,14 @@ export async function POST(request: NextRequest) {
         payload: {
           provider: 'website_direct_form',
           studentType,
+          enrollmentTiming: tokenPayload.quote.enrollmentTiming,
           legacyStudentMatched: Boolean(legacyResult.data),
           lineId,
           emergencyContactName,
           emergencyContactPhone,
           referrer,
+          referrerVerified: tokenPayload.quote.referrerStatus === 'verified',
+          pricing: tokenPayload.quote,
           recentChallenge,
           recentGoal,
           injuryHistory,

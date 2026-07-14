@@ -1,4 +1,5 @@
 import type { CourseOverride, SiteContent } from '@/lib/site-content'
+import type { CourseBillingConfig } from '@/lib/course-pricing'
 
 export type CourseSeasonStatus = 'draft' | 'enrolling' | 'active' | 'completed' | 'archived'
 
@@ -14,6 +15,7 @@ export type CourseSeason = {
   endsOn: string
   courseOverrides: Record<string, CourseOverride>
   courseCapacities: Record<string, number>
+  courseBillingConfigs: Record<string, CourseBillingConfig>
   courseOfferingIds: Record<string, string>
   registrationCount: number
   approvedCount: number

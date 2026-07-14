@@ -27,6 +27,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { courseSeasonStatusLabels, type CourseSeason, type CourseSeasonStatus } from '@/lib/course-seasons'
 import { orderedWeekdays } from '@/lib/course-sort'
+import { defaultCourseBillingConfig, type CourseBillingConfig } from '@/lib/course-pricing'
 import type {
   AboutContent,
   BrandContent,
@@ -154,9 +155,13 @@ export default function AdminContentManager({ content, courses, seasons, scope =
   const [seasonCapacities, setSeasonCapacities] = useState<Record<string, Record<string, number>>>(() =>
     Object.fromEntries(seasons.map((season) => [season.id, season.courseCapacities]))
   )
+  const [seasonBillingConfigs, setSeasonBillingConfigs] = useState<Record<string, Record<string, CourseBillingConfig>>>(() =>
+    Object.fromEntries(seasons.map((season) => [season.id, season.courseBillingConfigs]))
+  )
   const [selectedSlug, setSelectedSlug] = useState(courses[0]?.slug || '')
   const [draft, setDraft] = useState<CourseOverride>(() => courses[0] ? courseDraft(courses[0], currentSeason?.courseOverrides[courses[0].slug] ?? content.courseOverrides[courses[0].slug]) : {})
   const [draftCapacity, setDraftCapacity] = useState(40)
+  const [draftBilling, setDraftBilling] = useState<CourseBillingConfig>(() => currentSeason?.courseBillingConfigs[courses[0]?.slug || ''] ?? defaultCourseBillingConfig())
   const [isUploading, setIsUploading] = useState(false)
   const [localError, setLocalError] = useState('')
   const [courseMessage, setCourseMessage] = useState('')
@@ -175,6 +180,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
   useEffect(() => {
     setSeasonOverrides(Object.fromEntries(seasons.map((season) => [season.id, season.courseOverrides])))
     setSeasonCapacities(Object.fromEntries(seasons.map((season) => [season.id, season.courseCapacities])))
+    setSeasonBillingConfigs(Object.fromEntries(seasons.map((season) => [season.id, season.courseBillingConfigs])))
     if (!seasons.some((season) => season.id === selectedSeasonId)) {
       setSelectedSeasonId(seasons.find((season) => season.isCurrent)?.id ?? seasons[0]?.id ?? '')
     }
@@ -187,7 +193,10 @@ export default function AdminContentManager({ content, courses, seasons, scope =
     if (!selectedCourse) return
     setDraft(courseDraft(selectedCourse, courseOverrides[selectedCourse.slug]))
     setDraftCapacity(selectedSeason ? seasonCapacities[selectedSeason.id]?.[selectedCourse.slug] ?? 40 : 40)
-  }, [courseOverrides, seasonCapacities, selectedCourse, selectedSeason])
+    setDraftBilling(selectedSeason
+      ? seasonBillingConfigs[selectedSeason.id]?.[selectedCourse.slug] ?? defaultCourseBillingConfig(selectedCourse, selectedSeason.code)
+      : defaultCourseBillingConfig(selectedCourse))
+  }, [courseOverrides, seasonBillingConfigs, seasonCapacities, selectedCourse, selectedSeason])
 
   const allModes = [
     { id: 'overview' as const, label: '內容總覽', description: '查看可管理區域', destination: '全站', icon: LayoutGrid },
@@ -250,6 +259,10 @@ export default function AdminContentManager({ content, courses, seasons, scope =
       setLocalError('請至少選擇一位本課程教練。')
       return
     }
+    if (selectedSeason.isCurrent && (!draftBilling.scheduleReady || draftBilling.sessionDates.length === 0)) {
+      setLocalError('前台招生季度必須先完成實際收費課次設定。')
+      return
+    }
     const nextOverrides = { ...courseOverrides, [selectedCourse.slug]: draft }
     const saved = await runAction(`course-${selectedSeason.id}-${selectedCourse.slug}`, {
       action: 'save_season_course',
@@ -257,12 +270,17 @@ export default function AdminContentManager({ content, courses, seasons, scope =
       courseSlug: selectedCourse.slug,
       value: draft,
       capacity: draftCapacity,
+      billingConfig: draftBilling,
     })
     if (!saved) return
     setSeasonOverrides((current) => ({ ...current, [selectedSeason.id]: nextOverrides }))
     setSeasonCapacities((current) => ({
       ...current,
       [selectedSeason.id]: { ...(current[selectedSeason.id] ?? {}), [selectedCourse.slug]: draftCapacity },
+    }))
+    setSeasonBillingConfigs((current) => ({
+      ...current,
+      [selectedSeason.id]: { ...(current[selectedSeason.id] ?? {}), [selectedCourse.slug]: draftBilling },
     }))
     setCourseMessage(selectedSeason.isCurrent
       ? '已發布至訓練課程、訓練日程表、課程詳情與報名頁。'
@@ -275,6 +293,18 @@ export default function AdminContentManager({ content, courses, seasons, scope =
       action: 'create_next_course_season',
       sourceSeasonId: selectedSeason.id,
     })
+  }
+
+  function rebuildBillingDates() {
+    if (!selectedSeason) return
+    const generated = defaultCourseBillingConfig({ period: String(draft.period ?? ''), weekday: String(draft.weekday ?? '') }, selectedSeason.code)
+    setDraftBilling((current) => ({
+      ...current,
+      scheduleReady: generated.sessionDates.length > 0,
+      sessionDates: generated.sessionDates,
+      returningFullPrice: generated.sessionDates.length * current.returningLateRate,
+      newFullPrice: generated.sessionDates.length * current.standardLateRate,
+    }))
   }
 
   async function activateSeason(season: CourseSeason) {
@@ -416,6 +446,23 @@ export default function AdminContentManager({ content, courses, seasons, scope =
               <Field label="班級名額"><input type="number" min={1} max={500} value={draftCapacity} onChange={(e) => setDraftCapacity(Number(e.target.value))} className="apple-input" /></Field>
               <Field label="適合對象" wide><input value={String(draft.targetAudience ?? '')} onChange={(e) => setDraft((current) => ({ ...current, targetAudience: e.target.value }))} className="apple-input" /></Field>
               <Field label="訓練方向" wide><input value={String(draft.focus ?? '')} onChange={(e) => setDraft((current) => ({ ...current, focus: e.target.value }))} className="apple-input" /></Field>
+              <div className="border-y border-black/10 py-5 md:col-span-2">
+                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                  <div><h3 className="font-black text-apple-gray-900">報名計價設定</h3><p className="mt-1 text-sm leading-6 text-apple-gray-500">實際收費課次會直接決定插班堂數；日期請使用台灣時間。</p></div>
+                  <button type="button" onClick={rebuildBillingDates} className="apple-button-outline shrink-0 gap-2 px-4 py-2.5"><CalendarRange className="h-4 w-4" />依課程週期重建日期</button>
+                </div>
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  <Field label="實際收費課次日期（每行一個 YYYY-MM-DD）" wide><textarea rows={7} value={draftBilling.sessionDates.join('\n')} onChange={(e) => setDraftBilling((current) => ({ ...current, scheduleReady: true, sessionDates: [...new Set(e.target.value.split(/[\s,，]+/).map((date) => date.trim()).filter(Boolean))].sort() }))} className="apple-input resize-y font-mono text-sm" /></Field>
+                  <Field label="舊生整季價格"><input type="number" min={0} step={50} value={draftBilling.returningFullPrice} onChange={(e) => setDraftBilling((current) => ({ ...current, returningFullPrice: Number(e.target.value) }))} className="apple-input" /></Field>
+                  <Field label="新生整季價格"><input type="number" min={0} step={50} value={draftBilling.newFullPrice} onChange={(e) => setDraftBilling((current) => ({ ...current, newFullPrice: Number(e.target.value) }))} className="apple-input" /></Field>
+                  <Field label="舊生插班每堂"><input type="number" min={0} step={50} value={draftBilling.returningLateRate} onChange={(e) => setDraftBilling((current) => ({ ...current, returningLateRate: Number(e.target.value) }))} className="apple-input" /></Field>
+                  <Field label="有推薦人插班每堂"><input type="number" min={0} step={50} value={draftBilling.referredLateRate} onChange={(e) => setDraftBilling((current) => ({ ...current, referredLateRate: Number(e.target.value) }))} className="apple-input" /></Field>
+                  <Field label="無推薦人插班每堂"><input type="number" min={0} step={50} value={draftBilling.standardLateRate} onChange={(e) => setDraftBilling((current) => ({ ...current, standardLateRate: Number(e.target.value) }))} className="apple-input" /></Field>
+                  <Field label="第幾堂開始當日視為插班"><input type="number" min={1} max={20} value={draftBilling.regularUntilSessionNumber} onChange={(e) => setDraftBilling((current) => ({ ...current, regularUntilSessionNumber: Number(e.target.value) }))} className="apple-input" /></Field>
+                  <Field label="報價保留時數"><input type="number" min={1} max={168} value={draftBilling.priceLockHours} onChange={(e) => setDraftBilling((current) => ({ ...current, priceLockHours: Number(e.target.value) }))} className="apple-input" /></Field>
+                  <label className="flex items-center gap-3 text-sm font-bold"><input type="checkbox" checked={draftBilling.scheduleReady} onChange={(e) => setDraftBilling((current) => ({ ...current, scheduleReady: e.target.checked }))} className="h-4 w-4" />啟用本班自動計價</label>
+                </div>
+              </div>
               <fieldset className="md:col-span-2">
                 <legend className="mb-2 text-xs font-bold text-apple-gray-500">本課程教練</legend>
                 <div className="grid gap-2 border-y border-black/10 py-3 sm:grid-cols-2 xl:grid-cols-3">

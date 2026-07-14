@@ -17,10 +17,10 @@ import {
 } from 'lucide-react'
 import type { Course } from '@/lib/goodluck-data'
 import type { LegacyStudentStatus, MyCourseEnrollment } from '@/lib/course-registration'
+import type { CourseRegistrationQuote } from '@/lib/course-pricing'
 import {
   coursePolicyRules,
   invoiceDeliveryOptions,
-  registrationAmounts,
   type DirectCourseRegistration,
 } from '@/lib/course-registration-form'
 import { supabase } from '@/lib/supabase'
@@ -34,6 +34,8 @@ type DirectCourseRegistrationFormProps = {
 
 type RegistrationResponse = {
   enrollment?: MyCourseEnrollment
+  pricingQuote?: CourseRegistrationQuote
+  quoteToken?: string
   error?: string
 }
 
@@ -51,7 +53,7 @@ const initialForm: DirectCourseRegistration = {
   recentGoal: '',
   injuryHistory: '',
   runningStatus: '',
-  amount: '',
+  quoteToken: '',
   transferLastFive: '',
   invoiceDelivery: '',
   invoiceDetail: '',
@@ -77,16 +79,14 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
     ...initialForm,
     studentType: legacyStudent.matched ? 'returning' : 'new',
     studentName: legacyStudent.name,
-    amount: legacyStudent.matched ? registrationAmounts[0] : registrationAmounts[1],
   }))
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isQuoting, setIsQuoting] = useState(false)
+  const [pricingQuote, setPricingQuote] = useState<CourseRegistrationQuote | null>(null)
   const topRef = useRef<HTMLDivElement>(null)
 
   const coaches = useMemo(() => course.coaches ?? (course.coach ? [course.coach] : []), [course])
-  const availableAmounts = legacyStudent.matched
-    ? [registrationAmounts[0], registrationAmounts[2]]
-    : [registrationAmounts[1], registrationAmounts[2]]
   const progress = ((step + 1) / steps.length) * 100
 
   function update<K extends keyof DirectCourseRegistration>(key: K, value: DirectCourseRegistration[K]) {
@@ -116,8 +116,8 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
     }
 
     if (currentStep === 3) {
-      if (!form.amount || !/^\d{5}$/.test(form.transferLastFive)) {
-        showError('請選擇匯款金額，並填寫付款帳號後五碼。')
+      if (!pricingQuote || !form.quoteToken || !/^\d{5}$/.test(form.transferLastFive)) {
+        showError('請確認系統計算的費用，並填寫付款帳號後五碼。')
         return false
       }
       if (!form.invoiceDelivery || !form.invoiceDetail || !form.finalConsent) {
@@ -130,8 +130,42 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
     return true
   }
 
-  function nextStep() {
+  async function loadPricingQuote() {
+    setIsQuoting(true)
+    setError('')
+    try {
+      const { data: { session } } = supabase ? await supabase.auth.getSession() : { data: { session: null } }
+      if (!session?.access_token) throw new Error('登入狀態已失效，請重新登入後再繼續。')
+      const response = await fetch('/api/course-enrollments', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          intent: 'course_pricing_quote',
+          courseSlug: course.slug,
+          referrer: form.referrer,
+        }),
+      })
+      const payload = (await response.json().catch(() => ({}))) as RegistrationResponse
+      if (!response.ok || !payload.pricingQuote || !payload.quoteToken) {
+        throw new Error(payload.error || '課程費用計算失敗。')
+      }
+      setPricingQuote(payload.pricingQuote)
+      update('quoteToken', payload.quoteToken)
+      return true
+    } catch (quoteError) {
+      showError(quoteError instanceof Error ? quoteError.message : '課程費用計算失敗。')
+      return false
+    } finally {
+      setIsQuoting(false)
+    }
+  }
+
+  async function nextStep() {
     if (!validateStep(step)) return
+    if (step === 2 && !(await loadPricingQuote())) return
     setStep((current) => Math.min(current + 1, steps.length - 1))
     topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
@@ -305,7 +339,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
 
               {form.studentType === 'new' ? (
                 <>
-                  <label className="block"><FieldLabel optional>推薦人</FieldLabel><input value={form.referrer} onChange={(event) => update('referrer', event.target.value)} className="apple-input min-h-12" placeholder="跑班舊生姓名；若無可留白" /></label>
+                  <label className="block"><FieldLabel optional>推薦人信箱</FieldLabel><input type="email" inputMode="email" autoCapitalize="none" value={form.referrer} onChange={(event) => update('referrer', event.target.value)} className="apple-input min-h-12" placeholder="請填推薦人的好運報名信箱；若無可留白" /><span className="mt-2 block text-xs leading-5 text-apple-gray-500">插班新生的推薦資格會以舊生名單或已付款報名記錄自動核對。</span></label>
                   <label className="block"><FieldLabel>近期挑戰</FieldLabel><textarea value={form.recentChallenge} onChange={(event) => update('recentChallenge', event.target.value)} className="apple-input min-h-24 resize-y" placeholder="半年內 5K、10K、半馬或全馬成績；沒有可填「無」" /></label>
                   <label className="block"><FieldLabel>近期目標</FieldLabel><textarea value={form.recentGoal} onChange={(event) => update('recentGoal', event.target.value)} className="apple-input min-h-24 resize-y" placeholder="目標賽事、距離或完賽時間" /></label>
                   <label className="block"><FieldLabel>過去到現在是否有病史或運動傷害？</FieldLabel><textarea value={form.injuryHistory} onChange={(event) => update('injuryHistory', event.target.value)} className="apple-input min-h-24 resize-y" placeholder="沒有請填「無」" /></label>
@@ -324,17 +358,29 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
             </div>
             <div className="mt-3 flex items-start gap-2 rounded-lg border border-black/10 bg-apple-gray-50 px-4 py-3 text-xs leading-5 text-apple-gray-600"><LockKeyhole className="mt-0.5 h-4 w-4 shrink-0" />網站只記錄匯款帳號後五碼，不會要求信用卡號、網銀密碼或完整付款帳號。</div>
 
-            <fieldset className="mt-6">
-              <legend><FieldLabel>您的匯款總金額</FieldLabel></legend>
-              <div className="space-y-2">
-                {availableAmounts.map((amount) => (
-                  <label key={amount} className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm font-bold ${form.amount === amount ? 'border-black bg-apple-gray-950 text-white' : 'border-black/10 bg-white'}`}>
-                    <input type="radio" name="amount" checked={form.amount === amount} onChange={() => update('amount', amount)} className="h-4 w-4 accent-black" />{amount}
-                  </label>
-                ))}
-              </div>
-              <p className="mt-2 text-xs leading-5 text-apple-gray-500">插班堂數與費用請先透過好運 Instagram 洽詢小編計算。</p>
-            </fieldset>
+            <section className="mt-6 rounded-lg border border-black/10 bg-white p-5" aria-live="polite">
+              <p className="text-xs font-bold text-apple-gray-500">系統核算匯款總金額</p>
+              {isQuoting || !pricingQuote ? (
+                <div className="mt-3 flex items-center gap-2 text-sm font-bold text-apple-gray-600"><Loader2 className="h-4 w-4 animate-spin" />正在核對身份、課次與價格</div>
+              ) : (
+                <>
+                  <p className="mt-2 text-3xl font-black text-apple-gray-950">{pricingQuote.amountText}</p>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold">
+                    <span className="rounded-full bg-apple-gray-100 px-3 py-1.5 text-apple-gray-700">{pricingQuote.studentType === 'returning' ? '舊生' : '新生'}</span>
+                    <span className="rounded-full bg-blue-50 px-3 py-1.5 text-blue-800">{pricingQuote.enrollmentTiming === 'regular' ? '本期正常報名' : '插班報名'}</span>
+                    <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-800">計費 {pricingQuote.chargedSessionCount} 堂</span>
+                  </div>
+                  <p className="mt-4 text-sm font-semibold leading-6 text-apple-gray-700">
+                    {pricingQuote.enrollmentTiming === 'regular'
+                      ? `目前仍在首堂課寬限期內，依本期完整 ${pricingQuote.totalSessionCount} 堂計費。`
+                      : `同日報名會包含當天課次；本次以剩餘 ${pricingQuote.chargedSessionCount} 堂 × 每堂 ${pricingQuote.unitRate ? `NT$${pricingQuote.unitRate}` : ''} 計算。`}
+                  </p>
+                  {pricingQuote.referrerStatus === 'verified' ? <p className="mt-2 text-sm font-bold text-emerald-700">推薦資格已核對，插班費率為每堂 NT$450。</p> : null}
+                  {pricingQuote.referrerStatus === 'not_verified' ? <p className="mt-2 text-sm font-semibold text-apple-gray-600">目前無法核對推薦資格，插班費率依每堂 NT$500 計算。</p> : null}
+                  <p className="mt-3 text-xs leading-5 text-apple-gray-500">此金額自核算時間起保留 24 小時；送出後會連同課次明細鎖定在報名記錄中。</p>
+                </>
+              )}
+            </section>
 
             <label className="mt-6 block"><FieldLabel>匯款後五碼</FieldLabel><input inputMode="numeric" maxLength={5} value={form.transferLastFive} onChange={(event) => update('transferLastFive', event.target.value.replace(/\D/g, '').slice(0, 5))} className="apple-input min-h-12 text-lg tracking-[0.25em]" placeholder="12345" /><span className="mt-2 block text-xs leading-5 text-apple-gray-500">匯款備註請保持空白，並保留轉帳截圖以利後續查詢。</span></label>
 
@@ -371,7 +417,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
           {step < steps.length - 1 ? (
             <button type="button" onClick={nextStep} className="apple-button-primary min-h-12 flex-1 gap-2">下一步<ArrowRight className="h-4 w-4" /></button>
           ) : (
-            <button type="button" disabled={isSubmitting} onClick={submitRegistration} className="apple-button-primary min-h-12 flex-1 gap-2 disabled:cursor-not-allowed disabled:opacity-50">
+            <button type="button" disabled={isSubmitting || isQuoting || !pricingQuote} onClick={submitRegistration} className="apple-button-primary min-h-12 flex-1 gap-2 disabled:cursor-not-allowed disabled:opacity-50">
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
               送出報名與付款資料
             </button>

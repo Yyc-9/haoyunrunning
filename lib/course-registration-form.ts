@@ -20,8 +20,6 @@ export const coursePolicyRules = [
   '完成報名繳費之參加者，視為同意以上聲明。',
 ] as const
 
-export const registrationAmounts = ['舊生價 $4950', '新生價 $5500', '插班生（小編為您計算）'] as const
-
 export const invoiceDeliveryOptions = [
   '手機條碼載具（請於下方欄位填寫）',
   '寄至其他電子信箱（請於下方欄位填寫）',
@@ -40,7 +38,7 @@ export type DirectCourseRegistration = {
   recentGoal: string
   injuryHistory: string
   runningStatus: string
-  amount: string
+  quoteToken: string
   transferLastFive: string
   invoiceDelivery: string
   invoiceDetail: string

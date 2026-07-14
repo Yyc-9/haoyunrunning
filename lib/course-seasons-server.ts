@@ -2,6 +2,8 @@ import 'server-only'
 
 import { normalizeCourseOverrides } from '@/lib/site-content'
 import type { CourseSeason, CourseSeasonStatus } from '@/lib/course-seasons'
+import { defaultCourseBillingConfig, normalizeCourseBillingConfig } from '@/lib/course-pricing'
+import { allCourses } from '@/lib/goodluck-data'
 import { supabaseAdmin } from '@/lib/supabase-server'
 
 type SeasonRow = {
@@ -24,6 +26,7 @@ type SeasonCourseRow = {
   course_slug: string
   course_data: unknown
   capacity: number
+  billing_config: unknown
 }
 
 type SeasonRegistrationRow = {
@@ -45,7 +48,7 @@ export async function getCourseSeasons(options: { includeRegistrationStats?: boo
       .order('code', { ascending: false }),
     supabaseAdmin
       .from('course_season_courses')
-      .select('id, season_id, course_slug, course_data, capacity'),
+      .select('id, season_id, course_slug, course_data, capacity, billing_config'),
   ])
   const registrationsResult = options.includeRegistrationStats === false
     ? { data: [] as SeasonRegistrationRow[], error: null }
@@ -83,6 +86,16 @@ export async function getCourseSeasons(options: { includeRegistrationStats?: boo
         ])
       ),
       courseCapacities: Object.fromEntries(seasonCourses.map((course) => [course.course_slug, course.capacity])),
+      courseBillingConfigs: Object.fromEntries(seasonCourses.map((course) => {
+        const baseCourse = allCourses.find((item) => item.slug === course.course_slug)
+        const override = normalizeCourseOverrides({ [course.course_slug]: course.course_data })[course.course_slug] ?? {}
+        const scheduleSource = {
+          period: String(override.period || baseCourse?.period || ''),
+          weekday: String(override.weekday || baseCourse?.weekday || ''),
+        }
+        const fallback = defaultCourseBillingConfig(scheduleSource, season.code)
+        return [course.course_slug, normalizeCourseBillingConfig(course.billing_config, fallback)]
+      })),
       courseOfferingIds: Object.fromEntries(seasonCourses.map((course) => [course.course_slug, course.id])),
       registrationCount: seasonRegistrations.length,
       approvedCount: seasonRegistrations.filter((registration) => registration.status === 'approved').length,

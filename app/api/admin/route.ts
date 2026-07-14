@@ -7,6 +7,7 @@ import { allCourses } from '@/lib/goodluck-data'
 import { coachPublicProfilesFromRows, getDefaultCourseCoachKeys, type CoachPublicProfileRow } from '@/lib/coach-profiles'
 import { applyCourseSeasonToContent, nextCourseSeasonIdentity, type CourseSeasonStatus } from '@/lib/course-seasons'
 import { getCourseSeasons } from '@/lib/course-seasons-server'
+import { defaultCourseBillingConfig, normalizeCourseBillingConfig } from '@/lib/course-pricing'
 import { applyCourseOverrides } from '@/lib/managed-courses'
 import {
   defaultSiteContent,
@@ -57,6 +58,11 @@ type SignupLeadRow = {
   season_id: string | null
   course_season_course_id: string | null
   course_capacity: number
+  registration_identity: string | null
+  enrollment_timing: string | null
+  calculated_amount: number | null
+  pricing_snapshot: Record<string, unknown> | null
+  price_locked_until: string | null
   amount_text: string
   transfer_last_five: string
   status: string
@@ -72,6 +78,16 @@ type SignupLeadRow = {
 function payloadText(payload: Record<string, unknown> | null, key: string) {
   const value = payload?.[key]
   return typeof value === 'string' ? value.trim() : ''
+}
+
+function recordText(value: Record<string, unknown> | null, key: string) {
+  const item = value?.[key]
+  return typeof item === 'string' ? item.trim() : ''
+}
+
+function recordNumber(value: Record<string, unknown> | null, key: string) {
+  const item = Number(value?.[key])
+  return Number.isFinite(item) ? item : null
 }
 
 async function awardAchievementByEmail(email: string, badgeSlug: string, reason: string, awardedBy: string) {
@@ -160,7 +176,7 @@ type AdminPatchBody =
   | { action?: 'update_product'; productId?: string; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; variants?: Array<{ id?: string; name?: string; image?: string }>; summary?: string; description?: string; gallery?: string[]; highlights?: string; specifications?: Array<{ label?: string; value?: string }>; usageNotes?: string; externalUrl?: string }
   | { action?: 'create_product'; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; summary?: string; description?: string; gallery?: string[]; highlights?: string; specifications?: Array<{ label?: string; value?: string }>; usageNotes?: string; externalUrl?: string }
   | { action?: 'save_site_content'; section?: string; value?: unknown }
-  | { action?: 'save_season_course'; seasonId?: string; courseSlug?: string; value?: unknown; capacity?: number }
+  | { action?: 'save_season_course'; seasonId?: string; courseSlug?: string; value?: unknown; capacity?: number; billingConfig?: unknown }
   | { action?: 'create_next_course_season'; sourceSeasonId?: string }
   | { action?: 'activate_course_season'; seasonId?: string }
   | { action?: 'update_course_season_status'; seasonId?: string; status?: CourseSeasonStatus }
@@ -539,11 +555,28 @@ export async function GET(request: NextRequest) {
   })
 
   const courseDashboardOrders = coursePaymentOrders.map((order) => {
-    const studentType = payloadText(order.payload, 'studentType')
+    const studentType = order.registration_identity || payloadText(order.payload, 'studentType')
+    const enrollmentTiming = order.enrollment_timing || payloadText(order.payload, 'enrollmentTiming')
+    const pricing = order.pricing_snapshot && Object.keys(order.pricing_snapshot).length > 0
+      ? order.pricing_snapshot
+      : order.payload?.pricing && typeof order.payload.pricing === 'object'
+        ? order.payload.pricing as Record<string, unknown>
+        : null
+    const chargedSessionCount = recordNumber(pricing, 'chargedSessionCount')
+    const unitRate = recordNumber(pricing, 'unitRate')
+    const chargedSessionDates = Array.isArray(pricing?.chargedSessionDates)
+      ? pricing.chargedSessionDates.filter((date): date is string => typeof date === 'string')
+      : []
+    const referrerStatus = recordText(pricing, 'referrerStatus')
     const emergencyContactName = payloadText(order.payload, 'emergencyContactName')
     const emergencyContactPhone = payloadText(order.payload, 'emergencyContactPhone')
     const registrationDetails = [
       { label: '學員身分', value: studentType === 'returning' ? '舊生' : studentType === 'new' ? '新生' : '' },
+      { label: '報名時點', value: enrollmentTiming === 'late' ? '插班報名' : enrollmentTiming === 'regular' ? '本期正常報名' : '' },
+      { label: '計價方式', value: chargedSessionCount ? (unitRate ? `${chargedSessionCount} 堂 × NT$${unitRate}` : `完整 ${chargedSessionCount} 堂`) : '' },
+      { label: '收費課次', value: chargedSessionDates.map((date) => date.replace(/^\d{4}-/, '').replace('-', '/')).join('、') },
+      { label: '推薦資格', value: referrerStatus === 'verified' ? '已核對' : referrerStatus === 'not_verified' ? '未通過核對' : '' },
+      { label: '報價鎖定至', value: order.price_locked_until ? new Intl.DateTimeFormat('zh-TW', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Taipei' }).format(new Date(order.price_locked_until)) : '' },
       { label: '手機電話', value: order.phone || '' },
       { label: 'LINE ID', value: payloadText(order.payload, 'lineId') },
       { label: '緊急聯絡人', value: [emergencyContactName, emergencyContactPhone].filter(Boolean).join('｜') },
@@ -721,6 +754,26 @@ export async function PATCH(request: NextRequest) {
       return json({ error: '班級名額必須是 1 至 500 之間的整數。' }, { status: 400 })
     }
 
+    const { data: season, error: seasonError } = await supabaseAdmin!
+      .from('course_seasons')
+      .select('code, is_current')
+      .eq('id', seasonId)
+      .single()
+    if (seasonError || !season) {
+      return json({ error: seasonError?.message || '找不到這個季度。' }, { status: 404 })
+    }
+    const baseCourse = allCourses.find((course) => course.slug === courseSlug)
+    const billingConfig = normalizeCourseBillingConfig(
+      body.billingConfig,
+      defaultCourseBillingConfig({
+        period: String(normalized.period || baseCourse?.period || ''),
+        weekday: String(normalized.weekday || baseCourse?.weekday || ''),
+      }, season.code)
+    )
+    if (season.is_current && (!billingConfig.scheduleReady || billingConfig.sessionDates.length === 0)) {
+      return json({ error: '前台招生季度必須先完成實際收費課次設定。' }, { status: 400 })
+    }
+
     const { data: seasonCourse, error } = await supabaseAdmin!
       .from('course_season_courses')
       .upsert({
@@ -728,8 +781,9 @@ export async function PATCH(request: NextRequest) {
         course_slug: courseSlug,
         course_data: normalized,
         capacity,
+        billing_config: billingConfig,
       }, { onConflict: 'season_id,course_slug' })
-      .select('id, season_id, course_slug, course_data, capacity')
+      .select('id, season_id, course_slug, course_data, capacity, billing_config')
       .single()
 
     if (error || !seasonCourse) {
@@ -780,7 +834,7 @@ export async function PATCH(request: NextRequest) {
 
     const { data: sourceCourses, error: sourceCoursesError } = await supabaseAdmin!
       .from('course_season_courses')
-      .select('course_slug, course_data, capacity')
+      .select('course_slug, course_data, capacity, billing_config')
       .eq('season_id', sourceSeasonId)
 
     if (sourceCoursesError) {
@@ -793,6 +847,11 @@ export async function PATCH(request: NextRequest) {
       course_slug: course.course_slug,
       course_data: course.course_data,
       capacity: course.capacity,
+      billing_config: {
+        ...(course.billing_config && typeof course.billing_config === 'object' ? course.billing_config : {}),
+        scheduleReady: false,
+        sessionDates: [],
+      },
     }))
 
     if (copiedCourses.length > 0) {
