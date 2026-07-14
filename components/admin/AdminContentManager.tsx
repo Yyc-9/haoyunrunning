@@ -300,17 +300,17 @@ export default function AdminContentManager({ content, courses, seasons, scope =
   )
 
   return (
-    <section className="grid min-w-0 max-w-full gap-5 overflow-hidden lg:grid-cols-[220px_minmax(0,1fr)] lg:items-start">
-      <aside className="min-w-0 max-w-full lg:sticky lg:top-28">
+    <section className="grid min-w-0 max-w-full gap-5 overflow-hidden lg:min-h-[720px] lg:grid-cols-[232px_minmax(0,1fr)] lg:items-start">
+      <aside className="min-w-0 max-w-full lg:sticky lg:top-28 lg:w-[232px]">
         <div className="flex w-full max-w-full gap-2 overflow-x-auto border-b border-black/10 pb-3 lg:flex-col lg:overflow-visible lg:border-b-0 lg:pb-0">
           {modes.map((item) => {
             const Icon = item.icon
-            return <button key={item.id} type="button" onClick={() => setMode(item.id)} className={`flex min-w-max items-center gap-3 rounded-lg px-3 py-3 text-left transition lg:min-w-0 ${mode === item.id ? 'bg-black text-white' : 'bg-white text-apple-gray-700 ring-1 ring-black/10 hover:bg-apple-gray-100'}`}><Icon className="h-4 w-4 shrink-0" /><span><span className="block text-sm font-bold">{item.label}</span><span className={`hidden text-xs lg:block ${mode === item.id ? 'text-white/60' : 'text-apple-gray-500'}`}>{item.description}</span></span></button>
+            return <button key={item.id} type="button" onClick={() => setMode(item.id)} className={`flex min-w-max items-center gap-3 rounded-lg px-3 py-3 text-left ring-1 ring-inset transition-colors lg:min-h-[68px] lg:w-full lg:min-w-0 ${mode === item.id ? 'bg-black text-white ring-black' : 'bg-white text-apple-gray-700 ring-black/10 hover:bg-apple-gray-100'}`}><Icon className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1"><span className="block text-sm font-bold">{item.label}</span><span className={`hidden text-xs lg:block lg:h-8 lg:overflow-hidden ${mode === item.id ? 'text-white/60' : 'text-apple-gray-500'}`}>{item.description}</span></span></button>
           })}
         </div>
       </aside>
 
-      <div className="min-w-0">
+      <div className="min-w-0 lg:min-h-[720px]">
         {localError ? <p className="mb-5 rounded-lg bg-red-50 px-5 py-4 text-sm font-semibold text-red-600">{localError}</p> : null}
 
         {mode === 'overview' ? (

@@ -31,9 +31,9 @@ export default function CoachSubNav() {
               key={item.href}
               href={item.href}
               aria-current={active ? 'page' : undefined}
-              className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-bold transition sm:px-4 ${
+              className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-bold transition-colors sm:px-4 ${
                 active
-                  ? 'bg-black text-white shadow-sm'
+                  ? 'bg-black text-white'
                   : 'text-apple-gray-600 hover:bg-apple-gray-100 hover:text-apple-gray-900'
               }`}
             >

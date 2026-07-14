@@ -90,19 +90,21 @@ export default function CoachPublicProfileClient() {
   return (
     <main className="min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
       <section className="px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
-        <div className="container mx-auto max-w-3xl">
+        <div className="container mx-auto max-w-7xl">
           <CoachSubNav />
-          <header className="mb-6 border-b border-black/10 pb-6 sm:mb-8">
-            <p className="text-xs font-bold text-apple-blue sm:text-sm">教練帳號</p>
-            <h1 className="mt-2 text-3xl font-black text-black sm:text-4xl">頭像設定</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-apple-gray-600 sm:text-base">在這裡更換教練工作台使用的頭像。個人跑者資料請至「我的帳戶」管理，課程介紹由超級管理員統一維護。</p>
-          </header>
+          <div className="max-w-3xl">
+            <header className="mb-6 border-b border-black/10 pb-6 sm:mb-8">
+              <p className="text-xs font-bold text-apple-blue sm:text-sm">教練帳號</p>
+              <h1 className="mt-2 text-3xl font-black text-black sm:text-4xl">頭像設定</h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-apple-gray-600 sm:text-base">在這裡更換教練工作台使用的頭像。個人跑者資料請至「我的帳戶」管理，課程介紹由超級管理員統一維護。</p>
+            </header>
 
-          {error ? <p className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p> : null}
-          {message ? <p className="mb-5 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800"><CheckCircle2 className="h-4 w-4" />{message}</p> : null}
-          {isLoading ? <div className="flex min-h-64 items-center justify-center"><Loader2 className="h-7 w-7 animate-spin" /></div> : null}
+            {error ? <p className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p> : null}
+            {message ? <p className="mb-5 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800"><CheckCircle2 className="h-4 w-4" />{message}</p> : null}
+            {isLoading ? <div className="flex min-h-64 items-center justify-center"><Loader2 className="h-7 w-7 animate-spin" /></div> : null}
 
-          {profile ? <div className="rounded-lg border border-black/10 bg-white p-5 sm:p-7"><AvatarEditor profile={profile} uploading={uploading} onUpload={(file) => void upload(file)} /></div> : null}
+            {profile ? <div className="rounded-lg border border-black/10 bg-white p-5 sm:p-7"><AvatarEditor profile={profile} uploading={uploading} onUpload={(file) => void upload(file)} /></div> : null}
+          </div>
         </div>
       </section>
     </main>
