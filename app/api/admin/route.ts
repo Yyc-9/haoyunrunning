@@ -279,10 +279,7 @@ async function sendOptionalEnrollmentEmail(input: { to: string; studentName: str
   const from = process.env.ENROLLMENT_EMAIL_FROM || process.env.RESEND_FROM_EMAIL
 
   if (!apiKey || !from) {
-    console.info('[admin] Enrollment approved email skipped: email env is missing.', {
-      to: input.to,
-      courseName: input.courseName,
-    })
+    console.info('[admin] Enrollment approved email skipped: email env is missing.')
     return '郵件服務尚未設定，已完成核准但未發送郵件。'
   }
 
@@ -303,7 +300,6 @@ async function sendOptionalEnrollmentEmail(input: { to: string; studentName: str
   if (!response.ok) {
     console.warn('[admin] Enrollment approved email failed.', {
       status: response.status,
-      detail: await response.text().catch(() => ''),
     })
     return '核准已完成，但郵件發送失敗，請稍後檢查郵件服務設定。'
   }

@@ -1,12 +1,21 @@
+import { timingSafeEqual } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { checkPendingTransferReminders } from '@/lib/payment-reminders'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 
-async function isAuthorized(request: NextRequest) {
-  const cronSecret = process.env.CRON_SECRET
-  const providedSecret = request.headers.get('x-cron-secret') || request.nextUrl.searchParams.get('secret')
+function secretsMatch(received: string, expected: string) {
+  const receivedBuffer = Buffer.from(received)
+  const expectedBuffer = Buffer.from(expected)
+  return receivedBuffer.length === expectedBuffer.length && timingSafeEqual(receivedBuffer, expectedBuffer)
+}
 
-  if (cronSecret && providedSecret === cronSecret) {
+async function isAuthorized(request: NextRequest) {
+  const cronSecret = process.env.CRON_SECRET?.trim() ?? ''
+  const authorization = request.headers.get('authorization')?.trim() ?? ''
+  const bearerSecret = authorization.startsWith('Bearer ') ? authorization.slice(7).trim() : ''
+  const providedSecret = request.headers.get('x-cron-secret')?.trim() || bearerSecret
+
+  if (cronSecret && providedSecret && secretsMatch(providedSecret, cronSecret)) {
     return true
   }
 
@@ -22,12 +31,12 @@ async function isAuthorized(request: NextRequest) {
     .single()
 
   if (error) return false
-  return ['coach', 'admin'].includes(profile.role)
+  return profile.role === 'admin'
 }
 
 async function handleReminderCheck(request: NextRequest) {
   if (!(await isAuthorized(request))) {
-    return NextResponse.json({ error: '需要教練、管理員權限，或有效 CRON_SECRET。' }, { status: 401 })
+    return NextResponse.json({ error: '需要管理員權限或有效的定時任務憑證。' }, { status: 401 })
   }
 
   const dryRun = request.nextUrl.searchParams.get('dryRun') === '1'
@@ -35,15 +44,11 @@ async function handleReminderCheck(request: NextRequest) {
   try {
     const result = await checkPendingTransferReminders({ dryRun })
 
-    return NextResponse.json({
-      ...result,
-      todo: 'TODO: 接入 Vercel Cron 或 Supabase 定時任務後，定時呼叫此 API。目前可手動觸發。',
-    })
+    return NextResponse.json(result)
   } catch (error) {
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : '檢查待匯款提醒失敗。',
-        todo: '請確認已执行 supabase/payment-order-statuses.sql，尤其是 reminder_sent_at 字段。',
       },
       { status: 500 }
     )

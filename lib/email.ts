@@ -1,3 +1,5 @@
+import 'server-only'
+
 type EnrollmentApprovedEmailInput = {
   to: string
   studentName: string
@@ -16,12 +18,26 @@ type EmailResult = {
   message: string
 }
 
+function escapeHtml(value: string) {
+  return value.replace(
+    /[&<>"']/g,
+    (character) =>
+      ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;',
+      })[character] ?? character
+  )
+}
+
 async function sendEmail(input: { to: string; subject: string; text: string; html: string; skipLog: string; skipMessage: string; failMessage: string; successMessage: string }): Promise<EmailResult> {
   const apiKey = process.env.RESEND_API_KEY
   const from = process.env.ENROLLMENT_EMAIL_FROM || process.env.RESEND_FROM_EMAIL
 
   if (!apiKey || !from) {
-    console.info(input.skipLog, { to: input.to })
+    console.info(input.skipLog)
 
     return {
       sent: false,
@@ -46,8 +62,7 @@ async function sendEmail(input: { to: string; subject: string; text: string; htm
   })
 
   if (!response.ok) {
-    const detail = await response.text().catch(() => '')
-    console.warn('[email] Email send failed.', { status: response.status, detail })
+    console.warn('[email] Email send failed.', { status: response.status })
 
     return {
       sent: false,
@@ -65,6 +80,8 @@ export async function sendEnrollmentApprovedEmail(input: EnrollmentApprovedEmail
   const subject = '好運跑班報名付款已確認'
   const studentName = input.studentName || '同學'
   const courseName = input.courseName || '已報名課程'
+  const safeStudentName = escapeHtml(studentName)
+  const safeCourseName = escapeHtml(courseName)
 
   return sendEmail({
     to: input.to,
@@ -73,8 +90,8 @@ export async function sendEnrollmentApprovedEmail(input: EnrollmentApprovedEmail
     html: `
         <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.7;color:#111827;">
           <h2>報名付款已確認</h2>
-          <p>${studentName}你好：</p>
-          <p>你的 <strong>${courseName}</strong> 報名付款已經核准，報名確認完成。</p>
+          <p>${safeStudentName}你好：</p>
+          <p>你的 <strong>${safeCourseName}</strong> 報名付款已經核准，報名確認完成。</p>
           <p>後續集合時間、地點與課程通知將由好運跑班另行聯絡。</p>
           <p>好運跑班</p>
         </div>
@@ -89,6 +106,8 @@ export async function sendEnrollmentApprovedEmail(input: EnrollmentApprovedEmail
 export async function sendTransferReminderEmail(input: TransferReminderEmailInput): Promise<EmailResult> {
   const studentName = input.studentName || '同學'
   const courseName = input.courseName || '已報名課程'
+  const safeStudentName = escapeHtml(studentName)
+  const safeCourseName = escapeHtml(courseName)
 
   return sendEmail({
     to: input.to,
@@ -97,8 +116,8 @@ export async function sendTransferReminderEmail(input: TransferReminderEmailInpu
     html: `
       <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.7;color:#111827;">
         <h2>提醒填寫銀行帳號後五碼</h2>
-        <p>${studentName}你好：</p>
-        <p>你已經確認報名 <strong>${courseName}</strong>，目前系統還沒有收到你的銀行帳號後五碼。</p>
+        <p>${safeStudentName}你好：</p>
+        <p>你已經確認報名 <strong>${safeCourseName}</strong>，目前系統還沒有收到你的銀行帳號後五碼。</p>
         <p>完成匯款後，請回到網站付款頁填寫後五碼，方便我們人工核對並確認報名。</p>
         <p><a href="https://nurturerunningteam.com/payment">回到付款頁填寫後五碼</a></p>
         <p>好運跑班</p>

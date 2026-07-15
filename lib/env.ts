@@ -12,7 +12,6 @@ export interface EnvConfig {
   // Supabase 設定 (可選)
   supabaseUrl?: string
   supabaseAnonKey?: string
-  supabaseServiceRoleKey?: string
 
   // 檔案上傳
   maxFileSize: number
@@ -62,7 +61,6 @@ export function loadEnvConfig(): EnvConfig {
   if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
     config.supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     config.supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    config.supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   }
 
   // 驗證 Supabase 設定的一致性
