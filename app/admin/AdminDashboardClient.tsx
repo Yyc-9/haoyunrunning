@@ -45,6 +45,7 @@ type AdminDashboardPayload = {
     productCount: number
     lowStockCount: number
     paymentAccountCount: number
+    openAttendanceAnomalyCount?: number
   }
   students: AdminStudent[]
   coaches: AdminCoach[]
@@ -145,6 +146,17 @@ type AdminOrder = {
   inventoryReserved: boolean
   items: string[]
   registrationDetails: Array<{ label: string; value: string }>
+  attendanceAnomalies: Array<{
+    attendanceId: string
+    sessionDate: string
+    billingStartSessionDate: string
+    status: 'open' | 'resolved'
+    outcome: '' | 'supplement_paid' | 'waived'
+    resolutionNote: string
+    resolvedAt: string | null
+    markedAt: string
+  }>
+  openAttendanceAnomalyCount: number
 }
 
 type AdminProduct = AdminEditableProduct

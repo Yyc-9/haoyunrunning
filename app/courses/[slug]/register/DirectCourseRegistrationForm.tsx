@@ -102,7 +102,7 @@ function PricingQuoteSummary({ quote }: { quote: CourseRegistrationQuote }) {
           ? `本期共 ${quote.totalSessionCount} 堂，採整季價格。`
           : `剩餘 ${quote.chargedSessionCount} 堂 × 每堂 ${quote.unitRate ? `NT$${quote.unitRate}` : ''}。`}
       </p>
-      {quote.priorAttendanceClaimed ? <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold leading-6 text-amber-900">你已申報最近一堂有到課並補繳費用；管理員核對到課紀錄後才會核准。</p> : null}
+      {quote.priorAttendanceClaimed ? <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold leading-6 text-amber-900">你已申報最近一堂有到課並補繳費用；教練完成該堂點名後，系統會自動核對到課紀錄。</p> : null}
       {quote.referrerStatus === 'verified' ? <p className="mt-2 text-sm font-bold text-emerald-700">推薦資格已核對，插班費率為每堂 NT$450。</p> : null}
       {quote.referrerStatus === 'not_verified' ? <p className="mt-2 text-sm font-semibold text-apple-gray-600">目前無法核對推薦資格，插班費率依每堂 NT$500 計算。</p> : null}
       <p className="mt-3 text-xs leading-5 text-apple-gray-500">此金額保留至 {formatQuoteExpiry(quote.lockedUntil)}。選定的起始課次是本期計費承諾；之後若該堂請假，不會自動順延計費日期。</p>
@@ -433,7 +433,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
                       className={`min-h-20 rounded-lg border p-3 text-left transition sm:col-span-2 ${form.priorAttendanceClaimed ? 'border-amber-500 bg-amber-50 text-amber-950' : 'border-amber-200 bg-white text-amber-950 hover:bg-amber-50'}`}
                     >
                       <span className="block text-sm font-black">我已參加最近一堂，現在補繳</span>
-                      <span className="mt-1 block text-xs font-semibold leading-5 opacity-75">第 {pricingOptions.priorAttendanceSession.sessionNumber} 堂 · {formatSessionDate(pricingOptions.priorAttendanceSession.date)}；送出後由管理員核對到課紀錄。</span>
+                      <span className="mt-1 block text-xs font-semibold leading-5 opacity-75">第 {pricingOptions.priorAttendanceSession.sessionNumber} 堂 · {formatSessionDate(pricingOptions.priorAttendanceSession.date)}；教練點名後由系統自動核對。</span>
                     </button>
                   ) : null}
                 </div>

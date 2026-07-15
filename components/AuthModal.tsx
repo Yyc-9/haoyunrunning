@@ -31,7 +31,7 @@ function getAuthErrorMessage(error: unknown, fallbackMessage: string, emailNotCo
   }
 
   if (message.includes('password should be') || message.includes('weak password')) {
-    return '密碼強度不足，請使用至少 6 個字元。'
+    return '密碼強度不足，請使用至少 10 個字元。'
   }
 
   if (
@@ -396,7 +396,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                         value={formData.password}
                         onChange={handleChange}
                         placeholder={t.auth.passwordPlaceholder}
-                        minLength={6}
+                        minLength={activeMode === 'register' ? 10 : 1}
                         className="apple-input pl-10 pr-10"
                         required
                       />

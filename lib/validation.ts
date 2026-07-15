@@ -30,12 +30,12 @@ export function validateEmail(email: string): ValidationError | null {
   return null
 }
 
-export function validatePassword(password: string): ValidationError | null {
+export function validatePassword(password: string, minimumLength = 1): ValidationError | null {
   if (!password) {
     return { field: 'password', message: '請輸入密碼' }
   }
-  if (password.length < 6) {
-    return { field: 'password', message: '密碼至少6個字符' }
+  if (password.length < minimumLength) {
+    return { field: 'password', message: `密碼至少 ${minimumLength} 個字元` }
   }
   return null
 }
@@ -86,18 +86,18 @@ export function validateRegisterForm(data: RegisterFormData): ValidationError[] 
   if (phoneError) errors.push(phoneError)
 
   if (!data.gender) {
-    errors.push({ field: 'gender', message: '請選擇性别' })
+    errors.push({ field: 'gender', message: '請選擇性別' })
   }
 
   if (!data.pb) {
     errors.push({ field: 'pb', message: '請輸入PB成績' })
   }
 
-  const passwordError = validatePassword(data.password)
+  const passwordError = validatePassword(data.password, 10)
   if (passwordError) errors.push(passwordError)
 
   if (data.password !== data.confirmPassword) {
-    errors.push({ field: 'confirmPassword', message: '两次密碼不一致' })
+    errors.push({ field: 'confirmPassword', message: '兩次密碼不一致' })
   }
 
   return errors

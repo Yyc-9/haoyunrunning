@@ -78,6 +78,23 @@ type SignupLeadRow = {
   payment_submitted_at: string | null
 }
 
+type CourseAttendanceRow = {
+  id: string
+  enrollment_id: string
+  session_date: string
+  status: 'present' | 'absent' | 'excused'
+  note: string
+  marked_at: string
+}
+
+type CourseAttendanceResolutionRow = {
+  attendance_id: string
+  enrollment_id: string
+  outcome: 'supplement_paid' | 'waived'
+  note: string
+  resolved_at: string
+}
+
 function payloadText(payload: Record<string, unknown> | null, key: string) {
   const value = payload?.[key]
   return typeof value === 'string' ? value.trim() : ''
@@ -173,6 +190,7 @@ type AdminPatchBody =
   | { action?: 'link_coach_public_profile'; userId?: string; coachKey?: string }
   | { action?: 'create_coach_invite' }
   | { action?: 'review_order'; orderId?: string; orderKind?: 'course' | 'shop'; status?: PaymentOrderStatus; reviewNote?: string }
+  | { action?: 'resolve_attendance_anomaly'; attendanceId?: string; outcome?: 'supplement_paid' | 'waived' | 'reopen'; resolutionNote?: string }
   | { action?: 'delete_order'; orderId?: string; orderKind?: 'course' | 'shop' }
   | { action?: 'bind_student'; studentId?: string; coachId?: string }
   | { action?: 'unbind_student'; bindingId?: string }
@@ -375,6 +393,8 @@ export async function GET(request: NextRequest) {
     siteContentResult,
     coachInvitesResult,
     coachPublicProfilesResult,
+    courseAttendanceResult,
+    attendanceResolutionsResult,
   ] = await Promise.all([
     supabaseAdmin!
       .from('profiles')
@@ -431,6 +451,16 @@ export async function GET(request: NextRequest) {
     supabaseAdmin!
       .from('coach_public_profiles')
       .select('*'),
+    supabaseAdmin!
+      .from('course_attendance_records')
+      .select('id, enrollment_id, session_date, status, note, marked_at')
+      .order('session_date', { ascending: false })
+      .limit(5000),
+    supabaseAdmin!
+      .from('course_attendance_resolutions')
+      .select('attendance_id, enrollment_id, outcome, note, resolved_at')
+      .order('resolved_at', { ascending: false })
+      .limit(5000),
   ])
 
   const firstError = [
@@ -446,6 +476,8 @@ export async function GET(request: NextRequest) {
     isOptionalSchemaError(siteContentResult.error) ? null : siteContentResult.error,
     coachInvitesResult.error,
     coachPublicProfilesResult.error,
+    courseAttendanceResult.error,
+    attendanceResolutionsResult.error,
   ].find(Boolean)
 
   if (firstError) {
@@ -466,6 +498,8 @@ export async function GET(request: NextRequest) {
   const baseSiteContent = siteContentResult.error ? defaultSiteContent : siteContentFromRows(siteContentResult.data)
   const publicCoachProfiles = coachPublicProfilesFromRows(coachPublicProfilesResult.data as CoachPublicProfileRow[] | null)
   const publicCoachRows = (coachPublicProfilesResult.data ?? []) as CoachPublicProfileRow[]
+  const courseAttendance = (courseAttendanceResult.data ?? []) as CourseAttendanceRow[]
+  const attendanceResolutions = (attendanceResolutionsResult.data ?? []) as CourseAttendanceResolutionRow[]
   const siteContent = {
     ...applyCourseSeasonToContent(baseSiteContent, currentSeason),
     coachProfiles: publicCoachProfiles,
@@ -489,6 +523,11 @@ export async function GET(request: NextRequest) {
   )
   const latestFeedbackByStudent = firstByKey(feedback, 'student_id')
   const studentsWithPlans = new Set(plans.map((plan) => plan.student_id).filter(Boolean))
+  const attendanceByEnrollment = new Map<string, CourseAttendanceRow[]>()
+  courseAttendance.forEach((record) => {
+    attendanceByEnrollment.set(record.enrollment_id, [...(attendanceByEnrollment.get(record.enrollment_id) ?? []), record])
+  })
+  const resolutionByAttendance = new Map(attendanceResolutions.map((resolution) => [resolution.attendance_id, resolution]))
 
   const bindingsByStudent = new Map<string, CoachStudentRow[]>()
   const bindingsByCoach = new Map<string, CoachStudentRow[]>()
@@ -571,13 +610,30 @@ export async function GET(request: NextRequest) {
     const billingStartSessionNumber = recordNumber(pricing, 'billingStartSessionNumber')
     const priorAttendanceClaimed = order.prior_attendance_claimed || pricing?.priorAttendanceClaimed === true
     const attendanceVerificationStatus = order.attendance_verification_status || recordText(pricing, 'attendanceVerificationStatus')
+    const attendanceAnomalies = billingStartSessionDate
+      ? (attendanceByEnrollment.get(order.id) ?? [])
+          .filter((record) => record.status === 'present' && record.session_date < billingStartSessionDate)
+          .map((record) => {
+            const resolution = resolutionByAttendance.get(record.id)
+            return {
+              attendanceId: record.id,
+              sessionDate: record.session_date,
+              billingStartSessionDate,
+              status: resolution ? 'resolved' as const : 'open' as const,
+              outcome: resolution?.outcome ?? '',
+              resolutionNote: resolution?.note ?? '',
+              resolvedAt: resolution?.resolved_at ?? null,
+              markedAt: record.marked_at,
+            }
+          })
+      : []
     const emergencyContactName = payloadText(order.payload, 'emergencyContactName')
     const emergencyContactPhone = payloadText(order.payload, 'emergencyContactPhone')
     const registrationDetails = [
       { label: '學員身分', value: studentType === 'returning' ? '舊生' : studentType === 'new' ? '新生' : '' },
       { label: '報名時點', value: enrollmentTiming === 'late' ? '插班報名' : enrollmentTiming === 'regular' ? '本期正常報名' : '' },
       { label: '計費起始課次', value: billingStartSessionDate ? `${billingStartSessionNumber ? `第 ${billingStartSessionNumber} 堂｜` : ''}${billingStartSessionDate}` : '' },
-      { label: '最近一堂到課申報', value: priorAttendanceClaimed ? (attendanceVerificationStatus === 'verified' ? '已確認到課' : attendanceVerificationStatus === 'rejected' ? '未通過核對' : '待管理員確認；核准付款即代表確認到課') : '' },
+      { label: '最近一堂到課申報', value: priorAttendanceClaimed ? (attendanceVerificationStatus === 'verified' ? '教練點名已確認到課' : attendanceVerificationStatus === 'rejected' ? '教練點名未到，需人工處理' : '待教練完成該堂點名') : '' },
       { label: '計價方式', value: chargedSessionCount ? (unitRate ? `${chargedSessionCount} 堂 × NT$${unitRate}` : `完整 ${chargedSessionCount} 堂`) : '' },
       { label: '收費課次', value: chargedSessionDates.map((date) => date.replace(/^\d{4}-/, '').replace('-', '/')).join('、') },
       { label: '推薦資格', value: referrerStatus === 'verified' ? '已核對' : referrerStatus === 'not_verified' ? '未通過核對' : '' },
@@ -617,6 +673,8 @@ export async function GET(request: NextRequest) {
       inventoryReserved: false,
       items: [] as string[],
       registrationDetails,
+      attendanceAnomalies,
+      openAttendanceAnomalyCount: attendanceAnomalies.filter((anomaly) => anomaly.status === 'open').length,
     }
   })
 
@@ -651,6 +709,8 @@ export async function GET(request: NextRequest) {
         return `${item.name}${option ? ` - ${option}` : ''} x ${item.quantity}`
       }),
       registrationDetails: [] as Array<{ label: string; value: string }>,
+      attendanceAnomalies: [],
+      openAttendanceAnomalyCount: 0,
     }
   })
 
@@ -669,6 +729,7 @@ export async function GET(request: NextRequest) {
     productCount: shopProducts.length,
     lowStockCount: shopProducts.filter((product) => product.stockQuantity <= 3).length,
     paymentAccountCount: paymentAccounts.filter((account) => account.active).length,
+    openAttendanceAnomalyCount: courseDashboardOrders.reduce((sum, order) => sum + order.openAttendanceAnomalyCount, 0),
   }
 
   const courseCapacity = courseSeasons.flatMap((season) =>
@@ -1009,6 +1070,62 @@ export async function PATCH(request: NextRequest) {
     }
 
     return json({ message: coachKey ? '教練帳號與公開資料已連結。' : '已解除公開教練資料連結。' })
+  }
+
+  if (body.action === 'resolve_attendance_anomaly') {
+    const attendanceId = cleanText(body.attendanceId)
+    const outcome = cleanText(body.outcome)
+    const resolutionNote = cleanText(body.resolutionNote).slice(0, 1000)
+    if (!attendanceId || !['supplement_paid', 'waived', 'reopen'].includes(outcome)) {
+      return json({ error: '點名異常處理資料無效。' }, { status: 400 })
+    }
+
+    const { data: attendance, error: attendanceError } = await supabaseAdmin!
+      .from('course_attendance_records')
+      .select('id, enrollment_id, session_date, status')
+      .eq('id', attendanceId)
+      .single()
+    if (attendanceError || !attendance) {
+      return json({ error: attendanceError?.message || '找不到這筆點名資料。' }, { status: 404 })
+    }
+
+    const { data: enrollment, error: enrollmentError } = await supabaseAdmin!
+      .from('signup_leads')
+      .select('id, billing_start_session_date')
+      .eq('id', attendance.enrollment_id)
+      .eq('source', 'course_payment')
+      .single()
+    if (enrollmentError || !enrollment) {
+      return json({ error: enrollmentError?.message || '找不到這筆課程報名。' }, { status: 404 })
+    }
+    if (attendance.status !== 'present' || !enrollment.billing_start_session_date || attendance.session_date >= enrollment.billing_start_session_date) {
+      return json({ error: '這筆點名目前不構成計費起點異常。' }, { status: 409 })
+    }
+
+    if (outcome === 'reopen') {
+      const { error } = await supabaseAdmin!
+        .from('course_attendance_resolutions')
+        .delete()
+        .eq('attendance_id', attendanceId)
+      if (error) return json({ error: error.message }, { status: 500 })
+      return json({ message: '已重新開啟這筆計費異常。' })
+    }
+
+    const now = new Date().toISOString()
+    const { error } = await supabaseAdmin!
+      .from('course_attendance_resolutions')
+      .upsert({
+        attendance_id: attendanceId,
+        enrollment_id: attendance.enrollment_id,
+        outcome,
+        note: resolutionNote,
+        resolved_by: auth.user.id,
+        resolved_at: now,
+        updated_at: now,
+      }, { onConflict: 'attendance_id' })
+    if (error) return json({ error: error.message }, { status: 500 })
+
+    return json({ message: outcome === 'supplement_paid' ? '已記錄補繳完成。' : '已記錄本次免除補繳。' })
   }
 
   if (body.action === 'delete_order') {

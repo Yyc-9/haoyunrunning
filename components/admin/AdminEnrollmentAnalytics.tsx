@@ -1,10 +1,21 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { BarChart3, CalendarRange, CheckCircle2, ChevronLeft, ChevronRight, Download, Loader2, Package, RotateCcw, Search, Trash2, X } from 'lucide-react'
+import { AlertTriangle, BarChart3, CalendarRange, CheckCircle2, ChevronLeft, ChevronRight, Download, Loader2, Package, RotateCcw, Search, Trash2, X } from 'lucide-react'
 import type { CourseSeason } from '@/lib/course-seasons'
 
 type PaymentStatus = 'pending_transfer' | 'pending_review' | 'approved' | 'rejected'
+
+type AttendanceAnomaly = {
+  attendanceId: string
+  sessionDate: string
+  billingStartSessionDate: string
+  status: 'open' | 'resolved'
+  outcome: '' | 'supplement_paid' | 'waived'
+  resolutionNote: string
+  resolvedAt: string | null
+  markedAt: string
+}
 
 type Enrollment = {
   id: string
@@ -28,6 +39,8 @@ type Enrollment = {
   inventoryReserved: boolean
   items: string[]
   registrationDetails: Array<{ label: string; value: string }>
+  attendanceAnomalies: AttendanceAnomaly[]
+  openAttendanceAnomalyCount: number
 }
 
 type Capacity = {
@@ -107,10 +120,12 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
   const [courseFilter, setCourseFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState<'all' | 'new' | 'returning'>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | PaymentStatus>('all')
+  const [attendanceFilter, setAttendanceFilter] = useState<'all' | 'open'>('all')
   const [listKind, setListKind] = useState<'course' | 'shop'>('course')
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<Enrollment | null>(null)
   const [reviewNote, setReviewNote] = useState('')
+  const [resolutionNote, setResolutionNote] = useState('')
   const pageSize = 25
 
   const season = seasons.find((item) => item.id === seasonId)
@@ -145,6 +160,7 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
       occupancy: capacity ? Math.round((approved / capacity) * 1000) / 10 : 0,
       average: classCounts.length ? approved / classCounts.length : 0,
       median,
+      openAttendanceAnomalies: seasonOrders.reduce((sum, order) => sum + order.openAttendanceAnomalyCount, 0),
     }
   }, [capacities, seasonOrders])
 
@@ -168,14 +184,16 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
       if (listKind === 'course' && courseFilter !== 'all' && order.courseSlug !== courseFilter) return false
       if (listKind === 'course' && typeFilter !== 'all' && studentType(order) !== typeFilter) return false
       if (statusFilter !== 'all' && order.status !== statusFilter) return false
+      if (listKind === 'course' && attendanceFilter === 'open' && order.openAttendanceAnomalyCount === 0) return false
       return !text || [order.studentName, order.email, order.courseName, order.orderNumber, order.transferLastFive, order.items.join(' ')]
         .filter(Boolean)
         .some((value) => value.toLowerCase().includes(text))
     })
-  }, [courseFilter, listKind, query, seasonOrders, shopOrders, statusFilter, typeFilter])
+  }, [attendanceFilter, courseFilter, listKind, query, seasonOrders, shopOrders, statusFilter, typeFilter])
 
-  useEffect(() => setPage(1), [courseFilter, listKind, query, seasonId, statusFilter, typeFilter])
+  useEffect(() => setPage(1), [attendanceFilter, courseFilter, listKind, query, seasonId, statusFilter, typeFilter])
   useEffect(() => setReviewNote(selected?.reviewNote ?? ''), [selected])
+  useEffect(() => setResolutionNote(''), [selected])
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize))
   const visible = filtered.slice((page - 1) * pageSize, page * pageSize)
 
@@ -230,6 +248,17 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
     if (deleted) setSelected(null)
   }
 
+  async function resolveAttendance(anomaly: AttendanceAnomaly, outcome: 'supplement_paid' | 'waived' | 'reopen') {
+    if (!selected) return
+    const saved = await runAction(`attendance-${anomaly.attendanceId}`, {
+      action: 'resolve_attendance_anomaly',
+      attendanceId: anomaly.attendanceId,
+      outcome,
+      resolutionNote,
+    })
+    if (saved) setSelected(null)
+  }
+
   const selectedSummary = selected
     ? selected.orderKind === 'shop'
       ? [
@@ -276,6 +305,13 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
         ))}
       </div>
 
+      {summary.openAttendanceAnomalies > 0 ? (
+        <button type="button" onClick={() => { setListKind('course'); setAttendanceFilter('open') }} className="flex w-full items-center justify-between gap-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-left text-amber-950">
+          <span className="flex min-w-0 items-start gap-3"><AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" /><span><span className="block font-black">{summary.openAttendanceAnomalies} 筆計費起點異常待處理</span><span className="mt-1 block text-xs font-semibold leading-5 opacity-75">教練已點名到課，但到課日期早於學員選擇的計費起點。</span></span></span>
+          <ChevronRight className="h-5 w-5 shrink-0" />
+        </button>
+      ) : null}
+
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,.65fr)]">
         <section className="rounded-lg border border-black/10 bg-white">
           <div className="flex items-center justify-between border-b border-black/10 px-4 py-3"><h3 className="flex items-center gap-2 text-sm font-black"><BarChart3 className="h-4 w-4" />班級名額</h3><span className="text-xs font-bold text-apple-gray-500">平均 {summary.average.toFixed(1)}｜中位數 {summary.median}</span></div>
@@ -303,17 +339,18 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
             <button type="button" onClick={() => setListKind('shop')} className={`inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-bold ${listKind === 'shop' ? 'bg-white text-black shadow-sm' : 'text-apple-gray-500'}`}><Package className="h-4 w-4" />商城訂單</button>
           </div>
         </div>
-        <div className={`grid gap-3 border-b border-black/10 p-4 ${listKind === 'course' ? 'lg:grid-cols-[minmax(220px,1fr)_180px_130px_130px_auto]' : 'lg:grid-cols-[minmax(220px,1fr)_160px_auto]'}`}>
+        <div className={`grid gap-3 border-b border-black/10 p-4 ${listKind === 'course' ? 'lg:grid-cols-[minmax(220px,1fr)_170px_120px_120px_140px_auto]' : 'lg:grid-cols-[minmax(220px,1fr)_160px_auto]'}`}>
           <label className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-apple-gray-400" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={listKind === 'course' ? '搜尋姓名、信箱或後五碼' : '搜尋顧客、訂單編號或商品'} className="apple-input pl-10" /></label>
           {listKind === 'course' ? <select value={courseFilter} onChange={(event) => setCourseFilter(event.target.value)} className="apple-input"><option value="all">全部班級</option>{capacities.map((course) => <option key={course.slug} value={course.slug}>{course.name}</option>)}</select> : null}
           {listKind === 'course' ? <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as typeof typeFilter)} className="apple-input"><option value="all">全部身分</option><option value="new">新生</option><option value="returning">舊生</option></select> : null}
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} className="apple-input"><option value="all">全部狀態</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+          {listKind === 'course' ? <select value={attendanceFilter} onChange={(event) => setAttendanceFilter(event.target.value as typeof attendanceFilter)} className="apple-input"><option value="all">全部點名核對</option><option value="open">計費異常待處理</option></select> : null}
           <button type="button" onClick={exportRoster} disabled={!filtered.length} className="apple-button-outline gap-2 px-4 py-2.5 text-sm disabled:opacity-40"><Download className="h-4 w-4" />匯出</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[920px] text-left text-sm">
             <thead className="bg-apple-gray-100 text-xs text-apple-gray-600"><tr>{[listKind === 'course' ? '學員' : '顧客', listKind === 'course' ? '班級' : '訂單 / 商品', listKind === 'course' ? '身分' : '類型', '金額', '後五碼', '狀態', '提交時間', ''].map((label) => <th key={label || 'action'} className="px-3 py-2.5 font-bold">{label}</th>)}</tr></thead>
-            <tbody className="divide-y divide-black/5">{visible.map((order) => <tr key={order.id} className="hover:bg-apple-gray-50"><td className="px-3 py-2.5"><p className="font-bold">{order.studentName}</p><p className="max-w-52 truncate text-xs text-apple-gray-500">{order.email}</p></td><td className="max-w-64 px-3 py-2.5 font-semibold text-apple-gray-700">{order.orderKind === 'shop' ? <><p className="truncate">{order.orderNumber}</p><p className="mt-1 truncate text-xs font-medium text-apple-gray-500">{order.items.join('、') || '未載入商品'}</p></> : <p className="truncate">{order.courseName}</p>}</td><td className="px-3 py-2.5">{order.orderKind === 'shop' ? '商城' : studentType(order) === 'new' ? '新生' : studentType(order) === 'returning' ? '舊生' : '-'}</td><td className="px-3 py-2.5 font-semibold">{order.amountText}</td><td className="px-3 py-2.5 font-mono">{order.transferLastFive || '-'}</td><td className="px-3 py-2.5"><span className={`rounded-full px-2 py-1 text-xs font-bold ${statusTone[order.status]}`}>{statusLabels[order.status]}</span></td><td className="whitespace-nowrap px-3 py-2.5 text-xs text-apple-gray-500">{formatDate(order.submittedAt)}</td><td className="px-3 py-2.5 text-right"><button type="button" onClick={() => setSelected(order)} className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-black hover:text-white" aria-label={`查看 ${order.studentName} 的${order.orderKind === 'shop' ? '訂單' : '報名資料'}`}><ChevronRight className="h-4 w-4" /></button></td></tr>)}</tbody>
+            <tbody className="divide-y divide-black/5">{visible.map((order) => <tr key={order.id} className="hover:bg-apple-gray-50"><td className="px-3 py-2.5"><p className="font-bold">{order.studentName}</p><p className="max-w-52 truncate text-xs text-apple-gray-500">{order.email}</p></td><td className="max-w-64 px-3 py-2.5 font-semibold text-apple-gray-700">{order.orderKind === 'shop' ? <><p className="truncate">{order.orderNumber}</p><p className="mt-1 truncate text-xs font-medium text-apple-gray-500">{order.items.join('、') || '未載入商品'}</p></> : <p className="truncate">{order.courseName}</p>}</td><td className="px-3 py-2.5">{order.orderKind === 'shop' ? '商城' : studentType(order) === 'new' ? '新生' : studentType(order) === 'returning' ? '舊生' : '-'}</td><td className="px-3 py-2.5 font-semibold">{order.amountText}</td><td className="px-3 py-2.5 font-mono">{order.transferLastFive || '-'}</td><td className="px-3 py-2.5"><span className={`rounded-full px-2 py-1 text-xs font-bold ${statusTone[order.status]}`}>{statusLabels[order.status]}</span>{order.openAttendanceAnomalyCount > 0 ? <span className="mt-1 block w-fit rounded-full bg-amber-100 px-2 py-1 text-[11px] font-black text-amber-800">計費異常 {order.openAttendanceAnomalyCount}</span> : null}</td><td className="whitespace-nowrap px-3 py-2.5 text-xs text-apple-gray-500">{formatDate(order.submittedAt)}</td><td className="px-3 py-2.5 text-right"><button type="button" onClick={() => setSelected(order)} className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-black hover:text-white" aria-label={`查看 ${order.studentName} 的${order.orderKind === 'shop' ? '訂單' : '報名資料'}`}><ChevronRight className="h-4 w-4" /></button></td></tr>)}</tbody>
           </table>
         </div>
         {!filtered.length ? <p className="p-10 text-center text-sm font-semibold text-apple-gray-500">沒有符合條件的{listKind === 'course' ? '學員' : '商城訂單'}。</p> : null}
@@ -330,6 +367,26 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
             <div className="flex-1 overflow-y-auto p-5">
               <div className="grid gap-3 sm:grid-cols-2">{selectedSummary.map(([label, value]) => <div key={label} className="rounded-lg bg-apple-gray-100 p-3"><p className="text-xs font-bold text-apple-gray-500">{label}</p><p className="mt-1 break-words text-sm font-bold">{value || '-'}</p></div>)}</div>
               <dl className="mt-5 divide-y border-y">{selected.registrationDetails.filter((item) => item.label !== '學員身分').map((item) => <div key={item.label} className="py-3"><dt className="text-xs font-bold text-apple-gray-500">{item.label}</dt><dd className="mt-1 whitespace-pre-wrap break-words text-sm font-semibold leading-6">{item.value}</dd></div>)}{selected.notes ? <div className="py-3"><dt className="text-xs font-bold text-apple-gray-500">客戶備註</dt><dd className="mt-1 whitespace-pre-wrap text-sm font-semibold">{selected.notes}</dd></div> : null}</dl>
+              {selected.orderKind === 'course' && selected.attendanceAnomalies.length ? (
+                <section className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                  <h4 className="flex items-center gap-2 font-black text-amber-950"><AlertTriangle className="h-4 w-4" />點名與計費起點核對</h4>
+                  <div className="mt-3 space-y-3">
+                    {selected.attendanceAnomalies.map((anomaly) => (
+                      <article key={anomaly.attendanceId} className="rounded-md bg-white p-3 ring-1 ring-amber-200">
+                        <p className="text-sm font-black text-amber-950">{anomaly.sessionDate} 已到課，早於計費起點 {anomaly.billingStartSessionDate}</p>
+                        {anomaly.status === 'resolved' ? (
+                          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs font-bold text-emerald-700">已處理：{anomaly.outcome === 'supplement_paid' ? '補繳完成' : '免除補繳'}{anomaly.resolutionNote ? `｜${anomaly.resolutionNote}` : ''}</p><button type="button" disabled={updatingId === `attendance-${anomaly.attendanceId}`} onClick={() => resolveAttendance(anomaly, 'reopen')} className="text-left text-xs font-bold underline disabled:opacity-40">重新開啟</button></div>
+                        ) : (
+                          <div className="mt-3">
+                            <input value={resolutionNote} onChange={(event) => setResolutionNote(event.target.value)} className="apple-input min-h-10 text-sm" maxLength={1000} placeholder="處理備註（選填）" />
+                            <div className="mt-2 grid grid-cols-2 gap-2"><button type="button" disabled={updatingId === `attendance-${anomaly.attendanceId}`} onClick={() => resolveAttendance(anomaly, 'supplement_paid')} className="rounded-md bg-emerald-600 px-3 py-2 text-xs font-black text-white disabled:opacity-40">已補繳</button><button type="button" disabled={updatingId === `attendance-${anomaly.attendanceId}`} onClick={() => resolveAttendance(anomaly, 'waived')} className="rounded-md border border-amber-300 bg-white px-3 py-2 text-xs font-black text-amber-900 disabled:opacity-40">免除補繳</button></div>
+                          </div>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
               <label className="mt-5 block"><span className="mb-2 block text-xs font-bold text-apple-gray-500">管理備註</span><textarea value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} className="apple-input min-h-24 resize-y" placeholder="記錄核對結果或需要補充的資料" /></label>
             </div>
             <div className="grid gap-2 border-t bg-white p-4 sm:grid-cols-3">

@@ -28,7 +28,7 @@ function registrationError(message = '') {
     return { error: '這個信箱已經註冊，請直接登入。', code: 'email_exists', status: 409 }
   }
   if (normalized.includes('password should be') || normalized.includes('weak password')) {
-    return { error: '密碼強度不足，請使用至少 6 個字元。', code: 'weak_password', status: 400 }
+    return { error: '密碼強度不足，請使用至少 10 個字元。', code: 'weak_password', status: 400 }
   }
   if (normalized.includes('rate limit') || normalized.includes('too many')) {
     return { error: '註冊嘗試太頻繁，請稍後再試。', code: 'rate_limited', status: 429 }
@@ -52,8 +52,8 @@ export async function POST(request: NextRequest) {
   if (!isEmail(email)) {
     return NextResponse.json({ error: '請輸入有效的信箱地址。', code: 'invalid_email' }, { status: 400 })
   }
-  if (password.length < 6 || password.length > 128) {
-    return NextResponse.json({ error: '密碼請使用 6 至 128 個字元。', code: 'invalid_password' }, { status: 400 })
+  if (password.length < 10 || password.length > 128) {
+    return NextResponse.json({ error: '密碼請使用 10 至 128 個字元。', code: 'invalid_password' }, { status: 400 })
   }
   if (!name || !phone) {
     return NextResponse.json({ error: '請完整填寫姓名與聯絡電話。', code: 'missing_profile' }, { status: 400 })
