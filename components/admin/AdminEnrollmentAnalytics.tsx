@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, BarChart3, CalendarRange, CheckCircle2, ChevronLeft, ChevronRight, Download, Loader2, Package, RotateCcw, Search, Trash2, X } from 'lucide-react'
+import { AlertTriangle, BarChart3, CalendarRange, CheckCircle2, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, FileSpreadsheet, Loader2, Package, RotateCcw, Search, Trash2, X } from 'lucide-react'
 import type { CourseSeason } from '@/lib/course-seasons'
+import { supabase } from '@/lib/supabase'
 
 type PaymentStatus = 'pending_transfer' | 'pending_review' | 'approved' | 'rejected'
 
@@ -55,10 +56,24 @@ type Capacity = {
   remaining: number
 }
 
+type SeasonSyncSource = {
+  id: string
+  seasonId: string
+  provider: 'google_sheets'
+  spreadsheetId: string
+  sourceUrl: string
+  active: boolean
+  lastSyncedAt: string | null
+  lastResult: Record<string, unknown>
+  lastError: string
+  updatedAt: string
+}
+
 type Props = {
   orders: Enrollment[]
   courseCapacity: Capacity[]
   seasons: CourseSeason[]
+  syncSources: SeasonSyncSource[]
   runAction: (id: string, action: Record<string, unknown>) => Promise<boolean>
   updatingId: string
 }
@@ -110,7 +125,12 @@ function csvCell(value: unknown) {
   return `"${text.replaceAll('"', '""')}"`
 }
 
-export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seasons, runAction, updatingId }: Props) {
+function resultNumber(result: Record<string, unknown>, key: string) {
+  const value = Number(result[key])
+  return Number.isFinite(value) ? value : 0
+}
+
+export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seasons, syncSources, runAction, updatingId }: Props) {
   const initialSeasonId = seasons.find((season) => season.code === '2026-Q3')?.id
     ?? seasons.find((season) => season.isCurrent)?.id
     ?? seasons[0]?.id
@@ -126,9 +146,13 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
   const [selected, setSelected] = useState<Enrollment | null>(null)
   const [reviewNote, setReviewNote] = useState('')
   const [resolutionNote, setResolutionNote] = useState('')
+  const [syncScript, setSyncScript] = useState('')
+  const [syncScriptError, setSyncScriptError] = useState('')
+  const [syncScriptLoading, setSyncScriptLoading] = useState(false)
   const pageSize = 25
 
   const season = seasons.find((item) => item.id === seasonId)
+  const syncSource = syncSources.find((item) => item.seasonId === seasonId && item.active)
   const seasonOrders = useMemo(
     () => orders.filter((order) => order.orderKind === 'course' && order.seasonId === seasonId),
     [orders, seasonId]
@@ -259,6 +283,31 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
     if (saved) setSelected(null)
   }
 
+  async function loadSyncScript() {
+    if (!seasonId) return
+    setSyncScriptLoading(true)
+    setSyncScriptError('')
+    try {
+      if (!supabase) throw new Error('登入服務尚未設定。')
+      const { data: sessionData } = await supabase.auth.getSession()
+      const response = await fetch('/api/admin/google-sheets-script', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${sessionData.session?.access_token ?? ''}`,
+        },
+        body: JSON.stringify({ seasonId }),
+      })
+      const result = await response.json().catch(() => ({})) as { script?: string; error?: string }
+      if (!response.ok || !result.script) throw new Error(result.error || '無法取得同步程式。')
+      setSyncScript(result.script)
+    } catch (error) {
+      setSyncScriptError(error instanceof Error ? error.message : '無法取得同步程式。')
+    } finally {
+      setSyncScriptLoading(false)
+    }
+  }
+
   const selectedSummary = selected
     ? selected.orderKind === 'shop'
       ? [
@@ -291,6 +340,39 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
           {seasons.map((item) => <option key={item.id} value={item.id}>{item.name}{item.isCurrent ? '（前台招生）' : ''}</option>)}
         </select>
       </div>
+
+      {syncSource ? (
+        <section className="rounded-lg border border-black/10 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${syncSource.lastError ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                <FileSpreadsheet className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-black text-apple-gray-950">Q3 Google 表格同步</h3>
+                  <span className={`rounded-full px-2 py-1 text-[11px] font-black ${syncSource.lastError ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                    {syncSource.lastError ? '同步異常' : syncSource.lastSyncedAt ? '同步正常' : '已連結'}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs font-semibold leading-5 text-apple-gray-500">
+                  {syncSource.lastSyncedAt ? `最近同步 ${formatDate(syncSource.lastSyncedAt)}` : '等待第一次自動同步'}
+                  {syncSource.lastSyncedAt ? `｜表格 ${resultNumber(syncSource.lastResult, 'records')} 筆｜新增 ${resultNumber(syncSource.lastResult, 'inserted')}｜換班 ${resultNumber(syncSource.lastResult, 'moved')}｜更新 ${resultNumber(syncSource.lastResult, 'updated')}` : ''}
+                </p>
+                {syncSource.lastError ? <p className="mt-1 text-xs font-bold text-red-700">{syncSource.lastError}</p> : null}
+                {resultNumber(syncSource.lastResult, 'missing') > 0 ? <p className="mt-1 text-xs font-bold text-amber-700">網站另有 {resultNumber(syncSource.lastResult, 'missing')} 筆表格中未找到的舊資料，系統已保留並等待人工確認。</p> : null}
+                {resultNumber(syncSource.lastResult, 'duplicateGroups') > 0 ? <p className="mt-1 text-xs font-bold text-amber-700">表格中有 {resultNumber(syncSource.lastResult, 'duplicateGroups')} 組同班、同信箱及同姓名的重複資料，共 {resultNumber(syncSource.lastResult, 'duplicateRecords')} 筆，請在學員名單確認後再決定是否刪除。</p> : null}
+              </div>
+            </div>
+            <div className="grid shrink-0 grid-cols-2 gap-2">
+              <a href={syncSource.sourceUrl} target="_blank" rel="noreferrer" className="apple-button-outline gap-2 px-4 py-2.5 text-sm"><ExternalLink className="h-4 w-4" />開啟表格</a>
+              <button type="button" onClick={loadSyncScript} disabled={syncScriptLoading} className="apple-button-primary gap-2 px-4 py-2.5 text-sm disabled:opacity-40">
+                {syncScriptLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}同步設定
+              </button>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
@@ -395,6 +477,30 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
               <button type="button" disabled={updatingId === `delete-${selected.id}` || selected.status === 'approved'} onClick={deleteOrder} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40">{updatingId === `delete-${selected.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}刪除記錄</button>
             </div>
           </aside>
+        </div>
+      ) : null}
+
+      {syncScript || syncScriptError ? (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label="Google 表格同步設定" onClick={() => { setSyncScript(''); setSyncScriptError('') }}>
+          <section className="max-h-[88vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between border-b p-5">
+              <div><p className="text-xs font-bold text-apple-blue">季度名單</p><h3 className="mt-1 text-xl font-black">Google 表格自動同步</h3></div>
+              <button type="button" onClick={() => { setSyncScript(''); setSyncScriptError('') }} className="inline-flex h-9 w-9 items-center justify-center rounded-full border" aria-label="關閉"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="p-5">
+              {syncScriptError ? <p className="rounded-lg bg-red-50 p-4 text-sm font-bold text-red-700">{syncScriptError}</p> : (
+                <>
+                  <ol className="grid gap-2 text-sm font-semibold leading-6 text-apple-gray-700 sm:grid-cols-3">
+                    <li className="rounded-lg bg-apple-gray-100 p-3"><span className="mr-2 font-black">1</span>在 Q3 表格開啟「擴充功能 → Apps Script」</li>
+                    <li className="rounded-lg bg-apple-gray-100 p-3"><span className="mr-2 font-black">2</span>貼上以下程式並儲存</li>
+                    <li className="rounded-lg bg-apple-gray-100 p-3"><span className="mr-2 font-black">3</span>執行 setupGoodLuckRosterSync 並授權一次</li>
+                  </ol>
+                  <textarea readOnly value={syncScript} className="mt-4 min-h-[360px] w-full resize-y rounded-lg border border-black/10 bg-apple-gray-950 p-4 font-mono text-xs leading-5 text-white" aria-label="Google 表格同步程式" />
+                  <button type="button" onClick={() => navigator.clipboard.writeText(syncScript)} className="apple-button-primary mt-3 w-full gap-2 py-3"><Copy className="h-4 w-4" />複製同步程式</button>
+                </>
+              )}
+            </div>
+          </section>
         </div>
       ) : null}
     </section>

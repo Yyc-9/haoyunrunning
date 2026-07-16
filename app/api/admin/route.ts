@@ -198,6 +198,19 @@ type CoachInviteRow = {
   created_at: string
 }
 
+type CourseSeasonSyncSourceRow = {
+  id: string
+  season_id: string
+  provider: 'google_sheets'
+  external_id: string
+  source_url: string
+  active: boolean
+  last_synced_at: string | null
+  last_result: Record<string, unknown> | null
+  last_error: string
+  updated_at: string
+}
+
 type AdminPatchBody =
   | { action?: 'set_coach_role'; userId?: string; enabled?: boolean }
   | { action?: 'link_coach_public_profile'; userId?: string; coachKey?: string }
@@ -410,6 +423,7 @@ export async function GET(request: NextRequest) {
     attendanceResolutionsResult,
     attendanceDeductionsResult,
     sessionCancellationsResult,
+    seasonSyncSourcesResult,
   ] = await Promise.all([
     supabaseAdmin!
       .from('profiles')
@@ -485,6 +499,10 @@ export async function GET(request: NextRequest) {
       .from('course_session_cancellations')
       .select('course_season_course_id, session_date')
       .limit(1000),
+    supabaseAdmin!
+      .from('course_season_sync_sources')
+      .select('id, season_id, provider, external_id, source_url, active, last_synced_at, last_result, last_error, updated_at')
+      .order('updated_at', { ascending: false }),
   ])
 
   const firstError = [
@@ -504,6 +522,7 @@ export async function GET(request: NextRequest) {
     attendanceResolutionsResult.error,
     attendanceDeductionsResult.error,
     sessionCancellationsResult.error,
+    isOptionalSchemaError(seasonSyncSourcesResult.error) ? null : seasonSyncSourcesResult.error,
   ].find(Boolean)
 
   if (firstError) {
@@ -528,6 +547,9 @@ export async function GET(request: NextRequest) {
   const attendanceResolutions = (attendanceResolutionsResult.data ?? []) as CourseAttendanceResolutionRow[]
   const attendanceDeductions = (attendanceDeductionsResult.data ?? []) as CourseAttendanceDeductionRow[]
   const sessionCancellations = (sessionCancellationsResult.data ?? []) as CourseSessionCancellationRow[]
+  const seasonSyncSources = seasonSyncSourcesResult.error
+    ? []
+    : (seasonSyncSourcesResult.data ?? []) as CourseSeasonSyncSourceRow[]
   const siteContent = {
     ...applyCourseSeasonToContent(baseSiteContent, currentSeason),
     coachProfiles: publicCoachProfiles,
@@ -805,6 +827,18 @@ export async function GET(request: NextRequest) {
     products: shopProducts,
     paymentAccounts,
     courseSeasons,
+    seasonSyncSources: seasonSyncSources.map((source) => ({
+      id: source.id,
+      seasonId: source.season_id,
+      provider: source.provider,
+      spreadsheetId: source.external_id,
+      sourceUrl: source.source_url,
+      active: source.active,
+      lastSyncedAt: source.last_synced_at,
+      lastResult: source.last_result ?? {},
+      lastError: source.last_error,
+      updatedAt: source.updated_at,
+    })),
     siteContent,
     courses: managedCourses.map((course) => ({
       slug: course.slug,

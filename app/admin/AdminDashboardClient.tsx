@@ -52,6 +52,7 @@ type AdminDashboardPayload = {
   orders: AdminOrder[]
   courseCapacity: CourseCapacityRow[]
   courseSeasons: CourseSeason[]
+  seasonSyncSources: CourseSeasonSyncSource[]
   products: AdminProduct[]
   paymentAccounts: PaymentAccount[]
   siteContent: SiteContent
@@ -80,6 +81,19 @@ type CourseCapacityRow = {
   pendingTransferCount: number
   pendingReviewCount: number
   remaining: number
+}
+
+export type CourseSeasonSyncSource = {
+  id: string
+  seasonId: string
+  provider: 'google_sheets'
+  spreadsheetId: string
+  sourceUrl: string
+  active: boolean
+  lastSyncedAt: string | null
+  lastResult: Record<string, unknown>
+  lastError: string
+  updatedAt: string
 }
 
 type AdminCourseSummary = {
@@ -808,7 +822,7 @@ export default function AdminDashboardClient() {
                     </div>
                   </div>
                   {seasonView === 'students' ? (
-                    <AdminEnrollmentAnalytics orders={data.orders} courseCapacity={data.courseCapacity} seasons={data.courseSeasons} runAction={runAction} updatingId={updatingId} />
+                    <AdminEnrollmentAnalytics orders={data.orders} courseCapacity={data.courseCapacity} seasons={data.courseSeasons} syncSources={data.seasonSyncSources} runAction={runAction} updatingId={updatingId} />
                   ) : (
                     <AdminContentManager content={data.siteContent} courses={data.courses} seasons={data.courseSeasons} scope="seasons" runAction={runAction} />
                   )}
