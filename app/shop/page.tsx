@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, Package, Search } from 'lucide-react'
 import ShopCartDrawer from '@/components/ShopCartDrawer'
-import { defaultShopProducts, type ShopProduct } from '@/lib/shop-products'
+import type { ShopProduct } from '@/lib/shop-products'
 import { useSiteContent } from '@/app/site-content-provider'
 
 type SortOption = 'featured' | 'price-low' | 'price-high'
@@ -18,7 +18,9 @@ function formatPrice(product: ShopProduct) {
 
 export default function ShopPage() {
   const { pageMedia } = useSiteContent()
-  const [products, setProducts] = useState<ShopProduct[]>(defaultShopProducts)
+  const [products, setProducts] = useState<ShopProduct[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('')
   const [sort, setSort] = useState<SortOption>('featured')
@@ -33,7 +35,11 @@ export default function ShopPage() {
         if (!response.ok) throw new Error('商品資料載入失敗。')
         if (isActive && payload.products) setProducts(payload.products)
       })
-      .catch((error) => console.error('Load shop products failed:', error))
+      .catch((error) => {
+        console.error('Load shop products failed:', error)
+        if (isActive) setLoadError('商品資料暫時無法載入，請稍後重新整理。')
+      })
+      .finally(() => { if (isActive) setIsLoading(false) })
 
     return () => { isActive = false }
   }, [])
@@ -63,7 +69,7 @@ export default function ShopPage() {
                 <h1 className="text-3xl font-black text-apple-gray-950 sm:text-4xl">{pageMedia.shopTitle}</h1>
                 <p className="mt-3 max-w-2xl text-sm leading-7 text-apple-gray-600 sm:text-base">{pageMedia.shopSubtitle}</p>
               </div>
-              <p className="text-sm font-semibold text-apple-gray-500">目前共 {products.length} 件商品</p>
+              <p className="text-sm font-semibold text-apple-gray-500">{isLoading ? '商品資料載入中' : `目前共 ${products.length} 件商品`}</p>
             </div>
           </div>
           <div className="relative aspect-[16/7] overflow-hidden rounded-md border border-black/10 bg-white md:aspect-[4/3]">
@@ -91,7 +97,23 @@ export default function ShopPage() {
           </select>
         </div>
 
-        {visibleProducts.length > 0 ? (
+        {isLoading ? (
+          <div aria-label="商品資料載入中" className="grid grid-cols-2 gap-x-3 gap-y-8 pt-7 md:grid-cols-3 md:gap-x-5 lg:grid-cols-4">
+            {Array.from({ length: 4 }, (_, index) => (
+              <div key={index} className="animate-pulse">
+                <div className="aspect-square rounded-md bg-apple-gray-100" />
+                <div className="mt-3 h-3 w-20 rounded bg-apple-gray-100" />
+                <div className="mt-3 h-5 w-4/5 rounded bg-apple-gray-100" />
+                <div className="mt-3 h-5 w-24 rounded bg-apple-gray-100" />
+              </div>
+            ))}
+          </div>
+        ) : loadError ? (
+          <div className="flex min-h-80 flex-col items-center justify-center text-center">
+            <Package className="h-12 w-12 text-apple-gray-300" />
+            <p className="mt-4 font-black text-apple-gray-900">{loadError}</p>
+          </div>
+        ) : visibleProducts.length > 0 ? (
           <div className="grid grid-cols-2 gap-x-3 gap-y-8 pt-7 md:grid-cols-3 md:gap-x-5 lg:grid-cols-4">
             {visibleProducts.map((product) => (
               <article key={product.id} className="group min-w-0">

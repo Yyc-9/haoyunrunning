@@ -1,9 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { defaultShopProducts, shopProductFromRow, type ShopProductRow } from '@/lib/shop-products'
+import { shopProductFromRow, type ShopProductRow } from '@/lib/shop-products'
 import { supabaseAdmin } from '@/lib/supabase-server'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const noStoreHeaders = {
-  'Cache-Control': 'no-store',
+  'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+  'CDN-Cache-Control': 'no-store',
+  'Vercel-CDN-Cache-Control': 'no-store',
+}
+
+function unavailable(message = '商品資料暫時無法載入。') {
+  return NextResponse.json(
+    { products: [], product: null, source: 'unavailable', error: message },
+    { status: 503, headers: noStoreHeaders }
+  )
 }
 
 function isOptionalSchemaError(error: { code?: string; message?: string } | null) {
@@ -19,10 +31,7 @@ function isOptionalSchemaError(error: { code?: string; message?: string } | null
 export async function GET(request: NextRequest) {
   const requestedId = request.nextUrl.searchParams.get('id')?.trim() ?? ''
 
-  if (!supabaseAdmin) {
-    const products = requestedId ? defaultShopProducts.filter((product) => product.id === requestedId) : defaultShopProducts
-    return NextResponse.json({ products, product: products[0] ?? null, source: 'fallback' }, { headers: noStoreHeaders })
-  }
+  if (!supabaseAdmin) return unavailable('商品資料服務尚未設定。')
 
   try {
     const { data, error } = await supabaseAdmin
@@ -33,14 +42,9 @@ export async function GET(request: NextRequest) {
       .order('name', { ascending: true })
 
     if (error) {
-      if (isOptionalSchemaError(error)) {
-        const products = requestedId ? defaultShopProducts.filter((product) => product.id === requestedId) : defaultShopProducts
-        return NextResponse.json({ products, product: products[0] ?? null, source: 'fallback' }, { headers: noStoreHeaders })
-      }
-
-      console.error('Shop products query error:', error)
-      const products = requestedId ? defaultShopProducts.filter((product) => product.id === requestedId) : defaultShopProducts
-      return NextResponse.json({ products, product: products[0] ?? null, source: 'fallback' }, { headers: noStoreHeaders })
+      const label = isOptionalSchemaError(error) ? 'schema' : 'query'
+      console.error(`Shop products ${label} error:`, error)
+      return unavailable()
     }
 
     const products = (data ?? [])
@@ -52,7 +56,6 @@ export async function GET(request: NextRequest) {
     )
   } catch (error) {
     console.error('Shop products request failed:', error)
-    const products = requestedId ? defaultShopProducts.filter((product) => product.id === requestedId) : defaultShopProducts
-    return NextResponse.json({ products, product: products[0] ?? null, source: 'fallback' }, { headers: noStoreHeaders })
+    return unavailable()
   }
 }

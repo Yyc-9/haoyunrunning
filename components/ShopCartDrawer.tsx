@@ -106,6 +106,7 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
                   <div className="space-y-4">
                     {items.map((item) => {
                       const product = getProduct(item)
+                      const currentImage = product?.variants?.find((variant) => variant.id === item.variantId)?.image || product?.image || item.image
                       const remaining = product
                         ? Math.max(0, product.stockQuantity - items
                           .filter((cartItem) => cartItem.productId === item.productId)
@@ -116,8 +117,8 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
                         <article key={item.id} className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
                           <div className="flex gap-4">
                             <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-apple-gray-100">
-                              {item.image ? (
-                                <Image src={item.image} alt={item.name} fill sizes="80px" className="object-contain p-1" />
+                              {currentImage ? (
+                                <Image src={currentImage} alt={item.name} fill sizes="80px" className="object-contain p-1" />
                               ) : (
                                 <div className="flex h-full w-full items-center justify-center">
                                   <Package className="h-8 w-8 text-apple-gray-400" />

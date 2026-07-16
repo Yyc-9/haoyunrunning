@@ -9,7 +9,7 @@ import { useCart } from '@/app/cart-provider'
 import { useSiteContent } from '@/app/site-content-provider'
 import { useToast } from '@/app/toast-provider'
 import ShopCartDrawer from '@/components/ShopCartDrawer'
-import { defaultShopProducts, type ProductVariant, type ShopProduct } from '@/lib/shop-products'
+import type { ProductVariant, ShopProduct } from '@/lib/shop-products'
 
 type ProductDetailClientProps = {
   productId: string
@@ -30,8 +30,8 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
   const { addItem, items } = useCart()
   const { brand } = useSiteContent()
   const { showToast } = useToast()
-  const [products, setProducts] = useState<ShopProduct[]>(defaultShopProducts)
-  const [product, setProduct] = useState<ShopProduct | null>(() => defaultShopProducts.find((item) => item.id === productId) ?? null)
+  const [products, setProducts] = useState<ShopProduct[]>([])
+  const [product, setProduct] = useState<ShopProduct | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [selectedVariantId, setSelectedVariantId] = useState('')
   const [selectedSize, setSelectedSize] = useState('')
@@ -78,7 +78,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
     if (activeMediaIndex >= media.length) setActiveMediaIndex(0)
   }, [activeMediaIndex, media.length])
 
-  if (isLoading && !product) {
+  if (isLoading) {
     return <main className="flex min-h-[60vh] items-center justify-center pt-20 sm:pt-24"><Loader2 className="h-7 w-7 animate-spin text-apple-gray-500" aria-label="載入商品" /></main>
   }
 
