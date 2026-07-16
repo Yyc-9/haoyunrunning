@@ -220,8 +220,8 @@ type AdminPatchBody =
   | { action?: 'delete_order'; orderId?: string; orderKind?: 'course' | 'shop' }
   | { action?: 'bind_student'; studentId?: string; coachId?: string }
   | { action?: 'unbind_student'; bindingId?: string }
-  | { action?: 'update_product'; productId?: string; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; variants?: Array<{ id?: string; name?: string; image?: string }>; summary?: string; description?: string; gallery?: string[]; highlights?: string; specifications?: Array<{ label?: string; value?: string }>; usageNotes?: string; externalUrl?: string }
-  | { action?: 'create_product'; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; summary?: string; description?: string; gallery?: string[]; highlights?: string; specifications?: Array<{ label?: string; value?: string }>; usageNotes?: string; externalUrl?: string }
+  | { action?: 'update_product'; productId?: string; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; variants?: Array<{ id?: string; name?: string; image?: string; detailImages?: string[] }>; summary?: string; description?: string; gallery?: string[]; highlights?: string; specifications?: Array<{ label?: string; value?: string }>; usageNotes?: string; externalUrl?: string }
+  | { action?: 'create_product'; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; variants?: Array<{ id?: string; name?: string; image?: string; detailImages?: string[] }>; summary?: string; description?: string; gallery?: string[]; highlights?: string; specifications?: Array<{ label?: string; value?: string }>; usageNotes?: string; externalUrl?: string }
   | { action?: 'save_site_content'; section?: string; value?: unknown }
   | { action?: 'save_season_course'; seasonId?: string; courseSlug?: string; value?: unknown; capacity?: number; billingConfig?: unknown }
   | { action?: 'create_next_course_season'; sourceSeasonId?: string }
@@ -282,6 +282,21 @@ function cleanGallery(value: unknown) {
     .map((item) => cleanText(item))
     .filter((item) => item && isSafePublicUrl(item) && isSafeProductMedia(item))
     .slice(0, 12)
+}
+
+function cleanProductVariants(value: unknown) {
+  if (!Array.isArray(value)) return []
+  return value.slice(0, 20).flatMap((item) => {
+    if (!item || typeof item !== 'object') return []
+    const row = item as { id?: unknown; name?: unknown; image?: unknown; detailImages?: unknown }
+    const id = cleanText(row.id).slice(0, 100)
+    const name = cleanText(row.name).slice(0, 100)
+    const image = cleanText(row.image)
+    const rawDetailImages = Array.isArray(row.detailImages) ? row.detailImages : []
+    const detailImages = cleanGallery(rawDetailImages)
+    if (!/^[a-zA-Z0-9_-]+$/.test(id) || !name || !image || !isSafePublicUrl(image) || !isSafeProductMedia(image) || detailImages.length !== rawDetailImages.length) return []
+    return [{ id, name, image, detailImages }]
+  })
 }
 
 function isSafeProductMedia(value: string) {
@@ -1379,7 +1394,7 @@ export async function PATCH(request: NextRequest) {
     if (error || !order) {
       const capacityReached = /course capacity reached/i.test(error?.message ?? '')
       return json(
-        { error: capacityReached ? '這個班級已達 40 人，不能再核准新的付款。' : error?.message || '訂單更新失敗。' },
+        { error: capacityReached ? '這個班級已達目前設定的名額上限，不能再核准新的付款。' : error?.message || '訂單更新失敗。' },
         { status: capacityReached ? 409 : 500 }
       )
     }
@@ -1412,14 +1427,8 @@ export async function PATCH(request: NextRequest) {
     const rawGallery = Array.isArray(body.gallery) ? body.gallery : []
     const gallery = cleanGallery(rawGallery)
     const specifications = cleanSpecifications(body.specifications)
-    const rawVariants = Array.isArray(body.variants) ? body.variants.slice(0, 20) : []
-    const variants = rawVariants.flatMap((item) => {
-      const id = cleanText(item.id).slice(0, 100)
-      const variantName = cleanText(item.name).slice(0, 100)
-      const variantImage = cleanText(item.image)
-      if (!/^[a-zA-Z0-9_-]+$/.test(id) || !variantName || !variantImage || !isSafePublicUrl(variantImage) || !isSafeProductMedia(variantImage)) return []
-      return [{ id, name: variantName, image: variantImage }]
-    })
+    const rawVariants = Array.isArray(body.variants) ? body.variants : []
+    const variants = cleanProductVariants(rawVariants)
 
     if (!productId || !name || !category || !image) {
       return json({ error: '請完整填寫商品名稱、分類與主圖。' }, { status: 400 })
@@ -1436,8 +1445,8 @@ export async function PATCH(request: NextRequest) {
     if (externalUrl && !isSafePublicUrl(externalUrl)) {
       return json({ error: '商品官方連結網址無效。' }, { status: 400 })
     }
-    if (variants.length !== rawVariants.length) {
-      return json({ error: '請完整填寫每一個商品款式及款式圖片。' }, { status: 400 })
+    if (variants.length !== rawVariants.length || rawVariants.length > 20) {
+      return json({ error: '請完整填寫每一個商品款式、款式主圖與有效的詳情圖片。' }, { status: 400 })
     }
 
     if (!Number.isInteger(stockQuantity) || stockQuantity < 0) {
@@ -1495,6 +1504,8 @@ export async function PATCH(request: NextRequest) {
     const rawGallery = Array.isArray(body.gallery) ? body.gallery : []
     const gallery = cleanGallery(rawGallery)
     const specifications = cleanSpecifications(body.specifications)
+    const rawVariants = Array.isArray(body.variants) ? body.variants : []
+    const variants = cleanProductVariants(rawVariants)
 
     if (!name || !category || !image) {
       return json({ error: '請填寫商品名稱、分類並上傳主圖。' }, { status: 400 })
@@ -1507,6 +1518,9 @@ export async function PATCH(request: NextRequest) {
     }
     if (gallery.length !== rawGallery.length) {
       return json({ error: '商品詳情圖片網址無效。' }, { status: 400 })
+    }
+    if (variants.length !== rawVariants.length || rawVariants.length > 20) {
+      return json({ error: '請完整填寫每一個商品款式、款式主圖與有效的詳情圖片。' }, { status: 400 })
     }
     if (externalUrl && !isSafePublicUrl(externalUrl)) {
       return json({ error: '商品官方連結網址無效。' }, { status: 400 })
@@ -1538,7 +1552,7 @@ export async function PATCH(request: NextRequest) {
         specifications,
         usage_notes: lineSeparated(body.usageNotes),
         external_url: externalUrl,
-        variants: [],
+        variants,
         sizes: commaSeparated(body.sizes),
         stock_quantity: stockQuantity,
         active,

@@ -2,6 +2,7 @@ export type ProductVariant = {
   id: string
   name: string
   image: string
+  detailImages: string[]
 }
 
 export type ProductSpecification = {
@@ -77,6 +78,7 @@ function productVariants(value: unknown) {
         id: variant.id,
         name: variant.name,
         image: typeof variant.image === 'string' ? variant.image : '',
+        detailImages: stringArray((item as { detailImages?: unknown }).detailImages),
       }
     })
     .filter((item): item is ProductVariant => Boolean(item))
@@ -118,8 +120,8 @@ export const defaultShopProducts: ShopProduct[] = [
     active: true,
     sizes: ['XS', 'S', 'M', 'L', 'XL'],
     variants: [
-      { id: 'purple-white', name: '紫電白', image: '/goodluck-running-vest.jpg' },
-      { id: 'black-blue', name: '曜黑藍', image: '/goodluck-running-vest-black.jpg' },
+      { id: 'purple-white', name: '紫電白', image: '/goodluck-running-vest.jpg', detailImages: [] },
+      { id: 'black-blue', name: '曜黑藍', image: '/goodluck-running-vest-black.jpg', detailImages: [] },
     ],
   },
   {

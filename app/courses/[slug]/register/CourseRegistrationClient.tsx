@@ -132,7 +132,8 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
     )
   }
 
-  const remaining = availability?.remaining ?? COURSE_CAPACITY
+  const capacity = availability?.capacity ?? COURSE_CAPACITY
+  const remaining = availability?.remaining ?? capacity
   const isFull = availability?.full === true
   const canSubmitTransfer = enrollment && ['pending_transfer', 'rejected'].includes(enrollment.status)
 
@@ -152,7 +153,7 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
               </div>
             </div>
             <div className={`shrink-0 rounded-lg border px-4 py-3 ${isFull ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
-              <p className="text-xs font-bold">班額 {COURSE_CAPACITY} 人</p>
+              <p className="text-xs font-bold">班額 {capacity} 人</p>
               <p className="mt-1 text-lg font-black">{isLoading ? '讀取中' : isFull ? '目前額滿' : `剩餘 ${remaining} 位`}</p>
             </div>
           </div>

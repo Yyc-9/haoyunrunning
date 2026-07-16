@@ -64,12 +64,15 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
   const selectedVariant = product?.variants?.find((variant) => variant.id === selectedVariantId) ?? product?.variants?.[0]
   const media = useMemo<ProductMedia[]>(() => {
     if (!product) return []
-    const images = [selectedVariant?.image, product.image, ...product.gallery]
+    const variantImages = selectedVariant
+      ? [selectedVariant.image, ...(selectedVariant.detailImages.length ? selectedVariant.detailImages : product.gallery)]
+      : [product.image, ...product.gallery]
+    const images = variantImages
       .filter((url): url is string => Boolean(url))
       .filter((url, index, list) => list.indexOf(url) === index)
       .map((url, index) => ({ type: 'image' as const, url, label: `${product.name} 圖片 ${index + 1}` }))
     return product.video ? [...images, { type: 'video' as const, url: product.video, label: `${product.name} 商品影片` }] : images
-  }, [product, selectedVariant?.image])
+  }, [product, selectedVariant])
 
   useEffect(() => {
     if (activeMediaIndex >= media.length) setActiveMediaIndex(0)

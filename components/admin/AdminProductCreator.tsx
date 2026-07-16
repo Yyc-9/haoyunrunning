@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { useState } from 'react'
-import { Film, ImagePlus, Loader2, PackagePlus, Plus, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Film, ImagePlus, Loader2, PackagePlus, Plus, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 type AdminProductCreatorProps = {
@@ -17,6 +17,7 @@ const initialProductForm = {
   image: '',
   video: '',
   gallery: [] as string[],
+  variants: [] as Array<{ id: string; name: string; image: string; detailImages: string[] }>,
   tags: '',
   sizes: '',
   summary: '',
@@ -111,7 +112,52 @@ export default function AdminProductCreator({ runAction }: AdminProductCreatorPr
     }
   }
 
+  async function handleVariantMedia(file: File | undefined, variantIndex: number, target: 'image' | 'detail') {
+    if (!file) return
+    const key = `variant-${target}-${variantIndex}`
+    setUploadingKind(key)
+    setUploadError('')
+    try {
+      const url = await uploadProductMedia(file, 'image')
+      setForm((current) => ({
+        ...current,
+        variants: current.variants.map((variant, index) => index === variantIndex
+          ? target === 'image'
+            ? { ...variant, image: url }
+            : { ...variant, detailImages: [...variant.detailImages, url].slice(0, 12) }
+          : variant),
+      }))
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : '款式圖片上傳失敗。')
+    } finally {
+      setUploadingKind('')
+    }
+  }
+
+  function addVariant() {
+    const suffix = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID().slice(0, 8) : String(Date.now())
+    setForm((current) => ({ ...current, variants: [...current.variants, { id: `variant-${suffix}`, name: '', image: '', detailImages: [] }] }))
+  }
+
+  function moveVariantDetail(variantIndex: number, imageIndex: number, direction: -1 | 1) {
+    setForm((current) => ({
+      ...current,
+      variants: current.variants.map((variant, index) => {
+        if (index !== variantIndex) return variant
+        const nextIndex = imageIndex + direction
+        if (nextIndex < 0 || nextIndex >= variant.detailImages.length) return variant
+        const detailImages = [...variant.detailImages]
+        ;[detailImages[imageIndex], detailImages[nextIndex]] = [detailImages[nextIndex], detailImages[imageIndex]]
+        return { ...variant, detailImages }
+      }),
+    }))
+  }
+
   async function createProduct() {
+    if (form.variants.some((variant) => !variant.name.trim() || !variant.image)) {
+      setUploadError('請完整填寫每一個款式名稱並上傳款式主圖。')
+      return
+    }
     const priceTwd = Number(form.price || 0)
     const created = await runAction('create-product', {
       action: 'create_product',
@@ -126,6 +172,7 @@ export default function AdminProductCreator({ runAction }: AdminProductCreatorPr
       summary: form.summary,
       description: form.description,
       gallery: form.gallery,
+      variants: form.variants,
       highlights: form.highlights,
       specifications: parseSpecificationLines(form.specifications),
       usageNotes: form.usageNotes,
@@ -233,6 +280,35 @@ export default function AdminProductCreator({ runAction }: AdminProductCreatorPr
           </div>
         </div>
       ) : null}
+
+      <div className="mt-5 border-t border-black/10 pt-5">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <div><h3 className="font-black text-apple-gray-950">商品款式與圖片</h3><p className="mt-1 text-xs text-apple-gray-500">每個款式都可設定自己的主圖與詳情圖片；沒有款式的商品可略過。</p></div>
+          <button type="button" onClick={addVariant} className="apple-button-outline gap-2 px-4 py-2 text-sm"><Plus className="h-4 w-4" />新增款式</button>
+        </div>
+        {form.variants.length ? (
+          <div className="mt-4 space-y-4">
+            {form.variants.map((variant, variantIndex) => (
+              <div key={variant.id} className="rounded-lg border border-black/10 bg-apple-gray-50 p-4">
+                <div className="grid gap-4 lg:grid-cols-[200px_minmax(0,1fr)]">
+                  <div>
+                    <div className="relative aspect-square overflow-hidden rounded-lg border border-black/10 bg-white">
+                      {variant.image ? <Image src={variant.image} alt={`${variant.name || '款式'}主圖`} fill sizes="200px" className="object-contain p-2" /> : <div className="flex h-full items-center justify-center text-xs font-bold text-apple-gray-400">尚未上傳款式主圖</div>}
+                    </div>
+                    <input value={variant.name} onChange={(event) => setForm((current) => ({ ...current, variants: current.variants.map((item, index) => index === variantIndex ? { ...item, name: event.target.value } : item) }))} placeholder="款式名稱" className="apple-input mt-3" />
+                    <label className="apple-button-outline mt-2 flex cursor-pointer gap-2 px-4 py-2 text-sm">{uploadingKind === `variant-image-${variantIndex}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}{variant.image ? '更換款式主圖' : '上傳款式主圖'}<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={Boolean(uploadingKind)} onChange={(event) => handleVariantMedia(event.target.files?.[0], variantIndex, 'image')} /></label>
+                    <button type="button" onClick={() => setForm((current) => ({ ...current, variants: current.variants.filter((_, index) => index !== variantIndex) }))} className="mt-2 inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-xs font-bold text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" />刪除款式</button>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center"><p className="text-sm font-black text-apple-gray-900">{variant.name || `款式 ${variantIndex + 1}`}詳情圖片</p><label className="apple-button-outline inline-flex cursor-pointer gap-2 px-4 py-2 text-sm">{uploadingKind === `variant-detail-${variantIndex}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}加入詳情圖<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={Boolean(uploadingKind) || variant.detailImages.length >= 12} onChange={(event) => handleVariantMedia(event.target.files?.[0], variantIndex, 'detail')} /></label></div>
+                    {variant.detailImages.length ? <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">{variant.detailImages.map((imageUrl, imageIndex) => <div key={imageUrl} className="overflow-hidden rounded-lg border border-black/10 bg-white"><div className="relative aspect-square"><Image src={imageUrl} alt={`${variant.name || '款式'}詳情圖 ${imageIndex + 1}`} fill sizes="150px" className="object-contain p-1" /></div><div className="grid grid-cols-3 border-t border-black/10"><button type="button" disabled={imageIndex === 0} onClick={() => moveVariantDetail(variantIndex, imageIndex, -1)} title="向前移動" className="flex h-9 items-center justify-center disabled:opacity-25"><ChevronLeft className="h-4 w-4" /></button><button type="button" disabled={imageIndex === variant.detailImages.length - 1} onClick={() => moveVariantDetail(variantIndex, imageIndex, 1)} title="向後移動" className="flex h-9 items-center justify-center border-x border-black/10 disabled:opacity-25"><ChevronRight className="h-4 w-4" /></button><button type="button" onClick={() => setForm((current) => ({ ...current, variants: current.variants.map((item, index) => index === variantIndex ? { ...item, detailImages: item.detailImages.filter((_, detailIndex) => detailIndex !== imageIndex) } : item) }))} title="移除圖片" className="flex h-9 items-center justify-center text-red-600"><Trash2 className="h-4 w-4" /></button></div></div>)}</div> : <p className="mt-4 rounded-lg border border-dashed border-black/15 bg-white p-6 text-center text-sm text-apple-gray-500">可加入這個款式專屬的正面、背面與細節圖片。</p>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : <p className="mt-4 rounded-lg border border-dashed border-black/15 p-5 text-sm text-apple-gray-500">尚未新增款式，顧客會直接查看商品通用圖片。</p>}
+      </div>
 
       <div className="mt-5 border-t border-black/10 pt-5">
         <div className="mb-4"><h3 className="font-black text-apple-gray-950">商品詳情</h3><p className="mt-1 text-xs text-apple-gray-500">這些內容會直接顯示在商品獨立頁面。</p></div>
