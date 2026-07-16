@@ -357,7 +357,7 @@ export async function PATCH(request: NextRequest) {
     updatePayload.review_note = reviewNote
   }
 
-  const reviewResult = status === 'approved'
+  const reviewResult = status === 'approved' && existingLead.source === 'course_payment'
     ? await supabaseAdmin!.rpc('approve_course_enrollment', {
         p_lead_id: id,
         p_review_note: reviewNote,
