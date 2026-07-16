@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendEnrollmentApprovedEmail } from '@/lib/email'
+import { getDefaultCourseCoachKeys } from '@/lib/coach-profiles'
+import { getCourseSeasons } from '@/lib/course-seasons-server'
+import { applyCourseOverrides } from '@/lib/managed-courses'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { isPaymentOrderStatus } from '@/lib/payment'
 import { createCourseOrderAccessToken, verifyCourseOrderAccessToken } from '@/lib/order-access'
@@ -26,6 +29,31 @@ const allowedSources = new Set(['anniversary_4th', 'group_class', 'course_paymen
 
 function cleanText(value: unknown) {
   return typeof value === 'string' ? value.trim() : ''
+}
+
+function payloadText(payload: unknown, key: string) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return ''
+  return cleanText((payload as Record<string, unknown>)[key])
+}
+
+function safeCoachLead(row: Record<string, unknown>) {
+  return {
+    id: cleanText(row.id),
+    source: cleanText(row.source),
+    name: cleanText(row.name),
+    phone: cleanText(row.phone),
+    email: cleanText(row.email),
+    instagram: cleanText(row.instagram),
+    preferred_course: cleanText(row.preferred_course),
+    running_experience: cleanText(row.running_experience),
+    goal: cleanText(row.goal),
+    companion_count: cleanText(row.companion_count),
+    notes: cleanText(row.notes),
+    status: cleanText(row.status),
+    created_at: cleanText(row.created_at),
+    emergency_contact_name: payloadText(row.payload, 'emergencyContactName'),
+    emergency_contact_phone: payloadText(row.payload, 'emergencyContactPhone'),
+  }
 }
 
 function containsSensitiveLongNumber(value: string) {
@@ -59,6 +87,31 @@ async function getAuthorizedProfile(request: NextRequest) {
   return { profile }
 }
 
+async function getCoachCourseAccess(profileId: string) {
+  const [{ data: publicProfile, error: profileError }, seasons] = await Promise.all([
+    supabaseAdmin!
+      .from('coach_public_profiles')
+      .select('coach_key')
+      .eq('owner_profile_id', profileId)
+      .maybeSingle(),
+    getCourseSeasons({ includeRegistrationStats: false }),
+  ])
+  if (profileError) throw new Error(profileError.message)
+
+  const offeringIds = new Set<string>()
+  const seasonCourseKeys = new Set<string>()
+  for (const season of seasons.filter((item) => item.isCurrent || ['enrolling', 'active'].includes(item.status))) {
+    for (const course of applyCourseOverrides(season.courseOverrides)) {
+      const coachKeys = season.courseOverrides[course.slug]?.coachKeys ?? getDefaultCourseCoachKeys(course.slug)
+      if (!publicProfile?.coach_key || !coachKeys.includes(publicProfile.coach_key)) continue
+      const offeringId = season.courseOfferingIds[course.slug]
+      if (offeringId) offeringIds.add(offeringId)
+      seasonCourseKeys.add(`${season.id}:${course.slug}`)
+    }
+  }
+  return { offeringIds, seasonCourseKeys }
+}
+
 export async function GET(request: NextRequest) {
   const auth = await getAuthorizedProfile(request)
   if (auth.error) return auth.error
@@ -87,7 +140,22 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json({ leads: data ?? [] })
+  let visibleRows = (data ?? []) as Array<Record<string, unknown>>
+  if (auth.profile.role === 'coach') {
+    try {
+      const access = await getCoachCourseAccess(auth.profile.id)
+      visibleRows = visibleRows.filter((row) => {
+        if (row.source !== 'course_payment') return true
+        const offeringId = cleanText(row.course_season_course_id)
+        const seasonCourseKey = `${cleanText(row.season_id)}:${cleanText(row.course_slug)}`
+        return access.offeringIds.has(offeringId) || access.seasonCourseKeys.has(seasonCourseKey)
+      })
+    } catch (accessError) {
+      return NextResponse.json({ error: accessError instanceof Error ? accessError.message : '讀取教練課程權限失敗。' }, { status: 500 })
+    }
+  }
+
+  return NextResponse.json({ leads: visibleRows.map(safeCoachLead) })
 }
 
 export async function POST(request: NextRequest) {
@@ -268,8 +336,16 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: '狀態無效。' }, { status: 400 })
   }
 
-  if ((status === 'approved' || status === 'rejected') && auth.profile.role !== 'admin' && auth.profile.role !== 'coach') {
-    return NextResponse.json({ error: '只有教練或管理員可以審核付款訂單。' }, { status: 403 })
+  const { data: existingLead, error: existingLeadError } = await supabaseAdmin!
+    .from('signup_leads')
+    .select('id, source')
+    .eq('id', id)
+    .single()
+  if (existingLeadError || !existingLead) {
+    return NextResponse.json({ error: existingLeadError?.message || '找不到報名資料。' }, { status: 404 })
+  }
+  if (existingLead.source === 'course_payment' && auth.profile.role !== 'admin') {
+    return NextResponse.json({ error: '課程付款只能由管理員在管理後台核對。' }, { status: 403 })
   }
 
   const updatePayload: { status: string; notes?: string; reviewed_at?: string; review_note?: string } = { status }
@@ -314,5 +390,5 @@ export async function PATCH(request: NextRequest) {
     emailMessage = emailResult.message
   }
 
-  return NextResponse.json({ lead: data, emailMessage })
+  return NextResponse.json({ lead: safeCoachLead(data), emailMessage })
 }

@@ -81,10 +81,23 @@ type SignupLeadRow = {
 type CourseAttendanceRow = {
   id: string
   enrollment_id: string
+  course_season_course_id: string
   session_date: string
-  status: 'present' | 'absent' | 'excused'
+  status: 'present' | 'absent' | 'excused' | 'makeup'
   note: string
   marked_at: string
+}
+
+type CourseAttendanceDeductionRow = {
+  enrollment_id: string
+  session_date: string
+  deducted_by: string
+  deducted_at: string
+}
+
+type CourseSessionCancellationRow = {
+  course_season_course_id: string
+  session_date: string
 }
 
 type CourseAttendanceResolutionRow = {
@@ -395,6 +408,8 @@ export async function GET(request: NextRequest) {
     coachPublicProfilesResult,
     courseAttendanceResult,
     attendanceResolutionsResult,
+    attendanceDeductionsResult,
+    sessionCancellationsResult,
   ] = await Promise.all([
     supabaseAdmin!
       .from('profiles')
@@ -453,7 +468,7 @@ export async function GET(request: NextRequest) {
       .select('*'),
     supabaseAdmin!
       .from('course_attendance_records')
-      .select('id, enrollment_id, session_date, status, note, marked_at')
+      .select('id, enrollment_id, course_season_course_id, session_date, status, note, marked_at')
       .order('session_date', { ascending: false })
       .limit(5000),
     supabaseAdmin!
@@ -461,6 +476,15 @@ export async function GET(request: NextRequest) {
       .select('attendance_id, enrollment_id, outcome, note, resolved_at')
       .order('resolved_at', { ascending: false })
       .limit(5000),
+    supabaseAdmin!
+      .from('course_attendance_deductions')
+      .select('enrollment_id, session_date, deducted_by, deducted_at')
+      .order('session_date', { ascending: false })
+      .limit(5000),
+    supabaseAdmin!
+      .from('course_session_cancellations')
+      .select('course_season_course_id, session_date')
+      .limit(1000),
   ])
 
   const firstError = [
@@ -478,6 +502,8 @@ export async function GET(request: NextRequest) {
     coachPublicProfilesResult.error,
     courseAttendanceResult.error,
     attendanceResolutionsResult.error,
+    attendanceDeductionsResult.error,
+    sessionCancellationsResult.error,
   ].find(Boolean)
 
   if (firstError) {
@@ -500,6 +526,8 @@ export async function GET(request: NextRequest) {
   const publicCoachRows = (coachPublicProfilesResult.data ?? []) as CoachPublicProfileRow[]
   const courseAttendance = (courseAttendanceResult.data ?? []) as CourseAttendanceRow[]
   const attendanceResolutions = (attendanceResolutionsResult.data ?? []) as CourseAttendanceResolutionRow[]
+  const attendanceDeductions = (attendanceDeductionsResult.data ?? []) as CourseAttendanceDeductionRow[]
+  const sessionCancellations = (sessionCancellationsResult.data ?? []) as CourseSessionCancellationRow[]
   const siteContent = {
     ...applyCourseSeasonToContent(baseSiteContent, currentSeason),
     coachProfiles: publicCoachProfiles,
@@ -528,6 +556,11 @@ export async function GET(request: NextRequest) {
     attendanceByEnrollment.set(record.enrollment_id, [...(attendanceByEnrollment.get(record.enrollment_id) ?? []), record])
   })
   const resolutionByAttendance = new Map(attendanceResolutions.map((resolution) => [resolution.attendance_id, resolution]))
+  const deductionsByEnrollment = new Map<string, CourseAttendanceDeductionRow[]>()
+  attendanceDeductions.forEach((record) => {
+    deductionsByEnrollment.set(record.enrollment_id, [...(deductionsByEnrollment.get(record.enrollment_id) ?? []), record])
+  })
+  const cancelledSessions = new Set(sessionCancellations.map((record) => `${record.course_season_course_id}:${record.session_date}`))
 
   const bindingsByStudent = new Map<string, CoachStudentRow[]>()
   const bindingsByCoach = new Map<string, CoachStudentRow[]>()
@@ -613,6 +646,7 @@ export async function GET(request: NextRequest) {
     const attendanceAnomalies = billingStartSessionDate
       ? (attendanceByEnrollment.get(order.id) ?? [])
           .filter((record) => record.status === 'present' && record.session_date < billingStartSessionDate)
+          .filter((record) => !cancelledSessions.has(`${record.course_season_course_id}:${record.session_date}`))
           .map((record) => {
             const resolution = resolutionByAttendance.get(record.id)
             return {
@@ -629,6 +663,13 @@ export async function GET(request: NextRequest) {
       : []
     const emergencyContactName = payloadText(order.payload, 'emergencyContactName')
     const emergencyContactPhone = payloadText(order.payload, 'emergencyContactPhone')
+    const deductedSessions = (deductionsByEnrollment.get(order.id) ?? []).map((record) => {
+      const coach = profilesById.get(record.deducted_by)
+      const coachName = coach?.name || coach?.email || '教練'
+      const sessionDate = record.session_date.replace(/^\d{4}-/, '').replace('-', '/')
+      const deductedAt = new Intl.DateTimeFormat('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Taipei' }).format(new Date(record.deducted_at))
+      return `${sessionDate}（${coachName}，${deductedAt}）`
+    })
     const registrationDetails = [
       { label: '學員身分', value: studentType === 'returning' ? '舊生' : studentType === 'new' ? '新生' : '' },
       { label: '報名時點', value: enrollmentTiming === 'late' ? '插班報名' : enrollmentTiming === 'regular' ? '本期正常報名' : '' },
@@ -636,6 +677,7 @@ export async function GET(request: NextRequest) {
       { label: '最近一堂到課申報', value: priorAttendanceClaimed ? (attendanceVerificationStatus === 'verified' ? '教練點名已確認到課' : attendanceVerificationStatus === 'rejected' ? '教練點名未到，需人工處理' : '待教練完成該堂點名') : '' },
       { label: '計價方式', value: chargedSessionCount ? (unitRate ? `${chargedSessionCount} 堂 × NT$${unitRate}` : `完整 ${chargedSessionCount} 堂`) : '' },
       { label: '收費課次', value: chargedSessionDates.map((date) => date.replace(/^\d{4}-/, '').replace('-', '/')).join('、') },
+      { label: '已扣除課次', value: deductedSessions.join('、') },
       { label: '推薦資格', value: referrerStatus === 'verified' ? '已核對' : referrerStatus === 'not_verified' ? '未通過核對' : '' },
       { label: '報價鎖定至', value: order.price_locked_until ? new Intl.DateTimeFormat('zh-TW', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Taipei' }).format(new Date(order.price_locked_until)) : '' },
       { label: '手機電話', value: order.phone || '' },

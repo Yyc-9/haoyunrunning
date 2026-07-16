@@ -7,7 +7,6 @@ import {
   ArrowRight,
   CalendarCheck2,
   CheckCircle2,
-  ExternalLink,
   Loader2,
   LockKeyhole,
   ReceiptText,
@@ -357,16 +356,6 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
               {coursePolicyRules.map((rule, index) => (
                 <p key={rule} className="whitespace-pre-line"><span className="mr-2 font-black text-apple-gray-950">（{index + 1}）</span>{rule}</p>
               ))}
-            </div>
-
-            <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
-              <p className="font-black text-blue-950">報名相關疑問</p>
-              <p className="mt-1 text-sm leading-6 text-blue-800">可直接私訊以下任一聯絡窗口，我們會協助確認課程與報名資訊。</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <a href="https://www.instagram.com/nurture.running.team/" target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-blue-300 bg-white px-3 text-sm font-black text-blue-900">好運官方 IG<ExternalLink className="h-3.5 w-3.5" /></a>
-                <a href="https://www.facebook.com/77Coach.tw/" target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-blue-300 bg-white px-3 text-sm font-black text-blue-900">陳盛琦 Facebook<ExternalLink className="h-3.5 w-3.5" /></a>
-                <a href="https://www.instagram.com/chichi_moment/" target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-blue-300 bg-white px-3 text-sm font-black text-blue-900">chichi_moment IG<ExternalLink className="h-3.5 w-3.5" /></a>
-              </div>
             </div>
 
             <div className="mt-6 space-y-3">

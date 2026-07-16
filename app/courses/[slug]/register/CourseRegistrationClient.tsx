@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { CheckCircle2, Loader2, RefreshCw, ShieldCheck, WalletCards } from 'lucide-react'
+import { CheckCircle2, ExternalLink, Loader2, RefreshCw, ShieldCheck, WalletCards } from 'lucide-react'
 import { useAuth } from '@/app/providers'
 import { useSiteContent } from '@/app/site-content-provider'
 import { COURSE_CAPACITY, type CourseAvailability, type LegacyStudentStatus, type MyCourseEnrollment } from '@/lib/course-registration'
@@ -176,10 +176,21 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
               <Link href={`/courses/${course.slug}/register?auth=login`} className="apple-button-primary mt-6 w-full sm:w-fit">登入並開始填寫</Link>
             </div>
           ) : enrollment ? (
-            <div className="px-6 py-12 text-center sm:px-10">
-              <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600" />
-              <h2 className="mt-5 text-2xl font-black">已收到你的報名資料</h2>
-              <p className="mt-3 text-sm leading-6 text-apple-gray-600">目前狀態可在右側查看，管理員核對款項後會更新結果。</p>
+            <div className="px-6 py-10 sm:px-10 sm:py-12">
+              <div className="text-center">
+                <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600" />
+                <h2 className="mt-5 text-2xl font-black">已收到你的報名資料</h2>
+                <p className="mt-3 text-sm leading-6 text-apple-gray-600">目前狀態可在右側查看，管理員核對款項後會更新結果。</p>
+              </div>
+              <div className="mt-8 rounded-lg border border-blue-200 bg-blue-50 p-4 text-left sm:p-5">
+                <p className="font-black text-blue-950">報名相關疑問</p>
+                <p className="mt-1 text-sm leading-6 text-blue-800">報名相關疑問，可以直接私訊以下任一聯絡窗口。</p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  <a href="https://www.instagram.com/nurture.running.team/" target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-blue-300 bg-white px-3 text-sm font-black text-blue-900">好運官方 IG<ExternalLink className="h-3.5 w-3.5" /></a>
+                  <a href="https://www.facebook.com/77Coach.tw/" target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-blue-300 bg-white px-3 text-sm font-black text-blue-900">陳盛琦 Facebook<ExternalLink className="h-3.5 w-3.5" /></a>
+                  <a href="https://www.instagram.com/chichi_moment/" target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-blue-300 bg-white px-3 text-sm font-black text-blue-900">chichi_moment IG<ExternalLink className="h-3.5 w-3.5" /></a>
+                </div>
+              </div>
             </div>
           ) : (
             <DirectCourseRegistrationForm

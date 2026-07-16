@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CheckCircle2, Download, Filter, Inbox, RefreshCw, RotateCcw, Search } from 'lucide-react'
+import { Download, Filter, Inbox, Phone, RefreshCw, Search } from 'lucide-react'
 import CoachSubNav from '@/components/CoachSubNav'
 import { paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
 import { supabase } from '@/lib/supabase'
@@ -17,22 +17,20 @@ type SignupLead = {
   running_experience: string
   goal: string
   companion_count: string
-  amount_text: string
-  transfer_last_five: string
   notes: string
   status: PaymentOrderStatus
   created_at: string
-  payment_submitted_at?: string | null
-  review_note?: string | null
+  emergency_contact_name: string
+  emergency_contact_phone: string
 }
 
 const sourceLabels: Record<SignupLead['source'], string> = {
   anniversary_4th: '4 週年活動',
   group_class: '團練報名',
-  course_payment: '課程付款',
+  course_payment: '課程報名',
 }
 
-const statusLabels = paymentOrderStatusLabels['zh-CN']
+const statusLabels = paymentOrderStatusLabels['zh-TW']
 
 const statusTone: Record<SignupLead['status'], string> = {
   pending_transfer: 'bg-amber-50 text-amber-700',
@@ -170,6 +168,8 @@ export default function CoachSignupsClient() {
         lead.goal,
         lead.companion_count,
         lead.notes,
+        lead.emergency_contact_name,
+        lead.emergency_contact_phone,
       ]
         .filter(Boolean)
         .some((value) => value.toLowerCase().includes(text))
@@ -202,23 +202,6 @@ export default function CoachSignupsClient() {
     }
   }
 
-  async function reviewPayment(id: string, nextStatus: Extract<PaymentOrderStatus, 'approved' | 'rejected'>) {
-    setUpdatingId(id)
-    setError('')
-    setMessage('')
-
-    try {
-      const reviewNote = nextStatus === 'approved' ? '付款核對透過，課表已開通。' : '付款核對未透過或需補充資料。'
-      const { lead: updatedLead, emailMessage } = await updateLeadStatus(id, nextStatus, reviewNote)
-      setLeads((current) => current.map((lead) => (lead.id === id ? updatedLead : lead)))
-      setMessage(emailMessage || reviewNote)
-    } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : '更新審核狀態失敗。')
-    } finally {
-      setUpdatingId('')
-    }
-  }
-
   function exportCsv() {
     const headers = [
       '來源',
@@ -228,8 +211,8 @@ export default function CoachSignupsClient() {
       'Email',
       'Instagram',
       '想報名的團練',
-      '匯款金額',
-      '後五碼',
+      '緊急聯絡人',
+      '緊急聯絡電話',
       '同行人數',
       '跑步經驗',
       '目標',
@@ -245,8 +228,8 @@ export default function CoachSignupsClient() {
       lead.email,
       lead.instagram,
       lead.preferred_course,
-      lead.amount_text,
-      lead.transfer_last_five,
+      lead.emergency_contact_name,
+      lead.emergency_contact_phone,
       lead.companion_count,
       lead.running_experience,
       lead.goal,
@@ -280,10 +263,7 @@ export default function CoachSignupsClient() {
               </p>
               <h1 className="text-3xl font-black text-apple-gray-900 sm:text-5xl">團練報名看板</h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-apple-gray-600 sm:text-base sm:leading-7">
-                優先查看團練報名，也可篩選其他活動與課程付款資料。
-              </p>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-apple-gray-500">
-                付款核對僅供教練或管理員人工對帳；後五碼只是轉帳資料參考，不代表系統已完成真實支付驗證。
+                優先查看團練報名，也可查看指派班級的報名與緊急聯絡資料。付款核對統一由管理員處理。
               </p>
             </div>
 
@@ -309,7 +289,7 @@ export default function CoachSignupsClient() {
               ['全部資料', stats.total],
               ['4 週年活動', stats.anniversary],
               ['團練報名', stats.group],
-              ['課程付款', stats.coursePayment],
+              ['課程報名', stats.coursePayment],
               ['已核准', stats.approved],
             ].map(([label, value]) => (
               <div key={label} className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-5">
@@ -337,7 +317,7 @@ export default function CoachSignupsClient() {
                   <option value="all">全部來源</option>
                   <option value="anniversary_4th">4 週年活動</option>
                   <option value="group_class">團練報名</option>
-                  <option value="course_payment">課程付款</option>
+                  <option value="course_payment">課程報名</option>
                 </select>
               </label>
 
@@ -391,69 +371,48 @@ export default function CoachSignupsClient() {
                         </div>
                         <h2 className="text-2xl font-black text-apple-gray-900">{lead.name}</h2>
                         <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-apple-gray-600">
-                          {lead.phone ? <span>電話：{lead.phone}</span> : null}
+                          {lead.phone ? <a href={`tel:${lead.phone}`} className="inline-flex items-center gap-1 font-semibold hover:text-black"><Phone className="h-3.5 w-3.5" />電話：{lead.phone}</a> : null}
                           {lead.email ? <span>Email：{lead.email}</span> : null}
                           {lead.instagram ? <span>IG：{lead.instagram}</span> : null}
                         </div>
                       </div>
 
-                      <select
-                        value={lead.status}
-                        disabled={updatingId === lead.id}
-                        onChange={(event) => handleStatusChange(lead.id, event.target.value as SignupLead['status'])}
-                        className="apple-input w-full lg:w-40"
-                      >
-                        {Object.entries(statusLabels).map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
+                      {lead.source === 'course_payment' ? <p className="max-w-xs text-xs font-semibold leading-5 text-apple-gray-500">付款與核准狀態請由管理員後台處理。</p> : (
+                        <select
+                          value={lead.status}
+                          disabled={updatingId === lead.id}
+                          onChange={(event) => handleStatusChange(lead.id, event.target.value as SignupLead['status'])}
+                          className="apple-input w-full lg:w-40"
+                        >
+                          {Object.entries(statusLabels).map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </div>
 
                     {lead.source === 'course_payment' ? (
-                      <div className="mt-4 rounded-3xl border border-apple-blue/15 bg-apple-blue/5 p-4">
-                        <div className="mb-4 grid gap-3 md:grid-cols-4">
+                      <div className="mt-4 rounded-lg border border-apple-blue/15 bg-apple-blue/5 p-4">
+                        <div className="grid gap-3 md:grid-cols-3">
                           {[
                             ['報名課程', lead.preferred_course],
-                            ['應付金額', lead.amount_text],
-                            ['後五碼（人工對帳參考）', lead.transfer_last_five],
-                            ['提交時間', formatDate(lead.payment_submitted_at || lead.created_at)],
+                            ['緊急聯絡人', lead.emergency_contact_name],
+                            ['緊急聯絡電話', lead.emergency_contact_phone],
                           ].map(([label, value]) => (
-                            <div key={label} className="rounded-2xl bg-white p-3">
+                            <div key={label} className="rounded-lg bg-white p-3">
                               <p className="text-xs font-semibold text-apple-gray-500">{label}</p>
-                              <p className="mt-1 break-words text-sm font-bold text-apple-gray-900">{value || '-'}</p>
+                              {label === '緊急聯絡電話' && value ? <a href={`tel:${value}`} className="mt-1 inline-flex items-center gap-1 break-words text-sm font-black text-red-700 underline underline-offset-2"><Phone className="h-3.5 w-3.5" />{value}</a> : <p className="mt-1 break-words text-sm font-bold text-apple-gray-900">{value || '-'}</p>}
                             </div>
                           ))}
-                        </div>
-                        <div className="flex flex-col gap-3 sm:flex-row">
-                          <button
-                            type="button"
-                            disabled={updatingId === lead.id || lead.status === 'approved'}
-                            onClick={() => reviewPayment(lead.id, 'approved')}
-                            className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            <CheckCircle2 className="h-4 w-4" />
-                            核准透過
-                          </button>
-                          <button
-                            type="button"
-                            disabled={updatingId === lead.id || lead.status === 'rejected'}
-                            onClick={() => reviewPayment(lead.id, 'rejected')}
-                            className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-white px-5 py-2.5 text-sm font-bold text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            <RotateCcw className="h-4 w-4" />
-                            退回 / 標記異常
-                          </button>
                         </div>
                       </div>
                     ) : null}
 
                     <div className="mt-5 grid gap-3 md:grid-cols-2">
                       {[
-                        ['想報名', lead.preferred_course || lead.companion_count],
-                        ['匯款金額', lead.amount_text],
-                        ['後五碼（人工對帳參考）', lead.transfer_last_five],
+                        ...(lead.source === 'course_payment' ? [] : [['想報名', lead.preferred_course || lead.companion_count]]),
                         ['跑步經驗', lead.running_experience],
                         ['目標', lead.goal],
                         ['備註', lead.notes],
