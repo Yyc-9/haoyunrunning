@@ -342,10 +342,19 @@ export async function POST(request: NextRequest) {
     duplicateGroups: duplicateGroups.length,
     duplicateRecords,
   }
-  await supabaseAdmin
+  const { error: sourceUpdateError } = await supabaseAdmin
     .from('course_season_sync_sources')
-    .update({ last_synced_at: now, last_result: result, last_error: '' })
+    .update({
+      last_synced_at: now,
+      last_result: result,
+      last_error: '',
+      updated_at: now,
+    })
     .eq('id', source.id)
+
+  if (sourceUpdateError) {
+    return NextResponse.json({ error: '學員資料已同步，但同步狀態更新失敗。' }, { status: 500 })
+  }
 
   return NextResponse.json({ sync: result })
 }
