@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { isAdminAllowlistedEmail } from '@/lib/admin-auth'
 import { getAuthedUser, isRevokedDeviceSession, supabaseAdmin } from '@/lib/supabase-server'
 
 const noStoreHeaders = {
@@ -167,11 +168,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: coachBindingError.message }, { status: 500 })
     }
 
-    const nextEmail = user.email ?? existingProfile.email ?? ''
-    if (nextEmail && nextEmail !== existingProfile.email) {
+    const nextEmail = (user.email ?? existingProfile.email ?? '').trim().toLowerCase()
+    const shouldPromoteAdmin =
+      existingProfile.role !== 'admin' && await isAdminAllowlistedEmail(nextEmail)
+    if (
+      (nextEmail && nextEmail !== existingProfile.email) ||
+      shouldPromoteAdmin
+    ) {
       const { data: updatedProfile, error: updateError } = await supabaseAdmin
         .from('profiles')
-        .update({ email: nextEmail })
+        .update({
+          email: nextEmail,
+          ...(shouldPromoteAdmin ? { role: 'admin' as const } : {}),
+        })
         .eq('id', user.id)
         .select('*')
         .single()
@@ -186,18 +195,20 @@ export async function GET(request: NextRequest) {
     return accountResponse(existingProfile)
   }
 
+  const email = (user.email ?? '').trim().toLowerCase()
+  const initialRole = await isAdminAllowlistedEmail(email) ? 'admin' : 'student'
   const { data: profile, error } = await supabaseAdmin
     .from('profiles')
     .insert({
       id: user.id,
-      email: user.email ?? '',
+      email,
       name:
         (user.user_metadata?.name as string | undefined) ||
         user.email?.split('@')[0] ||
         '好運跑者',
       phone: (user.user_metadata?.phone as string | undefined) ?? '',
       pb: (user.user_metadata?.pb as string | undefined) ?? '',
-      role: (user.user_metadata?.role as string | undefined) ?? 'student',
+      role: initialRole,
     })
     .select('*')
     .single()

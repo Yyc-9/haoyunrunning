@@ -26,6 +26,26 @@ export function isAdminEmail(email: string | null | undefined) {
   return getAdminEmails().includes(normalizedEmail)
 }
 
+export async function isAdminAllowlistedEmail(email: string | null | undefined) {
+  const normalizedEmail = normalizeEmail(email)
+  if (!normalizedEmail) return false
+  if (isAdminEmail(normalizedEmail)) return true
+
+  if (!supabaseAdmin) {
+    throw new Error('Supabase server client is not configured.')
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('admin_role_allowlist')
+    .select('email')
+    .eq('email', normalizedEmail)
+    .eq('active', true)
+    .maybeSingle()
+
+  if (error) throw error
+  return Boolean(data)
+}
+
 export async function getAdminProfile(user: User) {
   if (!supabaseAdmin) {
     throw new Error('Supabase server client is not configured.')
@@ -40,10 +60,21 @@ export async function getAdminProfile(user: User) {
   if (error) throw error
 
   const email = normalizeEmail(user.email || profile?.email)
-  const role = profile?.role as AdminProfile['role'] | undefined
-  const isAdmin = role === 'admin' || isAdminEmail(email)
+  let role = profile?.role as AdminProfile['role'] | undefined
+  const allowlisted = role !== 'admin' && await isAdminAllowlistedEmail(email)
+  const isAdmin = role === 'admin' || allowlisted
 
   if (!isAdmin) return null
+
+  if (profile && role !== 'admin' && allowlisted) {
+    const { error: promoteError } = await supabaseAdmin
+      .from('profiles')
+      .update({ role: 'admin' })
+      .eq('id', user.id)
+
+    if (promoteError) throw promoteError
+    role = 'admin'
+  }
 
   return {
     id: user.id,
