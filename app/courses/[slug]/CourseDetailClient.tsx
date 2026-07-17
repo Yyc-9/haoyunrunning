@@ -111,8 +111,8 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
   const courseCoaches = course.coaches.map((coach) => localizeCoach(coach, language))
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
-      <div className="sticky top-24 z-40 border-b border-black/5 bg-white/85 backdrop-blur-md">
+    <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-20 sm:pt-24">
+      <div className="sticky top-[52px] z-40 border-b border-black/10 bg-white shadow-sm sm:top-16">
         <div className="container mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4 sm:px-6 lg:px-8 md:flex-row md:items-center md:justify-between">
           <Link href="/courses" className="inline-flex items-center gap-2 text-sm font-bold text-apple-gray-700 transition-colors hover:text-apple-blue">
             <ArrowLeft className="h-4 w-4" />
