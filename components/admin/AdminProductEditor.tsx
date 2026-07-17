@@ -69,10 +69,13 @@ export default function AdminProductEditor({ product, runAction }: AdminProductE
   const [isExpanded, setIsExpanded] = useState(false)
   const [uploadingKey, setUploadingKey] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
   const [localError, setLocalError] = useState('')
 
   useEffect(() => {
     setDraft(productDraft(product))
+    setDeleteConfirmationOpen(false)
   }, [product])
 
   async function uploadMedia(file: File | undefined, mediaKind: 'image' | 'video', variantIndex?: number | 'gallery') {
@@ -176,6 +179,19 @@ export default function AdminProductEditor({ product, runAction }: AdminProductE
     })
     setIsSaving(false)
     if (saved) setIsExpanded(false)
+  }
+
+  async function deleteProduct() {
+    setLocalError('')
+    setIsDeleting(true)
+    const deleted = await runAction(`delete-product-${product.id}`, {
+      action: 'delete_product',
+      productId: product.id,
+    })
+    setIsDeleting(false)
+    if (!deleted) {
+      setLocalError('商品刪除失敗，請查看上方訊息後再試一次。')
+    }
   }
 
   return (
@@ -341,9 +357,33 @@ export default function AdminProductEditor({ product, runAction }: AdminProductE
         ) : <p className="border-y border-black/10 py-4 text-sm text-apple-gray-500">此商品沒有額外款式，顧客會直接看到主圖。</p>}
       </div>
 
+      {deleteConfirmationOpen ? (
+        <div className="border-t border-red-200 bg-red-50 px-5 py-4" role="region" aria-labelledby={`delete-product-${product.id}-title`}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p id={`delete-product-${product.id}-title`} className="font-black text-red-900">確定刪除「{product.name}」？</p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-red-700">商品會立即從商城與管理清單移除；既有訂單與刪除紀錄仍會保留。</p>
+            </div>
+            <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+              <button type="button" onClick={() => setDeleteConfirmationOpen(false)} disabled={isDeleting} className="apple-button-outline min-h-10 px-4 py-2 text-sm disabled:opacity-50">取消</button>
+              <button type="button" onClick={deleteProduct} disabled={isDeleting} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-black text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50">
+                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                確認刪除
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-3 border-t border-black/10 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div>{localError ? <p className="text-sm font-semibold text-red-600">{localError}</p> : <p className="text-xs text-apple-gray-500">商品 ID：{product.id}</p>}</div>
-        <button type="button" onClick={save} disabled={isSaving || Boolean(uploadingKey)} className="apple-button-primary gap-2 px-5 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50">{isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}儲存商品</button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button type="button" onClick={() => setDeleteConfirmationOpen(true)} disabled={isSaving || isDeleting || Boolean(uploadingKey)} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-red-200 px-4 py-2 text-sm font-black text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50">
+            <Trash2 className="h-4 w-4" />
+            刪除商品
+          </button>
+          <button type="button" onClick={save} disabled={isSaving || isDeleting || Boolean(uploadingKey)} className="apple-button-primary gap-2 px-5 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50">{isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}儲存商品</button>
+        </div>
       </div>
         </>
       ) : null}

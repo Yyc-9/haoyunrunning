@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
       .from('shop_products')
       .select('id, name, category, price, price_label, image, video, rating, reviews, tags, summary, description, gallery, highlights, specifications, usage_notes, external_url, variants, sizes, stock_quantity, active')
       .eq('active', true)
+      .is('deleted_at', null)
       .order('category', { ascending: true })
       .order('name', { ascending: true })
 

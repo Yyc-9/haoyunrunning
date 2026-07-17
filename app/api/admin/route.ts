@@ -206,6 +206,7 @@ type AdminPatchBody =
   | { action?: 'unbind_student'; bindingId?: string }
   | { action?: 'update_product'; productId?: string; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; variants?: Array<{ id?: string; name?: string; image?: string; detailImages?: string[] }>; summary?: string; description?: string; gallery?: string[]; highlights?: string; specifications?: Array<{ label?: string; value?: string }>; usageNotes?: string; externalUrl?: string }
   | { action?: 'create_product'; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; variants?: Array<{ id?: string; name?: string; image?: string; detailImages?: string[] }>; summary?: string; description?: string; gallery?: string[]; highlights?: string; specifications?: Array<{ label?: string; value?: string }>; usageNotes?: string; externalUrl?: string }
+  | { action?: 'delete_product'; productId?: string }
   | { action?: 'save_site_content'; section?: string; value?: unknown }
   | { action?: 'save_season_course'; seasonId?: string; courseSlug?: string; value?: unknown; capacity?: number; billingConfig?: unknown }
   | { action?: 'create_next_course_season'; sourceSeasonId?: string }
@@ -418,6 +419,7 @@ export async function GET(request: NextRequest) {
     supabaseAdmin!
       .from('shop_products')
       .select('id, name, category, price, price_label, image, video, rating, reviews, tags, summary, description, gallery, highlights, specifications, usage_notes, external_url, variants, sizes, stock_quantity, active')
+      .is('deleted_at', null)
       .order('category', { ascending: true })
       .order('name', { ascending: true }),
     supabaseAdmin!
@@ -1367,6 +1369,51 @@ export async function PATCH(request: NextRequest) {
     return json({ order, message: emailMessage || finalReviewNote })
   }
 
+  if (body.action === 'delete_product') {
+    const productId = cleanText(body.productId)
+    if (!productId) {
+      return json({ error: '缺少商品 ID。' }, { status: 400 })
+    }
+
+    const { data: currentProduct, error: currentProductError } = await supabaseAdmin!
+      .from('shop_products')
+      .select('id, name')
+      .eq('id', productId)
+      .is('deleted_at', null)
+      .maybeSingle()
+
+    if (currentProductError) {
+      return json({ error: currentProductError.message || '讀取商品失敗。' }, { status: 500 })
+    }
+    if (!currentProduct) {
+      return json({ error: '找不到商品，或商品已經刪除。' }, { status: 404 })
+    }
+
+    const { data: deletedProduct, error } = await supabaseAdmin!
+      .from('shop_products')
+      .update({
+        active: false,
+        deleted_at: new Date().toISOString(),
+        deleted_by: auth.adminProfile.id,
+      })
+      .eq('id', productId)
+      .is('deleted_at', null)
+      .select('id')
+      .maybeSingle()
+
+    if (error) {
+      return json({ error: error.message || '刪除商品失敗。' }, { status: 500 })
+    }
+    if (!deletedProduct) {
+      return json({ error: '商品已被其他管理員刪除，請重新整理。' }, { status: 409 })
+    }
+
+    return json({
+      product: deletedProduct,
+      message: `商品「${currentProduct.name}」已刪除；既有訂單記錄與刪除紀錄仍會保留。`,
+    })
+  }
+
   if (body.action === 'update_product') {
     const productId = cleanText(body.productId)
     const name = cleanText(body.name).slice(0, 180)
@@ -1435,6 +1482,7 @@ export async function PATCH(request: NextRequest) {
         active,
       })
       .eq('id', productId)
+      .is('deleted_at', null)
       .select('*')
       .single()
 
