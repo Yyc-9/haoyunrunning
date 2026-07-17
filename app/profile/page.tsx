@@ -126,46 +126,46 @@ export default function ProfilePage() {
 
   return (
     <main className="min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
-      <div className="container mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-12">
+      <div className="container mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-12">
         {error ? <p role="alert" className="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p> : null}
 
         <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-lg bg-black text-white shadow-xl">
           <div className="absolute inset-y-0 left-0 w-2 bg-emerald-400" />
-          <div className="grid gap-6 p-5 pl-7 sm:p-8 sm:pl-10 lg:grid-cols-[1fr_320px] lg:items-stretch">
+          <div className="grid gap-4 p-4 pl-6 sm:gap-6 sm:p-8 sm:pl-10 lg:grid-cols-[1fr_320px] lg:items-stretch">
             <div className="min-w-0">
               <div className="flex items-center gap-2 text-xs font-black text-emerald-300"><Sparkles className="h-4 w-4" />GOOD LUCK RUNNER ID</div>
-              <div className="mt-5 flex min-w-0 items-center gap-4">
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-2xl font-black sm:h-20 sm:w-20">{displayName.charAt(0)}</div>
-                <div className="min-w-0"><h1 className="truncate text-3xl font-black sm:text-5xl">{displayName}</h1><p className="mt-1 truncate text-sm text-white/55">{profile.email || user.email}</p></div>
+              <div className="mt-4 flex min-w-0 items-center gap-3 sm:mt-5 sm:gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-xl font-black sm:h-20 sm:w-20 sm:text-2xl">{displayName.charAt(0)}</div>
+                <div className="min-w-0"><h1 className="truncate text-2xl font-black sm:text-5xl">{displayName}</h1><p className="mt-1 truncate text-[11px] text-white/55 sm:text-sm">{profile.email || user.email}</p></div>
               </div>
-              <p className="mt-5 max-w-2xl text-sm leading-6 text-white/70 sm:text-base sm:leading-7">{profile.bio || '寫下你的跑步故事，讓這張跑者名片更像你。'}</p>
-              <div className="mt-6 grid grid-cols-3 gap-2 sm:max-w-2xl sm:gap-3">
+              <p className="mt-4 line-clamp-2 max-w-2xl text-xs leading-5 text-white/70 sm:mt-5 sm:text-base sm:leading-7">{profile.bio || '寫下你的跑步故事，讓這張跑者名片更像你。'}</p>
+              <div className="mt-4 grid grid-cols-3 gap-2 sm:mt-6 sm:max-w-2xl sm:gap-3">
                 {[
                   ['跑齡', getRunningLabel(profile.running_since)],
                   ['偏好', profile.favorite_distance || '待補充'],
                   ['PB', profile.pb.replace('｜', ' ') || '待補充'],
-                ].map(([label, value]) => <div key={label} className="min-w-0 rounded-md bg-white/10 p-3"><p className="text-[10px] font-bold text-white/45 sm:text-xs">{label}</p><p className="mt-1 truncate text-xs font-black sm:text-sm">{value}</p></div>)}
+                ].map(([label, value]) => <div key={label} className="min-w-0 rounded-md bg-white/10 p-2.5 sm:p-3"><p className="text-[9px] font-bold text-white/45 sm:text-xs">{label}</p><p className="mt-1 truncate text-[11px] font-black sm:text-sm">{value}</p></div>)}
               </div>
 
-              <div className="mt-3 grid gap-2 sm:grid-cols-2 sm:gap-3">
-                <div className="min-w-0 rounded-md border border-white/10 bg-white/10 p-3 sm:p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:mt-3 sm:gap-3">
+                <div className="min-w-0 rounded-md border border-white/10 bg-white/10 p-2.5 sm:p-4">
+                  <div className="flex flex-col items-start gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-2">
                     <div>
-                      <p className="text-[10px] font-black text-emerald-300 sm:text-xs">NEXT RACE</p>
-                      <h2 className="mt-1 text-sm font-black text-white sm:text-base">目標賽事</h2>
+                      <p className="text-[9px] font-black text-emerald-300 sm:text-xs">NEXT RACE</p>
+                      <h2 className="mt-0.5 text-xs font-black text-white sm:mt-1 sm:text-base">目標賽事</h2>
                     </div>
-                    {raceCountdown ? <span className="whitespace-nowrap rounded-full bg-white px-2.5 py-1 font-mono text-[10px] font-black tabular-nums text-black sm:text-xs">{raceCountdown.label}</span> : null}
+                    {raceCountdown ? <span className="whitespace-nowrap rounded-full bg-white px-2 py-0.5 font-mono text-[9px] font-black tabular-nums text-black sm:px-2.5 sm:py-1 sm:text-xs">{raceCountdown.label}</span> : null}
                   </div>
-                  <p className="mt-2 line-clamp-2 text-xs leading-5 text-white/65 sm:text-sm">
+                  <p className="mt-1.5 line-clamp-2 text-[10px] leading-4 text-white/65 sm:mt-2 sm:text-sm sm:leading-5">
                     {getTargetEventLabel(profile.target_event) || '尚未選擇目標賽事。'}
                   </p>
-                  {race ? <a href={race.officialUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1.5 text-xs font-black text-white">官方資訊<ExternalLink className="h-3.5 w-3.5" /></a> : null}
+                  {race ? <a href={race.officialUrl} target="_blank" rel="noreferrer" className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-black text-white sm:mt-2 sm:gap-1.5 sm:text-xs">官方資訊<ExternalLink className="h-3 w-3 sm:h-3.5 sm:w-3.5" /></a> : null}
                 </div>
 
-                <div className="min-w-0 rounded-md border border-white/10 bg-white/10 p-3 sm:p-4">
-                  <p className="text-[10px] font-black text-emerald-300 sm:text-xs">CONTACT</p>
-                  <h2 className="mt-1 text-sm font-black text-white sm:text-base">聯絡資料</h2>
-                  <div className="mt-2 space-y-1 text-xs leading-5 text-white/65 sm:text-sm">
+                <div className="min-w-0 rounded-md border border-white/10 bg-white/10 p-2.5 sm:p-4">
+                  <p className="text-[9px] font-black text-emerald-300 sm:text-xs">CONTACT</p>
+                  <h2 className="mt-0.5 text-xs font-black text-white sm:mt-1 sm:text-base">聯絡資料</h2>
+                  <div className="mt-1.5 space-y-0.5 text-[10px] leading-4 text-white/65 sm:mt-2 sm:space-y-1 sm:text-sm sm:leading-5">
                     <p className="break-words">{profile.phone || '尚未填寫電話'}</p>
                     <p className="break-words">{profile.instagram ? `Instagram · @${profile.instagram}` : '尚未填寫 Instagram'}</p>
                     <p className="break-words">{profile.facebook ? `Facebook · ${profile.facebook}` : '尚未填寫 Facebook'}</p>
@@ -174,37 +174,37 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="flex flex-col justify-between rounded-md bg-white p-4 text-black sm:p-5">
+            <div className="flex flex-col justify-between rounded-md bg-white p-3 text-black sm:p-5">
               <div><div className="flex items-center justify-between"><p className="text-xs font-black text-apple-gray-500">PROFILE STATUS</p><span className="text-sm font-black">{profileCompletion}%</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-apple-gray-200"><div className="h-full bg-emerald-500" style={{ width: `${profileCompletion}%` }} /></div>
-              <div className="mt-5 space-y-3 text-sm">
+              <div className="mt-3 grid gap-2 text-xs sm:mt-5 sm:gap-3 sm:text-sm">
                 <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-apple-gray-400" />{profile.city || '尚未選擇城市'}</p>
-                <p className="flex items-start gap-2"><Target className="mt-0.5 h-4 w-4 shrink-0 text-apple-gray-400" /><span>{profile.goal || '尚未設定近期目標'}</span></p>
+                <p className="flex items-start gap-2"><Target className="mt-0.5 h-4 w-4 shrink-0 text-apple-gray-400" /><span className="line-clamp-1 sm:line-clamp-none">{profile.goal || '尚未設定近期目標'}</span></p>
               </div></div>
-              <Link href="/profile/edit" className="apple-button-primary mt-5 w-full gap-2 px-4 py-2.5 text-sm"><Edit3 className="h-4 w-4" />修改跑者資料</Link>
+              <Link href="/profile/edit" className="apple-button-primary mt-3 w-full gap-2 px-4 py-2 text-xs sm:mt-5 sm:py-2.5 sm:text-sm"><Edit3 className="h-4 w-4" />修改跑者資料</Link>
             </div>
           </div>
         </motion.section>
 
         {isStudentAccount ? (
-          <section id="attendance-overview" className="scroll-mt-24 border-t border-black/10 py-7 sm:py-10">
+          <section id="attendance-overview" className="scroll-mt-24 border-t border-black/10 py-4 sm:py-10">
             <button
               type="button"
               aria-expanded={isAttendanceOpen}
               aria-controls="student-attendance-content"
               onClick={() => setIsAttendanceOpen((current) => !current)}
-              className="flex w-full items-center justify-between gap-4 rounded-lg border border-black/10 bg-white p-4 text-left shadow-sm transition hover:border-black/20 hover:bg-apple-gray-100 sm:p-5"
+              className="flex w-full items-center justify-between gap-3 rounded-lg border border-black/10 bg-white p-3 text-left shadow-sm transition hover:border-black/20 hover:bg-apple-gray-100 sm:gap-4 sm:p-5"
             >
               <span className="flex min-w-0 items-center gap-3">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black text-white">
-                  <CalendarCheck2 className="h-5 w-5" />
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black text-white sm:h-11 sm:w-11">
+                  <CalendarCheck2 className="h-4 w-4 sm:h-5 sm:w-5" />
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-xs font-black text-apple-blue">ATTENDANCE</span>
-                  <span className="mt-1 block text-xl font-black text-black">我的點名</span>
-                  <span className="mt-1 block text-xs leading-5 text-apple-gray-500 sm:text-sm">查看到課、請假與本季度補課安排</span>
+                  <span className="block text-[10px] font-black text-apple-blue sm:text-xs">ATTENDANCE</span>
+                  <span className="mt-0.5 block text-lg font-black text-black sm:mt-1 sm:text-xl">我的點名</span>
+                  <span className="mt-1 hidden text-xs leading-5 text-apple-gray-500 sm:block sm:text-sm">查看到課、請假與本季度補課安排</span>
                 </span>
               </span>
-              <span className="flex shrink-0 items-center gap-2 text-xs font-black text-apple-gray-600 sm:text-sm">
+              <span className="flex shrink-0 items-center gap-1.5 text-xs font-black text-apple-gray-600 sm:gap-2 sm:text-sm">
                 {isAttendanceOpen ? '收合' : '展開'}
                 <ChevronDown className={`h-4 w-4 transition-transform ${isAttendanceOpen ? 'rotate-180' : ''}`} />
               </span>
@@ -220,7 +220,7 @@ export default function ProfilePage() {
           </section>
         ) : null}
 
-        <section className="border-t border-black/10 py-7 sm:py-10">
+        <section className="border-t border-black/10 py-6 sm:py-10">
           <div className="flex items-end justify-between gap-4">
             <div><p className="text-xs font-bold text-apple-blue sm:text-sm">ACHIEVEMENTS</p><h2 className="mt-1 text-2xl font-black text-black">榮譽勳章</h2></div>
             {isAccountLoading ? <Loader2 className="h-5 w-5 animate-spin text-apple-gray-400" /> : <p className="text-sm font-black">{earnedCount} / {achievements.length}</p>}
@@ -231,11 +231,11 @@ export default function ProfilePage() {
             {achievements.map((badge) => {
               const Icon = achievementIcons[badge.icon as keyof typeof achievementIcons] ?? Award
               return (
-                <article key={badge.slug} className={`min-h-44 rounded-lg border p-4 sm:min-h-52 sm:p-5 ${badge.earned ? rarityTone[badge.rarity] : 'border-black/10 bg-apple-gray-100 text-apple-gray-500'}`}>
+                <article key={badge.slug} className={`min-h-40 rounded-lg border p-3 sm:min-h-52 sm:p-5 ${badge.earned ? rarityTone[badge.rarity] : 'border-black/10 bg-apple-gray-100 text-apple-gray-500'}`}>
                   <div className="flex items-start justify-between gap-2"><div className="flex h-10 w-10 items-center justify-center rounded-full bg-white ring-1 ring-black/10">{badge.earned ? <Icon className="h-5 w-5" /> : <LockKeyhole className="h-4 w-4" />}</div><span className="rounded-full bg-white/80 px-2 py-1 text-[10px] font-black">{badge.category}</span></div>
-                  <h3 className="mt-4 text-base font-black sm:text-lg">{badge.name}</h3>
-                  <p className="mt-2 line-clamp-3 text-xs leading-5 opacity-80 sm:text-sm sm:leading-6">{badge.description}</p>
-                  <p className="mt-3 border-t border-current/10 pt-2 text-[11px] font-bold leading-4 opacity-65">{badge.earned ? badge.reason || '已獲得' : badge.unlockHint}</p>
+                  <h3 className="mt-3 text-base font-black sm:mt-4 sm:text-lg">{badge.name}</h3>
+                  <p className="mt-1.5 line-clamp-2 text-xs leading-5 opacity-80 sm:mt-2 sm:line-clamp-3 sm:text-sm sm:leading-6">{badge.description}</p>
+                  <p className="mt-2 border-t border-current/10 pt-2 text-[10px] font-bold leading-4 opacity-65 sm:mt-3 sm:text-[11px]">{badge.earned ? badge.reason || '已獲得' : badge.unlockHint}</p>
                 </article>
               )
             })}
@@ -244,7 +244,7 @@ export default function ProfilePage() {
 
         <section className="border-t border-black/10 py-7">
           <h2 className="text-xl font-black text-black">常用入口</h2>
-          <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-4">{accountLinks.map((item) => <Link key={item.href} href={item.href} className="flex min-h-24 flex-col justify-between rounded-lg border border-black/10 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 sm:min-h-32 sm:p-5"><item.icon className="h-5 w-5 text-apple-blue" /><span className="mt-4 text-xs font-black sm:text-base">{item.title}</span></Link>)}</div>
+          <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-4">{accountLinks.map((item) => <Link key={item.href} href={item.href} className="flex min-h-20 flex-col justify-between rounded-lg border border-black/10 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 sm:min-h-32 sm:p-5"><item.icon className="h-5 w-5 text-apple-blue" /><span className="mt-3 text-xs font-black sm:mt-4 sm:text-base">{item.title}</span></Link>)}</div>
         </section>
 
         <a href="https://www.instagram.com/nurture.running.team/" target="_blank" rel="noreferrer" className="mb-4 inline-flex items-center gap-2 text-sm font-bold text-apple-gray-600"><Instagram className="h-4 w-4" />聯絡好運跑班</a>
