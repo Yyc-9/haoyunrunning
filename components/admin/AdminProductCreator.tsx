@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight, Film, ImagePlus, Loader2, PackagePlus, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, Film, ImagePlus, Loader2, PackagePlus, Plus, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 type AdminProductCreatorProps = {
@@ -93,6 +93,7 @@ export async function uploadProductMedia(file: File, mediaKind: 'image' | 'video
 
 export default function AdminProductCreator({ runAction }: AdminProductCreatorProps) {
   const [form, setForm] = useState(initialProductForm)
+  const [isExpanded, setIsExpanded] = useState(false)
   const [uploadingKind, setUploadingKind] = useState('')
   const [uploadError, setUploadError] = useState('')
 
@@ -182,16 +183,37 @@ export default function AdminProductCreator({ runAction }: AdminProductCreatorPr
 
     if (created) {
       setForm(initialProductForm)
+      setIsExpanded(false)
     }
   }
 
   return (
-    <div className="apple-card p-5">
-      <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
-        <div>
-          <h2 className="text-xl font-black text-apple-gray-900">新增商城商品</h2>
-          <p className="mt-1 text-sm leading-6 text-apple-gray-600">主圖為必填，也可加入一支商品影片。可先儲存為下架狀態，確認完成後再公開。</p>
-        </div>
+    <div className="apple-card overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setIsExpanded((current) => !current)}
+        aria-expanded={isExpanded}
+        className="flex w-full items-center justify-between gap-4 p-4 text-left transition hover:bg-apple-gray-50 sm:px-5"
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black text-white">
+            <PackagePlus className="h-5 w-5" />
+          </span>
+          <span className="min-w-0">
+            <span className="block font-black text-apple-gray-900">新增商城商品</span>
+            <span className="mt-0.5 block truncate text-xs font-semibold text-apple-gray-500">需要建立商品時再展開完整表單</span>
+          </span>
+        </span>
+        <span className="flex shrink-0 items-center gap-2 text-xs font-bold text-apple-gray-600">
+          {isExpanded ? '收合' : '展開新增'}
+          <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+        </span>
+      </button>
+
+      {isExpanded ? (
+        <div className="border-t border-black/10 p-4 sm:p-5">
+          <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
+            <p className="max-w-xl text-sm leading-6 text-apple-gray-600">主圖為必填，也可加入一支商品影片。可先儲存為下架狀態，確認完成後再公開。</p>
         <div className="flex flex-wrap gap-2">
           <label title="上傳商品主圖" className="apple-button-outline inline-flex cursor-pointer items-center justify-center gap-2 px-4 py-3">
             {uploadingKind === 'image' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
@@ -209,7 +231,7 @@ export default function AdminProductCreator({ runAction }: AdminProductCreatorPr
             <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={Boolean(uploadingKind) || form.gallery.length >= 12} onChange={(event) => handleMedia(event.target.files?.[0], 'image', 'gallery')} />
           </label>
         </div>
-      </div>
+          </div>
 
       {uploadError ? <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">{uploadError}</p> : null}
 
@@ -321,6 +343,8 @@ export default function AdminProductCreator({ runAction }: AdminProductCreatorPr
           <label><span className="mb-2 block text-xs font-bold text-apple-gray-500">官方商品連結（選填）</span><input type="url" value={form.externalUrl} onChange={(event) => setForm((current) => ({ ...current, externalUrl: event.target.value }))} placeholder="https://" className="apple-input" /></label>
         </div>
       </div>
+        </div>
+      ) : null}
     </div>
   )
 }

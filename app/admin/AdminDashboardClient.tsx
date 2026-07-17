@@ -733,46 +733,51 @@ export default function AdminDashboardClient() {
                   </div>
                 </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[1120px] text-left text-sm">
+              <div className="hidden overflow-x-auto xl:block">
+                <table className="w-full table-fixed text-left text-sm">
                   <thead className="bg-apple-gray-100 text-apple-gray-600">
                     <tr>
-                      {['姓名', '信箱', '權限狀態', '公開教練身份', '綁定學員數', '負責課程', '建立時間', '操作'].map((header) => (
-                        <th key={header} className="px-4 py-3 font-bold">{header}</th>
-                      ))}
+                      <th className="w-[10%] px-3 py-3 font-bold">姓名</th>
+                      <th className="w-[16%] px-3 py-3 font-bold">信箱</th>
+                      <th className="w-[12%] px-3 py-3 font-bold">權限狀態</th>
+                      <th className="w-[18%] px-3 py-3 font-bold">公開教練身份</th>
+                      <th className="w-[8%] px-3 py-3 font-bold">學員數</th>
+                      <th className="w-[14%] px-3 py-3 font-bold">負責課程</th>
+                      <th className="w-[11%] px-3 py-3 font-bold">建立時間</th>
+                      <th className="w-[11%] px-3 py-3 font-bold">操作</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/10">
                     {filteredCoaches.map((coach) => (
                       <tr key={coach.id}>
-                        <td className="px-4 py-4 font-bold text-apple-gray-900">{coach.name}</td>
-                        <td className="px-4 py-4 text-apple-gray-600">{coach.email || '-'}</td>
-                        <td className="px-4 py-4">
-                          <span className={`rounded-full px-3 py-1 text-xs font-bold ${coach.coachEnabled ? 'bg-emerald-50 text-emerald-700' : 'bg-apple-gray-100 text-apple-gray-600'}`}>
+                        <td className="truncate px-3 py-3 font-bold text-apple-gray-900" title={coach.name}>{coach.name}</td>
+                        <td className="truncate px-3 py-3 text-apple-gray-600" title={coach.email || undefined}>{coach.email || '-'}</td>
+                        <td className="px-3 py-3">
+                          <span className={`inline-flex rounded-full px-2 py-1 text-[11px] font-bold ${coach.coachEnabled ? 'bg-emerald-50 text-emerald-700' : 'bg-apple-gray-100 text-apple-gray-600'}`}>
                             {coach.role === 'admin' ? '管理員' : coach.coachEnabled ? '教練已啟用' : '未啟用'}
                           </span>
                         </td>
-                        <td className="px-4 py-4">
+                        <td className="px-3 py-3">
                           <select
                             value={coach.publicCoachKey}
                             disabled={!coach.coachEnabled || updatingId === `coach-profile-${coach.id}`}
                             onChange={(event) => runAction(`coach-profile-${coach.id}`, { action: 'link_coach_public_profile', userId: coach.id, coachKey: event.target.value })}
-                            className="apple-input min-w-44 py-2 text-xs disabled:opacity-50"
+                            className="apple-input w-full min-w-0 py-2 text-xs disabled:opacity-50"
                             aria-label={`設定 ${coach.name} 的公開教練身份`}
                           >
                             <option value="">尚未連結</option>
                             {data.coachPublicProfiles.map((profile) => <option key={profile.coachKey} value={profile.coachKey}>{profile.displayName}{profile.ownerProfileId && profile.ownerProfileId !== coach.id ? '（已連結其他帳號）' : ''}</option>)}
                           </select>
                         </td>
-                        <td className="px-4 py-4 text-apple-gray-700">{coach.boundStudentCount}</td>
-                        <td className="px-4 py-4 text-apple-gray-600">{coach.courses || '暫無資料'}</td>
-                        <td className="px-4 py-4 text-apple-gray-600">{formatDate(coach.createdAt)}</td>
-                        <td className="px-4 py-4">
+                        <td className="px-3 py-3 text-apple-gray-700">{coach.boundStudentCount}</td>
+                        <td className="truncate px-3 py-3 text-apple-gray-600" title={coach.courses || undefined}>{coach.courses || '暫無資料'}</td>
+                        <td className="px-3 py-3 text-xs text-apple-gray-600">{formatDate(coach.createdAt)}</td>
+                        <td className="px-3 py-3">
                           <button
                             type="button"
                             disabled={coach.role === 'admin' || updatingId === coach.id}
                             onClick={() => runAction(coach.id, { action: 'set_coach_role', userId: coach.id, enabled: !coach.coachEnabled })}
-                            className="rounded-full bg-black px-4 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                            className="w-full rounded-lg bg-black px-2 py-2 text-[11px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
                           >
                             {coach.coachEnabled ? '取消教練權限' : '授予教練權限'}
                           </button>
@@ -781,6 +786,56 @@ export default function AdminDashboardClient() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+              <div className="divide-y divide-black/10 xl:hidden">
+                {filteredCoaches.map((coach) => (
+                  <article key={coach.id} className="p-4 sm:p-5">
+                    <div className="flex min-w-0 items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="truncate font-black text-apple-gray-900">{coach.name}</h3>
+                        <p className="mt-1 truncate text-sm text-apple-gray-500">{coach.email || '未提供信箱'}</p>
+                      </div>
+                      <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${coach.coachEnabled ? 'bg-emerald-50 text-emerald-700' : 'bg-apple-gray-100 text-apple-gray-600'}`}>
+                        {coach.role === 'admin' ? '管理員' : coach.coachEnabled ? '教練已啟用' : '未啟用'}
+                      </span>
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-apple-gray-50 p-3 text-sm">
+                      <div>
+                        <p className="text-xs font-bold text-apple-gray-400">綁定學員</p>
+                        <p className="mt-1 font-black text-apple-gray-900">{coach.boundStudentCount} 位</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-apple-gray-400">建立時間</p>
+                        <p className="mt-1 text-xs font-semibold leading-5 text-apple-gray-700">{formatDate(coach.createdAt)}</p>
+                      </div>
+                      <div className="col-span-2 min-w-0">
+                        <p className="text-xs font-bold text-apple-gray-400">負責課程</p>
+                        <p className="mt-1 break-words font-semibold leading-5 text-apple-gray-700">{coach.courses || '暫無資料'}</p>
+                      </div>
+                    </div>
+                    <label className="mt-4 block">
+                      <span className="mb-2 block text-xs font-bold text-apple-gray-500">公開教練身份</span>
+                      <select
+                        value={coach.publicCoachKey}
+                        disabled={!coach.coachEnabled || updatingId === `coach-profile-${coach.id}`}
+                        onChange={(event) => runAction(`coach-profile-${coach.id}`, { action: 'link_coach_public_profile', userId: coach.id, coachKey: event.target.value })}
+                        className="apple-input w-full min-w-0 py-2.5 text-sm disabled:opacity-50"
+                        aria-label={`設定 ${coach.name} 的公開教練身份`}
+                      >
+                        <option value="">尚未連結</option>
+                        {data.coachPublicProfiles.map((profile) => <option key={profile.coachKey} value={profile.coachKey}>{profile.displayName}{profile.ownerProfileId && profile.ownerProfileId !== coach.id ? '（已連結其他帳號）' : ''}</option>)}
+                      </select>
+                    </label>
+                    <button
+                      type="button"
+                      disabled={coach.role === 'admin' || updatingId === coach.id}
+                      onClick={() => runAction(coach.id, { action: 'set_coach_role', userId: coach.id, enabled: !coach.coachEnabled })}
+                      className="mt-3 w-full rounded-xl bg-black px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {coach.coachEnabled ? '取消教練權限' : '授予教練權限'}
+                    </button>
+                  </article>
+                ))}
               </div>
               {filteredCoaches.length === 0 ? (
                 <div className="p-8 text-center text-sm font-semibold text-apple-gray-500">
@@ -791,12 +846,19 @@ export default function AdminDashboardClient() {
           ) : null}
 
           {activeTab === 'products' && data ? (
-	            <section className="space-y-5">
-	              <AdminProductCreator runAction={runAction} />
-	              <div className="px-1">
-	                <h2 className="text-xl font-black text-apple-gray-900">商品資料與庫存</h2>
-	                <p className="mt-1 text-sm text-apple-gray-600">直接修改商品內容、圖片、影片、款式、售價、庫存與上架狀態。</p>
+	            <section className="space-y-3">
+	              <div className="flex flex-col gap-3 px-1 sm:flex-row sm:items-end sm:justify-between">
+	                <div>
+	                  <h2 className="text-xl font-black text-apple-gray-900">商城商品管理</h2>
+	                  <p className="mt-1 text-sm text-apple-gray-600">商品以精簡清單顯示，需要修改時再展開完整內容。</p>
+	                </div>
+	                <div className="flex flex-wrap gap-2 text-xs font-bold">
+	                  <span className="rounded-full bg-white px-3 py-1.5 text-apple-gray-600 ring-1 ring-black/10">共 {data.products.length} 件</span>
+	                  <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-700">上架 {data.products.filter((product) => product.active).length}</span>
+	                  <span className="rounded-full bg-amber-50 px-3 py-1.5 text-amber-700">低庫存 {data.products.filter((product) => product.stockQuantity <= 5).length}</span>
+	                </div>
 	              </div>
+	              <AdminProductCreator runAction={runAction} />
 	              {data.products.length === 0 ? (
 	                <div className="apple-card p-10 text-center text-sm font-semibold text-apple-gray-500">目前沒有商品，請使用上方表單建立第一件商品。</div>
 	              ) : data.products.map((product) => (

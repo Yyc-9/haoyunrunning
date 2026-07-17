@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
-import { ChevronLeft, ChevronRight, Film, ImagePlus, Loader2, Plus, Save, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, Film, ImagePlus, Loader2, Pencil, Plus, Save, Trash2 } from 'lucide-react'
 import { uploadProductMedia } from '@/components/admin/AdminProductCreator'
 
 export type AdminEditableProduct = {
@@ -66,6 +66,7 @@ function parseSpecificationLines(value: string) {
 
 export default function AdminProductEditor({ product, runAction }: AdminProductEditorProps) {
   const [draft, setDraft] = useState(() => productDraft(product))
+  const [isExpanded, setIsExpanded] = useState(false)
   const [uploadingKey, setUploadingKey] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [localError, setLocalError] = useState('')
@@ -152,7 +153,7 @@ export default function AdminProductEditor({ product, runAction }: AdminProductE
 
     const priceTwd = Number(draft.price || 0)
     setIsSaving(true)
-    await runAction(`product-${product.id}`, {
+    const saved = await runAction(`product-${product.id}`, {
       action: 'update_product',
       productId: product.id,
       name: draft.name,
@@ -174,10 +175,43 @@ export default function AdminProductEditor({ product, runAction }: AdminProductE
       active: draft.active,
     })
     setIsSaving(false)
+    if (saved) setIsExpanded(false)
   }
 
   return (
     <article className="apple-card overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setIsExpanded((current) => !current)}
+        aria-expanded={isExpanded}
+        className="grid w-full grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-3 p-3 text-left transition hover:bg-apple-gray-50 sm:grid-cols-[64px_minmax(0,1fr)_auto] sm:gap-4 sm:p-4"
+      >
+        <span className="relative h-14 w-14 overflow-hidden rounded-lg border border-black/10 bg-apple-gray-100 sm:h-16 sm:w-16">
+          <Image src={draft.image} alt="" fill sizes="64px" className="object-contain p-1" />
+        </span>
+        <span className="min-w-0">
+          <span className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className="truncate font-black text-apple-gray-950">{draft.name}</span>
+            <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${draft.active ? 'bg-emerald-50 text-emerald-700' : 'bg-apple-gray-100 text-apple-gray-600'}`}>
+              {draft.active ? '上架' : '下架'}
+            </span>
+          </span>
+          <span className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold text-apple-gray-500">
+            <span>{draft.category}</span>
+            <span>{draft.price ? `NT$ ${Number(draft.price).toLocaleString('zh-TW')}` : '價格洽詢'}</span>
+            <span className={Number(draft.stockQuantity) <= 5 ? 'text-amber-700' : ''}>庫存 {draft.stockQuantity || 0}</span>
+            <span>{draft.variants.length} 款式</span>
+          </span>
+        </span>
+        <span className="flex shrink-0 items-center gap-2 text-xs font-bold text-apple-gray-600">
+          <Pencil className="hidden h-4 w-4 sm:block" />
+          <span className="hidden sm:inline">{isExpanded ? '收合' : '編輯'}</span>
+          <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+        </span>
+      </button>
+
+      {isExpanded ? (
+        <>
       <div className="grid gap-5 p-5 lg:grid-cols-[380px_minmax(0,1fr)]">
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
@@ -311,6 +345,8 @@ export default function AdminProductEditor({ product, runAction }: AdminProductE
         <div>{localError ? <p className="text-sm font-semibold text-red-600">{localError}</p> : <p className="text-xs text-apple-gray-500">商品 ID：{product.id}</p>}</div>
         <button type="button" onClick={save} disabled={isSaving || Boolean(uploadingKey)} className="apple-button-primary gap-2 px-5 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50">{isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}儲存商品</button>
       </div>
+        </>
+      ) : null}
     </article>
   )
 }
