@@ -4,11 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
-  ArrowRight, Award, CalendarCheck2, CircleUserRound, Crown, Edit3, ExternalLink, HeartHandshake,
+  ArrowRight, Award, CalendarCheck2, ChevronDown, CircleUserRound, Crown, Edit3, ExternalLink, HeartHandshake,
   Instagram, Loader2, LockKeyhole, MapPin, Medal, MessageCircleHeart, Route, ShoppingBag,
   Sparkles, Target, TicketCheck, Trophy, UserRound, UsersRound,
 } from 'lucide-react'
 import { useAuth } from '@/app/providers'
+import StudentAttendancePanel from '@/components/StudentAttendancePanel'
 import {
   emptyProfile, getRaceCountdown, getRaceEvent, getTargetEventLabel, type AccountProfile, type Achievement,
 } from '@/lib/runner-profile'
@@ -54,6 +55,7 @@ export default function ProfilePage() {
   const [isAccountLoading, setIsAccountLoading] = useState(true)
   const [error, setError] = useState('')
   const [countdownNow, setCountdownNow] = useState<Date | null>(null)
+  const [isAttendanceOpen, setIsAttendanceOpen] = useState(false)
 
   const loadAccount = useCallback(async () => {
     if (!supabase || !isLoggedIn) return
@@ -84,9 +86,22 @@ export default function ProfilePage() {
     return () => window.clearInterval(timer)
   }, [])
 
+  useEffect(() => {
+    const openAttendanceFromHash = () => {
+      if (window.location.hash === '#attendance-overview') {
+        setIsAttendanceOpen(true)
+      }
+    }
+
+    openAttendanceFromHash()
+    window.addEventListener('hashchange', openAttendanceFromHash)
+    return () => window.removeEventListener('hashchange', openAttendanceFromHash)
+  }, [])
+
   const earnedCount = useMemo(() => achievements.filter((badge) => badge.earned).length, [achievements])
   const completion = achievements.length ? Math.round((earnedCount / achievements.length) * 100) : 0
   const displayName = profile.nickname || profile.name || user?.name || '好運會員'
+  const isStudentAccount = user?.role !== 'coach' && user?.role !== 'admin'
   const race = getRaceEvent(profile.target_event)
   const raceCountdown = race && countdownNow ? getRaceCountdown(race, countdownNow) : null
   const profileFields = [profile.nickname, profile.city, profile.running_since, profile.favorite_distance, profile.pb, profile.goal, profile.bio]
@@ -155,6 +170,41 @@ export default function ProfilePage() {
             <div className="mt-3 space-y-2 text-sm text-apple-gray-600"><p>{profile.phone || '尚未填寫電話'}</p><p>{profile.instagram ? `Instagram · @${profile.instagram}` : '尚未填寫 Instagram'}</p><p>{profile.facebook ? `Facebook · ${profile.facebook}` : '尚未填寫 Facebook'}</p></div>
           </div>
         </section>
+
+        {isStudentAccount ? (
+          <section id="attendance-overview" className="scroll-mt-24 border-t border-black/10 py-7 sm:py-10">
+            <button
+              type="button"
+              aria-expanded={isAttendanceOpen}
+              aria-controls="student-attendance-content"
+              onClick={() => setIsAttendanceOpen((current) => !current)}
+              className="flex w-full items-center justify-between gap-4 rounded-lg border border-black/10 bg-white p-4 text-left shadow-sm transition hover:border-black/20 hover:bg-apple-gray-100 sm:p-5"
+            >
+              <span className="flex min-w-0 items-center gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black text-white">
+                  <CalendarCheck2 className="h-5 w-5" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-xs font-black text-apple-blue">ATTENDANCE</span>
+                  <span className="mt-1 block text-xl font-black text-black">我的點名</span>
+                  <span className="mt-1 block text-xs leading-5 text-apple-gray-500 sm:text-sm">查看到課、請假與本季度補課安排</span>
+                </span>
+              </span>
+              <span className="flex shrink-0 items-center gap-2 text-xs font-black text-apple-gray-600 sm:text-sm">
+                {isAttendanceOpen ? '收合' : '展開'}
+                <ChevronDown className={`h-4 w-4 transition-transform ${isAttendanceOpen ? 'rotate-180' : ''}`} />
+              </span>
+            </button>
+
+            <div
+              id="student-attendance-content"
+              hidden={!isAttendanceOpen}
+              className="mt-4 [&>section]:mb-0"
+            >
+              <StudentAttendancePanel />
+            </div>
+          </section>
+        ) : null}
 
         <section className="border-t border-black/10 py-7 sm:py-10">
           <div className="flex items-end justify-between gap-4">

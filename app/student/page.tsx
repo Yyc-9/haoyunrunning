@@ -29,7 +29,6 @@ import Link from 'next/link'
 import { useAuth } from '@/app/providers'
 import { useLanguage } from '@/app/language-context'
 import StudentCoachBindingPanel from '@/components/StudentCoachBindingPanel'
-import StudentAttendancePanel from '@/components/StudentAttendancePanel'
 import {
   addMyStudentRace,
   getMyStudentRaces,
@@ -220,7 +219,7 @@ export default function StudentPage() {
     | { type: 'link'; href: string; icon: React.ElementType; label: string }
     | { type: 'button'; icon: React.ElementType; label: string }
   > = [
-    { type: 'link', href: '#attendance', icon: CalendarCheck2, label: '我的點名' },
+    { type: 'link', href: '/profile#attendance-overview', icon: CalendarCheck2, label: '我的點名' },
     { type: 'link', href: '#training-data', icon: Gauge, label: '訓練資料' },
     { type: 'link', href: '#training-plan', icon: CalendarDays, label: '訓練計畫' },
     { type: 'link', href: '#goals', icon: Trophy, label: '我的目標' },
@@ -835,8 +834,6 @@ export default function StudentPage() {
               />
             </div>
           ) : null}
-
-          {!isCoach ? <StudentAttendancePanel /> : null}
 
           <section id="training-data" className="scroll-mt-28">
             <article className="apple-card mb-6 p-6 md:p-8">
