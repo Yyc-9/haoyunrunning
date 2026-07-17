@@ -81,7 +81,15 @@ export function SiteContentProvider({ children }: { children: React.ReactNode })
   }, [loadContent])
 
   const value = useMemo(
-    () => ({ ...content, courses: applyCourseOverrides(content.courseOverrides, { coachProfiles: content.coachProfiles }), isLoading, hasSyncedContent }),
+    () => ({
+      ...content,
+      courses: applyCourseOverrides(content.courseOverrides, {
+        coachProfiles: content.coachProfiles,
+        onlyConfigured: Object.keys(content.courseOverrides).length > 0,
+      }),
+      isLoading,
+      hasSyncedContent,
+    }),
     [content, hasSyncedContent, isLoading]
   )
 

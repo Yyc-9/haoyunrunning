@@ -17,6 +17,7 @@ export type SeasonalUpdate = {
 
 export type CourseOverride = {
   active?: boolean
+  templateSlug?: string
   name?: string
   weekday?: string
   location?: string
@@ -318,11 +319,13 @@ export function normalizeCourseOverrides(value: unknown): Record<string, CourseO
     if (!/^[a-z0-9-]{1,120}$/.test(slug) || !rawOverride || typeof rawOverride !== 'object') return
     const override = rawOverride as CourseOverride
     const signupUrl = cleanString(override.signupUrl, 2000)
+    const templateSlug = cleanString(override.templateSlug, 120)
     const coachKeys = Array.isArray(override.coachKeys)
       ? [...new Set(override.coachKeys.map((item) => cleanString(item, 80)).filter((item) => /^[A-Za-z0-9-]+$/.test(item)))].slice(0, 20)
       : undefined
     result[slug] = {
       active: override.active !== false,
+      templateSlug: /^[a-z0-9-]{1,120}$/.test(templateSlug) ? templateSlug : undefined,
       name: cleanString(override.name, 180),
       weekday: cleanString(override.weekday, 20),
       location: cleanString(override.location, 100),

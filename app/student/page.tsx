@@ -701,7 +701,7 @@ export default function StudentPage() {
   if (!canAccessTraining) {
     const waitingText = studentAccessState === 'rejected'
       ? '你的報名資料需要補充或重新核對，請聯絡好運跑班協助處理。'
-      : '你的報名資料正在等待人工核對，課表將在核准後開通，請耐心等待。'
+      : '你的付款資料正在等待銀行對帳，確認入帳後將自動開通課表。'
 
     return (
       <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
@@ -719,9 +719,9 @@ export default function StudentPage() {
               </p>
               <div className="mt-8 grid gap-4 md:grid-cols-3">
                 {[
-                  ['目前狀態', studentAccessState === 'pending_review' ? '待人工核對' : studentAccessState === 'pending_transfer' ? '待匯款 / 待後五碼' : '需補充資料'],
-                  ['課表訪問', '核准後開通'],
-                  ['訓練回饋', '核准後可提交'],
+                  ['目前狀態', studentAccessState === 'pending_review' ? '待對帳' : studentAccessState === 'pending_transfer' ? '待付款' : '需處理'],
+                  ['課表訪問', '確認後開通'],
+                  ['訓練回饋', '確認後可提交'],
                 ].map(([label, value]) => (
                   <div key={label} className="rounded-2xl bg-apple-gray-100 p-4">
                     <p className="text-xs font-semibold text-apple-gray-500">{label}</p>

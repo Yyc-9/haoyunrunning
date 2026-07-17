@@ -325,18 +325,18 @@ export async function POST(request: NextRequest) {
         : []
       const exactCandidates = candidates.filter((candidate) => candidate.expectedAmount === transaction.amount)
       let matchStatus = 'unmatched'
-      let matchReason = '沒有找到後五碼相同的待核對訂單。'
+      let matchReason = '沒有找到後五碼相同的待對帳訂單。'
       if (transaction.direction === 'debit') {
         matchStatus = 'ignored'
         matchReason = '這是支出交易，不列入收款對帳。'
+      } else if (candidates.length > 1) {
+        matchStatus = 'ambiguous'
+        matchReason = '多人使用相同後五碼，需由財務確認正確訂單。'
       } else if (exactCandidates.length === 1) {
         matchStatus = exactCandidates[0].status === 'approved' ? 'already_confirmed' : 'matched'
         matchReason = exactCandidates[0].status === 'approved'
-          ? '後五碼與金額唯一相符；訂單先前已核准，可補登銀行依據。'
+          ? '後五碼與金額唯一相符；訂單先前已確認，可補登銀行依據。'
           : '後五碼與金額唯一相符，可以確認入帳。'
-      } else if (exactCandidates.length > 1) {
-        matchStatus = 'ambiguous'
-        matchReason = '有多筆後五碼與金額相同的訂單，需由財務選擇。'
       } else if (candidates.length > 0) {
         matchStatus = 'amount_mismatch'
         matchReason = '找到後五碼相同的訂單，但金額不同，需人工核對。'
@@ -381,7 +381,7 @@ export async function POST(request: NextRequest) {
     const candidateRows = transactionRows.flatMap(({ transaction, candidates, exactCandidates }) => {
       const transactionId = transactionIdByFingerprint.get(transaction.fingerprint)
       if (!transactionId) return []
-      const uniqueExact = exactCandidates.length === 1 ? exactCandidates[0] : null
+      const uniqueExact = candidates.length === 1 && exactCandidates.length === 1 ? exactCandidates[0] : null
       return candidates.map((candidate) => ({
         transaction_id: transactionId,
         order_kind: candidate.kind,
@@ -441,8 +441,63 @@ export async function POST(request: NextRequest) {
     if (auditError) throw auditError
     importCommitted = true
 
+    const reconciliationIssues = new Map<string, MatchableOrder>()
+    for (const item of transactionRows) {
+      if (!['ambiguous', 'amount_mismatch'].includes(item.row.match_status)) continue
+      for (const candidate of item.candidates) {
+        if (candidate.status === 'pending_review') {
+          reconciliationIssues.set(`${candidate.kind}:${candidate.id}`, candidate)
+        }
+      }
+    }
+    const issueCourseIds = [...reconciliationIssues.values()]
+      .filter((candidate) => candidate.kind === 'course')
+      .map((candidate) => candidate.id)
+    const issueShopIds = [...reconciliationIssues.values()]
+      .filter((candidate) => candidate.kind === 'shop')
+      .map((candidate) => candidate.id)
+    const issueUpdateErrors: string[] = []
+    if (issueCourseIds.length > 0) {
+      const { error } = await supabaseAdmin!
+        .from('signup_leads')
+        .update({
+          status: 'rejected',
+          review_note: '銀行對帳發現金額不符或後五碼重複，請由財務人工處理。',
+          reviewed_at: new Date().toISOString(),
+        })
+        .in('id', issueCourseIds)
+        .eq('status', 'pending_review')
+      if (error) issueUpdateErrors.push(error.message)
+    }
+    if (issueShopIds.length > 0) {
+      const { error } = await supabaseAdmin!
+        .from('shop_orders')
+        .update({
+          status: 'rejected',
+          review_note: '銀行對帳發現金額不符或後五碼重複，請由財務人工處理。',
+          reviewed_at: new Date().toISOString(),
+        })
+        .in('id', issueShopIds)
+        .eq('status', 'pending_review')
+      if (error) issueUpdateErrors.push(error.message)
+    }
+    if (reconciliationIssues.size > 0) {
+      await supabaseAdmin!
+        .from('finance_reconciliation_audit_log')
+        .insert({
+          batch_id: createdBatchId,
+          actor_profile_id: auth.adminProfile.id,
+          action: 'flag_exceptions',
+          details: {
+            flaggedOrderCount: reconciliationIssues.size,
+            updateErrors: issueUpdateErrors,
+          },
+        })
+    }
+
     return json({
-      message: `已匯入 ${insertedTransactions.length} 筆交易，系統已完成初步比對。`,
+      message: `已匯入 ${insertedTransactions.length} 筆交易，系統已完成初步比對${reconciliationIssues.size ? `，並標記 ${reconciliationIssues.size} 筆需處理訂單` : ''}。`,
+      warning: issueUpdateErrors.length ? '部分異常訂單未能更新狀態，請依對帳批次人工檢查。' : '',
       ...(await loadReconciliationData(createdBatchId)),
     })
   } catch (error) {

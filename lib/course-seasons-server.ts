@@ -87,8 +87,9 @@ export async function getCourseSeasons(options: { includeRegistrationStats?: boo
       ),
       courseCapacities: Object.fromEntries(seasonCourses.map((course) => [course.course_slug, course.capacity])),
       courseBillingConfigs: Object.fromEntries(seasonCourses.map((course) => {
-        const baseCourse = allCourses.find((item) => item.slug === course.course_slug)
         const override = normalizeCourseOverrides({ [course.course_slug]: course.course_data })[course.course_slug] ?? {}
+        const baseCourse = allCourses.find((item) => item.slug === course.course_slug)
+          ?? allCourses.find((item) => item.slug === override.templateSlug)
         const scheduleSource = {
           period: String(override.period || baseCourse?.period || ''),
           weekday: String(override.weekday || baseCourse?.weekday || ''),

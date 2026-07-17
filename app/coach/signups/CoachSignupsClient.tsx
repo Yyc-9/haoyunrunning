@@ -290,7 +290,7 @@ export default function CoachSignupsClient() {
               ['4 週年活動', stats.anniversary],
               ['團練報名', stats.group],
               ['課程報名', stats.coursePayment],
-              ['已核准', stats.approved],
+              ['已確認', stats.approved],
             ].map(([label, value]) => (
               <div key={label} className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-5">
                 <p className="text-xs text-apple-gray-500 sm:text-sm">{label}</p>

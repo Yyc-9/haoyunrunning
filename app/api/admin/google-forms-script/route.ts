@@ -38,7 +38,7 @@ function setupGoodLuckRegistrationSync() {
   const form = FormApp.getActiveForm();
   form.setCollectEmail(true);
   form.setConfirmationMessage(
-    '報名資料已送出。請返回好運跑班查看待付款狀態：\\n' + GOODLUCK.returnUrl
+    '報名資料已送出。請返回好運跑班查看付款與對帳狀態：\\n' + GOODLUCK.returnUrl
   );
 
   ScriptApp.getProjectTriggers()

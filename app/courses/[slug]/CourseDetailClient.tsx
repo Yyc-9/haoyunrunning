@@ -12,7 +12,7 @@ import {
   Route,
 } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
-import type { allCourses } from '@/lib/goodluck-data'
+import type { ManagedCourse } from '@/lib/managed-courses'
 import CoachCard from '@/components/CoachCard'
 import TrainingItemCard from '@/components/TrainingItemCard'
 import BenefitItem from '@/components/BenefitItem'
@@ -21,7 +21,7 @@ import FAQItem from '@/components/FAQItem'
 import EnrollmentStep from '@/components/EnrollmentStep'
 import { useSiteContent } from '@/app/site-content-provider'
 
-type CourseDetail = (typeof allCourses)[number]
+type CourseDetail = ManagedCourse
 type CoachDetail = CourseDetail['coach']
 
 type CourseDetailClientProps = {
@@ -124,18 +124,18 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
         </div>
       </div>
 
-      <section className="overflow-hidden border-b border-black/5 bg-white px-4 py-8 sm:px-6 lg:px-8">
+      <section className="overflow-hidden border-b border-black/5 bg-white px-4 py-6 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-7xl">
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
-            <div className="rounded-[2rem] border border-black/5 bg-apple-gray-50 p-6 shadow-sm md:p-8">
-              <p className="text-sm font-semibold uppercase tracking-wide text-apple-blue">{t.courseDetail.heroLabel}</p>
-              <h1 className="mt-3 max-w-4xl text-3xl font-black leading-tight text-apple-gray-900 md:text-5xl">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-stretch">
+            <div className="rounded-[1.5rem] border border-black/5 bg-apple-gray-50 p-5 shadow-sm md:p-6">
+              <p className="text-xs font-bold uppercase tracking-wide text-apple-blue">{t.courseDetail.heroLabel}</p>
+              <h1 className="mt-2 max-w-4xl text-3xl font-black leading-[1.08] text-apple-gray-900 md:text-4xl">
                 {text(course.title)}
               </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-apple-gray-600 md:text-lg">
+              <p className="mt-3 max-w-2xl text-base leading-7 text-apple-gray-600">
                 {text(course.slogan)}
               </p>
-              <div className="mt-5 grid max-w-3xl gap-3 sm:grid-cols-2">
+              <div className="mt-4 grid max-w-3xl gap-3 sm:grid-cols-2">
                 <div className="border-l-2 border-apple-blue pl-4">
                   <p className="text-xs font-bold text-apple-gray-400">適合對象</p>
                   <p className="mt-1 text-sm font-semibold leading-6 text-apple-gray-700">{text(course.targetAudience)}</p>
@@ -145,69 +145,43 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
                   <p className="mt-1 text-sm font-semibold leading-6 text-apple-gray-700">{text(course.feeNote)}</p>
                 </div>
               </div>
-              <div className="mt-6 flex flex-wrap gap-3">
-                {[
-                  [t.courseDetail.city, course.city],
-                  [t.courseDetail.courseWeekday, course.weekday],
-                  [t.courseDetail.classTime, course.time],
-                  [t.courseDetail.meetingPoint, course.meetingPoint],
-                  [t.courseDetail.coursePeriod, course.period],
-                ].map(([label, value]) => (
-                  <span key={`${label}-${value}`} className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-apple-gray-900 shadow-sm">
-                    <span className="text-apple-gray-400">{label}</span>
-                    {text(value)}
-                  </span>
-                ))}
-              </div>
-
-              <div className="mt-8 hidden border-t border-black/10 pt-6 lg:block">
+              <div className="mt-5 border-t border-black/10 pt-4">
                 <p className="text-xs font-bold uppercase text-apple-gray-400">本期訓練重點</p>
-                <div className="mt-4 grid grid-cols-3 divide-x divide-black/10">
+                <div className="mt-3 grid grid-cols-3 divide-x divide-black/10">
                   {course.trainingItems.slice(0, 3).map((item, index) => (
-                    <div key={item} className={index === 0 ? 'pr-5' : 'px-5'}>
+                    <div key={item} className={index === 0 ? 'pr-2 sm:pr-4' : 'px-2 sm:px-4'}>
                       <span className="text-xs font-black text-apple-blue">0{index + 1}</span>
-                      <p className="mt-2 text-sm font-black leading-6 text-apple-gray-900">{text(item)}</p>
+                      <p className="mt-1 text-xs font-black leading-5 text-apple-gray-900 sm:text-sm">{text(item)}</p>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
 
-            <div className="rounded-[2rem] border border-black/5 bg-white p-3 shadow-xl shadow-black/10">
-              <div className="relative overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#111] p-5">
+            <div className="rounded-[1.5rem] border border-black/5 bg-white p-2 shadow-xl shadow-black/10">
+              <div className="relative h-full overflow-hidden rounded-[1.15rem] border border-white/10 bg-[#111] p-4">
                 <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,.09)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.09)_1px,transparent_1px)] [background-size:28px_28px]" />
-                <div className="relative">
+                <div className="relative flex h-full flex-col">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-xs font-bold uppercase text-white/45">{t.courseDetail.courseLocation}</p>
-                      <h2 className="mt-2 text-3xl font-black leading-none text-white">{text(course.city)}</h2>
-                      <p className="mt-3 flex items-start gap-2 text-sm leading-6 text-white/70">
+                      <h2 className="mt-1 text-2xl font-black leading-none text-white">{text(course.city)}</h2>
+                      <p className="mt-2 flex items-start gap-2 text-sm leading-5 text-white/70">
                         <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-apple-blue" />
                         {text(course.meetingPoint)}
                       </p>
                     </div>
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white text-apple-gray-950">
-                      <Navigation className="h-6 w-6" />
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-apple-gray-950">
+                      <Navigation className="h-5 w-5" />
                     </div>
                   </div>
 
-                  <div className="my-6 rounded-3xl border border-white/10 bg-black/30 p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-400 text-xs font-black text-apple-gray-950">
-                        GO
-                      </div>
-                      <div className="h-px flex-1 bg-gradient-to-r from-emerald-400 via-white/50 to-apple-blue" />
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-apple-blue text-xs font-black text-white">
-                        RUN
-                      </div>
-                    </div>
-                    <div className="mt-4 flex items-center gap-2 text-sm font-bold text-white">
-                      <Route className="h-4 w-4 text-apple-blue" />
-                      {text(course.focus)}
-                    </div>
+                  <div className="my-4 flex items-start gap-2 rounded-xl border border-white/10 bg-black/30 p-3 text-sm font-bold leading-5 text-white">
+                    <Route className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                    {text(course.focus)}
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-[0.8fr_1.4fr_1fr]">
+                  <div className="grid grid-cols-3 gap-2">
                     {[
                       [CalendarDays, t.courseDetail.courseWeekday, '星期', course.weekday],
                       [Clock, t.courseDetail.classTime, '時間', course.time],
@@ -216,22 +190,21 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
                       const CardIcon = Icon as typeof CalendarDays
 
                       return (
-                        <div key={`${label}-${value}`} className="rounded-2xl border border-white/10 bg-white/10 p-3">
+                        <div key={`${label}-${value}`} className="min-w-0 rounded-xl border border-white/10 bg-white/10 p-2.5">
                           <div className="flex items-center gap-1 text-xs font-bold text-white/45">
                             <CardIcon className="h-3.5 w-3.5 shrink-0" />
-                            <span className="sm:hidden">{label as string}</span>
-                            <span className="hidden whitespace-nowrap sm:inline">{shortLabel as string}</span>
+                            <span className="truncate">{shortLabel as string}</span>
                           </div>
-                          <p className="mt-2 text-sm font-black leading-5 text-white sm:text-xs">{text(value as string)}</p>
+                          <p className="mt-1.5 break-words text-xs font-black leading-4 text-white">{text(value as string)}</p>
                         </div>
                       )
                     })}
                   </div>
 
-                  <div className="mt-5 flex flex-col gap-3">
+                  <div className="mt-auto flex flex-col gap-2 pt-4">
                     <Link
                       href={`/courses/${course.slug}/register`}
-                      className="apple-button-primary inline-flex w-full items-center justify-center gap-2 px-6 py-3"
+                      className="apple-button-primary inline-flex w-full items-center justify-center gap-2 px-5 py-2.5"
                     >
                       <ChevronRight className="h-5 w-5" />
                       立即報名
@@ -240,7 +213,7 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
                       href={instagramUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-bold text-white transition hover:bg-white/15"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-white/15"
                     >
                       <Instagram className="h-5 w-5" />
                       {t.courseDetail.contactInstagram}

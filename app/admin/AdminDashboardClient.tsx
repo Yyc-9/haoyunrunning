@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import type { CourseSeason } from '@/lib/course-seasons'
+import type { CourseBillingConfig } from '@/lib/course-pricing'
 import type { CourseOverride, SiteContent } from '@/lib/site-content'
 import AdminContentManager from '@/components/admin/AdminContentManager'
 import AdminEnrollmentAnalytics from '@/components/admin/AdminEnrollmentAnalytics'
@@ -191,10 +192,10 @@ type PaymentAccount = {
 }
 
 const statusLabels: Record<PaymentOrderStatus, string> = {
-  pending_transfer: '待匯款 / 待填寫後五碼',
-  pending_review: '已提交後五碼，待人工核對',
-  approved: '已核准 / 已完成',
-  rejected: '核對未透過或需補充資料',
+  pending_transfer: '待付款',
+  pending_review: '待對帳',
+  approved: '已確認',
+  rejected: '需處理',
 }
 
 const tabs: Array<{ id: AdminTab; label: string; icon: typeof LayoutDashboard }> = [
@@ -272,7 +273,7 @@ async function adminAction(body: Record<string, unknown>) {
     message?: string
     siteContent?: SiteContent
     courses?: AdminCourseSummary[]
-    seasonCourse?: { season_id: string; course_slug: string; course_data: CourseOverride; capacity: number }
+    seasonCourse?: { season_id: string; course_slug: string; course_data: CourseOverride; capacity: number; billing_config: CourseBillingConfig }
   }
   if (!response.ok) {
     throw new Error(payload.error || '操作失敗。')
@@ -393,6 +394,7 @@ export default function AdminDashboardClient() {
             ...season,
             courseOverrides: { ...season.courseOverrides, [saved.course_slug]: saved.course_data },
             courseCapacities: { ...season.courseCapacities, [saved.course_slug]: saved.capacity },
+            courseBillingConfigs: { ...season.courseBillingConfigs, [saved.course_slug]: saved.billing_config },
           } : season),
         } : current)
         announceSiteContentUpdated()
@@ -522,8 +524,8 @@ export default function AdminDashboardClient() {
             <section className="space-y-8">
               <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
                 {[
-                  ['待核對訂單', data.overview.pendingOrderCount],
-                  ['已核准訂單', data.overview.approvedOrderCount],
+                  ['待對帳訂單', data.overview.pendingOrderCount],
+                  ['已確認訂單', data.overview.approvedOrderCount],
                   ['商城商品', data.overview.productCount],
                   ['低庫存商品', data.overview.lowStockCount],
                   ['收款帳戶', data.overview.paymentAccountCount],
@@ -539,10 +541,10 @@ export default function AdminDashboardClient() {
               <div className="apple-card p-6">
                 <div className="mb-5 flex items-center gap-3">
                   <ShieldCheck className="h-5 w-5 text-emerald-600" />
-                  <h2 className="text-xl font-black text-apple-gray-900">待核對訂單</h2>
+                  <h2 className="text-xl font-black text-apple-gray-900">待對帳訂單</h2>
                 </div>
                 {pendingOrders.length === 0 ? (
-                  <p className="text-sm text-apple-gray-600">暫無待核對訂單。</p>
+                  <p className="text-sm text-apple-gray-600">目前沒有待對帳訂單。</p>
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2">
                     {pendingOrders.slice(0, 4).map((order) => (

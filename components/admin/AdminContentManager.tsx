@@ -123,6 +123,7 @@ function ImageField({ label, value, folder, onChange, onError }: { label: string
 function courseDraft(course: CourseSummary, override?: CourseOverride): CourseOverride {
   return {
     active: override?.active !== false,
+    templateSlug: override?.templateSlug || course.slug,
     name: override?.name || course.name,
     weekday: override?.weekday || course.weekday,
     location: override?.location || course.location,
@@ -158,13 +159,20 @@ export default function AdminContentManager({ content, courses, seasons, scope =
   const [seasonBillingConfigs, setSeasonBillingConfigs] = useState<Record<string, Record<string, CourseBillingConfig>>>(() =>
     Object.fromEntries(seasons.map((season) => [season.id, season.courseBillingConfigs]))
   )
-  const [selectedSlug, setSelectedSlug] = useState(courses[0]?.slug || '')
-  const [draft, setDraft] = useState<CourseOverride>(() => courses[0] ? courseDraft(courses[0], currentSeason?.courseOverrides[courses[0].slug] ?? content.courseOverrides[courses[0].slug]) : {})
+  const initialSlug = currentSeason ? Object.keys(currentSeason.courseOverrides)[0] ?? '' : courses[0]?.slug ?? ''
+  const initialTemplate = courses.find((course) => course.slug === initialSlug)
+    ?? courses.find((course) => course.slug === currentSeason?.courseOverrides[initialSlug]?.templateSlug)
+    ?? courses[0]
+  const [selectedSlug, setSelectedSlug] = useState(initialSlug)
+  const [draft, setDraft] = useState<CourseOverride>(() => initialTemplate ? courseDraft(initialTemplate, currentSeason?.courseOverrides[initialSlug] ?? content.courseOverrides[initialSlug]) : {})
   const [draftCapacity, setDraftCapacity] = useState(40)
-  const [draftBilling, setDraftBilling] = useState<CourseBillingConfig>(() => currentSeason?.courseBillingConfigs[courses[0]?.slug || ''] ?? defaultCourseBillingConfig())
+  const [draftBilling, setDraftBilling] = useState<CourseBillingConfig>(() => currentSeason?.courseBillingConfigs[initialSlug] ?? defaultCourseBillingConfig())
   const [isUploading, setIsUploading] = useState(false)
   const [localError, setLocalError] = useState('')
   const [courseMessage, setCourseMessage] = useState('')
+  const [showNewCourse, setShowNewCourse] = useState(false)
+  const [newCourseName, setNewCourseName] = useState('')
+  const [newCourseTemplateSlug, setNewCourseTemplateSlug] = useState(courses[0]?.slug ?? '')
 
   useEffect(() => {
     setSlides(content.heroSlides)
@@ -188,7 +196,32 @@ export default function AdminContentManager({ content, courses, seasons, scope =
 
   const selectedSeason = useMemo(() => seasons.find((season) => season.id === selectedSeasonId) ?? null, [seasons, selectedSeasonId])
   const courseOverrides = selectedSeason ? seasonOverrides[selectedSeason.id] ?? selectedSeason.courseOverrides : content.courseOverrides
-  const selectedCourse = useMemo(() => courses.find((course) => course.slug === selectedSlug), [courses, selectedSlug])
+  const seasonCourses = useMemo(() => Object.entries(courseOverrides).flatMap(([slug, override]) => {
+    const base = courses.find((course) => course.slug === slug)
+      ?? courses.find((course) => course.slug === override.templateSlug)
+      ?? courses[0]
+    if (!base) return []
+    return [{
+      ...base,
+      slug,
+      name: override.name || base.name,
+      weekday: override.weekday || base.weekday,
+      location: override.location || base.location,
+      period: override.period || base.period,
+      classTime: override.classTime || base.classTime,
+      meetingPoint: override.meetingPoint || base.meetingPoint,
+      feeNote: override.feeNote || base.feeNote,
+      targetAudience: override.targetAudience || base.targetAudience,
+      focus: override.focus || base.focus,
+      signupUrl: override.signupUrl || `/courses/${slug}/register`,
+      coachKeys: override.coachKeys?.length ? override.coachKeys : base.coachKeys,
+    }]
+  }), [courseOverrides, courses])
+  const selectedCourse = useMemo(() => seasonCourses.find((course) => course.slug === selectedSlug), [seasonCourses, selectedSlug])
+  useEffect(() => {
+    if (selectedCourse || seasonCourses.length === 0) return
+    setSelectedSlug(seasonCourses[0].slug)
+  }, [seasonCourses, selectedCourse])
   useEffect(() => {
     if (!selectedCourse) return
     setDraft(courseDraft(selectedCourse, courseOverrides[selectedCourse.slug]))
@@ -293,6 +326,42 @@ export default function AdminContentManager({ content, courses, seasons, scope =
       action: 'create_next_course_season',
       sourceSeasonId: selectedSeason.id,
     })
+  }
+
+  async function createSeasonCourse() {
+    if (!selectedSeason || !newCourseName.trim() || !newCourseTemplateSlug) {
+      setLocalError('請填寫新課程名稱並選擇介紹版型。')
+      return
+    }
+    const created = await runAction(`create-course-${selectedSeason.id}`, {
+      action: 'create_season_course',
+      seasonId: selectedSeason.id,
+      templateSlug: newCourseTemplateSlug,
+      name: newCourseName.trim(),
+    })
+    if (!created) return
+    setNewCourseName('')
+    setShowNewCourse(false)
+  }
+
+  async function duplicateSeasonCourse() {
+    if (!selectedSeason || !selectedCourse) return
+    await runAction(`duplicate-course-${selectedSeason.id}-${selectedCourse.slug}`, {
+      action: 'duplicate_season_course',
+      seasonId: selectedSeason.id,
+      courseSlug: selectedCourse.slug,
+    })
+  }
+
+  async function deleteSeasonCourse() {
+    if (!selectedSeason || !selectedCourse) return
+    if (!window.confirm(`確定移除「${selectedCourse.name}」？只有完全沒有報名、點名、停課或補課資料的課程可以刪除。`)) return
+    const deleted = await runAction(`delete-course-${selectedSeason.id}-${selectedCourse.slug}`, {
+      action: 'delete_season_course',
+      seasonId: selectedSeason.id,
+      courseSlug: selectedCourse.slug,
+    })
+    if (deleted) setSelectedSlug('')
   }
 
   function rebuildBillingDates() {
@@ -413,8 +482,8 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                     </div>
                     <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
                       <div><p className="text-xs font-bold text-apple-gray-500">報名記錄</p><p className="mt-1 text-lg font-black">{season.registrationCount}</p></div>
-                      <div><p className="text-xs font-bold text-apple-gray-500">已核准</p><p className="mt-1 text-lg font-black text-emerald-700">{season.approvedCount}</p></div>
-                      <div><p className="text-xs font-bold text-apple-gray-500">待核對</p><p className="mt-1 text-lg font-black text-blue-700">{season.pendingReviewCount}</p></div>
+                      <div><p className="text-xs font-bold text-apple-gray-500">已確認</p><p className="mt-1 text-lg font-black text-emerald-700">{season.approvedCount}</p></div>
+                      <div><p className="text-xs font-bold text-apple-gray-500">待對帳</p><p className="mt-1 text-lg font-black text-blue-700">{season.pendingReviewCount}</p></div>
                     </div>
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
@@ -430,12 +499,30 @@ export default function AdminContentManager({ content, courses, seasons, scope =
           </div>
         ) : null}
 
-        {mode === 'courses' && selectedCourse && selectedSeason ? (
+        {mode === 'courses' && selectedSeason ? (
           <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
             {panelHeader(`${selectedSeason.name}課程資料`, selectedSeason.isCurrent ? '儲存後會同步發布到首頁、訓練課程、日程表、課程詳情與報名頁。' : '這是非當前季度，儲存只會更新草稿或歷史資料，不影響前台。', '/courses')}
+            <div className="border-b border-black/10 bg-apple-gray-50 p-5">
+              <div className="grid gap-4 lg:grid-cols-[minmax(180px,.7fr)_minmax(280px,1.3fr)_auto] lg:items-end">
+                <Field label="管理季度"><select value={selectedSeasonId} onChange={(e) => { setSelectedSeasonId(e.target.value); setCourseMessage('') }} className="apple-input">{seasons.map((season) => <option key={season.id} value={season.id}>{season.name}{season.isCurrent ? '（前台招生）' : ''}</option>)}</select></Field>
+                <Field label="這一季的課程"><select value={selectedSlug} onChange={(e) => { setSelectedSlug(e.target.value); setCourseMessage('') }} className="apple-input" disabled={!seasonCourses.length}>{seasonCourses.length ? seasonCourses.map((course) => <option key={course.slug} value={course.slug}>{course.name}</option>) : <option value="">尚未建立課程</option>}</select></Field>
+                <div className="grid grid-cols-3 gap-2">
+                  <button type="button" onClick={() => setShowNewCourse((current) => !current)} className="apple-button-primary gap-1 px-3 py-3 text-sm"><Plus className="h-4 w-4" />新增</button>
+                  <button type="button" onClick={duplicateSeasonCourse} disabled={!selectedCourse} className="apple-button-outline gap-1 px-3 py-3 text-sm disabled:opacity-40"><Copy className="h-4 w-4" />複製</button>
+                  <button type="button" onClick={deleteSeasonCourse} disabled={!selectedCourse} className="inline-flex items-center justify-center gap-1 rounded-lg border border-red-200 bg-white px-3 py-3 text-sm font-bold text-red-700 disabled:opacity-40"><Trash2 className="h-4 w-4" />刪除</button>
+                </div>
+              </div>
+              {showNewCourse ? (
+                <div className="mt-4 grid gap-3 rounded-lg border border-black/10 bg-white p-4 md:grid-cols-[minmax(0,1fr)_minmax(220px,.7fr)_auto] md:items-end">
+                  <Field label="新課程名稱"><input value={newCourseName} onChange={(event) => setNewCourseName(event.target.value)} className="apple-input" maxLength={180} placeholder="例如 2026 好運跑步訓練營 X 週一台北夜跑班" /></Field>
+                  <Field label="介紹版型"><select value={newCourseTemplateSlug} onChange={(event) => setNewCourseTemplateSlug(event.target.value)} className="apple-input">{courses.map((course) => <option key={course.slug} value={course.slug}>{course.name}</option>)}</select></Field>
+                  <button type="button" onClick={createSeasonCourse} className="apple-button-primary gap-2 px-5 py-3"><Plus className="h-4 w-4" />建立課程</button>
+                  <p className="text-xs font-semibold leading-5 text-apple-gray-500 md:col-span-3">版型只繼承課程介紹架構；名稱、星期、城市、日期、教練、名額與價格都可獨立修改。新課程完成設定前預設不對外顯示。</p>
+                </div>
+              ) : null}
+            </div>
+            {selectedCourse ? (
             <div className="grid gap-4 p-5 md:grid-cols-2">
-              <Field label="管理季度" wide><select value={selectedSeasonId} onChange={(e) => { setSelectedSeasonId(e.target.value); setCourseMessage('') }} className="apple-input">{seasons.map((season) => <option key={season.id} value={season.id}>{season.name}{season.isCurrent ? '（前台招生）' : ''}</option>)}</select></Field>
-              <Field label="選擇課程" wide><select value={selectedSlug} onChange={(e) => { setSelectedSlug(e.target.value); setCourseMessage('') }} className="apple-input">{courses.map((course) => <option key={course.slug} value={course.slug}>{course.name}</option>)}</select></Field>
               <Field label="課程名稱"><input value={String(draft.name ?? '')} onChange={(e) => setDraft((current) => ({ ...current, name: e.target.value }))} className="apple-input" /></Field>
               <Field label="星期"><select value={String(draft.weekday ?? '').replace('周', '週')} onChange={(e) => setDraft((current) => ({ ...current, weekday: e.target.value }))} className="apple-input"><option value="">請選擇星期</option>{orderedWeekdays.map((weekday) => <option key={weekday} value={weekday}>{weekday}</option>)}</select></Field>
               <Field label="城市 / 地點"><input value={String(draft.location ?? '')} onChange={(e) => setDraft((current) => ({ ...current, location: e.target.value }))} className="apple-input" /></Field>
@@ -492,6 +579,9 @@ export default function AdminContentManager({ content, courses, seasons, scope =
               <div className="flex flex-wrap gap-2"><button type="button" onClick={saveCourse} className="apple-button-primary gap-2"><Save className="h-4 w-4" />{selectedSeason.isCurrent ? '儲存並發布至課程與日程表' : '儲存這季課程'}</button></div>
               {courseMessage ? <p className="md:col-span-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">{courseMessage}</p> : null}
             </div>
+            ) : (
+              <div className="p-10 text-center"><h3 className="text-lg font-black text-apple-gray-900">這一季尚未建立課程</h3><p className="mt-2 text-sm text-apple-gray-500">點擊上方「新增」，即可從介紹版型建立全新的班級。</p></div>
+            )}
           </div>
         ) : null}
       </div>

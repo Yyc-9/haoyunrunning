@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
       feedback: [],
       count: 0,
       accessState,
-      message: '你的報名資料正在等待人工核對，課表將在核准後開通，請耐心等待。',
+      message: '你的付款資料正在等待銀行對帳，確認入帳後將自動開通課表。',
     })
   }
 
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
   const accessState = await getStudentAccessState(user.id, user.email)
   if (!canAccessTrainingContent(accessState)) {
     return NextResponse.json(
-      { error: '你的報名資料正在等待人工核對，課表將在核准後開通，請耐心等待。', accessState },
+      { error: '你的付款資料正在等待銀行對帳，確認入帳後將自動開通課表。', accessState },
       { status: 403 }
     )
   }

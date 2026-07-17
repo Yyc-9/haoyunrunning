@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, BarChart3, CalendarRange, CheckCircle2, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, FileSpreadsheet, Loader2, Package, RotateCcw, Search, Trash2, X } from 'lucide-react'
+import { AlertTriangle, BarChart3, CalendarRange, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, FileSpreadsheet, Loader2, Package, RotateCcw, Search, Trash2, X } from 'lucide-react'
 import type { CourseSeason } from '@/lib/course-seasons'
 import { supabase } from '@/lib/supabase'
 
@@ -80,7 +80,7 @@ type Props = {
 
 const statusLabels: Record<PaymentStatus, string> = {
   pending_transfer: '待付款',
-  pending_review: '待核對',
+  pending_review: '待對帳',
   approved: '已確認',
   rejected: '需處理',
 }
@@ -246,13 +246,13 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
     URL.revokeObjectURL(url)
   }
 
-  async function reviewOrder(status: 'approved' | 'rejected') {
+  async function flagOrderForReview() {
     if (!selected) return
     const saved = await runAction(selected.id, {
       action: 'review_order',
       orderId: selected.id,
       orderKind: selected.orderKind,
-      status,
+      status: 'rejected',
       reviewNote,
     })
     if (saved) setSelected(null)
@@ -374,6 +374,20 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
         </section>
       ) : null}
 
+      <section className="grid gap-2 rounded-lg border border-black/10 bg-white p-3 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          ['待付款', '尚未提交後五碼。', 'bg-amber-50 text-amber-800'],
+          ['待對帳', '已提交後五碼與申報金額，等待銀行流水。', 'bg-blue-50 text-blue-800'],
+          ['已確認', '後五碼與金額相符，且已由財務確認。', 'bg-emerald-50 text-emerald-800'],
+          ['需處理', '金額不符、後五碼重複、重複報名或找不到流水。', 'bg-red-50 text-red-800'],
+        ].map(([label, description, tone]) => (
+          <div key={label} className={`rounded-md px-3 py-2.5 ${tone}`}>
+            <p className="text-xs font-black">{label}</p>
+            <p className="mt-1 text-[11px] font-semibold leading-5 opacity-80">{description}</p>
+          </div>
+        ))}
+      </section>
+
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
           ['報名記錄', summary.records, `去重學員 ${summary.people} 人`],
@@ -471,9 +485,9 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
               ) : null}
               <label className="mt-5 block"><span className="mb-2 block text-xs font-bold text-apple-gray-500">管理備註</span><textarea value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} className="apple-input min-h-24 resize-y" placeholder="記錄核對結果或需要補充的資料" /></label>
             </div>
-            <div className="grid gap-2 border-t bg-white p-4 sm:grid-cols-3">
-              <button type="button" disabled={updatingId === selected.id || selected.status === 'approved'} onClick={() => reviewOrder('approved')} className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-40">{updatingId === selected.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}核准付款</button>
-              <button type="button" disabled={updatingId === selected.id || selected.status === 'rejected'} onClick={() => reviewOrder('rejected')} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40"><RotateCcw className="h-4 w-4" />標記異常</button>
+            <div className="grid gap-2 border-t bg-white p-4 sm:grid-cols-2">
+              <p className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-bold leading-5 text-blue-800 sm:col-span-2">「已確認」只能由銀行對帳完成；這裡保留異常處理與刪除，避免繞過財務確認。</p>
+              <button type="button" disabled={updatingId === selected.id || selected.status === 'rejected' || selected.status === 'approved'} onClick={flagOrderForReview} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40"><RotateCcw className="h-4 w-4" />標記需處理</button>
               <button type="button" disabled={updatingId === `delete-${selected.id}` || selected.status === 'approved'} onClick={deleteOrder} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40">{updatingId === `delete-${selected.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}刪除記錄</button>
             </div>
           </aside>

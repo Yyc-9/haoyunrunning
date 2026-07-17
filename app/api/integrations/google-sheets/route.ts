@@ -28,6 +28,7 @@ type ExistingLead = {
   course_capacity: number
   registration_identity: string | null
   amount_text: string
+  calculated_amount: number | null
   notes: string
   status: string
   transfer_last_five: string
@@ -49,6 +50,16 @@ type SeasonCourse = {
 
 function cleanText(value: unknown, maxLength = 300) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : ''
+}
+
+function transferLastFive(record: NormalizedRosterRecord) {
+  const digits = record.transferLastFive.replace(/\D/g, '')
+  return digits.length >= 5 ? digits.slice(-5) : ''
+}
+
+function declaredAmount(record: NormalizedRosterRecord) {
+  const amount = Number(record.amountText.replace(/[^\d]/g, ''))
+  return Number.isFinite(amount) && amount > 0 ? Math.round(amount) : 0
 }
 
 function secretsMatch(received: string, expected: string) {
@@ -81,11 +92,11 @@ function firstUnused<T extends { id: string }>(items: T[] | undefined, usedIds: 
   return items?.find((item) => !usedIds.has(item.id)) ?? null
 }
 
-function parseStatus(record: NormalizedRosterRecord, existing: ExistingLead | null) {
-  if (record.confirmedName) return 'approved'
+function parseStatus(record: NormalizedRosterRecord, existing: ExistingLead | null, duplicateRegistration: boolean) {
   if (existing?.status === 'approved') return 'approved'
   if (existing && !isRosterManagedPayload(existing.payload)) return existing.status
-  return record.transferLastFive ? 'pending_review' : 'pending_transfer'
+  if (duplicateRegistration || existing?.status === 'rejected') return 'rejected'
+  return transferLastFive(record) && declaredAmount(record) ? 'pending_review' : 'pending_transfer'
 }
 
 function courseName(course: SeasonCourse) {
@@ -101,7 +112,8 @@ function hasMeaningfulChange(existing: ExistingLead, record: NormalizedRosterRec
     existing.email.trim().toLowerCase() !== record.email ||
     existing.phone !== record.phone ||
     existing.amount_text !== record.amountText ||
-    existing.transfer_last_five !== record.transferLastFive ||
+    existing.transfer_last_five !== transferLastFive(record) ||
+    Number(existing.calculated_amount ?? 0) !== declaredAmount(record) ||
     existing.notes !== record.notes ||
     existing.registration_identity !== record.identity ||
     existing.course_season_course_id !== offering.id ||
@@ -208,7 +220,7 @@ export async function POST(request: NextRequest) {
       .eq('season_id', season.id),
     supabaseAdmin
       .from('signup_leads')
-      .select('id, source, name, phone, email, preferred_course, course_slug, season_id, course_season_course_id, course_capacity, registration_identity, amount_text, notes, status, transfer_last_five, payment_submitted_at, reviewed_at, review_note, payload, created_at, external_submission_id, form_submitted_at')
+      .select('id, source, name, phone, email, preferred_course, course_slug, season_id, course_season_course_id, course_capacity, registration_identity, amount_text, calculated_amount, notes, status, transfer_last_five, payment_submitted_at, reviewed_at, review_note, payload, created_at, external_submission_id, form_submitted_at')
       .eq('season_id', season.id)
       .eq('source', 'course_payment'),
   ])
@@ -260,7 +272,8 @@ export async function POST(request: NextRequest) {
     const personMatch = personCandidates.length === 1 ? personCandidates[0] : null
     const current = submissionMatch || exactMatch || personMatch
     const id = current?.id ?? randomUUID()
-    const status = parseStatus(record, current)
+    const duplicateRegistration = (recordCounts.get(exactCourseKey(record.courseSlug, record.email, record.name)) ?? 0) > 1
+    const status = parseStatus(record, current, duplicateRegistration)
     const submittedAt = record.submittedAt && !Number.isNaN(Date.parse(record.submittedAt))
       ? new Date(record.submittedAt).toISOString()
       : current?.form_submitted_at || now
@@ -273,6 +286,7 @@ export async function POST(request: NextRequest) {
       sourceStableKey: record.stableKey,
       sourceConfirmedName: record.confirmedName,
       sourceConfirmedAmount: record.confirmedAmount,
+      duplicateRegistration,
       studentType: record.identity,
       lineId: record.lineId,
       emergencyContactName: record.emergencyName,
@@ -307,12 +321,21 @@ export async function POST(request: NextRequest) {
       course_capacity: offering.capacity,
       registration_identity: record.identity,
       amount_text: record.amountText,
+      calculated_amount: declaredAmount(record) || null,
       notes: record.notes,
       status,
-      transfer_last_five: record.transferLastFive,
-      payment_submitted_at: current?.payment_submitted_at || submittedAt,
+      transfer_last_five: transferLastFive(record),
+      payment_submitted_at: status === 'pending_review' || status === 'approved'
+        ? current?.payment_submitted_at || submittedAt
+        : current?.payment_submitted_at,
       reviewed_at: status === 'approved' ? current?.reviewed_at || now : current?.reviewed_at,
-      review_note: current?.review_note || (status === 'approved' ? '由 Q3 Google 表格同步並確認' : '由 Q3 Google 表格同步'),
+      review_note: current?.review_note || (
+        duplicateRegistration
+          ? 'Google 表格偵測到同班級、同姓名與同信箱的重複報名，請人工處理。'
+          : status === 'approved'
+            ? '已由財務確認入帳；Google 表格僅同步報名資料。'
+            : '由 Google 表格同步；付款仍依銀行對帳結果判定。'
+      ),
       payload,
       created_at: current?.created_at || submittedAt,
       external_submission_id: current?.external_submission_id || `q3-sheet:${record.stableKey}`,

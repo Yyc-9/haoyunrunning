@@ -113,7 +113,7 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
       if (!response.ok || !payload.enrollment) throw new Error(payload.error || '付款資料提交失敗。')
 
       setEnrollment(payload.enrollment)
-      setSuccess('付款資料已送出，管理員核對後會更新為已付款。')
+      setSuccess('付款資料已送出，銀行流水與申報資料相符並經財務確認後，狀態會更新為已確認。')
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : '付款資料提交失敗。')
     } finally {

@@ -1,5 +1,6 @@
 import CourseDetailClient from './CourseDetailClient'
-import { allCourses, getCourseBySlug } from '@/lib/goodluck-data'
+import { allCourses } from '@/lib/goodluck-data'
+import { getManagedCourses } from '@/lib/managed-courses-server'
 
 type CourseDetailPageProps = {
   params: Promise<{
@@ -15,7 +16,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: CourseDetailPageProps) {
   const { slug } = await params
-  const course = getCourseBySlug(slug)
+  const course = (await getManagedCourses({ includeInactive: true })).find((item) => item.slug === slug)
 
   if (!course) {
     return {
@@ -32,7 +33,7 @@ export async function generateMetadata({ params }: CourseDetailPageProps) {
 
 export default async function CourseDetailPage({ params }: CourseDetailPageProps) {
   const { slug } = await params
-  const course = getCourseBySlug(slug)
+  const course = (await getManagedCourses()).find((item) => item.slug === slug)
 
   return <CourseDetailClient course={course ?? null} />
 }

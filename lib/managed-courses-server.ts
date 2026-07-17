@@ -30,6 +30,7 @@ export async function getManagedCourses(options: { includeInactive?: boolean } =
   if (coachError) console.error('Load managed course coach profiles error:', coachError)
   return applyCourseOverrides(overrides, {
     ...options,
+    onlyConfigured: Boolean(currentSeason),
     coachProfiles: coachPublicProfilesFromRows(coachRows as CoachPublicProfileRow[] | null),
   })
 }

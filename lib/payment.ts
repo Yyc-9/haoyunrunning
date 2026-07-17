@@ -13,16 +13,16 @@ export const paymentOrderStatuses: PaymentOrderStatus[] = [
 
 export const paymentOrderStatusLabels = {
   'zh-TW': {
-    pending_transfer: '待匯款 / 待填寫後五碼',
-    pending_review: '已提交後五碼，待人工核對',
-    approved: '付款已核准，報名已確認',
-    rejected: '核對未通過或需補充資料',
+    pending_transfer: '待付款',
+    pending_review: '待對帳',
+    approved: '已確認',
+    rejected: '需處理',
   },
   'zh-CN': {
-    pending_transfer: '待匯款 / 待填寫後五碼',
-    pending_review: '已提交後五碼，待人工核對',
-    approved: '付款已核准，報名已確認',
-    rejected: '核對未透過或需補充資料',
+    pending_transfer: '待付款',
+    pending_review: '待对账',
+    approved: '已确认',
+    rejected: '需处理',
   },
   en: {
     pending_transfer: 'Awaiting transfer / last five digits',

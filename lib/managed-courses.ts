@@ -3,15 +3,25 @@ import { coachPublicProfileToCoach, getStaticCoachKey, type CoachPublicProfileMa
 import { compareCourses, normalizeCourseLocation } from '@/lib/course-sort'
 import type { CourseOverride } from '@/lib/site-content'
 
-export type ManagedCourse = (typeof allCourses)[number]
+export type ManagedCourse = Omit<(typeof allCourses)[number], 'slug'> & { slug: string }
 
 export function applyCourseOverrides(
   courseOverrides: Record<string, CourseOverride>,
-  options: { includeInactive?: boolean; coachProfiles?: CoachPublicProfileMap } = {}
+  options: { includeInactive?: boolean; coachProfiles?: CoachPublicProfileMap; onlyConfigured?: boolean } = {}
 ) {
-  return allCourses
-    .map((course) => {
-      const override = courseOverrides[course.slug]
+  const configuredSlugs = Object.keys(courseOverrides)
+  const slugs = options.onlyConfigured
+    ? configuredSlugs
+    : [...new Set([...allCourses.map((course) => course.slug), ...configuredSlugs])]
+
+  return slugs
+    .map((slug) => {
+      const override = courseOverrides[slug]
+      const course = allCourses.find((item) => item.slug === slug)
+        ?? allCourses.find((item) => item.slug === override?.templateSlug)
+        ?? allCourses[0]
+      if (!course) return null
+
       const defaultCoachKeys = (course.coaches ?? []).map(getStaticCoachKey).filter((key): key is string => Boolean(key))
       const requestedCoachKeys = override?.coachKeys?.length ? override.coachKeys : defaultCoachKeys
       const resolvedCoaches = requestedCoachKeys
@@ -38,11 +48,12 @@ export function applyCourseOverrides(
       const meetingPoint = override.meetingPoint || course.meetingPoint
       const focus = override.focus || course.focus
       const feeNote = override.feeNote || course.feeNote
-      const signupUrl = override.signupUrl || course.signupUrl
+      const signupUrl = override.signupUrl || (slug === course.slug ? course.signupUrl : `/courses/${slug}/register`)
 
       return {
         ...course,
         ...override,
+        slug,
         name,
         title: override.name || course.title,
         weekday,
@@ -63,6 +74,7 @@ export function applyCourseOverrides(
         targetAudience: override.targetAudience || course.targetAudience,
       }
     })
+    .filter((course): course is ManagedCourse => Boolean(course))
     .filter((course) => options.includeInactive || courseOverrides[course.slug]?.active !== false)
     .sort(compareCourses)
 }

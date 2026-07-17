@@ -1,4 +1,5 @@
-import { allCourses, getCourseBySlug } from '@/lib/goodluck-data'
+import { allCourses } from '@/lib/goodluck-data'
+import { getManagedCourses } from '@/lib/managed-courses-server'
 import CourseRegistrationClient from './CourseRegistrationClient'
 
 type CourseRegistrationPageProps = {
@@ -11,7 +12,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: CourseRegistrationPageProps) {
   const { slug } = await params
-  const course = getCourseBySlug(slug)
+  const course = (await getManagedCourses({ includeInactive: true })).find((item) => item.slug === slug)
   return {
     title: course ? `${course.name}報名 - 好運跑班` : '課程報名 - 好運跑班',
     description: course ? `在好運網站填寫 ${course.name} 報名資料並查看付款狀態。` : '好運跑班課程報名。',

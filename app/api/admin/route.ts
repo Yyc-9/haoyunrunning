@@ -10,10 +10,6 @@ import { getCourseSeasons } from '@/lib/course-seasons-server'
 import { defaultCourseBillingConfig, normalizeCourseBillingConfig } from '@/lib/course-pricing'
 import { applyCourseOverrides } from '@/lib/managed-courses'
 import {
-  awardCourseEnrollmentAchievement,
-  sendCourseEnrollmentApprovedEmail,
-} from '@/lib/admin-payment-notifications'
-import {
   defaultSiteContent,
   isSafePublicUrl,
   normalizeActivities,
@@ -209,6 +205,9 @@ type AdminPatchBody =
   | { action?: 'delete_product'; productId?: string }
   | { action?: 'save_site_content'; section?: string; value?: unknown }
   | { action?: 'save_season_course'; seasonId?: string; courseSlug?: string; value?: unknown; capacity?: number; billingConfig?: unknown }
+  | { action?: 'create_season_course'; seasonId?: string; templateSlug?: string; name?: string }
+  | { action?: 'duplicate_season_course'; seasonId?: string; courseSlug?: string }
+  | { action?: 'delete_season_course'; seasonId?: string; courseSlug?: string }
   | { action?: 'create_next_course_season'; sourceSeasonId?: string }
   | { action?: 'activate_course_season'; seasonId?: string }
   | { action?: 'update_course_season_status'; seasonId?: string; status?: CourseSeasonStatus }
@@ -765,7 +764,7 @@ export async function GET(request: NextRequest) {
   }
 
   const courseCapacity = courseSeasons.flatMap((season) =>
-    applyCourseOverrides(season.courseOverrides, { includeInactive: true }).map((course) => {
+    applyCourseOverrides(season.courseOverrides, { includeInactive: true, onlyConfigured: true }).map((course) => {
       const courseOrders = coursePaymentOrders.filter((order) =>
         order.course_slug === course.slug && order.season_id === season.id
       )
@@ -784,6 +783,10 @@ export async function GET(request: NextRequest) {
       }
     })
   )
+  const adminCourseCatalog = [
+    ...allCourses,
+    ...managedCourses.filter((course) => !allCourses.some((template) => template.slug === course.slug)),
+  ]
 
   return json({
     admin: auth.adminProfile,
@@ -808,7 +811,7 @@ export async function GET(request: NextRequest) {
       updatedAt: source.updated_at,
     })),
     siteContent,
-    courses: managedCourses.map((course) => ({
+    courses: adminCourseCatalog.map((course) => ({
       slug: course.slug,
       name: course.name,
       weekday: course.weekday,
@@ -854,10 +857,9 @@ export async function PATCH(request: NextRequest) {
     const seasonId = cleanText(body.seasonId)
     const courseSlug = cleanText(body.courseSlug)
     const capacity = Number(body.capacity)
-    const validSlugs = new Set(allCourses.map((course) => course.slug))
     const normalized = normalizeCourseOverrides({ [courseSlug]: body.value })[courseSlug]
 
-    if (!seasonId || !validSlugs.has(courseSlug) || !normalized) {
+    if (!seasonId || !/^[a-z0-9-]{1,120}$/.test(courseSlug) || !normalized) {
       return json({ error: '季度或課程資料無效。' }, { status: 400 })
     }
     if (!Number.isInteger(capacity) || capacity < 1 || capacity > 500) {
@@ -872,7 +874,17 @@ export async function PATCH(request: NextRequest) {
     if (seasonError || !season) {
       return json({ error: seasonError?.message || '找不到這個季度。' }, { status: 404 })
     }
+    const { data: existingCourse, error: existingCourseError } = await supabaseAdmin!
+      .from('course_season_courses')
+      .select('id')
+      .eq('season_id', seasonId)
+      .eq('course_slug', courseSlug)
+      .maybeSingle()
+    if (existingCourseError || !existingCourse) {
+      return json({ error: existingCourseError?.message || '找不到這一季的課程。' }, { status: 404 })
+    }
     const baseCourse = allCourses.find((course) => course.slug === courseSlug)
+      ?? allCourses.find((course) => course.slug === normalized.templateSlug)
     const billingConfig = normalizeCourseBillingConfig(
       body.billingConfig,
       defaultCourseBillingConfig({
@@ -901,6 +913,164 @@ export async function PATCH(request: NextRequest) {
     }
 
     return json({ seasonCourse, message: '已儲存到這一季；若為當前招生季度，前台也已同步。' })
+  }
+
+  if (body.action === 'create_season_course') {
+    const seasonId = cleanText(body.seasonId)
+    const templateSlug = cleanText(body.templateSlug)
+    const name = cleanText(body.name).slice(0, 180)
+    const template = allCourses.find((course) => course.slug === templateSlug)
+    if (!seasonId || !template || !name) {
+      return json({ error: '請選擇版型並填寫新課程名稱。' }, { status: 400 })
+    }
+
+    const [{ data: season, error: seasonError }, { data: existingCourses, error: coursesError }] = await Promise.all([
+      supabaseAdmin!.from('course_seasons').select('id, code').eq('id', seasonId).maybeSingle(),
+      supabaseAdmin!.from('course_season_courses').select('course_slug').eq('season_id', seasonId),
+    ])
+    if (seasonError || !season) return json({ error: seasonError?.message || '找不到這個季度。' }, { status: 404 })
+    if (coursesError) return json({ error: coursesError.message }, { status: 500 })
+
+    const usedSlugs = new Set((existingCourses ?? []).map((course) => course.course_slug))
+    let courseSlug = template.slug
+    let suffix = 2
+    while (usedSlugs.has(courseSlug)) {
+      courseSlug = `${template.slug}-${suffix}`
+      suffix += 1
+    }
+    const courseData = normalizeCourseOverrides({
+      [courseSlug]: {
+        active: false,
+        templateSlug: template.slug,
+        name,
+        weekday: template.weekday,
+        location: template.location,
+        period: template.period,
+        classTime: template.classTime,
+        meetingPoint: template.meetingPoint,
+        feeNote: template.feeNote,
+        targetAudience: template.targetAudience,
+        focus: template.focus,
+        signupUrl: `/courses/${courseSlug}/register`,
+        coachKeys: getDefaultCourseCoachKeys(template.slug),
+      },
+    })[courseSlug]
+    const billingConfig = {
+      ...defaultCourseBillingConfig(template, season.code),
+      scheduleReady: false,
+      sessionDates: [],
+    }
+    const { data: seasonCourse, error } = await supabaseAdmin!
+      .from('course_season_courses')
+      .insert({
+        season_id: seasonId,
+        course_slug: courseSlug,
+        course_data: courseData,
+        capacity: 40,
+        billing_config: billingConfig,
+      })
+      .select('id, season_id, course_slug, course_data, capacity, billing_config')
+      .single()
+    if (error || !seasonCourse) return json({ error: error?.message || '新增季度課程失敗。' }, { status: 500 })
+    return json({ seasonCourse, message: `已新增「${name}」；完成日期、教練與計價後再開啟對外顯示。` })
+  }
+
+  if (body.action === 'duplicate_season_course') {
+    const seasonId = cleanText(body.seasonId)
+    const sourceSlug = cleanText(body.courseSlug)
+    if (!seasonId || !/^[a-z0-9-]{1,120}$/.test(sourceSlug)) {
+      return json({ error: '季度或來源課程無效。' }, { status: 400 })
+    }
+    const [{ data: source, error: sourceError }, { data: existingCourses, error: coursesError }] = await Promise.all([
+      supabaseAdmin!
+        .from('course_season_courses')
+        .select('course_slug, course_data, capacity, billing_config')
+        .eq('season_id', seasonId)
+        .eq('course_slug', sourceSlug)
+        .maybeSingle(),
+      supabaseAdmin!.from('course_season_courses').select('course_slug').eq('season_id', seasonId),
+    ])
+    if (sourceError || !source) return json({ error: sourceError?.message || '找不到要複製的課程。' }, { status: 404 })
+    if (coursesError) return json({ error: coursesError.message }, { status: 500 })
+    const usedSlugs = new Set((existingCourses ?? []).map((course) => course.course_slug))
+    let suffix = 2
+    let courseSlug = `${sourceSlug}-${suffix}`
+    while (usedSlugs.has(courseSlug)) {
+      suffix += 1
+      courseSlug = `${sourceSlug}-${suffix}`
+    }
+    const sourceData = normalizeCourseOverrides({ [sourceSlug]: source.course_data })[sourceSlug] ?? {}
+    const courseData = normalizeCourseOverrides({
+      [courseSlug]: {
+        ...sourceData,
+        active: false,
+        templateSlug: sourceData.templateSlug || allCourses.find((course) => course.slug === sourceSlug)?.slug,
+        name: `${sourceData.name || sourceSlug}（複本）`,
+        signupUrl: `/courses/${courseSlug}/register`,
+      },
+    })[courseSlug]
+    const { data: seasonCourse, error } = await supabaseAdmin!
+      .from('course_season_courses')
+      .insert({
+        season_id: seasonId,
+        course_slug: courseSlug,
+        course_data: courseData,
+        capacity: source.capacity,
+        billing_config: {
+          ...(source.billing_config && typeof source.billing_config === 'object' ? source.billing_config : {}),
+          scheduleReady: false,
+          sessionDates: [],
+        },
+      })
+      .select('id, season_id, course_slug, course_data, capacity, billing_config')
+      .single()
+    if (error || !seasonCourse) return json({ error: error?.message || '複製課程失敗。' }, { status: 500 })
+    return json({ seasonCourse, message: '課程複本已建立；完成設定前不會顯示於前台。' })
+  }
+
+  if (body.action === 'delete_season_course') {
+    const seasonId = cleanText(body.seasonId)
+    const courseSlug = cleanText(body.courseSlug)
+    if (!seasonId || !/^[a-z0-9-]{1,120}$/.test(courseSlug)) {
+      return json({ error: '季度或課程資料無效。' }, { status: 400 })
+    }
+    const { data: offering, error: offeringError } = await supabaseAdmin!
+      .from('course_season_courses')
+      .select('id, course_data')
+      .eq('season_id', seasonId)
+      .eq('course_slug', courseSlug)
+      .maybeSingle()
+    if (offeringError || !offering) return json({ error: offeringError?.message || '找不到要移除的課程。' }, { status: 404 })
+
+    const [enrollmentResult, attendanceResult, cancellationResult, makeupResult] = await Promise.all([
+      supabaseAdmin!.from('signup_leads').select('id', { count: 'exact', head: true }).eq('course_season_course_id', offering.id),
+      supabaseAdmin!.from('course_attendance_records').select('id', { count: 'exact', head: true }).eq('course_season_course_id', offering.id),
+      supabaseAdmin!.from('course_session_cancellations').select('id', { count: 'exact', head: true }).eq('course_season_course_id', offering.id),
+      supabaseAdmin!.from('course_makeup_requests').select('id', { count: 'exact', head: true }).or(`original_course_season_course_id.eq.${offering.id},target_course_season_course_id.eq.${offering.id}`),
+    ])
+    const dependencyError = [enrollmentResult.error, attendanceResult.error, cancellationResult.error, makeupResult.error].find(Boolean)
+    if (dependencyError) return json({ error: dependencyError.message || '無法確認課程是否已有資料。' }, { status: 500 })
+    if (
+      (enrollmentResult.count ?? 0)
+      + (attendanceResult.count ?? 0)
+      + (cancellationResult.count ?? 0)
+      + (makeupResult.count ?? 0)
+      > 0
+    ) {
+      return json({ error: '這門課已有報名、點名、停課或補課資料，不能刪除；請改為關閉對外顯示。' }, { status: 409 })
+    }
+
+    const { error: auditError } = await supabaseAdmin!.from('course_catalog_audit_log').insert({
+      actor_profile_id: auth.user.id,
+      action: 'delete_empty_course_authorized',
+      season_id: seasonId,
+      course_slug: courseSlug,
+      snapshot: offering.course_data ?? {},
+    })
+    if (auditError) return json({ error: auditError.message || '無法建立刪除稽核記錄。' }, { status: 500 })
+    const { error } = await supabaseAdmin!.from('course_season_courses').delete().eq('id', offering.id)
+    if (error) return json({ error: error.message || '移除課程失敗。' }, { status: 500 })
+    return json({ message: '空白課程已移除，其他季度與既有資料不受影響。' })
   }
 
   if (body.action === 'create_next_course_season') {
@@ -978,6 +1148,28 @@ export async function PATCH(request: NextRequest) {
   if (body.action === 'activate_course_season') {
     const seasonId = cleanText(body.seasonId)
     if (!seasonId) return json({ error: '缺少季度 ID。' }, { status: 400 })
+
+    const { data: seasonCourses, error: seasonCoursesError } = await supabaseAdmin!
+      .from('course_season_courses')
+      .select('course_slug, course_data, billing_config')
+      .eq('season_id', seasonId)
+    if (seasonCoursesError) return json({ error: seasonCoursesError.message }, { status: 500 })
+    const activeCourses = (seasonCourses ?? []).filter((course) => {
+      const override = normalizeCourseOverrides({ [course.course_slug]: course.course_data })[course.course_slug]
+      return override?.active !== false
+    })
+    if (activeCourses.length === 0) {
+      return json({ error: '請先建立並開啟至少一門對外顯示的課程。' }, { status: 409 })
+    }
+    const incompleteCourses = activeCourses.filter((course) => {
+      const billing = course.billing_config && typeof course.billing_config === 'object'
+        ? course.billing_config as { scheduleReady?: unknown; sessionDates?: unknown }
+        : {}
+      return billing.scheduleReady !== true || !Array.isArray(billing.sessionDates) || billing.sessionDates.length === 0
+    })
+    if (incompleteCourses.length > 0) {
+      return json({ error: `還有 ${incompleteCourses.length} 門對外課程未完成實際收費課次，不能切換前台招生。` }, { status: 409 })
+    }
 
     const { data: season, error } = await supabaseAdmin!.rpc('activate_course_season', { p_season_id: seasonId })
     if (error || !season) {
@@ -1188,7 +1380,7 @@ export async function PATCH(request: NextRequest) {
       if (error) {
         const approved = /approved|核准/i.test(error.message)
         return json(
-          { error: approved ? '已核准的商城訂單不能刪除。' : error.message || '刪除商城訂單失敗。' },
+          { error: approved ? '已確認的商城訂單不能刪除。' : error.message || '刪除商城訂單失敗。' },
           { status: approved ? 409 : 500 }
         )
       }
@@ -1213,7 +1405,7 @@ export async function PATCH(request: NextRequest) {
       return json({ error: '找不到課程報名訂單。' }, { status: 404 })
     }
     if (currentOrder.status === 'approved') {
-      return json({ error: '已核准的課程報名不能刪除。' }, { status: 409 })
+      return json({ error: '已確認的課程報名不能刪除。' }, { status: 409 })
     }
 
     const { error } = await supabaseAdmin!
@@ -1232,18 +1424,20 @@ export async function PATCH(request: NextRequest) {
   if (body.action === 'review_order') {
     const orderId = cleanText(body.orderId)
     const orderKind = cleanText(body.orderKind) || 'course'
-    const status = cleanText(body.status)
+    const requestedStatus = cleanText(body.status)
     const reviewNote = cleanText(body.reviewNote)
 
     if (!orderId) {
       return json({ error: '缺少訂單 ID。' }, { status: 400 })
     }
-
-    if (!isPaymentOrderStatus(status) || !['approved', 'rejected'].includes(status)) {
-      return json({ error: '訂單狀態無效。' }, { status: 400 })
+    if (requestedStatus === 'approved') {
+      return json({ error: '「已確認」只能透過銀行對帳，由財務確認後寫入。' }, { status: 409 })
+    }
+    if (requestedStatus !== 'rejected') {
+      return json({ error: '這裡只能將訂單標記為需處理。' }, { status: 400 })
     }
 
-    const finalReviewNote = reviewNote || (status === 'approved' ? '付款核對透過，訂單已核准。' : '付款核對異常，請補充資料。')
+    const finalReviewNote = reviewNote || '付款資料有異常，請補充資料或由財務重新對帳。'
 
     if (orderKind === 'shop') {
       const { data: currentOrder, error: currentOrderError } = await supabaseAdmin!
@@ -1265,7 +1459,7 @@ export async function PATCH(request: NextRequest) {
         return json({ error: itemsError.message }, { status: 500 })
       }
 
-      if (status === 'rejected' && currentOrder.inventory_reserved) {
+      if (currentOrder.inventory_reserved) {
         try {
           for (const item of orderItems ?? []) {
             const currentStock = await getProductStock(item.product_id)
@@ -1283,35 +1477,13 @@ export async function PATCH(request: NextRequest) {
         }
       }
 
-      if (status === 'approved' && !currentOrder.inventory_reserved) {
-        try {
-          for (const item of orderItems ?? []) {
-            const currentStock = await getProductStock(item.product_id)
-            if (currentStock < item.quantity) {
-              return json({ error: `庫存不足，無法重新核准商品 ${item.product_id}。` }, { status: 409 })
-            }
-
-            const { error: stockError } = await supabaseAdmin!
-              .from('shop_products')
-              .update({ stock_quantity: currentStock - item.quantity })
-              .eq('id', item.product_id)
-
-            if (stockError) {
-              return json({ error: stockError.message }, { status: 500 })
-            }
-          }
-        } catch (stockReadError) {
-          return json({ error: stockReadError instanceof Error ? stockReadError.message : '庫存讀取失敗。' }, { status: 500 })
-        }
-      }
-
       const { data: order, error } = await supabaseAdmin!
         .from('shop_orders')
         .update({
-          status,
+          status: 'rejected',
           reviewed_at: new Date().toISOString(),
           review_note: finalReviewNote,
-          inventory_reserved: status === 'approved',
+          inventory_reserved: false,
         })
         .eq('id', orderId)
         .select('*')
@@ -1324,49 +1496,26 @@ export async function PATCH(request: NextRequest) {
       return json({ order, message: finalReviewNote })
     }
 
-    const courseReviewResult = status === 'approved'
-      ? await supabaseAdmin!.rpc('approve_course_enrollment', {
-          p_lead_id: orderId,
-          p_review_note: finalReviewNote,
-        })
-      : await supabaseAdmin!
-          .from('signup_leads')
-          .update({
-            status,
-            reviewed_at: new Date().toISOString(),
-            review_note: finalReviewNote,
-          })
-          .eq('id', orderId)
-          .eq('source', 'course_payment')
-          .select('*')
-          .single()
+    const courseReviewResult = await supabaseAdmin!
+      .from('signup_leads')
+      .update({
+        status: 'rejected',
+        reviewed_at: new Date().toISOString(),
+        review_note: finalReviewNote,
+      })
+      .eq('id', orderId)
+      .eq('source', 'course_payment')
+      .neq('status', 'approved')
+      .select('*')
+      .single()
 
     const order = courseReviewResult.data as SignupLeadRow | null
     const error = courseReviewResult.error
 
     if (error || !order) {
-      const capacityReached = /course capacity reached/i.test(error?.message ?? '')
-      return json(
-        { error: capacityReached ? '這個班級已達目前設定的名額上限，不能再核准新的付款。' : error?.message || '訂單更新失敗。' },
-        { status: capacityReached ? 409 : 500 }
-      )
+      return json({ error: error?.message || '訂單更新失敗。' }, { status: 500 })
     }
-
-    let emailMessage = ''
-    if (status === 'approved' && order.email) {
-      await awardCourseEnrollmentAchievement({
-        email: order.email,
-        courseName: order.preferred_course,
-        awardedBy: auth.adminProfile.id,
-      })
-      emailMessage = await sendCourseEnrollmentApprovedEmail({
-        to: order.email,
-        studentName: order.name,
-        courseName: order.preferred_course,
-      })
-    }
-
-    return json({ order, message: emailMessage || finalReviewNote })
+    return json({ order, message: finalReviewNote })
   }
 
   if (body.action === 'delete_product') {

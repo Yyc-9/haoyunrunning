@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       count: 0,
       weekStart: getTodayInfo().weekStart,
       accessState,
-      message: '你的報名資料正在等待人工核對，課表將在核准後開通，請耐心等待。',
+      message: '你的付款資料正在等待銀行對帳，確認入帳後將自動開通課表。',
     })
   }
 

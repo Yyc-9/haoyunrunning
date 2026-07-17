@@ -126,7 +126,7 @@ const statusMeta: Record<MatchStatus, { label: string; tone: string }> = {
   ambiguous: { label: '多筆待選', tone: 'bg-amber-50 text-amber-700 ring-amber-200' },
   amount_mismatch: { label: '金額不同', tone: 'bg-orange-50 text-orange-700 ring-orange-200' },
   unmatched: { label: '找不到訂單', tone: 'bg-red-50 text-red-700 ring-red-200' },
-  already_confirmed: { label: '已核准待補登', tone: 'bg-blue-50 text-blue-700 ring-blue-200' },
+  already_confirmed: { label: '已確認待補登', tone: 'bg-blue-50 text-blue-700 ring-blue-200' },
   manual_match: { label: '人工已選', tone: 'bg-violet-50 text-violet-700 ring-violet-200' },
   duplicate: { label: '重複交易', tone: 'bg-apple-gray-100 text-apple-gray-600 ring-black/10' },
   ignored: { label: '不需對帳', tone: 'bg-apple-gray-100 text-apple-gray-500 ring-black/10' },
