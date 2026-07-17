@@ -146,6 +146,32 @@ export default function ProfilePage() {
                   ['PB', profile.pb.replace('｜', ' ') || '待補充'],
                 ].map(([label, value]) => <div key={label} className="min-w-0 rounded-md bg-white/10 p-3"><p className="text-[10px] font-bold text-white/45 sm:text-xs">{label}</p><p className="mt-1 truncate text-xs font-black sm:text-sm">{value}</p></div>)}
               </div>
+
+              <div className="mt-3 grid gap-2 sm:grid-cols-2 sm:gap-3">
+                <div className="min-w-0 rounded-md border border-white/10 bg-white/10 p-3 sm:p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-[10px] font-black text-emerald-300 sm:text-xs">NEXT RACE</p>
+                      <h2 className="mt-1 text-sm font-black text-white sm:text-base">目標賽事</h2>
+                    </div>
+                    {raceCountdown ? <span className="whitespace-nowrap rounded-full bg-white px-2.5 py-1 font-mono text-[10px] font-black tabular-nums text-black sm:text-xs">{raceCountdown.label}</span> : null}
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-xs leading-5 text-white/65 sm:text-sm">
+                    {getTargetEventLabel(profile.target_event) || '尚未選擇目標賽事。'}
+                  </p>
+                  {race ? <a href={race.officialUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1.5 text-xs font-black text-white">官方資訊<ExternalLink className="h-3.5 w-3.5" /></a> : null}
+                </div>
+
+                <div className="min-w-0 rounded-md border border-white/10 bg-white/10 p-3 sm:p-4">
+                  <p className="text-[10px] font-black text-emerald-300 sm:text-xs">CONTACT</p>
+                  <h2 className="mt-1 text-sm font-black text-white sm:text-base">聯絡資料</h2>
+                  <div className="mt-2 space-y-1 text-xs leading-5 text-white/65 sm:text-sm">
+                    <p className="break-words">{profile.phone || '尚未填寫電話'}</p>
+                    <p className="break-words">{profile.instagram ? `Instagram · @${profile.instagram}` : '尚未填寫 Instagram'}</p>
+                    <p className="break-words">{profile.facebook ? `Facebook · ${profile.facebook}` : '尚未填寫 Facebook'}</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="flex flex-col justify-between rounded-md bg-white p-4 text-black sm:p-5">
@@ -158,18 +184,6 @@ export default function ProfilePage() {
             </div>
           </div>
         </motion.section>
-
-        <section className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-6">
-            <div className="flex flex-wrap items-end justify-between gap-2"><div><p className="text-xs font-black text-apple-blue">NEXT RACE</p><h2 className="mt-1 text-xl font-black text-black sm:text-2xl">目標賽事</h2></div>{raceCountdown ? <span className="whitespace-nowrap rounded-full bg-black px-3 py-1.5 font-mono text-xs font-black tabular-nums text-white">{raceCountdown.label}</span> : null}</div>
-            <p className="mt-3 text-sm leading-6 text-apple-gray-600">{getTargetEventLabel(profile.target_event) || '尚未選擇目標賽事。可到修改頁從最新賽事目錄中選擇。'}</p>
-            {race ? <a href={race.officialUrl} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 text-sm font-black text-black">查看官方資訊<ExternalLink className="h-4 w-4" /></a> : null}
-          </div>
-          <div className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-6">
-            <p className="text-xs font-black text-apple-blue">CONTACT</p><h2 className="mt-1 text-xl font-black text-black sm:text-2xl">聯絡資料</h2>
-            <div className="mt-3 space-y-2 text-sm text-apple-gray-600"><p>{profile.phone || '尚未填寫電話'}</p><p>{profile.instagram ? `Instagram · @${profile.instagram}` : '尚未填寫 Instagram'}</p><p>{profile.facebook ? `Facebook · ${profile.facebook}` : '尚未填寫 Facebook'}</p></div>
-          </div>
-        </section>
 
         {isStudentAccount ? (
           <section id="attendance-overview" className="scroll-mt-24 border-t border-black/10 py-7 sm:py-10">
