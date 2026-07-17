@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { attendanceCourseLabel, isBeforeCourseStart } from '@/lib/course-attendance'
+import {
+  attendanceCourseLabel,
+  isBeforeCourseStart,
+  isCourseSessionAfter,
+  nearestUpcomingCourseSession,
+} from '@/lib/course-attendance'
 import { getCurrentCourseSeason } from '@/lib/course-seasons-server'
 import { getManagedCourses } from '@/lib/managed-courses-server'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
@@ -190,18 +195,27 @@ export async function POST(request: NextRequest) {
     if (!homeCourse.sessionDates.includes(sessionDate)) {
       return NextResponse.json({ error: '請假課次不屬於你的班級。' }, { status: 400, headers: noStoreHeaders })
     }
-    if (!isBeforeCourseStart(sessionDate, homeCourse.classTime)) {
-      return NextResponse.json({ error: '本堂已開始，無法再由學員端提出請假。' }, { status: 409, headers: noStoreHeaders })
+
+    const { data: cancellations, error: cancellationError } = await supabaseAdmin!
+      .from('course_session_cancellations')
+      .select('session_date')
+      .eq('course_season_course_id', homeCourse.courseSeasonCourseId)
+    if (cancellationError) return NextResponse.json({ error: cancellationError.message }, { status: 500, headers: noStoreHeaders })
+
+    const cancelledDates = new Set((cancellations ?? []).map((item) => item.session_date))
+    if (cancelledDates.has(sessionDate)) {
+      return NextResponse.json({ error: '本堂已經停課，不需要另行請假。' }, { status: 409, headers: noStoreHeaders })
     }
 
-    const { data: cancellation, error: cancellationError } = await supabaseAdmin!
-      .from('course_session_cancellations')
-      .select('id')
-      .eq('course_season_course_id', homeCourse.courseSeasonCourseId)
-      .eq('session_date', sessionDate)
-      .maybeSingle()
-    if (cancellationError) return NextResponse.json({ error: cancellationError.message }, { status: 500, headers: noStoreHeaders })
-    if (cancellation) return NextResponse.json({ error: '本堂已經停課，不需要另行請假。' }, { status: 409, headers: noStoreHeaders })
+    const nearestSessionDate = nearestUpcomingCourseSession(
+      homeCourse.sessionDates,
+      homeCourse.classTime,
+      cancelledDates,
+    )
+
+    if (!nearestSessionDate || sessionDate !== nearestSessionDate) {
+      return NextResponse.json({ error: '目前只能為最近一堂尚未開始的課程請假。' }, { status: 409, headers: noStoreHeaders })
+    }
 
     const { error } = await supabaseAdmin!.rpc('request_course_leave', {
       p_season_id: context.season.id,
@@ -217,7 +231,7 @@ export async function POST(request: NextRequest) {
       const finalized = /already finalized/i.test(error.message)
       return NextResponse.json({ error: finalized ? '本堂點名已經由教練確認，無法再改為請假。' : error.message }, { status: finalized ? 409 : 500, headers: noStoreHeaders })
     }
-    return NextResponse.json({ message: '請假已送出，你可以選擇本季度其他班級的可用課次補課。' }, { headers: noStoreHeaders })
+    return NextResponse.json({ message: '請假已送出，你可以選擇原課次之後、本季度內其他班級的可用課次補課。' }, { headers: noStoreHeaders })
   }
 
   const requestId = cleanText(body.requestId, 80)
@@ -242,6 +256,23 @@ export async function POST(request: NextRequest) {
     }
     if (!targetCourse.sessionDates.includes(targetSessionDate)) {
       return NextResponse.json({ error: '補課課次不在本季度課表內。' }, { status: 400, headers: noStoreHeaders })
+    }
+    if (context.season.endsOn && targetSessionDate > context.season.endsOn) {
+      return NextResponse.json({ error: '補課課次不可超過本季度結束日。' }, { status: 400, headers: noStoreHeaders })
+    }
+    if (
+      makeupRequest.original_course_season_course_id !== homeCourse.courseSeasonCourseId
+      || !homeCourse.sessionDates.includes(makeupRequest.original_session_date)
+    ) {
+      return NextResponse.json({ error: '原請假課次與你的所屬班級不一致。' }, { status: 409, headers: noStoreHeaders })
+    }
+    if (!isCourseSessionAfter(
+      targetSessionDate,
+      targetCourse.classTime,
+      makeupRequest.original_session_date,
+      homeCourse.classTime,
+    )) {
+      return NextResponse.json({ error: '補課只能選擇原請假課次之後的課程。' }, { status: 400, headers: noStoreHeaders })
     }
     if (!isBeforeCourseStart(targetSessionDate, targetCourse.classTime)) {
       return NextResponse.json({ error: '只能選擇尚未開始的補課課次。' }, { status: 409, headers: noStoreHeaders })

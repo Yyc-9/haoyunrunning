@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Ban, CalendarCheck2, Check, Clock3, Loader2, RefreshCw, RotateCcw, X } from 'lucide-react'
 import {
+  courseSessionStart,
   formatAttendanceDate,
   isBeforeCourseStart,
+  isCourseSessionAfter,
+  nearestUpcomingCourseSession,
   type CourseAttendanceRecord,
   type CourseMakeupRequest,
   type CourseSessionCancellation,
@@ -102,6 +105,20 @@ export default function StudentAttendancePanel() {
 
   const courseNames = useMemo(() => new Map(courses.map((course) => [course.courseSeasonCourseId, course.courseName])), [courses])
 
+  const nearestSessionKeys = useMemo(() => new Map(enrollments.flatMap((enrollment) => {
+    const course = courses.find((item) => item.courseSeasonCourseId === enrollment.courseSeasonCourseId)
+    if (!course) return []
+    const cancelledDates = new Set(cancellations
+      .filter((item) => item.course_season_course_id === course.courseSeasonCourseId)
+      .map((item) => item.session_date))
+    const nearestSessionDate = nearestUpcomingCourseSession(
+      course.sessionDates,
+      course.classTime,
+      cancelledDates,
+    )
+    return nearestSessionDate ? [[enrollment.id, `${enrollment.id}:${nearestSessionDate}`] as const] : []
+  })), [cancellations, courses, enrollments])
+
   function targetOptions(row: AttendanceRow) {
     return courses.flatMap((course) => {
       if (course.courseSeasonCourseId === row.course.courseSeasonCourseId) return []
@@ -110,13 +127,27 @@ export default function StudentAttendancePanel() {
         const scheduledCount = course.scheduledMakeupCounts[sessionDate] ?? 0
         const isCurrentTarget = row.makeup?.target_course_season_course_id === course.courseSeasonCourseId && row.makeup.target_session_date === sessionDate
         const full = course.approvedCount + scheduledCount >= course.capacity
-        if (cancelled || !isBeforeCourseStart(sessionDate, course.classTime) || (full && !isCurrentTarget)) return []
+        const afterOriginalSession = isCourseSessionAfter(
+          sessionDate,
+          course.classTime,
+          row.sessionDate,
+          row.course.classTime,
+        )
+        const withinSeason = !payload.season?.endsOn || sessionDate <= payload.season.endsOn
+        if (
+          cancelled
+          || !afterOriginalSession
+          || !withinSeason
+          || !isBeforeCourseStart(sessionDate, course.classTime)
+          || (full && !isCurrentTarget)
+        ) return []
         return [{
           value: `${course.courseSeasonCourseId}|${sessionDate}`,
           label: `${course.courseName}｜${formatAttendanceDate(sessionDate)}｜${course.classTime}`,
+          startsAt: courseSessionStart(sessionDate, course.classTime).getTime(),
         }]
       })
-    }).sort((first, second) => first.label.localeCompare(second.label, 'zh-TW'))
+    }).sort((first, second) => first.startsAt - second.startsAt || first.label.localeCompare(second.label, 'zh-TW'))
   }
 
   async function runAction(key: string, body: Record<string, string>) {
@@ -161,7 +192,7 @@ export default function StudentAttendancePanel() {
         <div>
           <p className="text-sm font-semibold text-apple-blue">{payload.season?.name || '本季度'}</p>
           <h2 className="mt-1 flex items-center gap-2 text-2xl font-black text-apple-gray-900"><CalendarCheck2 className="h-6 w-6" />我的點名表</h2>
-          <p className="mt-2 text-sm leading-6 text-apple-gray-600">查看自己的到課紀錄；課前請假後，可選擇本季度其他班級的可用課次補課。</p>
+          <p className="mt-2 text-sm leading-6 text-apple-gray-600">查看自己的到課紀錄；只能為最近一堂課請假，補課則可選擇原課次之後、本季度內其他班級的可用課次。</p>
         </div>
         <button type="button" title="重新整理點名表" onClick={() => loadAttendance()} className="apple-button-secondary min-h-10 shrink-0 gap-2 px-4 py-2 text-sm"><RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />重新整理</button>
       </div>
@@ -175,7 +206,11 @@ export default function StudentAttendancePanel() {
         <div className="divide-y divide-black/5">
           {rows.map((row, index) => {
             const canChangeBeforeClass = isBeforeCourseStart(row.sessionDate, row.course.classTime)
-            const canRequestLeave = canChangeBeforeClass && !row.cancellation && !row.record && !row.makeup
+            const canRequestLeave = nearestSessionKeys.get(row.enrollment.id) === row.key
+              && canChangeBeforeClass
+              && !row.cancellation
+              && !row.record
+              && !row.makeup
             const options = targetOptions(row)
             const targetCourseName = row.makeup?.target_course_season_course_id ? courseNames.get(row.makeup.target_course_season_course_id) : ''
             const isEditing = row.makeup?.id === editingRequestId
@@ -218,8 +253,8 @@ export default function StudentAttendancePanel() {
 
                     {isEditing && row.makeup ? (
                       <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
-                        <label className="block"><span className="mb-2 block text-xs font-black text-blue-900">選擇本季度其他班級的補課課次</span><select value={targetValue} onChange={(event) => setTargetValue(event.target.value)} className="apple-input min-h-11 bg-white text-sm"><option value="">請選擇課次</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-                        {options.length === 0 ? <p className="mt-2 text-xs font-semibold leading-5 text-blue-800">目前沒有尚未開始且未額滿的補課課次，稍後可再回來查看。</p> : null}
+                        <label className="block"><span className="mb-2 block text-xs font-black text-blue-900">選擇原課次之後、本季度其他班級的補課課次</span><select value={targetValue} onChange={(event) => setTargetValue(event.target.value)} className="apple-input min-h-11 bg-white text-sm"><option value="">請選擇課次</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+                        {options.length === 0 ? <p className="mt-2 text-xs font-semibold leading-5 text-blue-800">目前沒有原課次之後、尚未開始且未額滿的本季度補課課次，稍後可再回來查看。</p> : null}
                         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                           <button type="button" disabled={!targetValue || Boolean(busyKey)} onClick={() => {
                             const [targetCourseSeasonCourseId, targetSessionDate] = targetValue.split('|')

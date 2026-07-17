@@ -88,6 +88,28 @@ export function isBeforeCourseStart(sessionDate: string, classTime: string, now 
   return now.getTime() < courseSessionStart(sessionDate, classTime).getTime()
 }
 
+export function nearestUpcomingCourseSession(
+  sessionDates: readonly string[],
+  classTime: string,
+  cancelledDates: ReadonlySet<string>,
+  now = new Date(),
+) {
+  return sessionDates
+    .filter((sessionDate) => !cancelledDates.has(sessionDate) && isBeforeCourseStart(sessionDate, classTime, now))
+    .sort((first, second) => courseSessionStart(first, classTime).getTime()
+      - courseSessionStart(second, classTime).getTime())[0] ?? null
+}
+
+export function isCourseSessionAfter(
+  candidateDate: string,
+  candidateTime: string,
+  referenceDate: string,
+  referenceTime: string,
+) {
+  return courseSessionStart(candidateDate, candidateTime).getTime()
+    > courseSessionStart(referenceDate, referenceTime).getTime()
+}
+
 export function formatAttendanceDate(date: string) {
   return new Intl.DateTimeFormat('zh-TW', {
     timeZone: 'Asia/Taipei',
