@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Copy,
   CreditCard,
+  FileSpreadsheet,
   LayoutDashboard,
   Loader2,
   RefreshCw,
@@ -27,11 +28,12 @@ import AdminContentManager from '@/components/admin/AdminContentManager'
 import AdminEnrollmentAnalytics from '@/components/admin/AdminEnrollmentAnalytics'
 import AdminProductCreator from '@/components/admin/AdminProductCreator'
 import AdminProductEditor, { type AdminEditableProduct } from '@/components/admin/AdminProductEditor'
+import AdminBankReconciliation from '@/components/admin/AdminBankReconciliation'
 import { announceSiteContentUpdated } from '@/lib/site-content-sync'
 
 type PaymentOrderStatus = 'pending_transfer' | 'pending_review' | 'approved' | 'rejected'
 
-type AdminTab = 'overview' | 'students' | 'coaches' | 'seasons' | 'products' | 'content' | 'paymentAccounts'
+type AdminTab = 'overview' | 'students' | 'coaches' | 'seasons' | 'products' | 'content' | 'reconciliation' | 'paymentAccounts'
 
 type AdminDashboardPayload = {
   admin: { id: string; email: string; name: string; role: string }
@@ -202,6 +204,7 @@ const tabs: Array<{ id: AdminTab; label: string; icon: typeof LayoutDashboard }>
   { id: 'seasons', label: '季度管理', icon: CalendarRange },
   { id: 'products', label: '商城商品', icon: Boxes },
   { id: 'content', label: '內容中心', icon: PanelsTopLeft },
+  { id: 'reconciliation', label: '銀行對帳', icon: FileSpreadsheet },
   { id: 'paymentAccounts', label: '收款帳戶', icon: Landmark },
 ]
 
@@ -890,6 +893,10 @@ export default function AdminDashboardClient() {
                   )}
                 </section>
               ) : null}
+
+	          {activeTab === 'reconciliation' && data ? (
+	            <AdminBankReconciliation paymentAccounts={data.paymentAccounts} />
+	          ) : null}
 
 	          {activeTab === 'paymentAccounts' && data ? (
 	            <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">

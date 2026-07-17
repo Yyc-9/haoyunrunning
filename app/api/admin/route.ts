@@ -10,6 +10,10 @@ import { getCourseSeasons } from '@/lib/course-seasons-server'
 import { defaultCourseBillingConfig, normalizeCourseBillingConfig } from '@/lib/course-pricing'
 import { applyCourseOverrides } from '@/lib/managed-courses'
 import {
+  awardCourseEnrollmentAchievement,
+  sendCourseEnrollmentApprovedEmail,
+} from '@/lib/admin-payment-notifications'
+import {
   defaultSiteContent,
   isSafePublicUrl,
   normalizeActivities,
@@ -121,26 +125,6 @@ function recordText(value: Record<string, unknown> | null, key: string) {
 function recordNumber(value: Record<string, unknown> | null, key: string) {
   const item = Number(value?.[key])
   return Number.isFinite(item) ? item : null
-}
-
-async function awardAchievementByEmail(email: string, badgeSlug: string, reason: string, awardedBy: string) {
-  if (!supabaseAdmin || !email) return
-
-  const [{ data: profile }, { data: badge }] = await Promise.all([
-    supabaseAdmin.from('profiles').select('id').ilike('email', email.trim()).maybeSingle(),
-    supabaseAdmin.from('achievement_badges').select('id').eq('slug', badgeSlug).eq('active', true).maybeSingle(),
-  ])
-
-  if (!profile || !badge) return
-  await supabaseAdmin.from('profile_achievements').upsert(
-    {
-      profile_id: profile.id,
-      badge_id: badge.id,
-      reason,
-      awarded_by: awardedBy,
-    },
-    { onConflict: 'profile_id,badge_id', ignoreDuplicates: true }
-  )
 }
 
 type ShopOrderRow = {
@@ -331,39 +315,6 @@ function isOptionalSchemaError(error: { code?: string; message?: string } | null
 function formatAmount(value: number | null | undefined) {
   if (!value) return '待確認'
   return `NT$${(value / 100).toFixed(0)}`
-}
-
-async function sendOptionalEnrollmentEmail(input: { to: string; studentName: string; courseName: string }) {
-  const apiKey = process.env.RESEND_API_KEY
-  const from = process.env.ENROLLMENT_EMAIL_FROM || process.env.RESEND_FROM_EMAIL
-
-  if (!apiKey || !from) {
-    console.info('[admin] Enrollment approved email skipped: email env is missing.')
-    return '郵件服務尚未設定，已完成核准但未發送郵件。'
-  }
-
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from,
-      to: input.to,
-      subject: '好運跑班報名付款已確認',
-      text: `${input.studentName || '同學'}你好：你的 ${input.courseName || '已報名課程'} 報名付款已經核准，報名確認完成。後續課程通知將另行聯絡。`,
-    }),
-  })
-
-  if (!response.ok) {
-    console.warn('[admin] Enrollment approved email failed.', {
-      status: response.status,
-    })
-    return '核准已完成，但郵件發送失敗，請稍後檢查郵件服務設定。'
-  }
-
-  return '核准已完成，並已發送報名確認郵件。'
 }
 
 async function requireAdmin(request: NextRequest) {
@@ -1401,8 +1352,12 @@ export async function PATCH(request: NextRequest) {
 
     let emailMessage = ''
     if (status === 'approved' && order.email) {
-      await awardAchievementByEmail(order.email, 'first-course', `完成 ${order.preferred_course} 報名`, auth.adminProfile.id)
-      emailMessage = await sendOptionalEnrollmentEmail({
+      await awardCourseEnrollmentAchievement({
+        email: order.email,
+        courseName: order.preferred_course,
+        awardedBy: auth.adminProfile.id,
+      })
+      emailMessage = await sendCourseEnrollmentApprovedEmail({
         to: order.email,
         studentName: order.name,
         courseName: order.preferred_course,
