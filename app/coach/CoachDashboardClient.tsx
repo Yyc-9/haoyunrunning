@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowRight, CalendarCheck2, ClipboardList, Mail, MessageSquareText, PencilLine, RefreshCw, UserRound, UsersRound } from 'lucide-react'
+import { ArrowRight, CalendarCheck2, ClipboardList, LockKeyhole, Mail, MessageSquareText, PencilLine, RefreshCw, UserRound, UsersRound } from 'lucide-react'
+import { useAuth } from '@/app/providers'
 import CoachAccessPanel from '@/components/CoachAccessPanel'
 import CoachSubNav from '@/components/CoachSubNav'
 import { paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
@@ -79,11 +80,13 @@ function formatDate(value: string) {
 }
 
 export default function CoachDashboardClient() {
+  const { user, isLoading: isAuthLoading } = useAuth()
   const [students, setStudents] = useState<BoundStudentRow[]>([])
   const [groupSignups, setGroupSignups] = useState<GroupSignup[]>([])
   const [coachProfile, setCoachProfile] = useState<CoachPublicProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const hasCoachAccess = user?.role === 'coach' || user?.role === 'admin'
 
   const loadWorkspace = useCallback(async () => {
     setIsLoading(true)
@@ -101,8 +104,13 @@ export default function CoachDashboardClient() {
   }, [])
 
   useEffect(() => {
+    if (isAuthLoading) return
+    if (!hasCoachAccess) {
+      setIsLoading(false)
+      return
+    }
     loadWorkspace()
-  }, [loadWorkspace])
+  }, [hasCoachAccess, isAuthLoading, loadWorkspace])
 
   const recentFeedback = useMemo(() => students
     .flatMap((row) => (row.recentFeedback ?? []).map((feedback) => ({ row, feedback })))
@@ -114,6 +122,31 @@ export default function CoachDashboardClient() {
   const hour = new Date().getHours()
   const greeting = hour < 11 ? '早安' : hour < 18 ? '午安' : '晚安'
   const coachName = coachProfile?.displayName || '教練'
+
+  if (isAuthLoading) {
+    return <main className="flex min-h-screen items-center justify-center bg-apple-gray-50 pt-24"><RefreshCw className="h-7 w-7 animate-spin text-apple-gray-400" /></main>
+  }
+
+  if (!hasCoachAccess) {
+    return (
+      <main className="min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
+        <section className="container mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-20">
+          <div className="rounded-lg border border-black/10 bg-white p-6 text-center shadow-sm sm:p-10">
+            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-black text-white">
+              <LockKeyhole className="h-5 w-5" />
+            </span>
+            <p className="mt-5 text-xs font-black text-apple-blue">COACH ACCESS</p>
+            <h1 className="mt-2 text-2xl font-black text-black sm:text-3xl">此頁面只供已認證教練使用</h1>
+            <p className="mx-auto mt-3 max-w-lg text-sm leading-7 text-apple-gray-600">若您的登入信箱已由管理員登記，請前往個人帳戶完成教練身份認證。</p>
+            <Link href="/profile" className="apple-button-primary mt-6 inline-flex gap-2 px-6 py-3">
+              前往個人帳戶
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </section>
+      </main>
+    )
+  }
 
   return (
     <main className="min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
@@ -160,7 +193,7 @@ export default function CoachDashboardClient() {
           </div>
 
           <div className="mb-6 grid gap-5 lg:grid-cols-[360px_1fr]">
-            <CoachAccessPanel compact onStudentBound={loadWorkspace} />
+            <CoachAccessPanel onStudentBound={loadWorkspace} />
 
             <section className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-6">
               <div className="flex items-center justify-between gap-3">

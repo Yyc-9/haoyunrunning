@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
   const { data: publicCoachProfile, error: publicCoachProfileError } = await supabaseAdmin
     .from('coach_public_profiles')
-    .select('coach_key, display_name, owner_profile_id')
+    .select('coach_key, display_name, owner_profile_id, verification_email')
     .eq('coach_key', invite.coach_key)
     .maybeSingle()
   if (publicCoachProfileError) {
@@ -61,6 +61,15 @@ export async function POST(request: NextRequest) {
   }
   if (publicCoachProfile.owner_profile_id && publicCoachProfile.owner_profile_id !== user.id) {
     return NextResponse.json({ error: '這份公開教練資料已經連結其他帳號。' }, { status: 409 })
+  }
+
+  const loginEmail = (user.email ?? '').trim().toLowerCase()
+  const verificationEmail = (publicCoachProfile.verification_email ?? '').trim().toLowerCase()
+  if (!verificationEmail) {
+    return NextResponse.json({ error: '這份教練資料尚未指定認證信箱，請聯絡管理員。' }, { status: 403 })
+  }
+  if (!loginEmail || loginEmail !== verificationEmail) {
+    return NextResponse.json({ error: '這組認證碼與目前登入的信箱不符。' }, { status: 403 })
   }
 
   const fallbackName =

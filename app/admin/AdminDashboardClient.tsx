@@ -62,7 +62,7 @@ type AdminDashboardPayload = {
   courses: AdminCourseSummary[]
   coachOptions: Array<{ id: string; name: string; email: string }>
   coachInvites: CoachInvite[]
-  coachPublicProfiles: Array<{ coachKey: string; displayName: string; ownerProfileId: string | null }>
+  coachPublicProfiles: Array<{ coachKey: string; displayName: string; ownerProfileId: string | null; verificationEmail: string }>
 }
 
 type CoachInvite = {
@@ -70,6 +70,7 @@ type CoachInvite = {
   code: string
   coachKey: string
   coachName: string
+  verificationEmail: string
   usedBy: string
   usedAt: string | null
   expiresAt: string | null
@@ -254,6 +255,23 @@ async function fetchAdminDashboard() {
   return payload
 }
 
+async function fetchCoachInviteStatus() {
+  const token = await getAccessToken()
+  if (!token) throw new Error('請先登入管理員帳號。')
+
+  const response = await fetch('/api/admin/coach-invite-status', {
+    cache: 'no-store',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const payload = (await response.json().catch(() => ({}))) as Pick<
+    AdminDashboardPayload,
+    'coachInvites' | 'coachPublicProfiles'
+  > & { error?: string }
+
+  if (!response.ok) throw new Error(payload.error || '讀取教練認證狀態失敗。')
+  return payload
+}
+
 async function adminAction(body: Record<string, unknown>) {
   const token = await getAccessToken()
   if (!token) {
@@ -297,6 +315,7 @@ export default function AdminDashboardClient() {
   const [studentQuery, setStudentQuery] = useState('')
   const [coachQuery, setCoachQuery] = useState('')
   const [selectedCoachInviteKey, setSelectedCoachInviteKey] = useState('')
+  const [selectedCoachInviteEmail, setSelectedCoachInviteEmail] = useState('')
   const [studentPlanFilter, setStudentPlanFilter] = useState<'all' | 'enabled' | 'missing'>('all')
   const [coachRoleFilter, setCoachRoleFilter] = useState<'all' | 'coach' | 'admin'>('all')
   const [accountForm, setAccountForm] = useState({
@@ -328,6 +347,40 @@ export default function AdminDashboardClient() {
   useEffect(() => {
     loadDashboard()
   }, [loadDashboard])
+
+  useEffect(() => {
+    if (activeTab !== 'coaches') return
+
+    let cancelled = false
+    const syncCoachInviteStatus = async () => {
+      try {
+        const snapshot = await fetchCoachInviteStatus()
+        if (cancelled) return
+        setData((current) => current ? {
+          ...current,
+          coachInvites: snapshot.coachInvites,
+          coachPublicProfiles: snapshot.coachPublicProfiles,
+        } : current)
+      } catch {
+        // The full dashboard refresh remains available if a background sync is interrupted.
+      }
+    }
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') syncCoachInviteStatus()
+    }
+
+    syncCoachInviteStatus()
+    const timer = window.setInterval(syncCoachInviteStatus, 10_000)
+    window.addEventListener('focus', syncCoachInviteStatus)
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+      window.removeEventListener('focus', syncCoachInviteStatus)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [activeTab])
 
   useEffect(() => {
     if (!message && !(error && data)) return
@@ -375,15 +428,18 @@ export default function AdminDashboardClient() {
     })
   }, [coachQuery, coachRoleFilter, data?.coaches])
   const availableCoachInviteProfiles = useMemo(() => {
-    const invitesByCoachKey = new Map((data?.coachInvites ?? []).map((invite) => [invite.coachKey, invite]))
-    const now = Date.now()
-
-    return (data?.coachPublicProfiles ?? []).filter((profile) => {
-      if (profile.ownerProfileId) return false
-      const invite = invitesByCoachKey.get(profile.coachKey)
-      return !invite || Boolean(invite.expiresAt && new Date(invite.expiresAt).getTime() <= now)
-    })
-  }, [data?.coachInvites, data?.coachPublicProfiles])
+    return (data?.coachPublicProfiles ?? []).filter((profile) => !profile.ownerProfileId)
+  }, [data?.coachPublicProfiles])
+  const assignedCoachInvites = useMemo(
+    () => (data?.coachInvites ?? []).filter((invite) => Boolean(invite.verificationEmail)),
+    [data?.coachInvites]
+  )
+  const unassignedCoachInviteCount = (data?.coachInvites.length ?? 0) - assignedCoachInvites.length
+  const verificationCoachProfiles = useMemo(
+    () => (data?.coachPublicProfiles ?? []).filter((profile) => Boolean(profile.verificationEmail)),
+    [data?.coachPublicProfiles]
+  )
+  const verifiedCoachProfileCount = verificationCoachProfiles.filter((profile) => Boolean(profile.ownerProfileId)).length
   async function runAction(id: string, action: Record<string, unknown>) {
     setUpdatingId(id)
     setError('')
@@ -446,12 +502,16 @@ export default function AdminDashboardClient() {
   }
 
   async function createCoachInvite() {
-    if (!selectedCoachInviteKey) return
+    if (!selectedCoachInviteKey || !selectedCoachInviteEmail.trim()) return
     const created = await runAction('create-coach-invite', {
       action: 'create_coach_invite',
       coachKey: selectedCoachInviteKey,
+      verificationEmail: selectedCoachInviteEmail,
     })
-    if (created) setSelectedCoachInviteKey('')
+    if (created) {
+      setSelectedCoachInviteKey('')
+      setSelectedCoachInviteEmail('')
+    }
   }
 
   if (isLoading) {
@@ -686,46 +746,68 @@ export default function AdminDashboardClient() {
           {activeTab === 'coaches' && data ? (
             <section className="apple-card overflow-hidden">
               <div className="border-b border-black/10 bg-apple-gray-100 p-5">
-                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
                   <div>
                     <div className="flex items-center gap-2">
                       <KeyRound className="h-5 w-5 text-apple-gray-700" />
                       <h2 className="text-lg font-black text-apple-gray-900">專屬教練認證碼</h2>
                     </div>
                     <p className="mt-1 text-sm text-apple-gray-600">每組認證碼只對應一份公開教練資料。使用者登入並完成認證後，教練權限、公開身份與負責課程會一起連結。</p>
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs font-black">
+                      <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-emerald-800">
+                        已完成 {verifiedCoachProfileCount} / {verificationCoachProfiles.length}
+                      </span>
+                      <span className="rounded-full bg-amber-100 px-3 py-1.5 text-amber-800">
+                        待認證 {assignedCoachInvites.length}
+                      </span>
+                    </div>
                   </div>
-                  <div className="grid min-w-0 gap-2 sm:min-w-[360px] sm:grid-cols-[minmax(0,1fr)_auto]">
+                  <div className="grid min-w-0 gap-2 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)_auto] lg:min-w-[520px]">
                     <select
                       value={selectedCoachInviteKey}
-                      onChange={(event) => setSelectedCoachInviteKey(event.target.value)}
+                      onChange={(event) => {
+                        const coachKey = event.target.value
+                        const profile = availableCoachInviteProfiles.find((item) => item.coachKey === coachKey)
+                        setSelectedCoachInviteKey(coachKey)
+                        setSelectedCoachInviteEmail(profile?.verificationEmail ?? '')
+                      }}
                       className="apple-input min-w-0 bg-white py-2.5 text-sm"
                       aria-label="選擇公開教練身份"
                     >
-                      <option value="">{availableCoachInviteProfiles.length ? '選擇尚未連結的教練' : '目前皆已生成或完成連結'}</option>
+                      <option value="">{availableCoachInviteProfiles.length ? '選擇尚未認證的教練' : '所有教練皆已完成認證'}</option>
                       {availableCoachInviteProfiles.map((profile) => (
                         <option key={profile.coachKey} value={profile.coachKey}>{profile.displayName}</option>
                       ))}
                     </select>
+                    <input
+                      type="email"
+                      value={selectedCoachInviteEmail}
+                      onChange={(event) => setSelectedCoachInviteEmail(event.target.value)}
+                      placeholder="教練登入信箱"
+                      className="apple-input min-w-0 bg-white py-2.5 text-sm"
+                      aria-label="教練登入信箱"
+                    />
                     <button
                       type="button"
                       onClick={createCoachInvite}
-                      disabled={!selectedCoachInviteKey || updatingId === 'create-coach-invite'}
-                      className="apple-button-primary gap-2 px-5 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={!selectedCoachInviteKey || !selectedCoachInviteEmail.trim() || updatingId === 'create-coach-invite'}
+                      className="apple-button-primary gap-2 whitespace-nowrap px-5 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {updatingId === 'create-coach-invite' ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
-                      生成專屬碼
+                      儲存認證資料
                     </button>
                   </div>
                 </div>
 
                 <div className="mt-4 grid max-h-[420px] gap-2 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-3">
-                  {data.coachInvites.map((invite) => {
+                  {assignedCoachInvites.map((invite) => {
                     const expired = Boolean(invite.expiresAt && new Date(invite.expiresAt).getTime() < Date.now())
                     return (
                       <div key={invite.id} className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 bg-white p-3">
                         <div className="min-w-0">
                           <p className="truncate text-sm font-black text-apple-gray-900">{invite.coachName}</p>
                           <p className="mt-1 truncate font-mono text-xs font-bold text-apple-gray-600">{invite.code}</p>
+                          <p className="mt-1 truncate text-xs text-apple-gray-500">{invite.verificationEmail}</p>
                           <p className={`mt-1 text-xs font-semibold ${expired ? 'text-amber-700' : 'text-emerald-700'}`}>
                             {expired ? '已過期，可重新生成' : `可使用 · 有效至 ${formatDate(invite.expiresAt)}`}
                           </p>
@@ -744,10 +826,19 @@ export default function AdminDashboardClient() {
                       </div>
                     )
                   })}
-                  {data.coachInvites.length === 0 ? (
-                    <p className="text-sm text-apple-gray-500">目前沒有可使用的專屬認證碼。</p>
+                  {assignedCoachInvites.length === 0 ? (
+                    <p className="text-sm font-semibold text-emerald-700">
+                      {verificationCoachProfiles.length > 0 && verifiedCoachProfileCount === verificationCoachProfiles.length
+                        ? '名單中的教練皆已完成身份認證。'
+                        : '目前沒有可使用的專屬認證碼。'}
+                    </p>
                   ) : null}
                 </div>
+                {unassignedCoachInviteCount > 0 ? (
+                  <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-800">
+                    另有 {unassignedCoachInviteCount} 份舊教練資料尚未指定登入信箱，認證碼不會對任何普通帳戶開放；可從上方選擇教練後補上信箱。
+                  </p>
+                ) : null}
               </div>
               <div className="border-b border-black/10 p-5">
                 <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">

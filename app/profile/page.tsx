@@ -9,13 +9,25 @@ import {
   Sparkles, Target, TicketCheck, Trophy, UserRound, UsersRound,
 } from 'lucide-react'
 import { useAuth } from '@/app/providers'
+import CoachVerificationPanel from '@/components/CoachVerificationPanel'
 import StudentAttendancePanel from '@/components/StudentAttendancePanel'
 import {
   emptyProfile, getRaceCountdown, getRaceEvent, getTargetEventLabel, type AccountProfile, type Achievement,
 } from '@/lib/runner-profile'
 import { supabase } from '@/lib/supabase'
 
-type AccountPayload = { profile?: AccountProfile; achievements?: Achievement[]; error?: string }
+type CoachVerificationEligibility = {
+  eligible: true
+  coachKey: string
+  coachName: string
+}
+
+type AccountPayload = {
+  profile?: AccountProfile
+  achievements?: Achievement[]
+  coachVerification?: CoachVerificationEligibility | null
+  error?: string
+}
 
 const accountLinks = [
   { href: '/courses', icon: TicketCheck, title: '訓練課程' },
@@ -54,6 +66,8 @@ export default function ProfilePage() {
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [isAccountLoading, setIsAccountLoading] = useState(true)
   const [error, setError] = useState('')
+  const [coachVerification, setCoachVerification] = useState<CoachVerificationEligibility | null>(null)
+  const [verificationMessage, setVerificationMessage] = useState('')
   const [countdownNow, setCountdownNow] = useState<Date | null>(null)
   const [isAttendanceOpen, setIsAttendanceOpen] = useState(false)
 
@@ -69,12 +83,19 @@ export default function ProfilePage() {
       if (!response.ok || !payload.profile) throw new Error(payload.error || '讀取帳戶資料失敗。')
       setProfile({ ...emptyProfile, ...payload.profile })
       setAchievements(payload.achievements ?? [])
+      setCoachVerification(payload.coachVerification ?? null)
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : '讀取帳戶資料失敗。')
     } finally {
       setIsAccountLoading(false)
     }
   }, [isLoggedIn])
+
+  const handleCoachVerified = useCallback(async () => {
+    setCoachVerification(null)
+    setVerificationMessage('教練身份認證完成，教練工作台已開放。')
+    await loadAccount()
+  }, [loadAccount])
 
   useEffect(() => {
     if (!isLoading && isLoggedIn) loadAccount()
@@ -85,6 +106,12 @@ export default function ProfilePage() {
     const timer = window.setInterval(() => setCountdownNow(new Date()), 1000)
     return () => window.clearInterval(timer)
   }, [])
+
+  useEffect(() => {
+    if (!verificationMessage) return
+    const timer = window.setTimeout(() => setVerificationMessage(''), 5000)
+    return () => window.clearTimeout(timer)
+  }, [verificationMessage])
 
   useEffect(() => {
     const openAttendanceFromHash = () => {
@@ -106,6 +133,9 @@ export default function ProfilePage() {
   const raceCountdown = race && countdownNow ? getRaceCountdown(race, countdownNow) : null
   const profileFields = [profile.nickname, profile.city, profile.running_since, profile.favorite_distance, profile.pb, profile.goal, profile.bio]
   const profileCompletion = Math.round((profileFields.filter(Boolean).length / profileFields.length) * 100)
+  const commonAccountLinks = user?.role === 'coach' || user?.role === 'admin'
+    ? [{ href: '/coach', icon: UsersRound, title: '教練工作台' }, ...accountLinks]
+    : accountLinks
 
   if (isLoading) {
     return <main className="flex min-h-screen items-center justify-center bg-apple-gray-50 pt-24"><div className="text-center"><div className="mx-auto h-11 w-11 animate-spin rounded-full border-2 border-apple-gray-200 border-t-black" /><p className="mt-4 text-sm font-semibold text-apple-gray-600">正在讀取帳戶...</p></div></main>
@@ -128,6 +158,7 @@ export default function ProfilePage() {
     <main className="min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
       <div className="container mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-12">
         {error ? <p role="alert" className="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p> : null}
+        {verificationMessage ? <p role="status" className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-800">{verificationMessage}</p> : null}
 
         <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-lg bg-black text-white shadow-xl">
           <div className="absolute inset-y-0 left-0 w-2 bg-emerald-400" />
@@ -184,6 +215,13 @@ export default function ProfilePage() {
             </div>
           </div>
         </motion.section>
+
+        {isStudentAccount && coachVerification?.eligible ? (
+          <CoachVerificationPanel
+            coachName={coachVerification.coachName}
+            onVerified={handleCoachVerified}
+          />
+        ) : null}
 
         {isStudentAccount ? (
           <section id="attendance-overview" className="scroll-mt-24 border-t border-black/10 py-4 sm:py-10">
@@ -244,7 +282,7 @@ export default function ProfilePage() {
 
         <section className="border-t border-black/10 py-7">
           <h2 className="text-xl font-black text-black">常用入口</h2>
-          <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-4">{accountLinks.map((item) => <Link key={item.href} href={item.href} className="flex min-h-20 flex-col justify-between rounded-lg border border-black/10 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 sm:min-h-32 sm:p-5"><item.icon className="h-5 w-5 text-apple-blue" /><span className="mt-3 text-xs font-black sm:mt-4 sm:text-base">{item.title}</span></Link>)}</div>
+          <div className={`mt-4 grid gap-2 sm:gap-4 ${commonAccountLinks.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}>{commonAccountLinks.map((item) => <Link key={item.href} href={item.href} className="flex min-h-20 flex-col justify-between rounded-lg border border-black/10 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 sm:min-h-32 sm:p-5"><item.icon className="h-5 w-5 text-apple-blue" /><span className="mt-3 text-xs font-black sm:mt-4 sm:text-base">{item.title}</span></Link>)}</div>
         </section>
 
         <a href="https://www.instagram.com/nurture.running.team/" target="_blank" rel="noreferrer" className="mb-4 inline-flex items-center gap-2 text-sm font-bold text-apple-gray-600"><Instagram className="h-4 w-4" />聯絡好運跑班</a>

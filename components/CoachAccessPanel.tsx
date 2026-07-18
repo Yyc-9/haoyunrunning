@@ -1,13 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { KeyRound, Link2, Loader2, ShieldCheck } from 'lucide-react'
+import { Link2, Loader2, ShieldCheck } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/app/providers'
 import { useLanguage } from '@/app/language-context'
 
 type CoachAccessPanelProps = {
-  compact?: boolean
   onStudentBound?: () => void | Promise<void>
 }
 
@@ -52,41 +51,13 @@ async function postWithSession(path: string, body: Record<string, string>) {
   return payload
 }
 
-export default function CoachAccessPanel({ compact = false, onStudentBound }: CoachAccessPanelProps) {
-  const { user, updateUser, refreshUser } = useAuth()
+export default function CoachAccessPanel({ onStudentBound }: CoachAccessPanelProps) {
+  const { user } = useAuth()
   const { t } = useLanguage()
-  const [inviteCode, setInviteCode] = useState('')
   const [studentEmail, setStudentEmail] = useState('')
-  const [isRedeeming, setIsRedeeming] = useState(false)
   const [isBinding, setIsBinding] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
-  const isCoach = user?.role === 'coach' || user?.role === 'admin'
-
-  const redeemInvite = async () => {
-    setIsRedeeming(true)
-    setMessage('')
-    setError('')
-
-    try {
-      const payload = await postWithSession('/api/coach/redeem-invite', { code: inviteCode })
-      updateUser({
-        role: payload.profile?.role || 'coach',
-        name: payload.profile?.name,
-        email: payload.profile?.email,
-        phone: payload.profile?.phone,
-        pb: payload.profile?.pb,
-        avatar: payload.profile?.avatar_url,
-      })
-      await refreshUser()
-      setInviteCode('')
-      setMessage(t.coach.inviteSuccess)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t.coach.inviteFailed)
-    } finally {
-      setIsRedeeming(false)
-    }
-  }
 
   const bindStudent = async () => {
     setIsBinding(true)
@@ -119,41 +90,14 @@ export default function CoachAccessPanel({ compact = false, onStudentBound }: Co
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
           <p className="text-xs text-apple-gray-500 sm:text-sm">{t.coach.accessLabel}</p>
-          <h2 className="text-lg font-black text-apple-gray-900 sm:text-xl">
-            {isCoach ? t.coach.bindTitle : t.coach.inviteInfoTitle}
-          </h2>
+          <h2 className="text-lg font-black text-apple-gray-900 sm:text-xl">{t.coach.bindTitle}</h2>
         </div>
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black text-white sm:h-11 sm:w-11">
           <ShieldCheck className="h-5 w-5" />
         </div>
       </div>
 
-      <div className={isCoach || compact ? 'space-y-4' : 'grid gap-4 md:grid-cols-2'}>
-        {!isCoach && (
-          <div className="rounded-md bg-apple-gray-100 p-3 sm:p-4">
-            <div className="mb-3 flex items-center gap-2">
-              <KeyRound className="h-4 w-4 text-apple-gray-700" />
-              <p className="font-bold text-apple-gray-900">{t.coach.inviteInput}</p>
-            </div>
-            <input
-              value={inviteCode}
-              onChange={(event) => setInviteCode(event.target.value)}
-              placeholder={t.coach.invitePlaceholder}
-              className="apple-input bg-white"
-            />
-            <button
-              type="button"
-              onClick={redeemInvite}
-              disabled={!user || !inviteCode.trim() || isRedeeming}
-              className="apple-button-primary mt-3 w-full gap-2 px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isRedeeming && <Loader2 className="h-4 w-4 animate-spin" />}
-              {t.coach.enableAccess}
-            </button>
-          </div>
-        )}
-
-        {isCoach ? (
+      <div className="space-y-4">
         <div className="rounded-md bg-apple-gray-100 p-3 sm:p-4">
           <div className="mb-3 flex items-center gap-2">
             <Link2 className="h-4 w-4 text-apple-gray-700" />
@@ -175,16 +119,9 @@ export default function CoachAccessPanel({ compact = false, onStudentBound }: Co
             {t.coach.bindStudent}
           </button>
         </div>
-        ) : null}
       </div>
 
-      {!user && (
-        <p className="mt-4 rounded-2xl bg-amber-50 p-3 text-sm leading-6 text-amber-800">
-          {t.coach.loginFirst}
-        </p>
-      )}
-
-      {user && isCoach && (
+      {user && (
         <p className="mt-4 rounded-2xl bg-green-50 p-3 text-sm leading-6 text-green-800">
           {t.coach.coachEnabled}
         </p>

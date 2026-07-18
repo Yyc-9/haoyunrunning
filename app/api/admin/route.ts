@@ -195,7 +195,7 @@ type CourseSeasonSyncSourceRow = {
 type AdminPatchBody =
   | { action?: 'set_coach_role'; userId?: string; enabled?: boolean }
   | { action?: 'link_coach_public_profile'; userId?: string; coachKey?: string }
-  | { action?: 'create_coach_invite'; coachKey?: string }
+  | { action?: 'create_coach_invite'; coachKey?: string; verificationEmail?: string }
   | { action?: 'review_order'; orderId?: string; orderKind?: 'course' | 'shop'; status?: PaymentOrderStatus; reviewNote?: string }
   | { action?: 'resolve_attendance_anomaly'; attendanceId?: string; outcome?: 'supplement_paid' | 'waived' | 'reopen'; resolutionNote?: string }
   | { action?: 'delete_order'; orderId?: string; orderKind?: 'course' | 'shop' }
@@ -231,6 +231,14 @@ function json(data: unknown, init?: ResponseInit) {
 
 function cleanText(value: unknown) {
   return typeof value === 'string' ? value.trim() : ''
+}
+
+function normalizeEmail(value: unknown) {
+  return cleanText(value).toLowerCase()
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
 }
 
 function commaSeparated(value: unknown) {
@@ -511,6 +519,7 @@ export async function GET(request: NextRequest) {
   const baseSiteContent = siteContentResult.error ? defaultSiteContent : siteContentFromRows(siteContentResult.data)
   const publicCoachProfiles = coachPublicProfilesFromRows(coachPublicProfilesResult.data as CoachPublicProfileRow[] | null)
   const publicCoachRows = (coachPublicProfilesResult.data ?? []) as CoachPublicProfileRow[]
+  const publicCoachRowsByKey = new Map(publicCoachRows.map((row) => [row.coach_key, row]))
   const courseAttendance = (courseAttendanceResult.data ?? []) as CourseAttendanceRow[]
   const attendanceResolutions = (attendanceResolutionsResult.data ?? []) as CourseAttendanceResolutionRow[]
   const attendanceDeductions = (attendanceDeductionsResult.data ?? []) as CourseAttendanceDeductionRow[]
@@ -835,6 +844,7 @@ export async function GET(request: NextRequest) {
       code: invite.code,
       coachKey: invite.coach_key,
       coachName: publicCoachProfiles[invite.coach_key]?.displayName || invite.coach_key,
+      verificationEmail: publicCoachRowsByKey.get(invite.coach_key)?.verification_email ?? '',
       usedBy: invite.used_by
         ? profilesById.get(invite.used_by)?.name || profilesById.get(invite.used_by)?.email || '已使用'
         : '',
@@ -846,6 +856,7 @@ export async function GET(request: NextRequest) {
       coachKey: row.coach_key,
       displayName: publicCoachProfiles[row.coach_key]?.displayName || row.display_name || row.coach_key,
       ownerProfileId: row.owner_profile_id ?? null,
+      verificationEmail: row.verification_email ?? '',
     })),
   })
 }
@@ -1208,13 +1219,14 @@ export async function PATCH(request: NextRequest) {
 
   if (body.action === 'create_coach_invite') {
     const coachKey = cleanText(body.coachKey)
+    const requestedVerificationEmail = normalizeEmail(body.verificationEmail)
     if (!/^[A-Za-z0-9-]{1,80}$/.test(coachKey)) {
       return json({ error: '請先選擇要連結的公開教練身份。' }, { status: 400 })
     }
 
     const { data: coachIdentity, error: coachIdentityError } = await supabaseAdmin!
       .from('coach_public_profiles')
-      .select('coach_key, display_name, owner_profile_id')
+      .select('coach_key, display_name, owner_profile_id, verification_email')
       .eq('coach_key', coachKey)
       .maybeSingle()
     if (coachIdentityError) {
@@ -1225,6 +1237,26 @@ export async function PATCH(request: NextRequest) {
     }
     if (coachIdentity.owner_profile_id) {
       return json({ error: '這份公開教練資料已經連結登入帳號。' }, { status: 409 })
+    }
+
+    const verificationEmail = requestedVerificationEmail || normalizeEmail(coachIdentity.verification_email)
+    if (!isValidEmail(verificationEmail)) {
+      return json({ error: '請填寫這位教練實際登入網站的有效信箱。' }, { status: 400 })
+    }
+    if (verificationEmail !== normalizeEmail(coachIdentity.verification_email)) {
+      const { error: verificationEmailError } = await supabaseAdmin!
+        .from('coach_public_profiles')
+        .update({ verification_email: verificationEmail })
+        .eq('coach_key', coachKey)
+        .is('owner_profile_id', null)
+      if (verificationEmailError) {
+        const duplicate = verificationEmailError.code === '23505'
+        return json({
+          error: duplicate
+            ? '這個登入信箱已經指定給其他公開教練身份。'
+            : verificationEmailError.message,
+        }, { status: duplicate ? 409 : 500 })
+      }
     }
 
     const { data: existingInvite, error: existingInviteError } = await supabaseAdmin!

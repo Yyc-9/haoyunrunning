@@ -64,16 +64,51 @@ async function getAchievementCollection(profileId: string) {
   })
 }
 
+async function getCoachVerification(profile: Record<string, unknown>) {
+  if (!supabaseAdmin || profile.role === 'coach' || profile.role === 'admin') return null
+
+  const email = typeof profile.email === 'string' ? profile.email.trim().toLowerCase() : ''
+  if (!email) return null
+
+  const { data: coachProfile, error: coachProfileError } = await supabaseAdmin
+    .from('coach_public_profiles')
+    .select('coach_key, display_name')
+    .eq('verification_email', email)
+    .is('owner_profile_id', null)
+    .maybeSingle()
+
+  if (coachProfileError) throw coachProfileError
+  if (!coachProfile) return null
+
+  const { data: invite, error: inviteError } = await supabaseAdmin
+    .from('coach_invites')
+    .select('id, expires_at')
+    .eq('coach_key', coachProfile.coach_key)
+    .is('used_at', null)
+    .maybeSingle()
+
+  if (inviteError) throw inviteError
+  if (!invite) return null
+  if (invite.expires_at && new Date(invite.expires_at).getTime() <= Date.now()) return null
+
+  return {
+    eligible: true,
+    coachKey: coachProfile.coach_key,
+    coachName: coachProfile.display_name,
+  }
+}
+
 async function accountResponse(profile: Record<string, unknown>) {
   if (!supabaseAdmin) return NextResponse.json({ profile, achievements: [] }, { headers: noStoreHeaders })
 
-  const [achievements, billingResult] = await Promise.all([
+  const [achievements, billingResult, coachVerification] = await Promise.all([
     getAchievementCollection(String(profile.id)),
     supabaseAdmin
       .from('profile_billing_preferences')
       .select('invoice_type, invoice_carrier, tax_id')
       .eq('profile_id', String(profile.id))
       .maybeSingle(),
+    getCoachVerification(profile),
   ])
 
   if (billingResult.error) throw billingResult.error
@@ -87,6 +122,7 @@ async function accountResponse(profile: Record<string, unknown>) {
       tax_id: billingResult.data?.tax_id ?? '',
     },
     achievements,
+    coachVerification,
   }, { headers: noStoreHeaders })
 }
 

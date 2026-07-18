@@ -22,6 +22,7 @@ export type CoachPublicProfile = {
 export type CoachPublicProfileRow = {
   coach_key: string
   owner_profile_id?: string | null
+  verification_email?: string | null
   display_name?: string | null
   nickname?: string | null
   role_title?: string | null
