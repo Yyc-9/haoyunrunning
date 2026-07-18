@@ -247,6 +247,14 @@ export default function AdminContentManager({ content, courses, seasons, scope =
   const modes = allModes.filter((item) => scope === 'seasons'
     ? item.id === 'seasons' || item.id === 'courses'
     : item.id !== 'seasons' && item.id !== 'courses')
+  const activeMode = modes.find((item) => item.id === mode) ?? modes[0]
+
+  function changeMode(nextMode: ContentMode) {
+    if (nextMode === mode) return
+    setLocalError('')
+    setCourseMessage('')
+    setMode(nextMode)
+  }
 
   async function addHeroImage(file?: File) {
     if (!file) return
@@ -399,24 +407,25 @@ export default function AdminContentManager({ content, courses, seasons, scope =
   )
 
   return (
-    <section className="grid min-w-0 max-w-full gap-5 overflow-hidden lg:min-h-[720px] lg:grid-cols-[232px_minmax(0,1fr)] lg:items-start">
-      <aside className="min-w-0 max-w-full lg:sticky lg:top-28 lg:w-[232px]">
+    <section className="grid min-w-0 max-w-full gap-5 lg:min-h-[720px] lg:grid-cols-[232px_minmax(0,1fr)] lg:items-start">
+      <aside className="min-w-0 max-w-full lg:w-[232px] lg:self-start">
         <div className="flex w-full max-w-full gap-2 overflow-x-auto border-b border-black/10 pb-3 lg:flex-col lg:overflow-visible lg:border-b-0 lg:pb-0">
           {modes.map((item) => {
             const Icon = item.icon
-            return <button key={item.id} type="button" onClick={() => setMode(item.id)} className={`flex min-w-max items-center gap-3 rounded-lg px-3 py-3 text-left ring-1 ring-inset transition-colors lg:min-h-[68px] lg:w-full lg:min-w-0 ${mode === item.id ? 'bg-black text-white ring-black' : 'bg-white text-apple-gray-700 ring-black/10 hover:bg-apple-gray-100'}`}><Icon className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1"><span className="block text-sm font-bold">{item.label}</span><span className={`hidden text-xs lg:block lg:h-8 lg:overflow-hidden ${mode === item.id ? 'text-white/60' : 'text-apple-gray-500'}`}>{item.description}</span></span></button>
+            return <button key={item.id} type="button" aria-pressed={mode === item.id} aria-controls="admin-content-panel" onClick={() => changeMode(item.id)} className={`flex min-w-max shrink-0 items-center gap-3 rounded-lg px-3 py-3 text-left ring-1 ring-inset transition-colors lg:min-h-[68px] lg:w-full lg:min-w-0 ${mode === item.id ? 'bg-black text-white ring-black' : 'bg-white text-apple-gray-700 ring-black/10 hover:bg-apple-gray-100'}`}><Icon className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1"><span className="block text-sm font-bold">{item.label}</span><span className={`hidden text-xs lg:block lg:h-8 lg:overflow-hidden ${mode === item.id ? 'text-white/60' : 'text-apple-gray-500'}`}>{item.description}</span></span></button>
           })}
         </div>
       </aside>
 
-      <div className="min-w-0 lg:min-h-[720px]">
+      <div id="admin-content-panel" className="min-w-0 lg:min-h-[720px] lg:self-start">
+        <p className="sr-only" aria-live="polite">目前顯示：{activeMode?.label}</p>
         {localError ? <p className="mb-5 rounded-lg bg-red-50 px-5 py-4 text-sm font-semibold text-red-600">{localError}</p> : null}
 
         {mode === 'overview' ? (
           <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
             {panelHeader('網站內容中心', '所有日常可替換的圖片與文案集中在這裡。商品本身請到「商城商品」管理。')}
             <div className="grid md:grid-cols-2">
-              {modes.filter((item) => item.id !== 'overview').map((item) => { const Icon = item.icon; return <button key={item.id} type="button" onClick={() => setMode(item.id)} className="flex items-start gap-4 border-b border-black/10 p-5 text-left transition hover:bg-apple-gray-50 md:odd:border-r"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-apple-gray-100"><Icon className="h-5 w-5" /></span><span className="min-w-0"><span className="block font-black text-apple-gray-900">{item.label}</span><span className="mt-1 block text-sm text-apple-gray-500">{item.description}</span><span className="mt-2 block text-xs font-bold text-apple-blue">發布位置：{item.destination}</span></span></button> })}
+              {modes.filter((item) => item.id !== 'overview').map((item) => { const Icon = item.icon; return <button key={item.id} type="button" aria-controls="admin-content-panel" onClick={() => changeMode(item.id)} className="flex items-start gap-4 border-b border-black/10 p-5 text-left transition hover:bg-apple-gray-50 md:odd:border-r"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-apple-gray-100"><Icon className="h-5 w-5" /></span><span className="min-w-0"><span className="block font-black text-apple-gray-900">{item.label}</span><span className="mt-1 block text-sm text-apple-gray-500">{item.description}</span><span className="mt-2 block text-xs font-bold text-apple-blue">發布位置：{item.destination}</span></span></button> })}
             </div>
           </div>
         ) : null}
@@ -490,7 +499,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                     <select value={season.status} onChange={(event) => updateSeasonStatus(season, event.target.value as CourseSeasonStatus)} className="apple-input min-w-32" aria-label={`更新 ${season.name} 狀態`}>
                       {Object.entries(courseSeasonStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                     </select>
-                    <button type="button" onClick={() => { setSelectedSeasonId(season.id); setMode('courses') }} className="apple-button-outline px-4 py-2.5">管理這季課程</button>
+                    <button type="button" onClick={() => { setSelectedSeasonId(season.id); changeMode('courses') }} className="apple-button-outline px-4 py-2.5">管理這季課程</button>
                     {!season.isCurrent ? <button type="button" onClick={() => activateSeason(season)} className="apple-button-primary gap-2 px-4 py-2.5"><CheckCircle2 className="h-4 w-4" />設為前台招生</button> : null}
                   </div>
                 </article>
