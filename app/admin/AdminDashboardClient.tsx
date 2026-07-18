@@ -132,7 +132,7 @@ type AdminCoach = {
   id: string
   name: string
   email: string
-  role: 'student' | 'coach' | 'admin'
+  role: 'coach' | 'admin'
   coachEnabled: boolean
   boundStudentCount: number
   courses: string
@@ -295,7 +295,7 @@ export default function AdminDashboardClient() {
   const [studentQuery, setStudentQuery] = useState('')
   const [coachQuery, setCoachQuery] = useState('')
   const [studentPlanFilter, setStudentPlanFilter] = useState<'all' | 'enabled' | 'missing'>('all')
-  const [coachRoleFilter, setCoachRoleFilter] = useState<'all' | 'coach' | 'student' | 'admin'>('all')
+  const [coachRoleFilter, setCoachRoleFilter] = useState<'all' | 'coach' | 'admin'>('all')
   const [accountForm, setAccountForm] = useState({
     label: '',
     accountName: '',
@@ -716,7 +716,7 @@ export default function AdminDashboardClient() {
                 <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
                   <div>
                     <h2 className="text-xl font-black text-apple-gray-900">教練管理</h2>
-                    <p className="mt-1 text-sm text-apple-gray-600">管理員可以授予或取消教練權限；admin 角色不會在這裡被降級。</p>
+                    <p className="mt-1 text-sm text-apple-gray-600">只有成功使用教練認證碼的帳號與超級管理員會顯示在這裡。取消後如需重新啟用，必須使用新的認證碼。</p>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-[minmax(220px,1fr)_150px] lg:w-[500px]">
                     <input
@@ -732,7 +732,6 @@ export default function AdminDashboardClient() {
                     >
                       <option value="all">全部角色</option>
                       <option value="coach">教練</option>
-                      <option value="student">普通學員</option>
                       <option value="admin">管理員</option>
                     </select>
                   </div>
@@ -781,10 +780,10 @@ export default function AdminDashboardClient() {
                           <button
                             type="button"
                             disabled={coach.role === 'admin' || updatingId === coach.id}
-                            onClick={() => runAction(coach.id, { action: 'set_coach_role', userId: coach.id, enabled: !coach.coachEnabled })}
+                            onClick={() => runAction(coach.id, { action: 'set_coach_role', userId: coach.id, enabled: false })}
                             className="w-full rounded-lg bg-black px-2 py-2 text-[11px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
                           >
-                            {coach.coachEnabled ? '取消教練權限' : '授予教練權限'}
+                            {coach.role === 'admin' ? '保留管理員權限' : '取消教練權限'}
                           </button>
                         </td>
                       </tr>
@@ -834,17 +833,17 @@ export default function AdminDashboardClient() {
                     <button
                       type="button"
                       disabled={coach.role === 'admin' || updatingId === coach.id}
-                      onClick={() => runAction(coach.id, { action: 'set_coach_role', userId: coach.id, enabled: !coach.coachEnabled })}
+                      onClick={() => runAction(coach.id, { action: 'set_coach_role', userId: coach.id, enabled: false })}
                       className="mt-3 w-full rounded-xl bg-black px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      {coach.coachEnabled ? '取消教練權限' : '授予教練權限'}
+                      {coach.role === 'admin' ? '保留管理員權限' : '取消教練權限'}
                     </button>
                   </article>
                 ))}
               </div>
               {filteredCoaches.length === 0 ? (
                 <div className="p-8 text-center text-sm font-semibold text-apple-gray-500">
-                  沒有符合條件的帳號。
+                  目前沒有符合條件的教練帳號。生成認證碼後，使用者完成認證就會加入這份名單。
                 </div>
               ) : null}
             </section>

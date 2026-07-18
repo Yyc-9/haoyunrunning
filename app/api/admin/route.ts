@@ -559,7 +559,7 @@ export async function GET(request: NextRequest) {
   })
 
   const studentProfiles = profiles.filter((profile) => profile.role === 'student')
-  const coachProfiles = profiles
+  const coachProfiles = profiles.filter((profile) => profile.role === 'coach' || profile.role === 'admin')
 
   const students = studentProfiles.map((student) => {
     const normalizedEmail = student.email.trim().toLowerCase()
@@ -1231,6 +1231,10 @@ export async function PATCH(request: NextRequest) {
       return json({ error: '缺少使用者 ID。' }, { status: 400 })
     }
 
+    if (enabled) {
+      return json({ error: '新增教練請使用一次性教練認證碼。' }, { status: 400 })
+    }
+
     const { data: target, error: targetError } = await supabaseAdmin!
       .from('profiles')
       .select('id, role')
@@ -1247,7 +1251,7 @@ export async function PATCH(request: NextRequest) {
 
     const { data: profile, error } = await supabaseAdmin!
       .from('profiles')
-      .update({ role: enabled ? 'coach' : 'student' })
+      .update({ role: 'student' })
       .eq('id', userId)
       .select('id, role, name, email')
       .single()
@@ -1256,7 +1260,7 @@ export async function PATCH(request: NextRequest) {
       return json({ error: error?.message || '更新教練權限失敗。' }, { status: 500 })
     }
 
-    return json({ profile, message: enabled ? '已授予教練權限。' : '已取消教練權限。' })
+    return json({ profile, message: '已取消教練權限；如需重新啟用，請使用新的教練認證碼。' })
   }
 
   if (body.action === 'link_coach_public_profile') {
