@@ -44,11 +44,30 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '邀請碼已過期，請聯絡管理員重新建立。' }, { status: 410 })
   }
 
+  if (!invite.coach_key) {
+    return NextResponse.json({ error: '這組舊版邀請碼已失效，請聯絡管理員取得專屬認證碼。' }, { status: 410 })
+  }
+
+  const { data: publicCoachProfile, error: publicCoachProfileError } = await supabaseAdmin
+    .from('coach_public_profiles')
+    .select('coach_key, display_name, owner_profile_id')
+    .eq('coach_key', invite.coach_key)
+    .maybeSingle()
+  if (publicCoachProfileError) {
+    return NextResponse.json({ error: publicCoachProfileError.message }, { status: 500 })
+  }
+  if (!publicCoachProfile) {
+    return NextResponse.json({ error: '認證碼對應的公開教練資料不存在。' }, { status: 404 })
+  }
+  if (publicCoachProfile.owner_profile_id && publicCoachProfile.owner_profile_id !== user.id) {
+    return NextResponse.json({ error: '這份公開教練資料已經連結其他帳號。' }, { status: 409 })
+  }
+
   const fallbackName =
     (user.user_metadata?.name as string | undefined) ||
     user.email?.split('@')[0] ||
     '好運教練'
-  const { error: ensureProfileError } = await supabaseAdmin
+  const { data: previousProfile, error: ensureProfileError } = await supabaseAdmin
     .from('profiles')
     .upsert(
       {
@@ -58,9 +77,11 @@ export async function POST(request: NextRequest) {
       },
       { onConflict: 'id' }
     )
+    .select('id, role')
+    .single()
 
-  if (ensureProfileError) {
-    return NextResponse.json({ error: ensureProfileError.message }, { status: 500 })
+  if (ensureProfileError || !previousProfile) {
+    return NextResponse.json({ error: ensureProfileError?.message || '建立教練帳號資料失敗。' }, { status: 500 })
   }
 
   let newlyClaimed = false
@@ -85,17 +106,15 @@ export async function POST(request: NextRequest) {
     newlyClaimed = true
   }
 
+  const nextRole = previousProfile.role === 'admin' ? 'admin' : 'coach'
   const { data: profile, error: profileError } = await supabaseAdmin
     .from('profiles')
-    .upsert(
-      {
-        id: user.id,
-        email: user.email ?? '',
-        name: fallbackName,
-        role: 'coach',
-      },
-      { onConflict: 'id' }
-    )
+    .update({
+      email: user.email ?? '',
+      name: fallbackName,
+      role: nextRole,
+    })
+    .eq('id', user.id)
     .select('*')
     .single()
 
@@ -110,6 +129,38 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: profileError.message }, { status: 500 })
   }
 
+  if (publicCoachProfile.owner_profile_id !== user.id) {
+    const { data: linkedCoachProfile, error: linkError } = await supabaseAdmin
+      .from('coach_public_profiles')
+      .update({ owner_profile_id: user.id })
+      .eq('coach_key', invite.coach_key)
+      .is('owner_profile_id', null)
+      .select('coach_key')
+      .maybeSingle()
+
+    if (linkError || !linkedCoachProfile) {
+      await Promise.all([
+        supabaseAdmin
+          .from('profiles')
+          .update({ role: previousProfile.role })
+          .eq('id', user.id),
+        newlyClaimed
+          ? supabaseAdmin
+              .from('coach_invites')
+              .update({ used_by: null, used_at: null })
+              .eq('id', invite.id)
+              .eq('used_by', user.id)
+          : Promise.resolve(),
+      ])
+      const isConflict = !linkError || linkError.code === '23505'
+      return NextResponse.json({
+        error: isConflict
+          ? '這個登入帳號已連結其他公開教練身份。'
+          : linkError.message,
+      }, { status: isConflict ? 409 : 500 })
+    }
+  }
+
   const { error: deleteInviteError } = await supabaseAdmin
     .from('coach_invites')
     .delete()
@@ -120,5 +171,11 @@ export async function POST(request: NextRequest) {
     console.warn('[coach] Used invite cleanup failed.', deleteInviteError.message)
   }
 
-  return NextResponse.json({ profile })
+  return NextResponse.json({
+    profile,
+    publicCoachProfile: {
+      coachKey: publicCoachProfile.coach_key,
+      displayName: publicCoachProfile.display_name,
+    },
+  })
 }

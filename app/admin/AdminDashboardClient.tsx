@@ -68,6 +68,8 @@ type AdminDashboardPayload = {
 type CoachInvite = {
   id: string
   code: string
+  coachKey: string
+  coachName: string
   usedBy: string
   usedAt: string | null
   expiresAt: string | null
@@ -294,6 +296,7 @@ export default function AdminDashboardClient() {
   const [selectedCoachByStudent, setSelectedCoachByStudent] = useState<Record<string, string>>({})
   const [studentQuery, setStudentQuery] = useState('')
   const [coachQuery, setCoachQuery] = useState('')
+  const [selectedCoachInviteKey, setSelectedCoachInviteKey] = useState('')
   const [studentPlanFilter, setStudentPlanFilter] = useState<'all' | 'enabled' | 'missing'>('all')
   const [coachRoleFilter, setCoachRoleFilter] = useState<'all' | 'coach' | 'admin'>('all')
   const [accountForm, setAccountForm] = useState({
@@ -371,6 +374,16 @@ export default function AdminDashboardClient() {
         .some((value) => value.toLowerCase().includes(text))
     })
   }, [coachQuery, coachRoleFilter, data?.coaches])
+  const availableCoachInviteProfiles = useMemo(() => {
+    const invitesByCoachKey = new Map((data?.coachInvites ?? []).map((invite) => [invite.coachKey, invite]))
+    const now = Date.now()
+
+    return (data?.coachPublicProfiles ?? []).filter((profile) => {
+      if (profile.ownerProfileId) return false
+      const invite = invitesByCoachKey.get(profile.coachKey)
+      return !invite || Boolean(invite.expiresAt && new Date(invite.expiresAt).getTime() <= now)
+    })
+  }, [data?.coachInvites, data?.coachPublicProfiles])
   async function runAction(id: string, action: Record<string, unknown>) {
     setUpdatingId(id)
     setError('')
@@ -430,6 +443,15 @@ export default function AdminDashboardClient() {
         weight: '1',
       })
     }
+  }
+
+  async function createCoachInvite() {
+    if (!selectedCoachInviteKey) return
+    const created = await runAction('create-coach-invite', {
+      action: 'create_coach_invite',
+      coachKey: selectedCoachInviteKey,
+    })
+    if (created) setSelectedCoachInviteKey('')
   }
 
   if (isLoading) {
@@ -668,32 +690,47 @@ export default function AdminDashboardClient() {
                   <div>
                     <div className="flex items-center gap-2">
                       <KeyRound className="h-5 w-5 text-apple-gray-700" />
-                      <h2 className="text-lg font-black text-apple-gray-900">教練認證碼</h2>
+                      <h2 className="text-lg font-black text-apple-gray-900">專屬教練認證碼</h2>
                     </div>
-                    <p className="mt-1 text-sm text-apple-gray-600">認證碼限用一次，有效期 30 天；使用者登入後輸入即可升級為教練。</p>
+                    <p className="mt-1 text-sm text-apple-gray-600">每組認證碼只對應一份公開教練資料。使用者登入並完成認證後，教練權限、公開身份與負責課程會一起連結。</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => runAction('create-coach-invite', { action: 'create_coach_invite' })}
-                    disabled={updatingId === 'create-coach-invite'}
-                    className="apple-button-primary gap-2 px-5 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {updatingId === 'create-coach-invite' ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
-                    生成認證碼
-                  </button>
+                  <div className="grid min-w-0 gap-2 sm:min-w-[360px] sm:grid-cols-[minmax(0,1fr)_auto]">
+                    <select
+                      value={selectedCoachInviteKey}
+                      onChange={(event) => setSelectedCoachInviteKey(event.target.value)}
+                      className="apple-input min-w-0 bg-white py-2.5 text-sm"
+                      aria-label="選擇公開教練身份"
+                    >
+                      <option value="">{availableCoachInviteProfiles.length ? '選擇尚未連結的教練' : '目前皆已生成或完成連結'}</option>
+                      {availableCoachInviteProfiles.map((profile) => (
+                        <option key={profile.coachKey} value={profile.coachKey}>{profile.displayName}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={createCoachInvite}
+                      disabled={!selectedCoachInviteKey || updatingId === 'create-coach-invite'}
+                      className="apple-button-primary gap-2 px-5 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {updatingId === 'create-coach-invite' ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+                      生成專屬碼
+                    </button>
+                  </div>
                 </div>
 
-                <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                  {data.coachInvites.slice(0, 6).map((invite) => {
+                <div className="mt-4 grid max-h-[420px] gap-2 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-3">
+                  {data.coachInvites.map((invite) => {
                     const expired = Boolean(invite.expiresAt && new Date(invite.expiresAt).getTime() < Date.now())
-                    const status = invite.usedAt ? `已由 ${invite.usedBy || '教練帳號'} 使用` : expired ? '已過期' : '可使用'
                     return (
                       <div key={invite.id} className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 bg-white p-3">
                         <div className="min-w-0">
-                          <p className="truncate font-mono text-sm font-bold text-apple-gray-900">{invite.code}</p>
-                          <p className={`mt-1 text-xs font-semibold ${invite.usedAt || expired ? 'text-apple-gray-500' : 'text-emerald-700'}`}>{status}</p>
+                          <p className="truncate text-sm font-black text-apple-gray-900">{invite.coachName}</p>
+                          <p className="mt-1 truncate font-mono text-xs font-bold text-apple-gray-600">{invite.code}</p>
+                          <p className={`mt-1 text-xs font-semibold ${expired ? 'text-amber-700' : 'text-emerald-700'}`}>
+                            {expired ? '已過期，可重新生成' : `可使用 · 有效至 ${formatDate(invite.expiresAt)}`}
+                          </p>
                         </div>
-                        {!invite.usedAt && !expired ? (
+                        {!expired ? (
                           <button
                             type="button"
                             onClick={() => navigator.clipboard.writeText(invite.code)}
@@ -708,7 +745,7 @@ export default function AdminDashboardClient() {
                     )
                   })}
                   {data.coachInvites.length === 0 ? (
-                    <p className="text-sm text-apple-gray-500">目前尚未生成認證碼。</p>
+                    <p className="text-sm text-apple-gray-500">目前沒有可使用的專屬認證碼。</p>
                   ) : null}
                 </div>
               </div>

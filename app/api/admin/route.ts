@@ -172,6 +172,7 @@ type PaymentAccountRow = {
 type CoachInviteRow = {
   id: string
   code: string
+  coach_key: string
   used_by: string | null
   used_at: string | null
   expires_at: string | null
@@ -194,7 +195,7 @@ type CourseSeasonSyncSourceRow = {
 type AdminPatchBody =
   | { action?: 'set_coach_role'; userId?: string; enabled?: boolean }
   | { action?: 'link_coach_public_profile'; userId?: string; coachKey?: string }
-  | { action?: 'create_coach_invite' }
+  | { action?: 'create_coach_invite'; coachKey?: string }
   | { action?: 'review_order'; orderId?: string; orderKind?: 'course' | 'shop'; status?: PaymentOrderStatus; reviewNote?: string }
   | { action?: 'resolve_attendance_anomaly'; attendanceId?: string; outcome?: 'supplement_paid' | 'waived' | 'reopen'; resolutionNote?: string }
   | { action?: 'delete_order'; orderId?: string; orderKind?: 'course' | 'shop' }
@@ -440,7 +441,7 @@ export async function GET(request: NextRequest) {
       .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'testimonials_content', 'page_media']),
     supabaseAdmin!
       .from('coach_invites')
-      .select('id, code, used_by, used_at, expires_at, created_at')
+      .select('id, code, coach_key, used_by, used_at, expires_at, created_at')
       .is('used_at', null)
       .order('created_at', { ascending: false })
       .limit(30),
@@ -832,6 +833,8 @@ export async function GET(request: NextRequest) {
     coachInvites: coachInvites.map((invite) => ({
       id: invite.id,
       code: invite.code,
+      coachKey: invite.coach_key,
+      coachName: publicCoachProfiles[invite.coach_key]?.displayName || invite.coach_key,
       usedBy: invite.used_by
         ? profilesById.get(invite.used_by)?.name || profilesById.get(invite.used_by)?.email || '已使用'
         : '',
@@ -1204,23 +1207,65 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (body.action === 'create_coach_invite') {
-    const code = `HYCOACH-${randomUUID().replaceAll('-', '').slice(0, 10).toUpperCase()}`
+    const coachKey = cleanText(body.coachKey)
+    if (!/^[A-Za-z0-9-]{1,80}$/.test(coachKey)) {
+      return json({ error: '請先選擇要連結的公開教練身份。' }, { status: 400 })
+    }
+
+    const { data: coachIdentity, error: coachIdentityError } = await supabaseAdmin!
+      .from('coach_public_profiles')
+      .select('coach_key, display_name, owner_profile_id')
+      .eq('coach_key', coachKey)
+      .maybeSingle()
+    if (coachIdentityError) {
+      return json({ error: coachIdentityError.message }, { status: 500 })
+    }
+    if (!coachIdentity) {
+      return json({ error: '找不到這份公開教練資料。' }, { status: 404 })
+    }
+    if (coachIdentity.owner_profile_id) {
+      return json({ error: '這份公開教練資料已經連結登入帳號。' }, { status: 409 })
+    }
+
+    const { data: existingInvite, error: existingInviteError } = await supabaseAdmin!
+      .from('coach_invites')
+      .select('id, code, coach_key, expires_at, created_at')
+      .eq('coach_key', coachKey)
+      .maybeSingle()
+    if (existingInviteError) {
+      return json({ error: existingInviteError.message }, { status: 500 })
+    }
+    if (existingInvite && (!existingInvite.expires_at || new Date(existingInvite.expires_at).getTime() > Date.now())) {
+      return json({ invite: existingInvite, message: `${coachIdentity.display_name} 已有可使用的專屬認證碼。` })
+    }
+    if (existingInvite) {
+      const { error: deleteExpiredError } = await supabaseAdmin!
+        .from('coach_invites')
+        .delete()
+        .eq('id', existingInvite.id)
+      if (deleteExpiredError) {
+        return json({ error: deleteExpiredError.message }, { status: 500 })
+      }
+    }
+
+    const code = `HYCOACH-${randomUUID().replaceAll('-', '').slice(0, 16).toUpperCase()}`
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
     const { data: invite, error } = await supabaseAdmin!
       .from('coach_invites')
       .insert({
         code,
+        coach_key: coachKey,
         created_by: auth.user.id,
         expires_at: expiresAt,
       })
-      .select('id, code, expires_at, created_at')
+      .select('id, code, coach_key, expires_at, created_at')
       .single()
 
     if (error || !invite) {
       return json({ error: error?.message || '生成教練認證碼失敗。' }, { status: 500 })
     }
 
-    return json({ invite, message: `教練認證碼 ${code} 已生成，有效期 30 天。` })
+    return json({ invite, message: `${coachIdentity.display_name} 的專屬認證碼已生成，有效期 30 天。` })
   }
 
   if (body.action === 'set_coach_role') {
