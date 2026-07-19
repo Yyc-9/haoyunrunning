@@ -6,5 +6,5 @@ export const metadata = {
 }
 
 export default function PaymentPage() {
-  redirect('/join')
+  redirect('/courses')
 }

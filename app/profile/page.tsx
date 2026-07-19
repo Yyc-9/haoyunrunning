@@ -146,7 +146,7 @@ export default function ProfilePage() {
       <main className="min-h-screen bg-apple-gray-50 pt-24">
         <section className="container mx-auto max-w-4xl px-4 py-12 sm:py-20">
           <div className="grid overflow-hidden rounded-lg border border-black/10 bg-white shadow-sm md:grid-cols-[1.15fr_0.85fr]">
-            <div className="p-6 sm:p-10"><p className="text-sm font-bold text-apple-blue">我的帳戶</p><h1 className="mt-3 text-3xl font-black leading-tight text-black sm:text-5xl">登入後建立你的跑者檔案</h1><p className="mt-4 text-sm leading-7 text-apple-gray-600 sm:text-base">記錄跑步目標、個人最佳與榮譽勳章。</p><Link href="/?auth=login" className="apple-button-primary mt-7 inline-flex gap-2 px-6 py-3">登入帳戶<ArrowRight className="h-4 w-4" /></Link></div>
+            <div className="p-6 sm:p-10"><p className="text-sm font-bold text-apple-blue">我的帳戶</p><h1 className="mt-3 text-3xl font-black leading-tight text-black sm:text-5xl">登入後建立你的跑者檔案</h1><p className="mt-4 text-sm leading-7 text-apple-gray-600 sm:text-base">記錄跑步目標、個人最佳與榮耀徽章。</p><Link href="/?auth=login" className="apple-button-primary mt-7 inline-flex gap-2 px-6 py-3">登入帳戶<ArrowRight className="h-4 w-4" /></Link></div>
             <div className="flex items-center justify-center bg-black p-8 text-white"><div className="max-w-xs text-center"><CircleUserRound className="mx-auto h-12 w-12 text-white/85" /><h2 className="mt-4 text-xl font-black">一個帳戶，記錄每次進步</h2></div></div>
           </div>
         </section>
@@ -260,8 +260,11 @@ export default function ProfilePage() {
 
         <section className="border-t border-black/10 py-6 sm:py-10">
           <div className="flex items-end justify-between gap-4">
-            <div><p className="text-xs font-bold text-apple-blue sm:text-sm">ACHIEVEMENTS</p><h2 className="mt-1 text-2xl font-black text-black">榮譽勳章</h2></div>
-            {isAccountLoading ? <Loader2 className="h-5 w-5 animate-spin text-apple-gray-400" /> : <p className="text-sm font-black">{earnedCount} / {achievements.length}</p>}
+            <div><p className="text-xs font-bold text-apple-blue sm:text-sm">ACHIEVEMENTS</p><h2 className="mt-1 text-2xl font-black text-black">榮耀徽章</h2></div>
+            <div className="flex items-center gap-3">
+              <Link href="/achievements" className="text-xs font-black text-apple-blue hover:underline sm:text-sm">查看取得方式</Link>
+              {isAccountLoading ? <Loader2 className="h-5 w-5 animate-spin text-apple-gray-400" /> : <p className="text-sm font-black">{earnedCount} / {achievements.length}</p>}
+            </div>
           </div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-apple-gray-200"><div className="h-full rounded-full bg-black" style={{ width: `${completion}%` }} /></div>
 

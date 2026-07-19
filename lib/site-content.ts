@@ -81,6 +81,7 @@ export type TestimonialsContent = {
   eyebrow: string
   title: string
   description: string
+  videoUrl: string
   pathLabel: string
   pathTitle: string
   pathDescription: string
@@ -208,6 +209,7 @@ export const defaultTestimonialsContent: TestimonialsContent = {
   eyebrow: '學員見證',
   title: '每一步進步，都從願意開始',
   description: '好運跑班陪跑者從第一次規律訓練，到完成賽事與挑戰個人目標。真實學員分享與最新訓練現場，持續發布在官方 Instagram。',
+  videoUrl: '',
   pathLabel: '跑者的成長路徑',
   pathTitle: '訓練不只看最後的成績',
   pathDescription: '我們更重視跑者能不能安全、穩定地持續下去。以下是好運跑班在每一段訓練裡最在意的事情。',
@@ -422,10 +424,12 @@ export function normalizeAboutContent(value: unknown): AboutContent {
 
 export function normalizeTestimonialsContent(value: unknown): TestimonialsContent {
   const source = value && typeof value === 'object' ? value as Partial<TestimonialsContent> : {}
+  const videoUrl = stablePublicAsset(cleanString(source.videoUrl, 2000))
   return {
     eyebrow: cleanOr(source.eyebrow, defaultTestimonialsContent.eyebrow, 80),
     title: cleanOr(source.title, defaultTestimonialsContent.title, 180),
     description: cleanOr(source.description, defaultTestimonialsContent.description, 1000),
+    videoUrl: videoUrl && isSafePublicUrl(videoUrl) ? videoUrl : '',
     pathLabel: cleanOr(source.pathLabel, defaultTestimonialsContent.pathLabel, 80),
     pathTitle: cleanOr(source.pathTitle, defaultTestimonialsContent.pathTitle, 180),
     pathDescription: cleanOr(source.pathDescription, defaultTestimonialsContent.pathDescription, 800),

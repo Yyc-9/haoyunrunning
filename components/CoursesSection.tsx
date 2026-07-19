@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ChevronRight, Clock, MapPin, Target, TicketCheck, Users } from 'lucide-react'
-import CoursePaymentInfo from '@/components/CoursePaymentInfo'
+import { ChevronRight, Clock, MapPin, Target, Users } from 'lucide-react'
 import CoursesTable from '@/components/CoursesTable'
+import EnrollmentStep from '@/components/EnrollmentStep'
+import FAQItem from '@/components/FAQItem'
 import { useLanguage } from '@/app/language-context'
 import { useSiteContent } from '@/app/site-content-provider'
 
@@ -17,6 +18,19 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
   const { courses: managedCourses, home } = useSiteContent()
   const sortedCourses = managedCourses
   const courses = preview ? sortedCourses.slice(0, 4) : sortedCourses
+  const joinSteps = [
+    { title: '查看本期課表', description: '先依照星期、城市與上課時間，找到能穩定參加的班級。' },
+    { title: '進入課程詳情', description: '點擊課表中的課程卡片，確認訓練方向、教練與適合對象。' },
+    { title: '填寫專屬報名表', description: '在課程詳情最下方點擊「立即報名」，登入後完成資料與計費確認。' },
+    { title: '完成匯款與核對', description: '依網站顯示的金額完成匯款並提交後五碼，財務核對後即完成報名。' },
+  ]
+  const faqItems = Array.from(
+    new Map(
+      sortedCourses
+        .flatMap((course) => course.faq ?? [])
+        .map((item) => [item.question, item])
+    ).values()
+  ).slice(0, 6)
 
   const localeText = (text: string) => {
     if (language === 'zh-TW') {
@@ -62,17 +76,10 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
             <div className="flex flex-wrap gap-3">
               {preview && (
                 <Link href="/courses" className="apple-button-primary gap-2 px-5 py-2.5 text-sm">
-                  {t.courses.viewAll}
+                  查看完整課表
                   <ChevronRight className="h-4 w-4" />
                 </Link>
               )}
-              <Link
-                href="/join"
-                className="apple-button-secondary gap-2 px-5 py-2.5 text-sm"
-              >
-                <TicketCheck className="h-4 w-4" />
-                立即報名
-              </Link>
             </div>
           </div>
         </motion.div>
@@ -81,40 +88,56 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
           <div>
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
               {courses.map((course) => (
-                <article key={course.slug} className="rounded-3xl border border-black/10 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+                <article key={course.slug} className="rounded-3xl border border-black/10 bg-white p-6 shadow-sm">
                   <div className="mb-4 flex items-center gap-2 text-sm font-bold text-apple-gray-600">
                     <MapPin className="h-4 w-4 text-apple-blue" />
                     {localeText(course.city || course.location)}
                   </div>
-                  <Link href={`/courses/${course.slug}`} className="block text-xl font-black leading-7 text-apple-gray-900 hover:text-apple-blue">
+                  <h3 className="text-xl font-black leading-7 text-apple-gray-900">
                     {localeText(course.name)}
-                  </Link>
+                  </h3>
                   <p className="mt-3 min-h-12 text-sm leading-6 text-apple-gray-600">
                     {localeText(course.targetAudience)}
                   </p>
-                  <Link href={`/courses/${course.slug}`} className="mt-5 inline-flex items-center gap-2 rounded-full border border-black/10 px-4 py-2 text-sm font-bold text-apple-gray-900 transition hover:border-apple-blue/40 hover:text-apple-blue">
-                    {t.courses.viewDetail}
-                    <ChevronRight className="h-4 w-4" />
-                  </Link>
+                  <p className="mt-5 inline-flex items-center gap-2 rounded-full bg-apple-gray-100 px-4 py-2 text-sm font-bold text-apple-gray-600">
+                    {localeText(course.weekday)} · {localeText(course.classTime)}
+                  </p>
                 </article>
               ))}
             </div>
             <div className="mt-8 flex justify-center">
               <Link href="/courses" className="apple-button-secondary inline-flex items-center gap-2 px-6 py-3">
-                {t.courses.viewAll}
+                查看完整課表
                 <ChevronRight className="h-4 w-4" />
               </Link>
             </div>
           </div>
         ) : (
-          <CoursesTable />
-        )}
-
-        {!preview && (
           <>
-            <div className="mt-8">
-              <CoursePaymentInfo />
-            </div>
+            <section className="mb-10">
+              <div className="mb-5">
+                <p className="text-sm font-bold uppercase tracking-wide text-apple-blue">REGISTRATION GUIDE</p>
+                <h3 className="mt-2 text-2xl font-black text-apple-gray-950 sm:text-3xl">如何加入課程？</h3>
+              </div>
+              <div className="rounded-lg border border-black/10 bg-apple-gray-50 p-5 sm:p-7">
+                {joinSteps.map((step, index) => (
+                  <EnrollmentStep key={step.title} number={index + 1} title={step.title} description={step.description} />
+                ))}
+              </div>
+            </section>
+
+            <CoursesTable />
+
+            {faqItems.length ? (
+              <section className="mt-10">
+                <h3 className="mb-5 text-2xl font-black text-apple-gray-950 sm:text-3xl">常見問題</h3>
+                <div className="rounded-lg border border-black/10 bg-white p-5 sm:p-7">
+                  {faqItems.map((item) => (
+                    <FAQItem key={item.question} question={localeText(item.question)} answer={localeText(item.answer)} />
+                  ))}
+                </div>
+              </section>
+            ) : null}
 
             <div className="mt-8 rounded-3xl bg-apple-gray-100 p-6">
               <h3 className="text-xl font-black text-apple-gray-900">{t.courses.signupNotesTitle}</h3>
@@ -129,18 +152,20 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
           </>
         )}
 
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
-          {t.courses.highlightsDecision.map((item, index) => {
-            const Icon = [Clock, Target, Users][index] ?? Clock
-            return (
-              <div key={item.title} className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
-                <Icon className="mb-4 h-5 w-5 text-apple-gray-700" />
-                <h3 className="font-bold text-apple-gray-900">{item.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-apple-gray-600">{item.description}</p>
-              </div>
-            )
-          })}
-        </div>
+        {!preview ? (
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {t.courses.highlightsDecision.map((item, index) => {
+              const Icon = [Clock, Target, Users][index] ?? Clock
+              return (
+                <div key={item.title} className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
+                  <Icon className="mb-4 h-5 w-5 text-apple-gray-700" />
+                  <h3 className="font-bold text-apple-gray-900">{item.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-apple-gray-600">{item.description}</p>
+                </div>
+              )
+            })}
+          </div>
+        ) : null}
       </div>
     </section>
   )

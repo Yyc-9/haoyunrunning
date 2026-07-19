@@ -16,13 +16,15 @@ export default function Footer() {
       title: '參加好運',
       links: [
         { name: '訓練課程', href: '/courses' },
-        { name: '課程報名', href: '/join' },
+        { name: '課程報名', href: '/courses' },
         { name: '團練報名', href: '/group-signup' },
       ],
     },
     {
       title: '探索',
       links: [
+        { name: '團隊陣容', href: '/team' },
+        { name: '榮耀徽章', href: '/achievements' },
         { name: '好運商店', href: '/shop' },
         { name: '學員見證', href: '/testimonials' },
         { name: '關於我們', href: '/about' },
@@ -49,13 +51,13 @@ export default function Footer() {
   ]
 
   return (
-    <footer className="mt-auto border-t border-gray-200 bg-gray-100">
+    <footer className="mt-auto border-t border-white/10 bg-black text-white">
       <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-5 lg:gap-12">
           {/* Brand Column */}
           <div className="lg:col-span-2">
             <div className="mb-6 flex items-center space-x-3">
-              <div className="relative h-14 w-14 overflow-hidden rounded-full border border-black/10 bg-white shadow-sm">
+              <div className="relative h-14 w-14 overflow-hidden rounded-full border border-white/15 bg-white shadow-sm">
                 <Image
                   src={brand.logoUrl}
                   alt={`${brand.brandName} Logo`}
@@ -66,16 +68,16 @@ export default function Footer() {
               </div>
 
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">
+                <h2 className="text-2xl font-bold text-white">
                   {brand.brandName}
                 </h2>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-white/55">
                   {brand.tagline}
                 </p>
               </div>
             </div>
 
-            <p className="mb-6 max-w-md text-gray-600">
+            <p className="mb-6 max-w-md text-white/65">
               {brand.footerDescription}
             </p>
 
@@ -89,8 +91,8 @@ export default function Footer() {
                     key={index}
                     className="flex items-center space-x-3"
                   >
-                    <Icon className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm text-gray-600">
+                    <Icon className="h-4 w-4 text-white/40" />
+                    <span className="text-sm text-white/60">
                       {item.text}
                     </span>
                   </div>
@@ -102,7 +104,7 @@ export default function Footer() {
           {/* Links Columns */}
           {footerLinks.map((column) => (
             <div key={column.title}>
-              <h3 className="mb-4 font-semibold text-gray-800">
+              <h3 className="mb-4 font-semibold text-white">
                 {column.title}
               </h3>
 
@@ -114,14 +116,14 @@ export default function Footer() {
                         href={link.href}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-sm text-gray-600 transition-colors duration-200 hover:text-blue-500"
+                        className="text-sm text-white/60 transition-colors duration-200 hover:text-white"
                       >
                         {link.name}
                       </a>
                     ) : (
                       <Link
                         href={link.href}
-                        className="text-sm text-gray-600 transition-colors duration-200 hover:text-blue-500"
+                        className="text-sm text-white/60 transition-colors duration-200 hover:text-white"
                       >
                         {link.name}
                       </Link>
@@ -134,11 +136,11 @@ export default function Footer() {
         </div>
 
         {/* Divider */}
-        <div className="my-8 border-t border-gray-300" />
+        <div className="my-8 border-t border-white/15" />
 
         {/* Bottom Section */}
         <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-          <p className="mb-4 text-sm text-gray-500 md:mb-0">
+          <p className="mb-4 text-sm text-white/45 md:mb-0">
             © {currentYear} {brand.brandName}. {t.footer.copyright}
           </p>
 
@@ -146,14 +148,14 @@ export default function Footer() {
           <div className="flex items-center space-x-4">
             <Link
               href="/courses"
-              className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-gray-50 hover:text-black hover:shadow-md"
+              className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-white hover:text-black"
             >
               <TicketCheck className="h-4 w-4" />
               查看課程
             </Link>
             <Link
               href="/shop"
-              className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-gray-50 hover:text-black hover:shadow-md"
+              className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-white hover:text-black"
             >
               <ShoppingBag className="h-4 w-4" />
               前往商店

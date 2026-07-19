@@ -69,6 +69,8 @@ export default function Navigation() {
   const navItems = [
     { key: 'home', name: t.navigation.home, href: '/' },
     { key: 'courses', name: t.navigation.courses, href: '/courses' },
+    { key: 'team', name: '團隊陣容', href: '/team' },
+    { key: 'achievements', name: '榮耀徽章', href: '/achievements' },
     { key: 'about', name: t.navigation.about, href: '/about' },
     { key: 'testimonials', name: t.navigation.testimonials, href: '/testimonials' },
     { key: 'shop', name: t.navigation.shop, href: '/shop' },
@@ -236,7 +238,7 @@ export default function Navigation() {
             </motion.div>
 
             {/* Desktop Navigation */}
-            <div className="absolute left-1/2 hidden -translate-x-1/2 items-center justify-center space-x-7 lg:flex">
+            <div className="absolute left-1/2 hidden -translate-x-1/2 items-center justify-center gap-4 xl:flex 2xl:gap-6">
               {navItems.map((item) => {
                 const isExternal = item.href.startsWith('http')
                 const isHashLink = item.href.startsWith('#')
@@ -260,7 +262,7 @@ export default function Navigation() {
                             }
                           }
                         }}
-                      className="group text-sm font-semibold text-apple-gray-950 transition-all duration-300 hover:text-apple-blue"
+                      className="group whitespace-nowrap text-xs font-semibold text-apple-gray-950 transition-all duration-300 hover:text-apple-blue 2xl:text-sm"
                       >
                         {item.name}
                         {item.key === 'shop' && (
@@ -271,7 +273,7 @@ export default function Navigation() {
                     ) : (
                       <Link
                         href={item.href}
-                        className="group text-sm font-semibold text-apple-gray-950 transition-all duration-300 hover:text-apple-blue"
+                        className="group whitespace-nowrap text-xs font-semibold text-apple-gray-950 transition-all duration-300 hover:text-apple-blue 2xl:text-sm"
                       >
                         {item.name}
                         {item.key === 'shop' && (
@@ -286,7 +288,7 @@ export default function Navigation() {
             </div>
 
             {/* Auth Buttons */}
-            <div className="hidden items-center space-x-4 justify-self-end lg:flex">
+            <div className="hidden items-center space-x-3 justify-self-end xl:flex">
               {languageSwitcher}
               {isLoading ? (
                 <div className="h-9 w-28 animate-pulse rounded-full bg-white/70 ring-1 ring-black/10" />
@@ -348,7 +350,7 @@ export default function Navigation() {
             </div>
 
             {/* Compact Auth + Menu */}
-            <div className="flex items-center gap-2 justify-self-end lg:hidden">
+            <div className="flex items-center gap-2 justify-self-end xl:hidden">
               {isLoading ? (
                 <div className="h-10 w-20 animate-pulse rounded-full bg-apple-gray-100 ring-1 ring-black/10" />
               ) : isLoggedIn ? (
@@ -411,7 +413,7 @@ export default function Navigation() {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-x-0 top-20 z-40 max-h-[calc(100vh-5rem)] overflow-y-auto border-b border-apple-gray-200 bg-white/95 backdrop-blur-glass lg:hidden"
+            className="fixed inset-x-0 top-20 z-40 max-h-[calc(100vh-5rem)] overflow-y-auto border-b border-apple-gray-200 bg-white/95 backdrop-blur-glass xl:hidden"
           >
             <div className="container mx-auto px-4 py-6">
               <div className="space-y-4">

@@ -31,7 +31,7 @@ export default function CoursePaymentInfo({ compact = false }: CoursePaymentInfo
 
         <div className="flex flex-col gap-3 sm:flex-row lg:shrink-0">
           <Link
-            href="/join"
+            href="/courses"
             className="apple-button-primary inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm"
           >
             <TicketCheck className="h-4 w-4" />

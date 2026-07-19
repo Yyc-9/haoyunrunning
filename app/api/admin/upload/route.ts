@@ -45,13 +45,13 @@ export async function POST(request: NextRequest) {
     const requestedFolder = String(payload?.folder ?? '')
     const folder = allowedFolders.has(requestedFolder) ? requestedFolder : 'activities'
 
-    if (!adminProfile) return json({ error: '只有超級管理員可以上傳商品影片。' }, { status: 403 })
+    if (!adminProfile) return json({ error: '只有超級管理員可以上傳網站影片。' }, { status: 403 })
 
     if (!mediaType || mediaType.kind !== 'video') {
       return json({ error: '影片僅支援 MP4、WebM 或 MOV。' }, { status: 400 })
     }
-    if (folder !== 'products') {
-      return json({ error: '目前只有商城商品可以上傳影片。' }, { status: 400 })
+    if (!['products', 'pages'].includes(folder)) {
+      return json({ error: '影片只能上傳至商城商品或網站頁面。' }, { status: 400 })
     }
     if (!Number.isInteger(fileSize) || fileSize <= 0 || fileSize > mediaType.maxSize) {
       return json({ error: '影片大小必須小於 50 MB。' }, { status: 400 })

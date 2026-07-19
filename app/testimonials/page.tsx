@@ -1,14 +1,13 @@
 'use client'
 
 import Image from 'next/image'
-import Link from 'next/link'
-import { ArrowUpRight, BookOpenCheck, Instagram, Target, UsersRound } from 'lucide-react'
+import { BookOpenCheck, PlayCircle, Target, UsersRound } from 'lucide-react'
 import { useSiteContent } from '@/app/site-content-provider'
 
 const storyIcons = [BookOpenCheck, UsersRound, Target]
 
 export default function TestimonialsPage() {
-  const { brand, pageMedia, testimonials } = useSiteContent()
+  const { pageMedia, testimonials } = useSiteContent()
   return (
     <main className="bg-white pt-24">
       <section className="relative min-h-[34rem] overflow-hidden bg-black sm:min-h-[40rem]">
@@ -31,6 +30,32 @@ export default function TestimonialsPage() {
           </div>
         </div>
       </section>
+
+      {testimonials.videoUrl ? (
+        <section className="border-b border-black/10 bg-white px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+          <div className="container mx-auto max-w-5xl">
+            <div className="mb-5 flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black text-white">
+                <PlayCircle className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide text-apple-blue">RUNNER STORIES</p>
+                <h2 className="mt-1 text-2xl font-black text-apple-gray-950 sm:text-3xl">學員故事</h2>
+              </div>
+            </div>
+            <div className="overflow-hidden rounded-lg border border-black/10 bg-black shadow-sm">
+              <video
+                src={testimonials.videoUrl}
+                poster={pageMedia.testimonialsHero}
+                controls
+                playsInline
+                preload="metadata"
+                className="aspect-video h-auto w-full object-contain"
+              />
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <section className="border-b border-black/10 bg-white py-16 sm:py-20">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -57,33 +82,6 @@ export default function TestimonialsPage() {
         </div>
       </section>
 
-      <section className="bg-apple-gray-100 py-16 sm:py-20">
-        <div className="container mx-auto grid gap-10 px-4 sm:px-6 lg:grid-cols-[1fr_auto] lg:items-center lg:px-8">
-          <div className="max-w-3xl">
-            <p className="text-sm font-bold uppercase tracking-wide text-apple-blue">{testimonials.ctaLabel}</p>
-            <h2 className="mt-3 text-3xl font-black text-apple-gray-950 sm:text-4xl">{testimonials.ctaTitle}</h2>
-            <p className="mt-4 text-lg leading-8 text-apple-gray-600">
-              {testimonials.ctaDescription}
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
-            <a
-              href={brand.instagramUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="apple-button-primary gap-2 px-6 py-3"
-            >
-              <Instagram className="h-5 w-5" />
-              查看官方 Instagram
-              <ArrowUpRight className="h-4 w-4" />
-            </a>
-            <Link href="/courses" className="apple-button-secondary gap-2 px-6 py-3">
-              查看訓練課程
-              <ArrowUpRight className="h-4 w-4" />
-            </Link>
-          </div>
-        </div>
-      </section>
     </main>
   )
 }

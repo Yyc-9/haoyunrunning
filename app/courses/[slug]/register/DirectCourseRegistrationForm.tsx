@@ -322,25 +322,13 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
             </div>
 
             <div className="mt-7">
-              <div className="flex items-center gap-2"><UsersRound className="h-5 w-5 text-apple-blue" /><h3 className="font-black">認識教練陣容</h3></div>
+              <div className="flex items-center gap-2"><UsersRound className="h-5 w-5 text-apple-blue" /><h3 className="font-black">本課程教練</h3></div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 {coaches.map((coach) => (
-                  <div key={coach.name} className="flex min-w-0 items-center gap-3 rounded-lg border border-black/10 p-3">
-                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-apple-gray-100">
-                      {coach.imageUrl ? (
-                        <Image
-                          src={coach.imageUrl}
-                          alt={coach.name}
-                          fill
-                          quality={95}
-                          loading="eager"
-                          sizes="64px"
-                          className="object-cover"
-                          style={{ objectPosition: `${coach.avatarFocusX ?? 50}% ${coach.avatarFocusY ?? 18}%` }}
-                        />
-                      ) : <UserRound className="m-5 h-6 w-6 text-apple-gray-400" />}
-                    </div>
-                    <div className="min-w-0"><p className="truncate font-black text-apple-gray-950">{coach.name}</p><p className="mt-1 line-clamp-2 text-xs leading-5 text-apple-gray-500">{coach.role}</p></div>
+                  <div key={coach.name} className="min-w-0 rounded-lg border border-black/10 bg-apple-gray-50 p-4">
+                    <p className="font-black text-apple-gray-950">{coach.name}</p>
+                    <p className="mt-2 text-xs font-bold text-apple-gray-400">負責班級</p>
+                    <p className="mt-1 text-sm font-semibold leading-6 text-apple-gray-700">{course.name}</p>
                   </div>
                 ))}
               </div>

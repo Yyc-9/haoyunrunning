@@ -10,19 +10,16 @@ import {
   MapPin,
   Navigation,
   Route,
+  UsersRound,
 } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
 import type { ManagedCourse } from '@/lib/managed-courses'
-import CoachCard from '@/components/CoachCard'
 import TrainingItemCard from '@/components/TrainingItemCard'
 import BenefitItem from '@/components/BenefitItem'
 import SuitabilityCard from '@/components/SuitabilityCard'
-import FAQItem from '@/components/FAQItem'
-import EnrollmentStep from '@/components/EnrollmentStep'
 import { useSiteContent } from '@/app/site-content-provider'
 
 type CourseDetail = ManagedCourse
-type CoachDetail = CourseDetail['coach']
 
 type CourseDetailClientProps = {
   course: CourseDetail | null
@@ -31,20 +28,6 @@ type CourseDetailClientProps = {
 function localizeText(text: string, _language: string) {
   void _language
   return text
-}
-
-function localizeCoach(coach: CoachDetail, language: string): CoachDetail {
-  return {
-    ...coach,
-    name: localizeText(coach.name, language),
-    nickname: coach.nickname ? localizeText(coach.nickname, language) : undefined,
-    role: localizeText(coach.role, language),
-    bio: localizeText(coach.bio, language),
-    specialties: coach.specialties.map((item) => localizeText(item, language)),
-    style: localizeText(coach.style, language),
-    achievements: coach.achievements.map((item) => localizeText(item, language)),
-    certifications: coach.certifications?.map((item) => localizeText(item, language)),
-  }
 }
 
 const trainingDescriptions: Record<string, string> = {
@@ -108,7 +91,7 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
 
   const text = (value: string) => localizeText(value, language)
   const instagramUrl = brand.instagramUrl || course.instagramUrl || 'https://www.instagram.com/nurture.running.team/'
-  const courseCoaches = course.coaches.map((coach) => localizeCoach(coach, language))
+  const courseCoaches = course.coaches ?? (course.coach ? [course.coach] : [])
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-20 sm:pt-24">
@@ -126,8 +109,7 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
 
       <section className="overflow-hidden border-b border-black/5 bg-white px-4 py-6 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-7xl">
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-stretch">
-            <div className="rounded-[1.5rem] border border-black/5 bg-apple-gray-50 p-5 shadow-sm md:p-6">
+          <div className="rounded-[1.5rem] border border-black/5 bg-apple-gray-50 p-5 shadow-sm md:p-7">
               <p className="text-xs font-bold uppercase tracking-wide text-apple-blue">{t.courseDetail.heroLabel}</p>
               <h1 className="mt-2 max-w-4xl text-3xl font-black leading-[1.08] text-apple-gray-900 md:text-4xl">
                 {text(course.title)}
@@ -156,72 +138,6 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
                   ))}
                 </div>
               </div>
-            </div>
-
-            <div className="rounded-[1.5rem] border border-black/5 bg-white p-2 shadow-xl shadow-black/10">
-              <div className="relative h-full overflow-hidden rounded-[1.15rem] border border-white/10 bg-[#111] p-4">
-                <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,.09)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.09)_1px,transparent_1px)] [background-size:28px_28px]" />
-                <div className="relative flex h-full flex-col">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-xs font-bold uppercase text-white/45">{t.courseDetail.courseLocation}</p>
-                      <h2 className="mt-1 text-2xl font-black leading-none text-white">{text(course.city)}</h2>
-                      <p className="mt-2 flex items-start gap-2 text-sm leading-5 text-white/70">
-                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-apple-blue" />
-                        {text(course.meetingPoint)}
-                      </p>
-                    </div>
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-apple-gray-950">
-                      <Navigation className="h-5 w-5" />
-                    </div>
-                  </div>
-
-                  <div className="my-4 flex items-start gap-2 rounded-xl border border-white/10 bg-black/30 p-3 text-sm font-bold leading-5 text-white">
-                    <Route className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-                    {text(course.focus)}
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      [CalendarDays, t.courseDetail.courseWeekday, '星期', course.weekday],
-                      [Clock, t.courseDetail.classTime, '時間', course.time],
-                      [Route, t.courseDetail.coursePeriod, '週期', course.period],
-                    ].map(([Icon, label, shortLabel, value]) => {
-                      const CardIcon = Icon as typeof CalendarDays
-
-                      return (
-                        <div key={`${label}-${value}`} className="min-w-0 rounded-xl border border-white/10 bg-white/10 p-2.5">
-                          <div className="flex items-center gap-1 text-xs font-bold text-white/45">
-                            <CardIcon className="h-3.5 w-3.5 shrink-0" />
-                            <span className="truncate">{shortLabel as string}</span>
-                          </div>
-                          <p className="mt-1.5 break-words text-xs font-black leading-4 text-white">{text(value as string)}</p>
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  <div className="mt-auto flex flex-col gap-2 pt-4">
-                    <Link
-                      href={`/courses/${course.slug}/register`}
-                      className="apple-button-primary inline-flex w-full items-center justify-center gap-2 px-5 py-2.5"
-                    >
-                      <ChevronRight className="h-5 w-5" />
-                      立即報名
-                    </Link>
-                    <a
-                      href={instagramUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-white/15"
-                    >
-                      <Instagram className="h-5 w-5" />
-                      {t.courseDetail.contactInstagram}
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -249,46 +165,87 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
 
             <section>
               <h2 className="mb-6 text-2xl font-black text-apple-gray-900">{t.courseDetail.coachIntroduction}</h2>
-              <div className="space-y-6">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {courseCoaches.map((coach) => (
-                  <CoachCard
-                    key={coach.name}
-                    coach={coach}
-                    labels={{
-                      photo: t.courseDetail.coachPhotoPlaceholder,
-                      photoPending: t.courseDetail.coachPhotoPending,
-                      specialties: t.courseDetail.coachSpecialties,
-                      style: t.courseDetail.coachStyle,
-                      achievements: t.courseDetail.coachAchievements,
-                      certifications: t.courseDetail.coachCertifications,
-                    }}
-                  />
+                  <article key={coach.name} className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black text-white">
+                      <UsersRound className="h-4 w-4" />
+                    </span>
+                    <h3 className="mt-4 text-lg font-black text-apple-gray-950">{text(coach.name)}</h3>
+                    <p className="mt-2 text-xs font-bold text-apple-gray-400">負責班級</p>
+                    <p className="mt-1 text-sm font-semibold leading-6 text-apple-gray-700">{text(course.name)}</p>
+                  </article>
                 ))}
               </div>
             </section>
 
             <section>
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="max-w-4xl">
                 <SuitabilityCard type="suitable" title={t.courseDetail.suitableFor} items={course.suitableFor.map(text)} />
-                <SuitabilityCard type="notSuitable" title={t.courseDetail.notSuitableFor} items={course.notSuitableFor.map(text)} />
               </div>
             </section>
 
-            <section>
-              <h2 className="mb-6 text-2xl font-black text-apple-gray-900">{t.courseDetail.howToJoin}</h2>
-              <div className="apple-card p-6 md:p-8">
-                {t.courseDetail.enrollmentSteps.map((step, index) => (
-                  <EnrollmentStep key={step.title} number={index + 1} title={step.title} description={step.description} />
-                ))}
-              </div>
-            </section>
+            <section className="relative overflow-hidden rounded-[1.5rem] bg-[#111] p-5 text-white shadow-xl shadow-black/10 sm:p-7 lg:p-8">
+              <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,.09)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.09)_1px,transparent_1px)] [background-size:28px_28px]" />
+              <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] lg:items-end">
+                <div>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-bold uppercase text-white/45">{t.courseDetail.courseLocation}</p>
+                      <h2 className="mt-2 text-3xl font-black leading-none text-white">{text(course.city)}</h2>
+                      <p className="mt-3 flex items-start gap-2 text-sm leading-6 text-white/70">
+                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-apple-blue" />
+                        {text(course.meetingPoint)}
+                      </p>
+                    </div>
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-apple-gray-950">
+                      <Navigation className="h-5 w-5" />
+                    </span>
+                  </div>
 
-            <section>
-              <h2 className="mb-6 text-2xl font-black text-apple-gray-900">{t.courseDetail.faqs}</h2>
-              <div className="apple-card p-6 md:p-8">
-                {course.faq.map((item) => (
-                  <FAQItem key={item.question} question={text(item.question)} answer={text(item.answer)} />
-                ))}
+                  <div className="mt-5 flex items-start gap-2 rounded-xl border border-white/10 bg-black/30 p-4 text-sm font-bold leading-6 text-white">
+                    <Route className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                    {text(course.focus)}
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-2 min-[420px]:grid-cols-3">
+                    {[
+                      [CalendarDays, t.courseDetail.courseWeekday, '星期', course.weekday],
+                      [Clock, t.courseDetail.classTime, '時間', course.time],
+                      [Route, t.courseDetail.coursePeriod, '週期', course.period],
+                    ].map(([Icon, label, shortLabel, value]) => {
+                      const CardIcon = Icon as typeof CalendarDays
+                      return (
+                        <div key={`${label}-${value}`} className="min-w-0 rounded-xl border border-white/10 bg-white/10 p-3">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-white/45">
+                            <CardIcon className="h-3.5 w-3.5 shrink-0" />
+                            <span>{shortLabel as string}</span>
+                          </div>
+                          <p className="mt-2 break-words text-xs font-black leading-5 text-white">{text(value as string)}</p>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <Link
+                    href={`/courses/${course.slug}/register`}
+                    className="apple-button-primary inline-flex min-h-12 w-full items-center justify-center gap-2 px-5 py-3"
+                  >
+                    立即報名
+                    <ChevronRight className="h-5 w-5" />
+                  </Link>
+                  <a
+                    href={instagramUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/15"
+                  >
+                    <Instagram className="h-5 w-5" />
+                    {t.courseDetail.contactInstagram}
+                  </a>
+                </div>
               </div>
             </section>
           </div>

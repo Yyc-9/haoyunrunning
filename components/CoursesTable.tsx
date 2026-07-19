@@ -27,7 +27,7 @@ function getCourseShortName(name: string) {
 
 function getCourseTone(level: Exclude<LevelFilter, 'all'>) {
   if (level === 'beginner') return 'border-blue-200 bg-blue-50 text-blue-950'
-  if (level === 'elite') return 'border-black bg-black text-white'
+  if (level === 'elite') return 'border-slate-300 bg-slate-200 text-slate-950'
   return 'border-emerald-200 bg-emerald-50 text-emerald-950'
 }
 
@@ -117,24 +117,55 @@ export default function CoursesTable() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-black/10 bg-white shadow-sm">
-        <div className="min-w-[1050px]">
-          <div className="grid grid-cols-[104px_repeat(7,minmax(132px,1fr))] border-b border-black/10 bg-black text-white">
-            <div className="sticky left-0 z-20 flex min-h-16 items-center border-r border-white/15 bg-black px-4 text-sm font-black">時間</div>
+      <div className="space-y-3 md:hidden">
+        {weekdays.map((weekday) => {
+          const weekdayCourses = filteredCourses.filter((course) => course.weekday.replace('周', '週') === weekday)
+          if (!weekdayCourses.length) return null
+
+          return (
+            <section key={weekday} className="overflow-hidden rounded-lg border border-black/10 bg-white shadow-sm">
+              <h3 className="bg-black px-4 py-3 text-sm font-black text-white">{localeText(weekday)}</h3>
+              <div className="space-y-2 p-3">
+                {weekdayCourses.map((course) => {
+                  const level = getCourseLevel(course.name)
+                  return (
+                    <Link key={course.slug} href={`/courses/${course.slug}`} className={`group block rounded-lg border p-4 transition active:scale-[0.99] ${getCourseTone(level)}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-base font-black leading-6">{localeText(getCourseShortName(course.name))}</p>
+                          <p className="mt-2 flex items-center gap-1.5 text-xs font-black opacity-75">
+                            <Clock3 className="h-3.5 w-3.5 shrink-0" />
+                            {localeText(course.classTime)}
+                          </p>
+                        </div>
+                        <ArrowUpRight className="h-4 w-4 shrink-0 opacity-50" />
+                      </div>
+                      <p className="mt-2 flex items-start gap-1.5 text-xs font-bold leading-5 opacity-70">
+                        <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        <span>{localeText(course.location)} · {localeText(course.meetingPoint)}</span>
+                      </p>
+                      <p className="mt-2 text-[11px] font-semibold opacity-60">{localeText(course.period)}</p>
+                    </Link>
+                  )
+                })}
+              </div>
+            </section>
+          )
+        })}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-lg border border-black/10 bg-white shadow-sm md:block">
+        <div className="min-w-[940px]">
+          <div className="grid grid-cols-7 border-b border-black/10 bg-black text-white">
             {weekdays.map((weekday) => <div key={weekday} className="flex min-h-16 items-center justify-center border-r border-white/15 px-3 text-sm font-black last:border-r-0">{localeText(weekday)}</div>)}
           </div>
 
           {scheduleRows.map((row) => (
-            <div key={`${row.period}-${row.time}`} className="grid grid-cols-[104px_repeat(7,minmax(132px,1fr))] border-b border-black/10 last:border-b-0">
-              <div className="sticky left-0 z-10 flex min-h-[138px] flex-col justify-center border-r border-black/10 bg-apple-gray-50 px-4">
-                <span className="text-xs font-bold text-apple-gray-500">{row.period}</span>
-                <span className="mt-2 flex items-center gap-1.5 text-base font-black text-black"><Clock3 className="h-4 w-4" />{row.time}</span>
-              </div>
-
+            <div key={`${row.period}-${row.time}`} className="grid grid-cols-7 border-b border-black/10 last:border-b-0">
               {weekdays.map((weekday) => {
                 const slotCourses = coursesBySlot.get(`${weekday}-${row.time}`) ?? []
                 return (
-                  <div key={`${weekday}-${row.time}`} className="min-h-[138px] border-r border-black/10 bg-white p-2 last:border-r-0">
+                  <div key={`${weekday}-${row.time}`} className="min-h-[154px] border-r border-black/10 bg-white p-2 last:border-r-0">
                     <div className="space-y-2">
                       {slotCourses.map((course) => {
                         const level = getCourseLevel(course.name)
@@ -145,6 +176,10 @@ export default function CoursesTable() {
                               <p className="text-sm font-black leading-5">{localeText(getCourseShortName(course.name))}</p>
                               <ArrowUpRight className="h-4 w-4 shrink-0 opacity-45 transition group-hover:opacity-100" />
                             </div>
+                            <p className="mt-2 flex items-center gap-1 text-xs font-black opacity-75">
+                              <Clock3 className="h-3.5 w-3.5 shrink-0" />
+                              {row.time}
+                            </p>
                             <p className="mt-2 flex items-start gap-1 text-xs font-bold leading-4 opacity-70">
                               <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                               <span>{localeText(course.location)} · {localeText(course.meetingPoint)}</span>

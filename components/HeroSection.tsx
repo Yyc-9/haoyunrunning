@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import Link from 'next/link'
-import { BookOpenCheck, ChevronDown, ChevronLeft, ChevronRight, Pause, Play, ShoppingBag, UsersRound } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
 import { useSiteContent } from '@/app/site-content-provider'
 
@@ -17,26 +16,6 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
   const { t } = useLanguage()
   const { heroSlides: syncedImages, hasSyncedContent } = useSiteContent()
   const images = hasSyncedContent ? syncedImages : initialImages
-  const entryCards = [
-    {
-      href: '/courses',
-      external: false,
-      icon: BookOpenCheck,
-      ...t.hero.entries[0],
-    },
-    {
-      href: '/group-signup',
-      external: false,
-      icon: UsersRound,
-      ...t.hero.entries[1],
-    },
-    {
-      href: '/shop',
-      external: false,
-      icon: ShoppingBag,
-      ...t.hero.entries[2],
-    },
-  ]
 
   useEffect(() => {
     if (!isAutoPlay) return
@@ -66,24 +45,7 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
     )
   }
 
-  const renderEntryContent = (item: (typeof entryCards)[number]) => {
-    const Icon = item.icon
-
-    return (
-      <>
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-black text-white">
-          <Icon className="h-5 w-5" />
-        </span>
-        <span>
-          <span className="block text-lg font-black text-apple-gray-950">{item.title}</span>
-          <span className="mt-2 block text-sm leading-6 text-apple-gray-600">{item.description}</span>
-        </span>
-      </>
-    )
-  }
-
   return (
-    <>
     <section className="relative h-screen min-h-[640px] overflow-hidden bg-black">
       <div className="absolute inset-0">
         {images.map((image, index) => (
@@ -163,33 +125,5 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
         <ChevronDown className="h-8 w-8 animate-bounce" />
       </motion.button>
     </section>
-
-    <section className="border-b border-black/10 bg-white px-4 py-8 sm:px-6 lg:px-8">
-      <div className="container mx-auto max-w-6xl">
-        <p className="mb-4 text-sm font-semibold uppercase tracking-wide text-apple-blue">{t.hero.entryLabel}</p>
-        <div className="grid gap-3 md:grid-cols-3">
-          {entryCards.map((item) => {
-            const className =
-              'group flex min-h-[132px] items-start gap-4 rounded-2xl border border-black/10 bg-white p-5 text-left text-black shadow-sm transition duration-300 hover:-translate-y-1 hover:border-black/20 hover:shadow-xl'
-            const content = renderEntryContent(item)
-
-            if ('external' in item && item.external) {
-              return (
-                <a key={item.title} href={item.href} target="_blank" rel="noreferrer" className={className}>
-                  {content}
-                </a>
-              )
-            }
-
-            return (
-              <Link key={item.title} href={item.href} className={className}>
-                {content}
-              </Link>
-            )
-          })}
-        </div>
-      </div>
-    </section>
-    </>
   )
 }

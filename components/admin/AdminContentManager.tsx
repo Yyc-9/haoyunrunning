@@ -11,6 +11,7 @@ import {
   Copy,
   ExternalLink,
   FileText,
+  Film,
   GalleryHorizontalEnd,
   Home,
   ImageIcon,
@@ -82,6 +83,43 @@ async function uploadSiteImage(file: File, folder: 'hero' | 'brand' | 'pages') {
   return payload.url
 }
 
+async function uploadSiteVideo(file: File) {
+  if (!supabase) throw new Error('影片服務尚未設定。')
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.access_token) throw new Error('請重新登入管理員帳號。')
+
+  const signResponse = await fetch('/api/admin/upload', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      contentType: file.type,
+      fileSize: file.size,
+      folder: 'pages',
+    }),
+  })
+  const signed = (await signResponse.json().catch(() => ({}))) as {
+    url?: string
+    path?: string
+    token?: string
+    error?: string
+  }
+  if (!signResponse.ok || !signed.url || !signed.path || !signed.token) {
+    throw new Error(signed.error || '無法建立影片上傳憑證。')
+  }
+
+  const { error } = await supabase.storage
+    .from('site-media')
+    .uploadToSignedUrl(signed.path, signed.token, file, {
+      contentType: file.type,
+      cacheControl: '31536000',
+    })
+  if (error) throw new Error(error.message || '影片上傳失敗。')
+  return signed.url
+}
+
 function Field({ label, children, wide = false }: { label: string; children: React.ReactNode; wide?: boolean }) {
   return <label className={wide ? 'md:col-span-2' : ''}><span className="mb-2 block text-xs font-bold text-apple-gray-500">{label}</span>{children}</label>
 }
@@ -114,6 +152,55 @@ function ImageField({ label, value, folder, onChange, onError }: { label: string
             更換圖片
             <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={uploading} onChange={(event) => upload(event.target.files?.[0])} />
           </label>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function VideoField({ label, value, onChange, onError }: { label: string; value: string; onChange: (url: string) => void; onError: (message: string) => void }) {
+  const [uploading, setUploading] = useState(false)
+
+  async function upload(file?: File) {
+    if (!file) return
+    setUploading(true)
+    onError('')
+    try {
+      onChange(await uploadSiteVideo(file))
+    } catch (error) {
+      onError(error instanceof Error ? error.message : '影片上傳失敗。')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div className="md:col-span-2 rounded-lg border border-black/10 bg-apple-gray-50 p-4">
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,280px)_1fr] sm:items-center">
+        <div className="flex aspect-video items-center justify-center overflow-hidden rounded-md bg-black">
+          {value ? (
+            <video src={value} controls muted playsInline preload="metadata" className="h-full w-full object-contain" />
+          ) : (
+            <Film className="h-9 w-9 text-white/50" />
+          )}
+        </div>
+        <div className="min-w-0">
+          <p className="font-black text-apple-gray-900">{label}</p>
+          <p className="mt-1 break-all text-xs leading-5 text-apple-gray-500">{value || '尚未設定影片；沒有影片時，前台不會保留空白區塊。'}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-black/10 bg-white px-4 text-sm font-bold hover:bg-apple-gray-100">
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Film className="h-4 w-4" />}
+              {value ? '更換影片' : '上傳影片'}
+              <input type="file" accept="video/mp4,video/webm,video/quicktime" className="sr-only" disabled={uploading} onChange={(event) => upload(event.target.files?.[0])} />
+            </label>
+            {value ? (
+              <button type="button" onClick={() => onChange('')} className="inline-flex min-h-10 items-center gap-2 rounded-lg px-4 text-sm font-bold text-red-600 hover:bg-red-50">
+                <Trash2 className="h-4 w-4" />
+                移除影片
+              </button>
+            ) : null}
+          </div>
+          <p className="mt-2 text-xs text-apple-gray-400">支援 MP4、WebM、MOV，單一影片最大 50 MB。</p>
         </div>
       </div>
     </div>
@@ -234,7 +321,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
   const allModes = [
     { id: 'overview' as const, label: '內容總覽', description: '查看可管理區域', destination: '全站', icon: LayoutGrid },
     { id: 'hero' as const, label: '首頁輪播', description: '圖片與排序', destination: '首頁首屏輪播', icon: GalleryHorizontalEnd },
-    { id: 'home' as const, label: '首頁文案', description: '區塊標題與重點', destination: '首頁活動、特色與課程預覽', icon: Home },
+    { id: 'home' as const, label: '首頁文案', description: '近期報名與課程預覽', destination: '首頁近期報名、課程預覽', icon: Home },
     { id: 'activities' as const, label: '活動入口', description: '報名與活動連結', destination: '首頁近期報名入口', icon: Megaphone },
     { id: 'seasonal' as const, label: '首頁招生公告', description: '對外公告', destination: '首頁招生公告區', icon: Megaphone },
     { id: 'seasons' as const, label: '季度設定', description: '切換、複製與歷史資料', destination: '課程、日程表、報名與歷史報表', icon: CalendarRange },
@@ -443,11 +530,9 @@ export default function AdminContentManager({ content, courses, seasons, scope =
 
         {mode === 'home' ? (
           <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
-            {panelHeader('首頁文案', '管理活動區、特色區與首頁課程預覽的標題及說明。', '/')}
+            {panelHeader('首頁文案', '管理近期報名與課程預覽的標題及說明；首頁順序固定為近期報名、課程預覽。', '/')}
             <div className="grid gap-4 p-5 md:grid-cols-2">
-              {([['activitiesLabel','活動區小標'],['activitiesTitle','活動區標題'],['activitiesDescription','活動區說明'],['featuresTitle','特色區標題'],['featuresSubtitle','特色區說明'],['coursesLabel','課程區小標'],['coursesTitle','課程區標題'],['coursesDescription','課程區說明']] as const).map(([key,label]) => <Field key={key} label={label} wide={key.endsWith('Description') || key.endsWith('Subtitle')}><input value={home[key]} onChange={(e)=>setHome((c)=>({...c,[key]:e.target.value}))} className="apple-input" /></Field>)}
-              <div className="md:col-span-2"><h3 className="mb-3 font-black">六項特色</h3><div className="divide-y divide-black/10 border-y border-black/10">{home.features.map((item,index)=><div key={index} className="grid gap-3 py-4 md:grid-cols-2"><input value={item.title} onChange={(e)=>setHome((c)=>({...c,features:c.features.map((x,i)=>i===index?{...x,title:e.target.value}:x)}))} className="apple-input" /><input value={item.description} onChange={(e)=>setHome((c)=>({...c,features:c.features.map((x,i)=>i===index?{...x,description:e.target.value}:x)}))} className="apple-input" /></div>)}</div></div>
-              <div className="md:col-span-2"><h3 className="mb-3 font-black">首頁數字</h3><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{home.stats.map((item,index)=><div key={index} className="grid gap-2"><input value={item.value} onChange={(e)=>setHome((c)=>({...c,stats:c.stats.map((x,i)=>i===index?{...x,value:e.target.value}:x)}))} className="apple-input" /><input value={item.label} onChange={(e)=>setHome((c)=>({...c,stats:c.stats.map((x,i)=>i===index?{...x,label:e.target.value}:x)}))} className="apple-input" /></div>)}</div></div>
+              {([['activitiesLabel','近期報名小標'],['activitiesTitle','近期報名標題'],['activitiesDescription','近期報名說明'],['coursesLabel','課程預覽小標'],['coursesTitle','課程預覽標題'],['coursesDescription','課程預覽說明']] as const).map(([key,label]) => <Field key={key} label={label} wide={key.endsWith('Description')}><input value={home[key]} onChange={(e)=>setHome((c)=>({...c,[key]:e.target.value}))} className="apple-input" /></Field>)}
             </div><div className="border-t border-black/10 p-5 text-right">{saveButton('save-home', 'home_content', home)}</div>
           </div>
         ) : null}
@@ -467,7 +552,46 @@ export default function AdminContentManager({ content, courses, seasons, scope =
 
         {mode === 'about' ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('關於我們','管理品牌故事、理念、適合對象與頁尾行動文字。','/about')}<div className="grid gap-4 p-5 md:grid-cols-2">{([['eyebrow','頁面小標'],['title','主標題'],['titleHighlight','主標題重點'],['description','品牌介紹'],['beliefsLabel','理念小標'],['beliefsTitle','理念標題'],['audienceLabel','對象小標'],['audienceTitle','對象標題'],['audienceDescription','對象說明'],['ctaTitle','頁尾標題'],['ctaDescription','頁尾說明']] as const).map(([key,label])=><Field key={key} label={label} wide={['description','beliefsTitle','audienceTitle','audienceDescription','ctaTitle','ctaDescription'].includes(key)}>{['description','audienceDescription','ctaDescription'].includes(key)?<textarea rows={4} value={about[key]} onChange={(e)=>setAbout((c)=>({...c,[key]:e.target.value}))} className="apple-input resize-y" />:<input value={about[key]} onChange={(e)=>setAbout((c)=>({...c,[key]:e.target.value}))} className="apple-input" />}</Field>)}<Field label="對象標籤（以逗號分隔）" wide><input value={about.audienceTags.join(', ')} onChange={(e)=>setAbout((c)=>({...c,audienceTags:e.target.value.split(',').map(x=>x.trim()).filter(Boolean)}))} className="apple-input" /></Field><div className="md:col-span-2"><h3 className="mb-3 font-black">三項品牌理念</h3>{about.beliefs.map((item,index)=><div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2"><input value={item.title} onChange={(e)=>setAbout((c)=>({...c,beliefs:c.beliefs.map((x,i)=>i===index?{...x,title:e.target.value}:x)}))} className="apple-input" /><input value={item.description} onChange={(e)=>setAbout((c)=>({...c,beliefs:c.beliefs.map((x,i)=>i===index?{...x,description:e.target.value}:x)}))} className="apple-input" /></div>)}</div><div className="md:col-span-2"><h3 className="mb-3 font-black">三項服務重點</h3>{about.facts.map((item,index)=><div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2"><input value={item.title} onChange={(e)=>setAbout((c)=>({...c,facts:c.facts.map((x,i)=>i===index?{...x,title:e.target.value}:x)}))} className="apple-input" /><input value={item.description} onChange={(e)=>setAbout((c)=>({...c,facts:c.facts.map((x,i)=>i===index?{...x,description:e.target.value}:x)}))} className="apple-input" /></div>)}</div></div><div className="border-t border-black/10 p-5 text-right">{saveButton('save-about','about_content',about)}</div></div> : null}
 
-        {mode === 'testimonials' ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('學員見證','管理見證頁首屏、成長路徑與 Instagram 引導文案。','/testimonials')}<div className="grid gap-4 p-5 md:grid-cols-2">{([['eyebrow','首屏小標'],['title','首屏標題'],['description','首屏說明'],['pathLabel','成長路徑小標'],['pathTitle','成長路徑標題'],['pathDescription','成長路徑說明'],['ctaLabel','結尾小標'],['ctaTitle','結尾標題'],['ctaDescription','結尾說明']] as const).map(([key,label])=><Field key={key} label={label} wide={['description','pathTitle','pathDescription','ctaTitle','ctaDescription'].includes(key)}>{['description','pathDescription','ctaDescription'].includes(key)?<textarea rows={4} value={testimonials[key]} onChange={(e)=>setTestimonials((c)=>({...c,[key]:e.target.value}))} className="apple-input resize-y" />:<input value={testimonials[key]} onChange={(e)=>setTestimonials((c)=>({...c,[key]:e.target.value}))} className="apple-input" />}</Field>)}<div className="md:col-span-2"><h3 className="mb-3 font-black">三段成長路徑</h3>{testimonials.themes.map((item,index)=><div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2"><input value={item.title} onChange={(e)=>setTestimonials((c)=>({...c,themes:c.themes.map((x,i)=>i===index?{...x,title:e.target.value}:x)}))} className="apple-input" /><input value={item.description} onChange={(e)=>setTestimonials((c)=>({...c,themes:c.themes.map((x,i)=>i===index?{...x,description:e.target.value}:x)}))} className="apple-input" /></div>)}</div></div><div className="border-t border-black/10 p-5 text-right">{saveButton('save-testimonials','testimonials_content',testimonials)}</div></div> : null}
+        {mode === 'testimonials' ? (
+          <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
+            {panelHeader('學員見證', '管理見證頁首屏、影片與成長路徑；沒有影片時前台會自動收合。', '/testimonials')}
+            <div className="grid gap-4 p-5 md:grid-cols-2">
+              <VideoField
+                label="學員見證影片"
+                value={testimonials.videoUrl}
+                onChange={(videoUrl) => setTestimonials((current) => ({ ...current, videoUrl }))}
+                onError={setLocalError}
+              />
+              {([
+                ['eyebrow', '首屏小標'],
+                ['title', '首屏標題'],
+                ['description', '首屏說明'],
+                ['pathLabel', '成長路徑小標'],
+                ['pathTitle', '成長路徑標題'],
+                ['pathDescription', '成長路徑說明'],
+              ] as const).map(([key, label]) => (
+                <Field key={key} label={label} wide={['description', 'pathTitle', 'pathDescription'].includes(key)}>
+                  {['description', 'pathDescription'].includes(key) ? (
+                    <textarea rows={4} value={testimonials[key]} onChange={(event) => setTestimonials((current) => ({ ...current, [key]: event.target.value }))} className="apple-input resize-y" />
+                  ) : (
+                    <input value={testimonials[key]} onChange={(event) => setTestimonials((current) => ({ ...current, [key]: event.target.value }))} className="apple-input" />
+                  )}
+                </Field>
+              ))}
+              <div className="md:col-span-2">
+                <h3 className="mb-3 font-black">三段成長路徑</h3>
+                {testimonials.themes.map((item, index) => (
+                  <div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2">
+                    <input value={item.title} onChange={(event) => setTestimonials((current) => ({ ...current, themes: current.themes.map((theme, themeIndex) => themeIndex === index ? { ...theme, title: event.target.value } : theme) }))} className="apple-input" />
+                    <input value={item.description} onChange={(event) => setTestimonials((current) => ({ ...current, themes: current.themes.map((theme, themeIndex) => themeIndex === index ? { ...theme, description: event.target.value } : theme) }))} className="apple-input" />
+                  </div>
+                ))}
+              </div>
+              <p className="md:col-span-2 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-800">「真實內容持續更新」結尾區塊目前已在前台隱藏，原有文字仍保留在資料中。</p>
+            </div>
+            <div className="border-t border-black/10 p-5 text-right">{saveButton('save-testimonials', 'testimonials_content', testimonials)}</div>
+          </div>
+        ) : null}
 
         {mode === 'seasons' ? (
           <div className="overflow-hidden rounded-lg border border-black/10 bg-white">

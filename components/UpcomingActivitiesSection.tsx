@@ -17,7 +17,7 @@ export default function UpcomingActivitiesSection() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-12 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={false}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
@@ -40,7 +40,7 @@ export default function UpcomingActivitiesSection() {
             const isExternal = activity.href.startsWith('http')
             const content = (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={false}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
                 viewport={{ once: true }}
