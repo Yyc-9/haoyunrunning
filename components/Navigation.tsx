@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { ChevronDown, CircleUserRound, ClipboardList, Globe2, Menu, X, User, LogOut, LogIn, ShieldCheck, ShoppingBag } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
-import Image from 'next/image'
 import Link from 'next/link'
 import { useSiteContent } from '@/app/site-content-provider'
 import { usePathname, useSearchParams } from 'next/navigation'
@@ -12,6 +11,7 @@ import { useAuth } from '@/app/providers'
 import { useLanguage } from '@/app/language-context'
 import { languages } from '@/lib/dictionary'
 import AuthModal from '@/components/AuthModal'
+import WeekdayLogo from '@/components/WeekdayLogo'
 
 export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -225,14 +225,7 @@ export default function Navigation() {
               className="flex min-w-0 items-center space-x-2 justify-self-start"
             >
               <div className="relative h-9 w-9 overflow-hidden rounded-full border border-black/10 bg-white shadow-sm sm:h-10 sm:w-10">
-                <Image
-                  src={brand.logoUrl}
-                  alt={`${brand.brandName} Logo`}
-                  fill
-                  sizes="40px"
-                  className="object-cover"
-                  priority
-                />
+                <WeekdayLogo brandName={brand.brandName} />
               </div>
               <span className="max-w-[8rem] truncate text-base font-bold tracking-tight text-apple-gray-950 sm:max-w-none sm:text-xl">{brand.brandName}</span>
             </motion.div>
