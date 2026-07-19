@@ -3,11 +3,13 @@
 import Image from 'next/image'
 import { BookOpenCheck, PlayCircle, Target, UsersRound } from 'lucide-react'
 import { useSiteContent } from '@/app/site-content-provider'
+import { getYouTubeEmbedUrl } from '@/lib/youtube'
 
 const storyIcons = [BookOpenCheck, UsersRound, Target]
 
 export default function TestimonialsPage() {
   const { pageMedia, testimonials } = useSiteContent()
+  const youtubeEmbedUrl = getYouTubeEmbedUrl(testimonials.videoUrl)
   return (
     <main className="bg-white pt-24">
       <section className="relative min-h-[34rem] overflow-hidden bg-black sm:min-h-[40rem]">
@@ -31,7 +33,7 @@ export default function TestimonialsPage() {
         </div>
       </section>
 
-      {testimonials.videoUrl ? (
+      {testimonials.videoEnabled && testimonials.videoUrl ? (
         <section className="border-b border-black/10 bg-white px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
           <div className="container mx-auto max-w-5xl">
             <div className="mb-5 flex items-center gap-3">
@@ -40,18 +42,32 @@ export default function TestimonialsPage() {
               </span>
               <div>
                 <p className="text-xs font-black uppercase tracking-wide text-apple-blue">RUNNER STORIES</p>
-                <h2 className="mt-1 text-2xl font-black text-apple-gray-950 sm:text-3xl">學員故事</h2>
+                <h2 className="mt-1 text-2xl font-black text-apple-gray-950 sm:text-3xl">{testimonials.videoTitle}</h2>
               </div>
             </div>
+            <p className="mb-5 max-w-3xl text-sm leading-7 text-apple-gray-600 sm:text-base">
+              {testimonials.videoDescription}
+            </p>
             <div className="overflow-hidden rounded-lg border border-black/10 bg-black shadow-sm">
-              <video
-                src={testimonials.videoUrl}
-                poster={pageMedia.testimonialsHero}
-                controls
-                playsInline
-                preload="metadata"
-                className="aspect-video h-auto w-full object-contain"
-              />
+              {youtubeEmbedUrl ? (
+                <iframe
+                  src={youtubeEmbedUrl}
+                  title={testimonials.videoTitle}
+                  loading="lazy"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  className="aspect-video h-auto w-full"
+                />
+              ) : (
+                <video
+                  src={testimonials.videoUrl}
+                  poster={pageMedia.testimonialsHero}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="aspect-video h-auto w-full object-contain"
+                />
+              )}
             </div>
           </div>
         </section>

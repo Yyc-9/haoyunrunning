@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import {
   ArrowLeft,
@@ -28,6 +29,13 @@ type CourseDetailClientProps = {
 function localizeText(text: string, _language: string) {
   void _language
   return text
+}
+
+function compactCourseName(name: string) {
+  return name
+    .replace(/^2026\s*/, '')
+    .replace(/^好運跑步訓練營\s*X\s*/, '')
+    .trim()
 }
 
 const trainingDescriptions: Record<string, string> = {
@@ -59,7 +67,7 @@ function getTrainingDescription(title: string, language: string) {
 
 export default function CourseDetailClient({ course }: CourseDetailClientProps) {
   const { language, t } = useLanguage()
-  const { courses, brand, isLoading } = useSiteContent()
+  const { courses, brand, coachProfiles, isLoading } = useSiteContent()
   const courseSlug = course?.slug
   const managedCourse = courseSlug ? courses.find((item) => item.slug === courseSlug) ?? (isLoading ? course : null) : null
 
@@ -117,14 +125,10 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
               <p className="mt-3 max-w-2xl text-base leading-7 text-apple-gray-600">
                 {text(course.slogan)}
               </p>
-              <div className="mt-4 grid max-w-3xl gap-3 sm:grid-cols-2">
+              <div className="mt-4 max-w-3xl">
                 <div className="border-l-2 border-apple-blue pl-4">
                   <p className="text-xs font-bold text-apple-gray-400">適合對象</p>
                   <p className="mt-1 text-sm font-semibold leading-6 text-apple-gray-700">{text(course.targetAudience)}</p>
-                </div>
-                <div className="border-l-2 border-emerald-500 pl-4">
-                  <p className="text-xs font-bold text-apple-gray-400">費用說明</p>
-                  <p className="mt-1 text-sm font-semibold leading-6 text-apple-gray-700">{text(course.feeNote)}</p>
                 </div>
               </div>
               <div className="mt-5 border-t border-black/10 pt-4">
@@ -166,16 +170,46 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
             <section>
               <h2 className="mb-6 text-2xl font-black text-apple-gray-900">{t.courseDetail.coachIntroduction}</h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {courseCoaches.map((coach) => (
-                  <article key={coach.name} className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black text-white">
-                      <UsersRound className="h-4 w-4" />
-                    </span>
-                    <h3 className="mt-4 text-lg font-black text-apple-gray-950">{text(coach.name)}</h3>
-                    <p className="mt-2 text-xs font-bold text-apple-gray-400">負責班級</p>
-                    <p className="mt-1 text-sm font-semibold leading-6 text-apple-gray-700">{text(course.name)}</p>
-                  </article>
-                ))}
+                {courseCoaches.map((coach) => {
+                  const profile = Object.values(coachProfiles).find((item) =>
+                    item.displayName === coach.name || (
+                      Boolean(coach.imageUrl) &&
+                      (item.avatarUrl === coach.imageUrl || item.fullBodyImageUrl === coach.imageUrl)
+                    )
+                  )
+                  const imageUrl = profile?.avatarUrl || coach.imageUrl || coach.fullBodyImageUrl
+                  const href = profile ? `/team#coach-${profile.coachKey}` : '/team'
+
+                  return (
+                    <Link
+                      key={coach.name}
+                      href={href}
+                      className="group rounded-lg border border-black/10 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-black/25 hover:shadow-md sm:p-5"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full bg-apple-gray-100 ring-1 ring-black/10">
+                          {imageUrl ? (
+                            <Image
+                              src={imageUrl}
+                              alt={`${coach.name}教練照片`}
+                              fill
+                              sizes="56px"
+                              className="object-cover"
+                              style={{ objectPosition: `${profile?.avatarFocusX ?? coach.avatarFocusX ?? 50}% ${profile?.avatarFocusY ?? coach.avatarFocusY ?? 18}%` }}
+                            />
+                          ) : (
+                            <UsersRound className="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 text-apple-gray-400" />
+                          )}
+                        </div>
+                        <ChevronRight className="h-5 w-5 shrink-0 text-apple-gray-300 transition group-hover:translate-x-0.5 group-hover:text-black" />
+                      </div>
+                      <h3 className="mt-4 text-lg font-black text-apple-gray-950">{text(coach.name)}</h3>
+                      <p className="mt-2 text-xs font-bold text-apple-gray-400">負責班級</p>
+                      <p className="mt-1 text-sm font-semibold leading-6 text-apple-gray-700">{text(compactCourseName(course.name))}</p>
+                      <p className="mt-3 text-xs font-black text-apple-blue">查看團隊資料</p>
+                    </Link>
+                  )
+                })}
               </div>
             </section>
 

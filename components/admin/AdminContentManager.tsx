@@ -40,6 +40,7 @@ import type {
   SiteContent,
   TestimonialsContent,
 } from '@/lib/site-content'
+import { getYouTubeEmbedUrl } from '@/lib/youtube'
 
 type CourseSummary = {
   slug: string
@@ -160,6 +161,7 @@ function ImageField({ label, value, folder, onChange, onError }: { label: string
 
 function VideoField({ label, value, onChange, onError }: { label: string; value: string; onChange: (url: string) => void; onError: (message: string) => void }) {
   const [uploading, setUploading] = useState(false)
+  const youtubeEmbedUrl = getYouTubeEmbedUrl(value)
 
   async function upload(file?: File) {
     if (!file) return
@@ -178,7 +180,16 @@ function VideoField({ label, value, onChange, onError }: { label: string; value:
     <div className="md:col-span-2 rounded-lg border border-black/10 bg-apple-gray-50 p-4">
       <div className="grid gap-4 sm:grid-cols-[minmax(0,280px)_1fr] sm:items-center">
         <div className="flex aspect-video items-center justify-center overflow-hidden rounded-md bg-black">
-          {value ? (
+          {youtubeEmbedUrl ? (
+            <iframe
+              src={youtubeEmbedUrl}
+              title={`${label}預覽`}
+              loading="lazy"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              className="h-full w-full"
+            />
+          ) : value ? (
             <video src={value} controls muted playsInline preload="metadata" className="h-full w-full object-contain" />
           ) : (
             <Film className="h-9 w-9 text-white/50" />
@@ -187,6 +198,13 @@ function VideoField({ label, value, onChange, onError }: { label: string; value:
         <div className="min-w-0">
           <p className="font-black text-apple-gray-900">{label}</p>
           <p className="mt-1 break-all text-xs leading-5 text-apple-gray-500">{value || '尚未設定影片；沒有影片時，前台不會保留空白區塊。'}</p>
+          <input
+            type="url"
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder="貼上 YouTube 網址，或使用下方按鈕上傳影片"
+            className="apple-input mt-3"
+          />
           <div className="mt-3 flex flex-wrap gap-2">
             <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-black/10 bg-white px-4 text-sm font-bold hover:bg-apple-gray-100">
               {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Film className="h-4 w-4" />}
@@ -200,7 +218,7 @@ function VideoField({ label, value, onChange, onError }: { label: string; value:
               </button>
             ) : null}
           </div>
-          <p className="mt-2 text-xs text-apple-gray-400">支援 MP4、WebM、MOV，單一影片最大 50 MB。</p>
+          <p className="mt-2 text-xs text-apple-gray-400">支援 YouTube、MP4、WebM、MOV；上傳影片最大 50 MB。</p>
         </div>
       </div>
     </div>
@@ -562,16 +580,27 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                 onChange={(videoUrl) => setTestimonials((current) => ({ ...current, videoUrl }))}
                 onError={setLocalError}
               />
+              <label className="md:col-span-2 flex items-center gap-3 rounded-lg border border-black/10 bg-apple-gray-50 px-4 py-3 text-sm font-bold">
+                <input
+                  type="checkbox"
+                  checked={testimonials.videoEnabled}
+                  onChange={(event) => setTestimonials((current) => ({ ...current, videoEnabled: event.target.checked }))}
+                  className="h-4 w-4"
+                />
+                在學員見證頁顯示影片
+              </label>
               {([
                 ['eyebrow', '首屏小標'],
                 ['title', '首屏標題'],
                 ['description', '首屏說明'],
+                ['videoTitle', '影片標題'],
+                ['videoDescription', '影片說明'],
                 ['pathLabel', '成長路徑小標'],
                 ['pathTitle', '成長路徑標題'],
                 ['pathDescription', '成長路徑說明'],
               ] as const).map(([key, label]) => (
-                <Field key={key} label={label} wide={['description', 'pathTitle', 'pathDescription'].includes(key)}>
-                  {['description', 'pathDescription'].includes(key) ? (
+                <Field key={key} label={label} wide={['description', 'videoDescription', 'pathTitle', 'pathDescription'].includes(key)}>
+                  {['description', 'videoDescription', 'pathDescription'].includes(key) ? (
                     <textarea rows={4} value={testimonials[key]} onChange={(event) => setTestimonials((current) => ({ ...current, [key]: event.target.value }))} className="apple-input resize-y" />
                   ) : (
                     <input value={testimonials[key]} onChange={(event) => setTestimonials((current) => ({ ...current, [key]: event.target.value }))} className="apple-input" />

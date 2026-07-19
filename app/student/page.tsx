@@ -214,7 +214,7 @@ export default function StudentPage() {
           ? '關注心率與睡眠'
           : '可以按計畫推進'
   const loadZone =
-    trainingLoad === 0 ? '完成訓練後提交回饋' : trainingLoad < 180 ? '輕負荷' : trainingLoad < 420 ? '适中負荷' : '高負荷'
+    trainingLoad === 0 ? '完成訓練後提交回饋' : trainingLoad < 180 ? '輕負荷' : trainingLoad < 420 ? '適中負荷' : '高負荷'
   const dashboardNav: Array<
     | { type: 'link'; href: string; icon: React.ElementType; label: string }
     | { type: 'button'; icon: React.ElementType; label: string }
@@ -763,7 +763,7 @@ export default function StudentPage() {
                 {displayName}，今天照顾好這一課。
               </h1>
               <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
-                課表、完成狀態與訓練感受都集中在這裡。回報越清楚，教練越能幫你把下一周調得剛剛好。
+                課表、完成狀態與訓練感受都集中在這裡。回報越清楚，教練越能幫你把下一週調得剛剛好。
               </p>
             </div>
             <div className="apple-card p-5">
@@ -842,7 +842,7 @@ export default function StudentPage() {
                   <p className="text-sm font-semibold text-apple-blue">Training data</p>
                   <h2 className="mt-1 text-2xl font-black text-apple-gray-900">訓練資料</h2>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-apple-gray-600">
-                    用訓練負荷、完成率和體感趨勢，快速判斷這一周該推進、维持還是先恢復。
+                    用訓練負荷、完成率和體感趨勢，快速判斷這一週該推進、維持還是先恢復。
                   </p>
                 </div>
                 <a href="#feedback" className="apple-button-secondary gap-2 px-5 py-2.5 text-sm">
@@ -903,7 +903,7 @@ export default function StudentPage() {
                   <div className="mb-5 flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-bold text-apple-gray-900">近 7 次訓練負荷</p>
-                      <p className="mt-1 text-xs text-apple-gray-500">里程 × RPE，用来觀察疲勞趨勢</p>
+                      <p className="mt-1 text-xs text-apple-gray-500">里程 × RPE，用來觀察疲勞趨勢</p>
                     </div>
                     <span className="rounded-full bg-apple-gray-100 px-3 py-1 text-xs font-bold text-apple-gray-600">
                       {recentLoadItems.length || 0} 次
@@ -1472,7 +1472,7 @@ export default function StudentPage() {
                     value={profileForm.name}
                     onChange={(event) => updateProfileField('name', event.target.value)}
                     className="apple-input"
-                    placeholder="你的称呼"
+                    placeholder="你的稱呼"
                   />
                 </label>
                 <label className="block">

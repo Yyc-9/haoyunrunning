@@ -33,14 +33,6 @@ function getCourseTime(classTime: string) {
   return classTime.match(/(?:[01]\d|2[0-3]):[0-5]\d/)?.[0] ?? null
 }
 
-function getSchedulePeriod(time: string) {
-  const hour = Number(time.slice(0, 2))
-  if (hour < 12) return '上午'
-  if (hour < 14) return '中午'
-  if (hour < 18) return '下午'
-  return '晚上'
-}
-
 export default function CoursesTable() {
   const { language } = useLanguage()
   const { courses } = useSiteContent()
@@ -54,29 +46,6 @@ export default function CoursesTable() {
     if (cityFilter !== 'all' && course.location !== cityFilter) return false
     return true
   }).sort(compareCourses), [cityFilter, courses, levelFilter])
-
-  const scheduleRows = useMemo(() => {
-    const times = new Set<string>()
-    filteredCourses.forEach((course) => {
-      const time = getCourseTime(course.classTime)
-      if (time) times.add(time)
-    })
-    return [...times]
-      .sort((a, b) => a.localeCompare(b))
-      .map((time) => ({ period: getSchedulePeriod(time), time }))
-  }, [filteredCourses])
-
-  const coursesBySlot = useMemo(() => {
-    const slots = new Map<string, typeof courses>()
-    filteredCourses.forEach((course) => {
-      const weekday = course.weekday.replace('周', '週')
-      const time = getCourseTime(course.classTime)
-      if (!time) return
-      const key = `${weekday}-${time}`
-      slots.set(key, [...(slots.get(key) ?? []), course].sort(compareCourses))
-    })
-    return slots
-  }, [filteredCourses])
 
   const filterButtons: Array<{ value: LevelFilter; label: string }> = [
     { value: 'all', label: '全部' },
@@ -157,40 +126,41 @@ export default function CoursesTable() {
             {weekdays.map((weekday) => <div key={weekday} className="flex min-h-16 items-center justify-center border-r border-white/15 px-3 text-sm font-black last:border-r-0">{localeText(weekday)}</div>)}
           </div>
 
-          {scheduleRows.map((row) => (
-            <div key={`${row.period}-${row.time}`} className="grid grid-cols-7 border-b border-black/10 last:border-b-0">
-              {weekdays.map((weekday) => {
-                const slotCourses = coursesBySlot.get(`${weekday}-${row.time}`) ?? []
-                return (
-                  <div key={`${weekday}-${row.time}`} className="min-h-[154px] border-r border-black/10 bg-white p-2 last:border-r-0">
-                    <div className="space-y-2">
-                      {slotCourses.map((course) => {
-                        const duration = course.classTime.match(/（(.+?)）/)?.[1] ?? ''
-                        return (
-                          <Link key={course.slug} href={`/courses/${course.slug}`} className={`group block rounded-lg border p-3 transition hover:-translate-y-0.5 hover:shadow-md ${getCourseTone()}`}>
-                            <div className="flex items-start justify-between gap-2">
-                              <p className="text-sm font-black leading-5">{localeText(getCourseShortName(course.name))}</p>
-                              <ArrowUpRight className="h-4 w-4 shrink-0 opacity-45 transition group-hover:opacity-100" />
-                            </div>
+          <div className="grid grid-cols-7">
+            {weekdays.map((weekday) => {
+              const weekdayCourses = filteredCourses.filter((course) => course.weekday.replace('周', '週') === weekday)
+              return (
+                <div key={weekday} className="min-h-40 border-r border-black/10 bg-white p-2 last:border-r-0">
+                  <div className="space-y-2">
+                    {weekdayCourses.map((course) => {
+                      const duration = course.classTime.match(/（(.+?)）/)?.[1] ?? ''
+                      const time = getCourseTime(course.classTime)
+                      return (
+                        <Link key={course.slug} href={`/courses/${course.slug}`} className={`group block rounded-lg border p-3 transition hover:-translate-y-0.5 hover:shadow-md ${getCourseTone()}`}>
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm font-black leading-5">{localeText(getCourseShortName(course.name))}</p>
+                            <ArrowUpRight className="h-4 w-4 shrink-0 opacity-45 transition group-hover:opacity-100" />
+                          </div>
+                          {time ? (
                             <p className="mt-2 flex items-center gap-1 text-xs font-black opacity-75">
                               <Clock3 className="h-3.5 w-3.5 shrink-0" />
-                              {row.time}
+                              {time}
                             </p>
-                            <p className="mt-2 flex items-start gap-1 text-xs font-bold leading-4 opacity-70">
-                              <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                              <span>{localeText(course.location)} · {localeText(course.meetingPoint)}</span>
-                            </p>
-                            {duration ? <p className="mt-1 text-[11px] font-bold opacity-65">{duration}</p> : null}
-                            <p className="mt-2 text-[11px] font-semibold opacity-60">{localeText(course.period)}</p>
-                          </Link>
-                        )
-                      })}
-                    </div>
+                          ) : null}
+                          <p className="mt-2 flex items-start gap-1 text-xs font-bold leading-4 opacity-70">
+                            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                            <span>{localeText(course.location)} · {localeText(course.meetingPoint)}</span>
+                          </p>
+                          {duration ? <p className="mt-1 text-[11px] font-bold opacity-65">{duration}</p> : null}
+                          <p className="mt-2 text-[11px] font-semibold opacity-60">{localeText(course.period)}</p>
+                        </Link>
+                      )
+                    })}
                   </div>
-                )
-              })}
-            </div>
-          ))}
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
 

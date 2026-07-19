@@ -232,7 +232,7 @@ export default function TrainingLogPreview() {
               <div className="border-t border-apple-gray-200 pt-4">
                 <div className="flex items-center gap-2 text-apple-gray-600">
                   <CheckCircle className="h-4 w-4" />
-                  <span className="text-sm">完成訓練後，請在右侧提交回饋。</span>
+                  <span className="text-sm">完成訓練後，請在右側提交回饋。</span>
                 </div>
               </div>
             </div>

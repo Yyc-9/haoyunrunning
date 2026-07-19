@@ -8,7 +8,7 @@ export default function CtaSection() {
     {
       icon: CheckCircle,
       title: '30天免費試用',
-      description: '體验完整訓練系統',
+      description: '體驗完整訓練系統',
     },
     {
       icon: Smartphone,

@@ -82,6 +82,9 @@ export type TestimonialsContent = {
   title: string
   description: string
   videoUrl: string
+  videoTitle: string
+  videoDescription: string
+  videoEnabled: boolean
   pathLabel: string
   pathTitle: string
   pathDescription: string
@@ -210,6 +213,9 @@ export const defaultTestimonialsContent: TestimonialsContent = {
   title: '每一步進步，都從願意開始',
   description: '好運跑班陪跑者從第一次規律訓練，到完成賽事與挑戰個人目標。真實學員分享與最新訓練現場，持續發布在官方 Instagram。',
   videoUrl: '',
+  videoTitle: '學員故事',
+  videoDescription: '從訓練現場與賽事歷程，看見跑者如何一步一步完成自己的目標。',
+  videoEnabled: true,
   pathLabel: '跑者的成長路徑',
   pathTitle: '訓練不只看最後的成績',
   pathDescription: '我們更重視跑者能不能安全、穩定地持續下去。以下是好運跑班在每一段訓練裡最在意的事情。',
@@ -430,6 +436,9 @@ export function normalizeTestimonialsContent(value: unknown): TestimonialsConten
     title: cleanOr(source.title, defaultTestimonialsContent.title, 180),
     description: cleanOr(source.description, defaultTestimonialsContent.description, 1000),
     videoUrl: videoUrl && isSafePublicUrl(videoUrl) ? videoUrl : '',
+    videoTitle: cleanOr(source.videoTitle, defaultTestimonialsContent.videoTitle, 160),
+    videoDescription: cleanOr(source.videoDescription, defaultTestimonialsContent.videoDescription, 600),
+    videoEnabled: source.videoEnabled !== false,
     pathLabel: cleanOr(source.pathLabel, defaultTestimonialsContent.pathLabel, 80),
     pathTitle: cleanOr(source.pathTitle, defaultTestimonialsContent.pathTitle, 180),
     pathDescription: cleanOr(source.pathDescription, defaultTestimonialsContent.pathDescription, 800),
