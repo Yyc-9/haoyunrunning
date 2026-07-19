@@ -25,10 +25,8 @@ function getCourseShortName(name: string) {
     .trim()
 }
 
-function getCourseTone(level: Exclude<LevelFilter, 'all'>) {
-  if (level === 'beginner') return 'border-blue-200 bg-blue-50 text-blue-950'
-  if (level === 'elite') return 'border-slate-300 bg-slate-200 text-slate-950'
-  return 'border-emerald-200 bg-emerald-50 text-emerald-950'
+function getCourseTone() {
+  return 'border-slate-200 bg-slate-100 text-slate-950 hover:border-slate-300'
 }
 
 function getCourseTime(classTime: string) {
@@ -127,9 +125,8 @@ export default function CoursesTable() {
               <h3 className="bg-black px-4 py-3 text-sm font-black text-white">{localeText(weekday)}</h3>
               <div className="space-y-2 p-3">
                 {weekdayCourses.map((course) => {
-                  const level = getCourseLevel(course.name)
                   return (
-                    <Link key={course.slug} href={`/courses/${course.slug}`} className={`group block rounded-lg border p-4 transition active:scale-[0.99] ${getCourseTone(level)}`}>
+                    <Link key={course.slug} href={`/courses/${course.slug}`} className={`group block rounded-lg border p-4 transition active:scale-[0.99] ${getCourseTone()}`}>
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-base font-black leading-6">{localeText(getCourseShortName(course.name))}</p>
@@ -168,10 +165,9 @@ export default function CoursesTable() {
                   <div key={`${weekday}-${row.time}`} className="min-h-[154px] border-r border-black/10 bg-white p-2 last:border-r-0">
                     <div className="space-y-2">
                       {slotCourses.map((course) => {
-                        const level = getCourseLevel(course.name)
                         const duration = course.classTime.match(/（(.+?)）/)?.[1] ?? ''
                         return (
-                          <Link key={course.slug} href={`/courses/${course.slug}`} className={`group block rounded-lg border p-3 transition hover:-translate-y-0.5 hover:shadow-md ${getCourseTone(level)}`}>
+                          <Link key={course.slug} href={`/courses/${course.slug}`} className={`group block rounded-lg border p-3 transition hover:-translate-y-0.5 hover:shadow-md ${getCourseTone()}`}>
                             <div className="flex items-start justify-between gap-2">
                               <p className="text-sm font-black leading-5">{localeText(getCourseShortName(course.name))}</p>
                               <ArrowUpRight className="h-4 w-4 shrink-0 opacity-45 transition group-hover:opacity-100" />
