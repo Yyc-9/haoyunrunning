@@ -16,7 +16,7 @@ export async function GET() {
     supabaseAdmin
       .from('site_content')
       .select('key, value')
-      .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'testimonials_content', 'page_media']),
+      .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'testimonials_content', 'team_content', 'page_media']),
     getCurrentCourseSeason(),
     supabaseAdmin
       .from('coach_public_profiles')

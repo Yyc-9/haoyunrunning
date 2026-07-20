@@ -468,6 +468,7 @@ export default function AdminDashboardClient() {
         } : current)
         announceSiteContentUpdated()
       } else {
+        if (action.action === 'save_coach_public_profile') announceSiteContentUpdated()
         await loadDashboard(true)
       }
       return true

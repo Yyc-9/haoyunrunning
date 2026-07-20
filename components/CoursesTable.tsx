@@ -25,8 +25,14 @@ function getCourseShortName(name: string) {
     .trim()
 }
 
-function getCourseTone() {
-  return 'border-slate-200 bg-slate-100 text-slate-950 hover:border-slate-300'
+function getCourseTone(level: Exclude<LevelFilter, 'all'>) {
+  if (level === 'beginner') {
+    return 'border-sky-200 bg-sky-50 text-sky-950 hover:border-sky-300'
+  }
+  if (level === 'elite') {
+    return 'border-slate-300 bg-slate-100 text-slate-950 hover:border-slate-400'
+  }
+  return 'border-emerald-200 bg-emerald-50 text-emerald-950 hover:border-emerald-300'
 }
 
 function getCourseTime(classTime: string) {
@@ -95,7 +101,7 @@ export default function CoursesTable() {
               <div className="space-y-2 p-3">
                 {weekdayCourses.map((course) => {
                   return (
-                    <Link key={course.slug} href={`/courses/${course.slug}`} className={`group block rounded-lg border p-4 transition active:scale-[0.99] ${getCourseTone()}`}>
+                    <Link key={course.slug} href={`/courses/${course.slug}`} className={`group block rounded-lg border p-4 transition active:scale-[0.99] ${getCourseTone(getCourseLevel(course.name))}`}>
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-base font-black leading-6">{localeText(getCourseShortName(course.name))}</p>
@@ -136,7 +142,7 @@ export default function CoursesTable() {
                       const duration = course.classTime.match(/（(.+?)）/)?.[1] ?? ''
                       const time = getCourseTime(course.classTime)
                       return (
-                        <Link key={course.slug} href={`/courses/${course.slug}`} className={`group block rounded-lg border p-3 transition hover:-translate-y-0.5 hover:shadow-md ${getCourseTone()}`}>
+                        <Link key={course.slug} href={`/courses/${course.slug}`} className={`group block rounded-lg border p-3 transition hover:-translate-y-0.5 hover:shadow-md ${getCourseTone(getCourseLevel(course.name))}`}>
                           <div className="flex items-start justify-between gap-2">
                             <p className="text-sm font-black leading-5">{localeText(getCourseShortName(course.name))}</p>
                             <ArrowUpRight className="h-4 w-4 shrink-0 opacity-45 transition group-hover:opacity-100" />

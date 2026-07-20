@@ -4,7 +4,7 @@ import { getAdminProfile } from '@/lib/admin-auth'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { shopProductFromRow, type ShopProductRow } from '@/lib/shop-products'
 import { allCourses } from '@/lib/goodluck-data'
-import { coachPublicProfilesFromRows, getDefaultCourseCoachKeys, type CoachPublicProfileRow } from '@/lib/coach-profiles'
+import { coachPublicProfilesFromRows, getDefaultCourseCoachKeys, type CoachPublicProfile, type CoachPublicProfileRow } from '@/lib/coach-profiles'
 import { applyCourseSeasonToContent, nextCourseSeasonIdentity, type CourseSeasonStatus } from '@/lib/course-seasons'
 import { getCourseSeasons } from '@/lib/course-seasons-server'
 import { defaultCourseBillingConfig, normalizeCourseBillingConfig } from '@/lib/course-pricing'
@@ -20,6 +20,7 @@ import {
   normalizeHomeContent,
   normalizePageMedia,
   normalizeSeasonalUpdate,
+  normalizeTeamContent,
   normalizeTestimonialsContent,
   siteContentFromRows,
 } from '@/lib/site-content'
@@ -123,6 +124,50 @@ function recordNumber(value: Record<string, unknown> | null, key: string) {
   return Number.isFinite(item) ? item : null
 }
 
+function normalizeCoachList(value: unknown) {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item) => cleanText(item).slice(0, 180))
+    .filter(Boolean)
+    .slice(0, 20)
+}
+
+function normalizeCoachFocus(value: unknown, fallback: number) {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? Math.max(0, Math.min(100, Math.round(numeric))) : fallback
+}
+
+function normalizeAdminCoachProfile(value: unknown) {
+  const source = value && typeof value === 'object' ? value as Partial<CoachPublicProfile> : {}
+  const avatarUrl = cleanText(source.avatarUrl).slice(0, 2000)
+  const fullBodyImageUrl = cleanText(source.fullBodyImageUrl).slice(0, 2000)
+  if ((avatarUrl && !isSafePublicUrl(avatarUrl)) || (fullBodyImageUrl && !isSafePublicUrl(fullBodyImageUrl))) {
+    return null
+  }
+
+  const displayName = cleanText(source.displayName).slice(0, 120)
+  if (!displayName) return null
+
+  return {
+    display_name: displayName,
+    nickname: cleanText(source.nickname).slice(0, 80),
+    role_title: cleanText(source.role).slice(0, 180),
+    bio: cleanText(source.bio).slice(0, 1600),
+    avatar_url: avatarUrl,
+    full_body_image_url: fullBodyImageUrl || avatarUrl,
+    avatar_focus_x: normalizeCoachFocus(source.avatarFocusX, 50),
+    avatar_focus_y: normalizeCoachFocus(source.avatarFocusY, 18),
+    full_body_focus_x: normalizeCoachFocus(source.fullBodyFocusX, 50),
+    full_body_focus_y: normalizeCoachFocus(source.fullBodyFocusY, 18),
+    specialties: normalizeCoachList(source.specialties),
+    style: cleanText(source.style).slice(0, 1000),
+    achievements: normalizeCoachList(source.achievements),
+    certifications: normalizeCoachList(source.certifications),
+    profile_initialized: true,
+    published: source.published !== false,
+  }
+}
+
 type ShopOrderRow = {
   id: string
   order_number: string
@@ -205,6 +250,7 @@ type AdminPatchBody =
   | { action?: 'create_product'; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; variants?: Array<{ id?: string; name?: string; image?: string; detailImages?: string[] }>; summary?: string; description?: string; gallery?: string[]; highlights?: string; specifications?: Array<{ label?: string; value?: string }>; usageNotes?: string; externalUrl?: string }
   | { action?: 'delete_product'; productId?: string }
   | { action?: 'save_site_content'; section?: string; value?: unknown }
+  | { action?: 'save_coach_public_profile'; coachKey?: string; value?: unknown }
   | { action?: 'save_season_course'; seasonId?: string; courseSlug?: string; value?: unknown; capacity?: number; billingConfig?: unknown }
   | { action?: 'create_season_course'; seasonId?: string; templateSlug?: string; name?: string }
   | { action?: 'duplicate_season_course'; seasonId?: string; courseSlug?: string }
@@ -446,7 +492,7 @@ export async function GET(request: NextRequest) {
     supabaseAdmin!
       .from('site_content')
       .select('key, value')
-      .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'testimonials_content', 'page_media']),
+      .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'testimonials_content', 'team_content', 'page_media']),
     supabaseAdmin!
       .from('coach_invites')
       .select('id, code, coach_key, used_by, used_at, expires_at, created_at')
@@ -1800,6 +1846,28 @@ export async function PATCH(request: NextRequest) {
     return json({ product, message: '商品已建立並加入商城管理。' })
   }
 
+  if (body.action === 'save_coach_public_profile') {
+    const coachKey = cleanText(body.coachKey)
+    if (!/^[A-Za-z0-9-]{1,80}$/.test(coachKey)) {
+      return json({ error: '教練資料識別碼無效。' }, { status: 400 })
+    }
+    const value = normalizeAdminCoachProfile(body.value)
+    if (!value) {
+      return json({ error: '請填寫教練姓名，並確認照片網址格式正確。' }, { status: 400 })
+    }
+
+    const { data: profile, error } = await supabaseAdmin!
+      .from('coach_public_profiles')
+      .update(value)
+      .eq('coach_key', coachKey)
+      .select('coach_key')
+      .single()
+    if (error || !profile) {
+      return json({ error: error?.message || '教練公開資料儲存失敗。' }, { status: 500 })
+    }
+    return json({ profile, message: '團隊陣容資料已更新並發布。' })
+  }
+
   if (body.action === 'save_site_content') {
     const section = cleanText(body.section)
     let value: unknown
@@ -1835,6 +1903,8 @@ export async function PATCH(request: NextRequest) {
       value = normalizeAboutContent(body.value)
     } else if (section === 'testimonials_content') {
       value = normalizeTestimonialsContent(body.value)
+    } else if (section === 'team_content') {
+      value = normalizeTeamContent(body.value)
     } else if (section === 'page_media') {
       value = normalizePageMedia(body.value)
     } else {
@@ -1854,7 +1924,7 @@ export async function PATCH(request: NextRequest) {
     const { data: contentRows, error: contentRowsError } = await supabaseAdmin!
       .from('site_content')
       .select('key, value')
-      .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'testimonials_content', 'page_media'])
+      .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'testimonials_content', 'team_content', 'page_media'])
 
     if (contentRowsError) {
       return json({ error: contentRowsError.message || '內容已儲存，但重新讀取失敗。' }, { status: 500 })

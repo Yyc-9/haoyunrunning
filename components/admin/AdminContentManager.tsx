@@ -24,6 +24,8 @@ import {
   ShoppingBag,
   Sparkles,
   Trash2,
+  Undo2,
+  UsersRound,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { courseSeasonStatusLabels, type CourseSeason, type CourseSeasonStatus } from '@/lib/course-seasons'
@@ -36,10 +38,11 @@ import type {
   HomeActivity,
   HomeContent,
   PageMedia,
-  SeasonalUpdate,
   SiteContent,
+  TeamContent,
   TestimonialsContent,
 } from '@/lib/site-content'
+import type { CoachPublicProfile } from '@/lib/coach-profiles'
 import { getYouTubeEmbedUrl } from '@/lib/youtube'
 
 type CourseSummary = {
@@ -65,9 +68,9 @@ type AdminContentManagerProps = {
   runAction: (id: string, action: Record<string, unknown>) => Promise<boolean>
 }
 
-type ContentMode = 'overview' | 'hero' | 'home' | 'activities' | 'seasonal' | 'seasons' | 'brand' | 'media' | 'about' | 'testimonials' | 'courses'
+type ContentMode = 'overview' | 'hero' | 'home' | 'activities' | 'team' | 'seasons' | 'brand' | 'media' | 'about' | 'testimonials' | 'courses'
 
-async function uploadSiteImage(file: File, folder: 'hero' | 'brand' | 'pages') {
+async function uploadSiteImage(file: File, folder: 'hero' | 'brand' | 'pages' | 'coaches') {
   if (!supabase) throw new Error('圖片服務尚未設定。')
   const { data: { session } } = await supabase.auth.getSession()
   if (!session?.access_token) throw new Error('請重新登入管理員帳號。')
@@ -125,7 +128,7 @@ function Field({ label, children, wide = false }: { label: string; children: Rea
   return <label className={wide ? 'md:col-span-2' : ''}><span className="mb-2 block text-xs font-bold text-apple-gray-500">{label}</span>{children}</label>
 }
 
-function ImageField({ label, value, folder, onChange, onError }: { label: string; value: string; folder: 'brand' | 'pages'; onChange: (url: string) => void; onError: (message: string) => void }) {
+function ImageField({ label, value, folder, objectPosition, onChange, onError }: { label: string; value: string; folder: 'brand' | 'pages' | 'coaches'; objectPosition?: string; onChange: (url: string) => void; onError: (message: string) => void }) {
   const [uploading, setUploading] = useState(false)
   async function upload(file?: File) {
     if (!file) return
@@ -143,7 +146,7 @@ function ImageField({ label, value, folder, onChange, onError }: { label: string
     <div className="border-b border-black/10 py-5 first:pt-0 last:border-0 last:pb-0">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <div className="relative h-28 w-full shrink-0 overflow-hidden rounded-lg bg-apple-gray-100 sm:w-44">
-          {value ? <Image src={value} alt={`${label}預覽`} fill sizes="176px" className="object-cover" /> : <ImageIcon className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 text-apple-gray-400" />}
+          {value ? <Image src={value} alt={`${label}預覽`} fill sizes="176px" className="object-cover" style={objectPosition ? { objectPosition } : undefined} /> : <ImageIcon className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 text-apple-gray-400" />}
         </div>
         <div className="min-w-0 flex-1">
           <p className="font-bold text-apple-gray-900">{label}</p>
@@ -247,11 +250,12 @@ export default function AdminContentManager({ content, courses, seasons, scope =
   const [mode, setMode] = useState<ContentMode>(scope === 'seasons' ? 'seasons' : 'overview')
   const [slides, setSlides] = useState(content.heroSlides)
   const [activities, setActivities] = useState<HomeActivity[]>(content.activities)
-  const [seasonal, setSeasonal] = useState<SeasonalUpdate>(content.seasonalUpdate)
   const [brand, setBrand] = useState<BrandContent>(content.brand)
   const [home, setHome] = useState<HomeContent>(content.home)
   const [about, setAbout] = useState<AboutContent>(content.about)
   const [testimonials, setTestimonials] = useState<TestimonialsContent>(content.testimonials)
+  const [team, setTeam] = useState<TeamContent>(content.team)
+  const [coachDrafts, setCoachDrafts] = useState<Record<string, CoachPublicProfile>>(content.coachProfiles)
   const [pageMedia, setPageMedia] = useState<PageMedia>(content.pageMedia)
   const currentSeason = seasons.find((season) => season.isCurrent) ?? seasons[0] ?? null
   const [selectedSeasonId, setSelectedSeasonId] = useState(currentSeason?.id ?? '')
@@ -282,11 +286,12 @@ export default function AdminContentManager({ content, courses, seasons, scope =
   useEffect(() => {
     setSlides(content.heroSlides)
     setActivities(content.activities)
-    setSeasonal(content.seasonalUpdate)
     setBrand(content.brand)
     setHome(content.home)
     setAbout(content.about)
     setTestimonials(content.testimonials)
+    setTeam(content.team)
+    setCoachDrafts(content.coachProfiles)
     setPageMedia(content.pageMedia)
   }, [content])
 
@@ -341,9 +346,9 @@ export default function AdminContentManager({ content, courses, seasons, scope =
     { id: 'hero' as const, label: '首頁輪播', description: '圖片與排序', destination: '首頁首屏輪播', icon: GalleryHorizontalEnd },
     { id: 'home' as const, label: '首頁文案', description: '近期報名與課程預覽', destination: '首頁近期報名、課程預覽', icon: Home },
     { id: 'activities' as const, label: '活動入口', description: '報名與活動連結', destination: '首頁近期報名入口', icon: Megaphone },
-    { id: 'seasonal' as const, label: '首頁招生公告', description: '對外公告', destination: '首頁招生公告區', icon: Megaphone },
+    { id: 'team' as const, label: '團隊陣容', description: '頁面介紹與教練資料', destination: '團隊陣容完整頁面', icon: UsersRound },
     { id: 'seasons' as const, label: '季度設定', description: '切換、複製與歷史資料', destination: '課程、日程表、報名與歷史報表', icon: CalendarRange },
-    { id: 'brand' as const, label: '品牌與聯絡', description: 'Logo、社群與頁尾', destination: '頂部導覽、頁尾與聯絡入口', icon: BadgeInfo },
+    { id: 'brand' as const, label: '品牌與聯絡', description: '頁尾 Logo、社群與聯絡', destination: '頁尾與聯絡入口', icon: BadgeInfo },
     { id: 'media' as const, label: '各頁主視覺', description: '商店、關於與見證', destination: '商店、關於我們、學員見證與週年頁', icon: ImageIcon },
     { id: 'about' as const, label: '關於我們', description: '品牌故事與對象', destination: '關於我們完整頁面', icon: Sparkles },
     { id: 'testimonials' as const, label: '學員見證', description: '見證頁文案', destination: '學員見證完整頁面', icon: FileText },
@@ -489,6 +494,15 @@ export default function AdminContentManager({ content, courses, seasons, scope =
     }))
   }
 
+  function restoreSelectedCourse() {
+    if (!selectedCourse) return
+    setDraft(courseDraft(selectedCourse, courseOverrides[selectedCourse.slug]))
+    setDraftCapacity(selectedSeason ? seasonCapacities[selectedSeason.id]?.[selectedCourse.slug] ?? 40 : 40)
+    setDraftBilling(selectedSeason
+      ? seasonBillingConfigs[selectedSeason.id]?.[selectedCourse.slug] ?? defaultCourseBillingConfig(selectedCourse, selectedSeason.code)
+      : defaultCourseBillingConfig(selectedCourse))
+  }
+
   async function activateSeason(season: CourseSeason) {
     if (!window.confirm(`確定將 ${season.name} 設為前台招生季度？課程、日程表與報名頁會一起切換。`)) return
     await runAction(`activate-season-${season.id}`, { action: 'activate_course_season', seasonId: season.id })
@@ -503,6 +517,27 @@ export default function AdminContentManager({ content, courses, seasons, scope =
       <Save className="h-4 w-4" />{label}
     </button>
   )
+
+  const restoreButton = (onRestore: () => void) => (
+    <button type="button" onClick={() => { onRestore(); setLocalError(''); setCourseMessage('') }} className="apple-button-outline gap-2 px-5 py-3">
+      <Undo2 className="h-4 w-4" />還原未儲存變更
+    </button>
+  )
+
+  const actionBar = (onRestore: () => void, save: React.ReactNode) => (
+    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
+      {restoreButton(onRestore)}
+      {save}
+    </div>
+  )
+
+  async function saveCoachProfile(profile: CoachPublicProfile) {
+    await runAction(`save-coach-profile-${profile.coachKey}`, {
+      action: 'save_coach_public_profile',
+      coachKey: profile.coachKey,
+      value: profile,
+    })
+  }
 
   const panelHeader = (title: string, description: string, previewPath?: string) => (
     <div className="flex flex-col justify-between gap-4 border-b border-black/10 px-5 py-5 sm:px-6 md:flex-row md:items-center">
@@ -542,7 +577,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
               {slides.map((slide, index) => <article key={`${slide}-${index}`} className="overflow-hidden rounded-lg border border-black/10"><div className="relative aspect-video bg-apple-gray-100"><Image src={slide} alt={`首頁輪播 ${index + 1}`} fill sizes="360px" className="object-cover" /></div><div className="flex items-center justify-between p-3"><span className="text-xs font-bold text-apple-gray-500">第 {index + 1} 張</span><div className="flex gap-1"><button title="向前移動" type="button" disabled={index === 0} onClick={() => moveSlide(index, -1)} className="p-2 disabled:opacity-30"><ArrowUp className="h-4 w-4" /></button><button title="向後移動" type="button" disabled={index === slides.length - 1} onClick={() => moveSlide(index, 1)} className="p-2 disabled:opacity-30"><ArrowDown className="h-4 w-4" /></button><button title="刪除圖片" type="button" disabled={slides.length <= 1} onClick={() => setSlides((current) => current.filter((_, i) => i !== index))} className="p-2 text-red-500 disabled:opacity-30"><Trash2 className="h-4 w-4" /></button></div></div></article>)}
               <label className="flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-black/20 bg-apple-gray-50 text-sm font-bold text-apple-gray-600"><ImagePlus className="mb-3 h-6 w-6" />{isUploading ? '圖片上傳中...' : '新增輪播圖片'}<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={isUploading || slides.length >= 8} onChange={(event) => addHeroImage(event.target.files?.[0])} /></label>
             </div>
-            <div className="border-t border-black/10 p-5 text-right">{saveButton('save-hero', 'hero_slides', slides, '儲存輪播')}</div>
+            <div className="border-t border-black/10 p-5">{actionBar(() => setSlides(content.heroSlides), saveButton('save-hero', 'hero_slides', slides, '儲存輪播'))}</div>
           </div>
         ) : null}
 
@@ -551,24 +586,104 @@ export default function AdminContentManager({ content, courses, seasons, scope =
             {panelHeader('首頁文案', '管理近期報名與課程預覽的標題及說明；首頁順序固定為近期報名、課程預覽。', '/')}
             <div className="grid gap-4 p-5 md:grid-cols-2">
               {([['activitiesLabel','近期報名小標'],['activitiesTitle','近期報名標題'],['activitiesDescription','近期報名說明'],['coursesLabel','課程預覽小標'],['coursesTitle','課程預覽標題'],['coursesDescription','課程預覽說明']] as const).map(([key,label]) => <Field key={key} label={label} wide={key.endsWith('Description')}><input value={home[key]} onChange={(e)=>setHome((c)=>({...c,[key]:e.target.value}))} className="apple-input" /></Field>)}
-            </div><div className="border-t border-black/10 p-5 text-right">{saveButton('save-home', 'home_content', home)}</div>
+            </div><div className="border-t border-black/10 p-5">{actionBar(() => setHome(content.home), saveButton('save-home', 'home_content', home))}</div>
           </div>
         ) : null}
 
         {mode === 'activities' ? (
           <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('首頁活動入口', '新增活動、報名頁或外部連結，首頁會依順序顯示。', '/')}
             <div className="divide-y divide-black/10">{activities.map((activity,index)=><div key={index} className="grid gap-3 p-5 md:grid-cols-2"><Field label="活動名稱"><input value={activity.title} onChange={(e)=>setActivities((c)=>c.map((x,i)=>i===index?{...x,title:e.target.value}:x))} className="apple-input" /></Field><Field label="按鈕文字"><input value={activity.action} onChange={(e)=>setActivities((c)=>c.map((x,i)=>i===index?{...x,action:e.target.value}:x))} className="apple-input" /></Field><Field label="活動說明" wide><textarea rows={3} value={activity.description} onChange={(e)=>setActivities((c)=>c.map((x,i)=>i===index?{...x,description:e.target.value}:x))} className="apple-input resize-y" /></Field><Field label="連結"><input value={activity.href} onChange={(e)=>setActivities((c)=>c.map((x,i)=>i===index?{...x,href:e.target.value}:x))} className="apple-input" /></Field><button title="刪除活動" type="button" onClick={()=>setActivities((c)=>c.filter((_,i)=>i!==index))} className="self-end justify-self-start rounded-lg px-3 py-2 text-sm font-bold text-red-600 hover:bg-red-50"><Trash2 className="mr-2 inline h-4 w-4" />刪除</button></div>)}</div>
-            <div className="flex flex-col justify-between gap-3 border-t border-black/10 p-5 sm:flex-row"><button type="button" disabled={activities.length>=8} onClick={()=>setActivities((c)=>[...c,{title:'',description:'',action:'立即查看',href:'/'}])} className="apple-button-outline gap-2 px-5 py-3"><Plus className="h-4 w-4" />新增活動</button>{saveButton('save-activities','home_activities',activities,'發布活動入口')}</div>
+            <div className="flex flex-col justify-between gap-3 border-t border-black/10 p-5 lg:flex-row">
+              <button type="button" disabled={activities.length>=8} onClick={()=>setActivities((c)=>[...c,{title:'',description:'',action:'立即查看',href:'/'}])} className="apple-button-outline gap-2 px-5 py-3"><Plus className="h-4 w-4" />新增活動</button>
+              {actionBar(() => setActivities(content.activities), saveButton('save-activities','home_activities',activities,'發布活動入口'))}
+            </div>
           </div>
         ) : null}
 
-        {mode === 'seasonal' ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('季度資訊','發布招生週期或重要公告；開啟後會出現在首頁。','/')}<div className="grid gap-4 p-5 md:grid-cols-2"><Field label="季度"><input value={seasonal.period} onChange={(e)=>setSeasonal((c)=>({...c,period:e.target.value}))} className="apple-input" /></Field><Field label="標題"><input value={seasonal.title} onChange={(e)=>setSeasonal((c)=>({...c,title:e.target.value}))} className="apple-input" /></Field><Field label="摘要" wide><textarea rows={3} value={seasonal.summary} onChange={(e)=>setSeasonal((c)=>({...c,summary:e.target.value}))} className="apple-input resize-y" /></Field><Field label="完整內容" wide><textarea rows={6} value={seasonal.body} onChange={(e)=>setSeasonal((c)=>({...c,body:e.target.value}))} className="apple-input resize-y" /></Field><Field label="延伸連結"><input value={seasonal.href} onChange={(e)=>setSeasonal((c)=>({...c,href:e.target.value}))} className="apple-input" /></Field><Field label="連結文字"><input value={seasonal.linkLabel} onChange={(e)=>setSeasonal((c)=>({...c,linkLabel:e.target.value}))} className="apple-input" /></Field><label className="flex items-center gap-3 text-sm font-bold"><input type="checkbox" checked={seasonal.active} onChange={(e)=>setSeasonal((c)=>({...c,active:e.target.checked}))} className="h-4 w-4" />在首頁顯示</label><div className="text-right">{saveButton('save-seasonal','seasonal_update',seasonal)}</div></div></div> : null}
+        {mode === 'team' ? (
+          <div className="space-y-5">
+            <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
+              {panelHeader('團隊陣容頁面介紹', '管理首屏介紹與教練名單上方標題。', '/team')}
+              <div className="grid gap-4 p-5 md:grid-cols-2">
+                <Field label="首屏小標"><input value={team.eyebrow} onChange={(event) => setTeam((current) => ({ ...current, eyebrow: event.target.value }))} className="apple-input" /></Field>
+                <Field label="首屏標題"><input value={team.title} onChange={(event) => setTeam((current) => ({ ...current, title: event.target.value }))} className="apple-input" /></Field>
+                <Field label="首屏說明" wide><textarea rows={4} value={team.description} onChange={(event) => setTeam((current) => ({ ...current, description: event.target.value }))} className="apple-input resize-y" /></Field>
+                <Field label="名單小標"><input value={team.rosterLabel} onChange={(event) => setTeam((current) => ({ ...current, rosterLabel: event.target.value }))} className="apple-input" /></Field>
+                <Field label="名單標題"><input value={team.rosterTitle} onChange={(event) => setTeam((current) => ({ ...current, rosterTitle: event.target.value }))} className="apple-input" /></Field>
+              </div>
+              <div className="border-t border-black/10 p-5">{actionBar(() => setTeam(content.team), saveButton('save-team', 'team_content', team))}</div>
+            </div>
 
-        {mode === 'brand' ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('品牌與聯絡','Logo 與聯絡資料會同步到導覽列及頁尾。','/')}<div className="p-5"><ImageField label="品牌 Logo" value={brand.logoUrl} folder="brand" onChange={(logoUrl)=>setBrand((c)=>({...c,logoUrl}))} onError={setLocalError}/><div className="mt-5 grid gap-4 md:grid-cols-2">{([['brandName','品牌名稱'],['tagline','品牌標語'],['instagramUrl','Instagram 網址'],['instagramHandle','Instagram 帳號'],['contactText','聯絡說明'],['address','服務地區']] as const).map(([key,label])=><Field key={key} label={label}><input value={brand[key]} onChange={(e)=>setBrand((c)=>({...c,[key]:e.target.value}))} className="apple-input" /></Field>)}<Field label="頁尾品牌介紹" wide><textarea rows={4} value={brand.footerDescription} onChange={(e)=>setBrand((c)=>({...c,footerDescription:e.target.value}))} className="apple-input resize-y" /></Field></div></div><div className="border-t border-black/10 p-5 text-right">{saveButton('save-brand','brand_content',brand)}</div></div> : null}
+            <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
+              {panelHeader('教練與助教公開資料', '可更新團隊頁姓名、介紹、長方形半身照與公開狀態；課程歸屬仍在季度管理設定。', '/team')}
+              <div className="divide-y divide-black/10">
+                {Object.values(coachDrafts)
+                  .sort((left, right) => Number(right.published) - Number(left.published) || left.displayName.localeCompare(right.displayName, 'zh-Hant'))
+                  .map((profile) => (
+                    <details key={profile.coachKey} className="group">
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 hover:bg-apple-gray-50">
+                        <div className="min-w-0">
+                          <p className="truncate font-black text-apple-gray-900">{profile.displayName}</p>
+                          <p className="mt-1 truncate text-xs text-apple-gray-500">{profile.published ? '前台顯示中' : '前台隱藏'} · {profile.role || '尚未填寫職務'}</p>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-apple-gray-100 px-3 py-1.5 text-xs font-black text-apple-gray-600 group-open:bg-black group-open:text-white">編輯</span>
+                      </summary>
+                      <div className="border-t border-black/10 bg-apple-gray-50 p-5">
+                        <ImageField
+                          label="團隊頁長方形照片"
+                          value={profile.fullBodyImageUrl}
+                          folder="coaches"
+                          objectPosition={`${profile.fullBodyFocusX}% ${profile.fullBodyFocusY}%`}
+                          onChange={(fullBodyImageUrl) => setCoachDrafts((current) => ({
+                            ...current,
+                            [profile.coachKey]: { ...current[profile.coachKey], fullBodyImageUrl },
+                          }))}
+                          onError={setLocalError}
+                        />
+                        <div className="mt-5 grid gap-4 md:grid-cols-2">
+                          <Field label="公開姓名"><input value={profile.displayName} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], displayName: event.target.value } }))} className="apple-input" /></Field>
+                          <Field label="暱稱"><input value={profile.nickname} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], nickname: event.target.value } }))} className="apple-input" /></Field>
+                          <Field label="職務與專長" wide><input value={profile.role} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], role: event.target.value } }))} className="apple-input" /></Field>
+                          <Field label="公開介紹" wide><textarea rows={5} value={profile.bio} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], bio: event.target.value } }))} className="apple-input resize-y" /></Field>
+                          <Field label="擅長方向（每行一項）"><textarea rows={5} value={profile.specialties.join('\n')} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], specialties: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean) } }))} className="apple-input resize-y" /></Field>
+                          <Field label="帶訓風格"><textarea rows={5} value={profile.style} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], style: event.target.value } }))} className="apple-input resize-y" /></Field>
+                          <Field label="代表經歷（每行一項）"><textarea rows={6} value={profile.achievements.join('\n')} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], achievements: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean) } }))} className="apple-input resize-y" /></Field>
+                          <Field label="教練證照（每行一項）"><textarea rows={6} value={profile.certifications.join('\n')} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], certifications: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean) } }))} className="apple-input resize-y" /></Field>
+                          <Field label={`照片水平焦點 ${profile.fullBodyFocusX}%`}>
+                            <input type="range" min={0} max={100} value={profile.fullBodyFocusX} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], fullBodyFocusX: Number(event.target.value) } }))} className="w-full accent-black" />
+                          </Field>
+                          <Field label={`照片垂直焦點 ${profile.fullBodyFocusY}%`}>
+                            <input type="range" min={0} max={100} value={profile.fullBodyFocusY} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], fullBodyFocusY: Number(event.target.value) } }))} className="w-full accent-black" />
+                          </Field>
+                          <label className="flex items-center gap-3 text-sm font-bold md:col-span-2">
+                            <input type="checkbox" checked={profile.published} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], published: event.target.checked } }))} className="h-4 w-4" />
+                            在團隊陣容與課程教練選單顯示
+                          </label>
+                        </div>
+                        <div className="mt-5 border-t border-black/10 pt-5">
+                          {actionBar(
+                            () => setCoachDrafts((current) => ({
+                              ...current,
+                              [profile.coachKey]: content.coachProfiles[profile.coachKey] ?? current[profile.coachKey],
+                            })),
+                            <button type="button" onClick={() => void saveCoachProfile(profile)} className="apple-button-primary gap-2 px-6 py-3">
+                              <Save className="h-4 w-4" />儲存並發布教練資料
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </details>
+                  ))}
+              </div>
+            </div>
+          </div>
+        ) : null}
 
-        {mode === 'media' ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('各頁主視覺','更換關於、學員見證、商店與週年活動頁的主要圖片。')}<div className="p-5"><ImageField label="關於我們主圖" value={pageMedia.aboutHero} folder="pages" onChange={(aboutHero)=>setPageMedia((c)=>({...c,aboutHero}))} onError={setLocalError}/><ImageField label="學員見證主圖" value={pageMedia.testimonialsHero} folder="pages" onChange={(testimonialsHero)=>setPageMedia((c)=>({...c,testimonialsHero}))} onError={setLocalError}/><ImageField label="商店主視覺" value={pageMedia.shopHero} folder="pages" onChange={(shopHero)=>setPageMedia((c)=>({...c,shopHero}))} onError={setLocalError}/><ImageField label="週年活動主圖" value={pageMedia.anniversaryHero} folder="pages" onChange={(anniversaryHero)=>setPageMedia((c)=>({...c,anniversaryHero}))} onError={setLocalError}/><div className="mt-5 grid gap-4 md:grid-cols-2"><Field label="商店標題"><input value={pageMedia.shopTitle} onChange={(e)=>setPageMedia((c)=>({...c,shopTitle:e.target.value}))} className="apple-input" /></Field><Field label="商店說明"><input value={pageMedia.shopSubtitle} onChange={(e)=>setPageMedia((c)=>({...c,shopSubtitle:e.target.value}))} className="apple-input" /></Field></div></div><div className="border-t border-black/10 p-5 text-right">{saveButton('save-media','page_media',pageMedia)}</div></div> : null}
+        {mode === 'brand' ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('品牌與聯絡','頁尾 Logo、品牌文字與聯絡資料會同步到前台；頂部 Logo 依星期自動更換。','/')}<div className="p-5"><ImageField label="頁尾品牌 Logo" value={brand.logoUrl} folder="brand" onChange={(logoUrl)=>setBrand((c)=>({...c,logoUrl}))} onError={setLocalError}/><div className="mt-5 grid gap-4 md:grid-cols-2">{([['brandName','品牌名稱'],['tagline','品牌標語'],['instagramUrl','Instagram 網址'],['instagramHandle','Instagram 帳號'],['contactText','聯絡說明'],['address','服務地區']] as const).map(([key,label])=><Field key={key} label={label}><input value={brand[key]} onChange={(e)=>setBrand((c)=>({...c,[key]:e.target.value}))} className="apple-input" /></Field>)}<Field label="頁尾品牌介紹" wide><textarea rows={4} value={brand.footerDescription} onChange={(e)=>setBrand((c)=>({...c,footerDescription:e.target.value}))} className="apple-input resize-y" /></Field></div></div><div className="border-t border-black/10 p-5">{actionBar(() => setBrand(content.brand), saveButton('save-brand','brand_content',brand))}</div></div> : null}
 
-        {mode === 'about' ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('關於我們','管理品牌故事、理念、適合對象與頁尾行動文字。','/about')}<div className="grid gap-4 p-5 md:grid-cols-2">{([['eyebrow','頁面小標'],['title','主標題'],['titleHighlight','主標題重點'],['description','品牌介紹'],['beliefsLabel','理念小標'],['beliefsTitle','理念標題'],['audienceLabel','對象小標'],['audienceTitle','對象標題'],['audienceDescription','對象說明'],['ctaTitle','頁尾標題'],['ctaDescription','頁尾說明']] as const).map(([key,label])=><Field key={key} label={label} wide={['description','beliefsTitle','audienceTitle','audienceDescription','ctaTitle','ctaDescription'].includes(key)}>{['description','audienceDescription','ctaDescription'].includes(key)?<textarea rows={4} value={about[key]} onChange={(e)=>setAbout((c)=>({...c,[key]:e.target.value}))} className="apple-input resize-y" />:<input value={about[key]} onChange={(e)=>setAbout((c)=>({...c,[key]:e.target.value}))} className="apple-input" />}</Field>)}<Field label="對象標籤（以逗號分隔）" wide><input value={about.audienceTags.join(', ')} onChange={(e)=>setAbout((c)=>({...c,audienceTags:e.target.value.split(',').map(x=>x.trim()).filter(Boolean)}))} className="apple-input" /></Field><div className="md:col-span-2"><h3 className="mb-3 font-black">三項品牌理念</h3>{about.beliefs.map((item,index)=><div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2"><input value={item.title} onChange={(e)=>setAbout((c)=>({...c,beliefs:c.beliefs.map((x,i)=>i===index?{...x,title:e.target.value}:x)}))} className="apple-input" /><input value={item.description} onChange={(e)=>setAbout((c)=>({...c,beliefs:c.beliefs.map((x,i)=>i===index?{...x,description:e.target.value}:x)}))} className="apple-input" /></div>)}</div><div className="md:col-span-2"><h3 className="mb-3 font-black">三項服務重點</h3>{about.facts.map((item,index)=><div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2"><input value={item.title} onChange={(e)=>setAbout((c)=>({...c,facts:c.facts.map((x,i)=>i===index?{...x,title:e.target.value}:x)}))} className="apple-input" /><input value={item.description} onChange={(e)=>setAbout((c)=>({...c,facts:c.facts.map((x,i)=>i===index?{...x,description:e.target.value}:x)}))} className="apple-input" /></div>)}</div></div><div className="border-t border-black/10 p-5 text-right">{saveButton('save-about','about_content',about)}</div></div> : null}
+        {mode === 'media' ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('各頁主視覺','更換關於、學員見證、商店與週年活動頁的主要圖片。')}<div className="p-5"><ImageField label="關於我們主圖" value={pageMedia.aboutHero} folder="pages" onChange={(aboutHero)=>setPageMedia((c)=>({...c,aboutHero}))} onError={setLocalError}/><ImageField label="學員見證主圖" value={pageMedia.testimonialsHero} folder="pages" onChange={(testimonialsHero)=>setPageMedia((c)=>({...c,testimonialsHero}))} onError={setLocalError}/><ImageField label="商店主視覺" value={pageMedia.shopHero} folder="pages" onChange={(shopHero)=>setPageMedia((c)=>({...c,shopHero}))} onError={setLocalError}/><ImageField label="週年活動主圖" value={pageMedia.anniversaryHero} folder="pages" onChange={(anniversaryHero)=>setPageMedia((c)=>({...c,anniversaryHero}))} onError={setLocalError}/><div className="mt-5 grid gap-4 md:grid-cols-2"><Field label="商店標題"><input value={pageMedia.shopTitle} onChange={(e)=>setPageMedia((c)=>({...c,shopTitle:e.target.value}))} className="apple-input" /></Field><Field label="商店說明"><input value={pageMedia.shopSubtitle} onChange={(e)=>setPageMedia((c)=>({...c,shopSubtitle:e.target.value}))} className="apple-input" /></Field></div></div><div className="border-t border-black/10 p-5">{actionBar(() => setPageMedia(content.pageMedia), saveButton('save-media','page_media',pageMedia))}</div></div> : null}
+
+        {mode === 'about' ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('關於我們','管理目前前台顯示的品牌故事、理念與服務重點。','/about')}<div className="grid gap-4 p-5 md:grid-cols-2">{([['eyebrow','頁面小標'],['title','主標題'],['titleHighlight','主標題重點'],['description','品牌介紹'],['beliefsLabel','理念小標'],['beliefsTitle','理念標題']] as const).map(([key,label])=><Field key={key} label={label} wide={['description','beliefsTitle'].includes(key)}>{key === 'description'?<textarea rows={4} value={about[key]} onChange={(e)=>setAbout((c)=>({...c,[key]:e.target.value}))} className="apple-input resize-y" />:<input value={about[key]} onChange={(e)=>setAbout((c)=>({...c,[key]:e.target.value}))} className="apple-input" />}</Field>)}<div className="md:col-span-2"><h3 className="mb-3 font-black">三項品牌理念</h3>{about.beliefs.map((item,index)=><div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2"><input value={item.title} onChange={(e)=>setAbout((c)=>({...c,beliefs:c.beliefs.map((x,i)=>i===index?{...x,title:e.target.value}:x)}))} className="apple-input" /><input value={item.description} onChange={(e)=>setAbout((c)=>({...c,beliefs:c.beliefs.map((x,i)=>i===index?{...x,description:e.target.value}:x)}))} className="apple-input" /></div>)}</div><div className="md:col-span-2"><h3 className="mb-3 font-black">三項服務重點</h3>{about.facts.map((item,index)=><div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2"><input value={item.title} onChange={(e)=>setAbout((c)=>({...c,facts:c.facts.map((x,i)=>i===index?{...x,title:e.target.value}:x)}))} className="apple-input" /><input value={item.description} onChange={(e)=>setAbout((c)=>({...c,facts:c.facts.map((x,i)=>i===index?{...x,description:e.target.value}:x)}))} className="apple-input" /></div>)}</div></div><div className="border-t border-black/10 p-5">{actionBar(() => setAbout(content.about), saveButton('save-about','about_content',about))}</div></div> : null}
 
         {mode === 'testimonials' ? (
           <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
@@ -616,9 +731,8 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                   </div>
                 ))}
               </div>
-              <p className="md:col-span-2 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-800">「真實內容持續更新」結尾區塊目前已在前台隱藏，原有文字仍保留在資料中。</p>
             </div>
-            <div className="border-t border-black/10 p-5 text-right">{saveButton('save-testimonials', 'testimonials_content', testimonials)}</div>
+            <div className="border-t border-black/10 p-5">{actionBar(() => setTestimonials(content.testimonials), saveButton('save-testimonials', 'testimonials_content', testimonials))}</div>
           </div>
         ) : null}
 
@@ -714,7 +828,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
               <fieldset className="md:col-span-2">
                 <legend className="mb-2 text-xs font-bold text-apple-gray-500">本課程教練</legend>
                 <div className="grid gap-2 border-y border-black/10 py-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {Object.values(content.coachProfiles).map((coach) => {
+                  {Object.values(content.coachProfiles).filter((coach) => coach.published).map((coach) => {
                     const checked = draft.coachKeys?.includes(coach.coachKey) ?? false
                     return (
                       <label key={coach.coachKey} className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm font-bold transition ${checked ? 'border-black bg-black text-white' : 'border-black/10 bg-white text-apple-gray-700 hover:bg-apple-gray-50'}`}>
@@ -738,7 +852,10 @@ export default function AdminContentManager({ content, courses, seasons, scope =
               </fieldset>
               <div className="md:col-span-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3"><p className="text-sm font-black text-emerald-900">報名方式：網站內建報名表</p><p className="mt-1 text-sm leading-6 text-emerald-800">發布後，「立即報名」會進入本課程的網站報名頁，不再使用 Google 表單。</p></div>
               <label className="flex items-center gap-3 text-sm font-bold"><input type="checkbox" checked={draft.active !== false} onChange={(e) => setDraft((current) => ({ ...current, active: e.target.checked }))} className="h-4 w-4" />這門課程對外顯示</label>
-              <div className="flex flex-wrap gap-2"><button type="button" onClick={saveCourse} className="apple-button-primary gap-2"><Save className="h-4 w-4" />{selectedSeason.isCurrent ? '儲存並發布至課程與日程表' : '儲存這季課程'}</button></div>
+              <div className="flex flex-wrap gap-2 md:col-span-2">
+                {restoreButton(restoreSelectedCourse)}
+                <button type="button" onClick={saveCourse} className="apple-button-primary gap-2"><Save className="h-4 w-4" />{selectedSeason.isCurrent ? '儲存並發布至課程與日程表' : '儲存這季課程'}</button>
+              </div>
               {courseMessage ? <p className="md:col-span-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">{courseMessage}</p> : null}
             </div>
             ) : (

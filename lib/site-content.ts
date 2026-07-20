@@ -94,6 +94,14 @@ export type TestimonialsContent = {
   ctaDescription: string
 }
 
+export type TeamContent = {
+  eyebrow: string
+  title: string
+  description: string
+  rosterLabel: string
+  rosterTitle: string
+}
+
 export type PageMedia = {
   aboutHero: string
   testimonialsHero: string
@@ -112,6 +120,7 @@ export type SiteContent = {
   home: HomeContent
   about: AboutContent
   testimonials: TestimonialsContent
+  team: TeamContent
   pageMedia: PageMedia
   coachProfiles: CoachPublicProfileMap
 }
@@ -229,6 +238,14 @@ export const defaultTestimonialsContent: TestimonialsContent = {
   ctaDescription: '為避免使用未經確認的姓名、成績或照片，網站不刊登虛構見證；公開內容以好運跑班官方帳號發布為準。',
 }
 
+export const defaultTeamContent: TeamContent = {
+  eyebrow: 'GOOD LUCK TEAM',
+  title: '團隊陣容',
+  description: '每一堂團練由不同專長的教練與助教共同照顧。課程頁只保留姓名與負責班級，完整公開資料集中在這裡。',
+  rosterLabel: 'COACHES & ASSISTANTS',
+  rosterTitle: '一起帶領每一次訓練',
+}
+
 export const defaultPageMedia: PageMedia = {
   aboutHero: '/goodluck-fourth-anniversary-wallpaper.jpg',
   testimonialsHero: '/goodluck-anniversary-7089.jpg',
@@ -247,6 +264,7 @@ export const defaultSiteContent: SiteContent = {
   home: defaultHomeContent,
   about: defaultAboutContent,
   testimonials: defaultTestimonialsContent,
+  team: defaultTeamContent,
   pageMedia: defaultPageMedia,
   coachProfiles: defaultCoachPublicProfiles,
 }
@@ -449,6 +467,17 @@ export function normalizeTestimonialsContent(value: unknown): TestimonialsConten
   }
 }
 
+export function normalizeTeamContent(value: unknown): TeamContent {
+  const source = value && typeof value === 'object' ? value as Partial<TeamContent> : {}
+  return {
+    eyebrow: cleanOr(source.eyebrow, defaultTeamContent.eyebrow, 80),
+    title: cleanOr(source.title, defaultTeamContent.title, 160),
+    description: cleanOr(source.description, defaultTeamContent.description, 1200),
+    rosterLabel: cleanOr(source.rosterLabel, defaultTeamContent.rosterLabel, 80),
+    rosterTitle: cleanOr(source.rosterTitle, defaultTeamContent.rosterTitle, 160),
+  }
+}
+
 export function normalizePageMedia(value: unknown): PageMedia {
   const source = value && typeof value === 'object' ? value as Partial<PageMedia> : {}
   const image = (candidate: unknown, fallback: string) => {
@@ -477,6 +506,7 @@ export function siteContentFromRows(rows: Array<{ key: string; value: unknown }>
     home: normalizeHomeContent(values.get('home_content')),
     about: normalizeAboutContent(values.get('about_content')),
     testimonials: normalizeTestimonialsContent(values.get('testimonials_content')),
+    team: normalizeTeamContent(values.get('team_content')),
     pageMedia: normalizePageMedia(values.get('page_media')),
     coachProfiles: defaultCoachPublicProfiles,
   }
