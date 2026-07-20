@@ -44,7 +44,7 @@ export default function CoachCard({ coach, labels }: CoachCardProps) {
               quality={95}
               loading="eager"
               className="h-48 w-40 rounded-lg object-cover shadow-sm ring-1 ring-apple-gray-200 md:h-56 md:w-44"
-              style={{ objectPosition: `${coach.fullBodyFocusX ?? 50}% ${coach.fullBodyFocusY ?? 18}%` }}
+              style={{ objectPosition: `${coach.fullBodyFocusX ?? 50}% ${coach.fullBodyFocusY ?? 10}%` }}
             />
           ) : (
             <div className="flex h-48 w-40 items-center justify-center rounded-lg bg-apple-gray-200 text-apple-gray-400 ring-1 ring-apple-gray-300 md:h-56 md:w-44">

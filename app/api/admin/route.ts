@@ -158,7 +158,7 @@ function normalizeAdminCoachProfile(value: unknown) {
     avatar_focus_x: normalizeCoachFocus(source.avatarFocusX, 50),
     avatar_focus_y: normalizeCoachFocus(source.avatarFocusY, 18),
     full_body_focus_x: normalizeCoachFocus(source.fullBodyFocusX, 50),
-    full_body_focus_y: normalizeCoachFocus(source.fullBodyFocusY, 18),
+    full_body_focus_y: normalizeCoachFocus(source.fullBodyFocusY, 10),
     specialties: normalizeCoachList(source.specialties),
     style: cleanText(source.style).slice(0, 1000),
     achievements: normalizeCoachList(source.achievements),

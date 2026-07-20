@@ -615,7 +615,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
             </div>
 
             <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
-              {panelHeader('教練與助教公開資料', '可更新團隊頁姓名、介紹、長方形半身照與公開狀態；課程歸屬仍在季度管理設定。', '/team')}
+              {panelHeader('教練與助教公開資料', '可更新團隊頁姓名、介紹、長方形上半身照與公開狀態；課程歸屬仍在季度管理設定。', '/team')}
               <div className="divide-y divide-black/10">
                 {Object.values(coachDrafts)
                   .sort((left, right) => Number(right.published) - Number(left.published) || left.displayName.localeCompare(right.displayName, 'zh-Hant'))
@@ -630,7 +630,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                       </summary>
                       <div className="border-t border-black/10 bg-apple-gray-50 p-5">
                         <ImageField
-                          label="團隊頁長方形照片"
+                          label="團隊頁長方形上半身照片"
                           value={profile.fullBodyImageUrl}
                           folder="coaches"
                           objectPosition={`${profile.fullBodyFocusX}% ${profile.fullBodyFocusY}%`}

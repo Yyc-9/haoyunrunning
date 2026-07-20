@@ -77,7 +77,7 @@ export default function TeamRosterClient() {
                           fill
                           sizes="(min-width: 1280px) 400px, (min-width: 768px) 50vw, 100vw"
                           className="object-cover"
-                          style={{ objectPosition: `${coach.fullBodyFocusX ?? 50}% ${coach.fullBodyFocusY ?? 18}%` }}
+                          style={{ objectPosition: `${coach.fullBodyFocusX ?? 50}% ${coach.fullBodyFocusY ?? 10}%` }}
                         />
                       ) : (
                         <UserRound className="absolute left-1/2 top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 text-apple-gray-300" />
