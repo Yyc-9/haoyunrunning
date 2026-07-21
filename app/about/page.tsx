@@ -19,7 +19,7 @@ export default function AboutPage() {
               </p>
               <h1 className="mb-6 text-4xl font-black leading-tight text-apple-gray-900 md:text-6xl">
                 {about.title}
-                <span className="block">{about.titleHighlight.replaceAll('喜欢', '喜歡')}</span>
+                <span className="block">{about.titleHighlight}</span>
               </h1>
               <p className="text-lg leading-8 text-apple-gray-600 md:text-xl md:leading-9">
                 {about.description}

@@ -1,3 +1,5 @@
+import { courseMemberPerks, courseWebsiteCopyBySlug } from '@/lib/course-website-copy'
+
 export type Coach = {
   name: string
   nickname?: string
@@ -41,6 +43,8 @@ export type Course = {
   trialPolicy?: string
   absencePolicy?: string
   slogan?: string
+  campaignLabel?: string
+  enrollmentNote?: string
   level?: string
   trainingGoal?: string
   trainingGoals?: string[]
@@ -586,6 +590,7 @@ function getDefaultMeetingPoint(course: Course) {
 export const allCourses = courseGroups.flatMap((group) =>
   group.courses.map((course) => {
     const slug = courseSlug(course)
+    const websiteCopy = courseWebsiteCopyBySlug[slug]
     const coaches = getCourseCoaches(course)
     const coach = coaches[0] || getDefaultCoach(course)
     const classTime =
@@ -607,7 +612,7 @@ export const allCourses = courseGroups.flatMap((group) =>
       city: course.city || course.location,
       groupTitle: group.title,
       groupAudience: group.audience,
-      targetAudience: course.targetAudience || group.audience,
+      targetAudience: course.targetAudience || websiteCopy?.targetAudience || group.audience,
       trainingGoal: course.trainingGoal || course.focus,
       trainingGoals,
       classTime,
@@ -620,11 +625,13 @@ export const allCourses = courseGroups.flatMap((group) =>
       signupMethod: '請透過 Instagram 私訊報名或諮詢名額',
       trialPolicy: course.trialPolicy || '是否可試上請透過 Instagram 諮詢當期名額',
       absencePolicy: course.absencePolicy || '請假與補課規則以當期課程通知為準',
-      slogan: course.slogan || '一起穩定累積，一起跑得更遠',
+      campaignLabel: course.campaignLabel || websiteCopy?.campaignLabel || '',
+      slogan: course.slogan || websiteCopy?.slogan || '一起穩定累積，一起跑得更遠',
+      enrollmentNote: course.enrollmentNote || websiteCopy?.enrollmentNote || '',
       level: course.level || (course.name.includes('PB') ? '進階' : course.name.includes('初心') ? '入門' : '中級'),
       trainingItems: course.trainingItems || getDefaultTrainingItems(course),
-      benefits: course.benefits || getDefaultBenefits(course),
-      suitableFor: course.suitableFor || getDefaultSuitableFor(course),
+      benefits: course.benefits || (websiteCopy ? [...websiteCopy.introPoints, ...courseMemberPerks] : getDefaultBenefits(course)),
+      suitableFor: course.suitableFor || websiteCopy?.suitableFor || getDefaultSuitableFor(course),
       notSuitableFor: course.notSuitableFor || getDefaultNotSuitableFor(),
       faq: course.faq || getDefaultFaq(course),
       instagramUrl: course.instagramUrl || 'https://www.instagram.com/nurture.running.team/',

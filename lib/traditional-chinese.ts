@@ -1,4 +1,6 @@
 export const simplifiedToTraditionalPhrases: ReadonlyArray<readonly [string, string]> = [
+  ['喜欢', '喜歡'],
+  ['挑战赛', '挑戰賽'],
   ['为什么', '為什麼'],
   ['一场比赛', '一場比賽'],
   ['一个', '一個'],

@@ -5,6 +5,16 @@ import type { CourseOverride } from '@/lib/site-content'
 
 export type ManagedCourse = Omit<(typeof allCourses)[number], 'slug'> & { slug: string }
 
+const legacyTargetAudiences = new Set([
+  '適合業餘跑者、目標賽事備賽者、追求 PB 的進階與菁英跑者。',
+  '適合沒有跑步經驗、久未運動，或擔心跟不上一般跑班的跑者；不需要配速門檻。',
+  '適合新手小白、剛開始規律跑步、想安全建立基礎的跑者。',
+])
+
+export function isLegacyCourseTargetAudience(value: string | undefined) {
+  return Boolean(value && legacyTargetAudiences.has(value))
+}
+
 export function applyCourseOverrides(
   courseOverrides: Record<string, CourseOverride>,
   options: { includeInactive?: boolean; coachProfiles?: CoachPublicProfileMap; onlyConfigured?: boolean } = {}
@@ -48,6 +58,14 @@ export function applyCourseOverrides(
       const meetingPoint = override.meetingPoint || course.meetingPoint
       const focus = override.focus || course.focus
       const feeNote = override.feeNote || course.feeNote
+      const campaignLabel = override.campaignLabel || course.campaignLabel
+      const slogan = override.slogan || course.slogan
+      const benefits = override.benefits?.length ? override.benefits : course.benefits
+      const suitableFor = override.suitableFor?.length ? override.suitableFor : course.suitableFor
+      const enrollmentNote = override.enrollmentNote || course.enrollmentNote
+      const targetAudience = override.targetAudience && !isLegacyCourseTargetAudience(override.targetAudience)
+        ? override.targetAudience
+        : course.targetAudience
       const signupUrl = override.signupUrl || (slug === course.slug ? course.signupUrl : `/courses/${slug}/register`)
 
       return {
@@ -68,10 +86,15 @@ export function applyCourseOverrides(
         trainingGoals: focus ? [focus] : course.trainingGoals,
         feeNote,
         priceNote: feeNote,
+        campaignLabel,
+        slogan,
+        benefits,
+        suitableFor,
+        enrollmentNote,
         signupUrl,
         coach,
         coaches,
-        targetAudience: override.targetAudience || course.targetAudience,
+        targetAudience,
       }
     })
     .filter((course): course is ManagedCourse => Boolean(course))

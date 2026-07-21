@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { courseSeasonStatusLabels, type CourseSeason, type CourseSeasonStatus } from '@/lib/course-seasons'
+import { isLegacyCourseTargetAudience } from '@/lib/managed-courses'
 import { orderedWeekdays } from '@/lib/course-sort'
 import { defaultCourseBillingConfig, type CourseBillingConfig } from '@/lib/course-pricing'
 import type {
@@ -54,8 +55,13 @@ type CourseSummary = {
   classTime: string
   meetingPoint: string
   feeNote: string
+  campaignLabel: string
+  slogan: string
   targetAudience: string
   focus: string
+  benefits: string[]
+  suitableFor: string[]
+  enrollmentNote: string
   signupUrl: string
   coachKeys: string[]
 }
@@ -239,8 +245,15 @@ function courseDraft(course: CourseSummary, override?: CourseOverride): CourseOv
     classTime: override?.classTime || course.classTime,
     meetingPoint: override?.meetingPoint || course.meetingPoint,
     feeNote: override?.feeNote || course.feeNote,
-    targetAudience: override?.targetAudience || course.targetAudience,
+    campaignLabel: override?.campaignLabel || course.campaignLabel,
+    slogan: override?.slogan || course.slogan,
+    targetAudience: override?.targetAudience && !isLegacyCourseTargetAudience(override.targetAudience)
+      ? override.targetAudience
+      : course.targetAudience,
     focus: override?.focus || course.focus,
+    benefits: override?.benefits?.length ? override.benefits : course.benefits,
+    suitableFor: override?.suitableFor?.length ? override.suitableFor : course.suitableFor,
+    enrollmentNote: override?.enrollmentNote || course.enrollmentNote,
     signupUrl: override?.signupUrl || course.signupUrl,
     coachKeys: override?.coachKeys?.length ? override.coachKeys : course.coachKeys,
   }
@@ -321,8 +334,15 @@ export default function AdminContentManager({ content, courses, seasons, scope =
       classTime: override.classTime || base.classTime,
       meetingPoint: override.meetingPoint || base.meetingPoint,
       feeNote: override.feeNote || base.feeNote,
-      targetAudience: override.targetAudience || base.targetAudience,
+      campaignLabel: override.campaignLabel || base.campaignLabel,
+      slogan: override.slogan || base.slogan,
+      targetAudience: override.targetAudience && !isLegacyCourseTargetAudience(override.targetAudience)
+        ? override.targetAudience
+        : base.targetAudience,
       focus: override.focus || base.focus,
+      benefits: override.benefits?.length ? override.benefits : base.benefits,
+      suitableFor: override.suitableFor?.length ? override.suitableFor : base.suitableFor,
+      enrollmentNote: override.enrollmentNote || base.enrollmentNote,
       signupUrl: override.signupUrl || `/courses/${slug}/register`,
       coachKeys: override.coachKeys?.length ? override.coachKeys : base.coachKeys,
     }]
@@ -809,6 +829,17 @@ export default function AdminContentManager({ content, courses, seasons, scope =
               <Field label="班級名額"><input type="number" min={1} max={500} value={draftCapacity} onChange={(e) => setDraftCapacity(Number(e.target.value))} className="apple-input" /></Field>
               <Field label="適合對象" wide><input value={String(draft.targetAudience ?? '')} onChange={(e) => setDraft((current) => ({ ...current, targetAudience: e.target.value }))} className="apple-input" /></Field>
               <Field label="訓練方向" wide><input value={String(draft.focus ?? '')} onChange={(e) => setDraft((current) => ({ ...current, focus: e.target.value }))} className="apple-input" /></Field>
+              <details className="rounded-lg border border-black/10 bg-apple-gray-50 md:col-span-2">
+                <summary className="cursor-pointer list-none px-4 py-4 font-black text-apple-gray-900">官網課程介紹文案</summary>
+                <div className="grid gap-4 border-t border-black/10 p-4 md:grid-cols-2">
+                  <Field label="季度英文小標"><input value={String(draft.campaignLabel ?? '')} onChange={(e) => setDraft((current) => ({ ...current, campaignLabel: e.target.value }))} className="apple-input" /></Field>
+                  <Field label="課程主標語"><input value={String(draft.slogan ?? '')} onChange={(e) => setDraft((current) => ({ ...current, slogan: e.target.value }))} className="apple-input" /></Field>
+                  <Field label="你將獲得（每行一項）" wide><textarea rows={7} value={(draft.benefits ?? []).join('\n')} onChange={(e) => setDraft((current) => ({ ...current, benefits: e.target.value.split('\n').map((item) => item.trim()).filter(Boolean) }))} className="apple-input resize-y" /></Field>
+                  <Field label="適合這堂課的你（每行一項）" wide><textarea rows={5} value={(draft.suitableFor ?? []).join('\n')} onChange={(e) => setDraft((current) => ({ ...current, suitableFor: e.target.value.split('\n').map((item) => item.trim()).filter(Boolean) }))} className="apple-input resize-y" /></Field>
+                  <Field label="開班提醒" wide><input value={String(draft.enrollmentNote ?? '')} onChange={(e) => setDraft((current) => ({ ...current, enrollmentNote: e.target.value }))} className="apple-input" placeholder="沒有提醒時可留空" /></Field>
+                  <p className="text-xs font-semibold leading-5 text-apple-gray-500 md:col-span-2">這些欄位只調整現有課程詳情版位，不會新增加購商品，也不會變更匯款與付款流程。</p>
+                </div>
+              </details>
               <div className="border-y border-black/10 py-5 md:col-span-2">
                 <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                   <div><h3 className="font-black text-apple-gray-900">報名計價設定</h3><p className="mt-1 text-sm leading-6 text-apple-gray-500">實際收費課次會直接決定插班堂數；課程開始後，學員必須選擇本期計費起始課次。</p></div>

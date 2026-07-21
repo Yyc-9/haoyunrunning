@@ -118,7 +118,7 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
       <section className="overflow-hidden border-b border-black/5 bg-white px-4 py-6 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-7xl">
           <div className="rounded-[1.5rem] border border-black/5 bg-apple-gray-50 p-5 shadow-sm md:p-7">
-              <p className="text-xs font-bold uppercase tracking-wide text-apple-blue">{t.courseDetail.heroLabel}</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-apple-blue">{course.campaignLabel || t.courseDetail.heroLabel}</p>
               <h1 className="mt-2 max-w-4xl text-3xl font-black leading-[1.08] text-apple-gray-900 md:text-4xl">
                 {text(course.title)}
               </h1>
@@ -260,6 +260,11 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
                       )
                     })}
                   </div>
+                  {course.enrollmentNote ? (
+                    <p className="mt-4 rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-3 text-sm font-black text-amber-100">
+                      開班提醒：{text(course.enrollmentNote)}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="flex flex-col gap-3">

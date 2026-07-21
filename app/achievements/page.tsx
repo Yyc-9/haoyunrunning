@@ -14,42 +14,48 @@ const badgeSeries = [
     standard: '全馬 SUB 3',
     name: '閃電征途',
     image: '/achievements/2026/full-sub3.jpg',
-    description: '「3」以閃電型態呈現，結合好運馬蹄鐵 Logo，象徵速度與力量在長期訓練中彼此成就。',
-    story: '跑進三小時從來不是一次偶然的爆發，而是配速、耐力、恢復與意志長時間累積後的結果。',
+    description: '閃電構成 SUB「3」，展現速度與爆發力；融入 U 型馬蹄鐵，象徵競速與好運並存。',
+    story: '星芒點綴其中，代表在挑戰中持續突破閃耀。',
   },
   {
     slug: 'full-sub4',
     standard: '全馬 SUB 4',
     name: '成就之星',
     image: '/achievements/2026/full-sub4.jpg',
-    description: '努力達標後的每一個人都是耀眼的星。不為追逐別人的目光，而是專注成就更好的自己。',
-    story: '四小時是一道清楚的全馬里程碑，也記錄著跑者在訓練週期裡一次次把承諾完成。',
+    description: '放射光芒呈現 SUB4，象徵達標瞬間的榮耀時刻；光芒四射的設計，展現挑戰自我的能量。',
+    story: '每位跑者，都是為自己發光的一顆星。',
   },
   {
     slug: 'half-sub100',
     standard: '半馬 SUB 100',
     name: '與影同行',
     image: '/achievements/2026/half-sub100.jpg',
-    description: '「總會有人陪你進終點：你的影子。」呼應琦琦教練的話，陪伴跑者繼續前行。',
-    story: '跑進一百分鐘，需要速度，也需要在後半程守住節奏。影子始終同行，就像那些無人看見的練習。',
+    description: '影子為主視覺，象徵一路上的陪伴與自我對話；SUB 字樣延伸形成「100」，代表為目標付出的努力。',
+    story: '你不孤單，陪你到終點的，是一路堅持的自己。',
   },
   {
     slug: 'half-sub2',
     standard: '半馬 SUB 2',
-    name: '飛越跑道',
+    name: '飛躍跑道',
     image: '/achievements/2026/full-sub2.jpg',
-    description: '田徑場記錄著每位跑者揮灑汗水、完成課表並突破極限的過程。',
-    story: '今天要跑幾個圈？每一圈看似相同，累積起來卻會讓跑者真正飛越原本的自己。',
+    description: '跑道造型呈現 SUB「2」，日復一日的累積與訓練；每一圈都是汗水與堅持的軌跡。',
+    story: '斜向延伸如展翅飛翔，突破極限持續向前。',
   },
 ] as const
 
 const applicationSteps = [
-  '必須為好運跑班成員。',
-  '僅採計加入跑班後，於正式賽事達標的完賽成績。',
-  '完賽成績需符合對應徽章標準，並提供可核對的成績證明。',
-  '至所屬跑班 LINE 群組依當期公告填寫申請表。',
-  '通過核對後，於週年活動頒發或由跑班安排領取。',
+  '必須為好運跑班學員。',
+  '參加正式賽事並達標對應成績。',
+  '成績須於加入好運跑班期間內達成。',
+  '向各班教練詢問及填寫申請表。',
+  '經過審核後通知，並於課堂或指定地點領取徽章。',
 ]
+
+const originTimeline = [
+  ['2025.01', 'SUB Series Concept & Design'],
+  ['2025.04', 'First Production'],
+  ['2025.06', 'First Award Ceremony · Nurture Running Team Anniversary'],
+] as const
 
 export default function AchievementsPage() {
   return (
@@ -57,13 +63,13 @@ export default function AchievementsPage() {
       <section className="overflow-hidden bg-[#0f0d0c] px-4 py-12 text-white sm:px-6 sm:py-16 lg:px-8 lg:py-20">
         <div className="container mx-auto grid max-w-7xl gap-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(520px,1.15fr)] lg:items-center">
           <div>
-            <p className="text-sm font-black uppercase tracking-[0.18em] text-[#d6b66c]">GOOD LUCK HONOR PINS</p>
-            <h1 className="mt-4 text-4xl font-black leading-tight sm:text-5xl lg:text-6xl">好運榮耀徽章</h1>
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-[#d6b66c]">SUB SERIES · SINCE 2025</p>
+            <h1 className="mt-4 text-4xl font-black leading-tight sm:text-5xl lg:text-6xl">好運跑班限定 SUB 系列榮耀徽章</h1>
             <p className="mt-5 max-w-2xl text-lg font-bold leading-8 text-white/90">
-              一枚徽章，記住一段真正跑過的路。
+              每一步的汗水與堅持，都值得被紀念。
             </p>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-white/65 sm:text-base">
-              全系列以黑、金、白為核心，將馬蹄鐵、閃電、星芒、跑道與獨角獸化成跑者的達標記號。它不是商品，而是加入好運之後，用正式賽事成績換來的紀念。
+              完成賽事、達標成績，即可依申請資格取得專屬徽章，收藏每一次突破自己的榮耀時刻。
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <a href="#badge-series" className="inline-flex min-h-11 items-center justify-center rounded-full bg-white px-6 text-sm font-black text-black">
@@ -103,9 +109,19 @@ export default function AchievementsPage() {
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9a742d]">THE ORIGIN</p>
             <h2 className="mt-3 text-3xl font-black text-apple-gray-950 sm:text-4xl">為什麼要做一套屬於跑者的徽章？</h2>
             <div className="mt-5 space-y-4 text-base leading-8 text-apple-gray-600">
-              <p>一場比賽只留下一個完賽時間，但真正改變跑者的，是為了那個時間經歷過的清晨、夜晚、疲勞與堅持。</p>
-              <p>好運榮耀徽章把這些過程濃縮成可以被保存的記號。每一款對應一道清楚的成績門檻，也對應一段只有完成訓練的人才懂的故事。</p>
-              <p>它不比較誰更值得被看見，而是讓每位達標的跑者，都能看見自己曾經認真走過的路。</p>
+              <p>始於 2025 年，好運跑班以跑者追逐目標的歷程為靈感，打造專屬於跑班成員的 SUB 系列榮耀徽章。</p>
+              <p>從 2025 年初開始企劃設計，歷經數個月的反覆討論與製作，於 2025 年 4 月完成首批實體徽章，並於同年 6 月好運跑班週年慶首次頒發給達成目標的跑班學員，正式開啟 SUB 系列的第一個里程碑。</p>
+              <p>整體設計採用黑、金、白三色，呈現簡約且高級的視覺風格，並以好運跑班 Logo 中具有代表性的 U 字馬蹄鐵作為系列核心元素，延伸出專屬於跑班的榮耀識別。每一款徽章皆融入不同的象徵圖騰，代表各自的挑戰與目標，讓每一次突破，都化為值得珍藏的榮耀。</p>
+              <p>自推出以來，SUB 系列陪伴許多跑者完成人生第一枚 SUB2、SUB4、突破 SUB3、達成 SUB100，甚至站上 BQ 的門檻。它所象徵的不只是完賽成績，更是無數個清晨、每一場訓練，以及一次次超越自我的見證。</p>
+              <p>對好運跑班而言，SUB 系列榮耀徽章從來不只是一件紀念品，而是一份對努力的肯定。每一枚徽章，都承載著跑者一路走來的汗水、堅持與成長，也希望陪伴每一位跑者，收藏屬於自己的榮耀時刻。</p>
+            </div>
+            <div className="mt-7 grid gap-3 border-t border-black/10 pt-6 sm:grid-cols-3">
+              {originTimeline.map(([date, event]) => (
+                <div key={date} className="rounded-xl bg-[#f5f3ef] p-4">
+                  <p className="text-xs font-black text-[#9a742d]">{date}</p>
+                  <p className="mt-2 text-xs font-bold leading-5 text-apple-gray-700">{event}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -150,7 +166,7 @@ export default function AchievementsPage() {
               <h3 className="mt-3 text-3xl font-black text-[#17120d] sm:text-4xl">BQ Pride</h3>
               <p className="mt-2 text-lg font-black text-[#8b6620]">獻給真正完成波士頓馬拉松的你</p>
               <p className="mt-5 text-base leading-8 text-[#5c5040]">
-                You start as a runner. You finish as a Boston Marathoner. 為了踏上波馬起跑線，跑者犧牲無數清晨與夜晚；曾為達標門檻拼盡全力，也曾為夢想燃燒到底。那份執著，值得一枚專屬的獨角獸勳章。
+                融合 U 型馬蹄鐵，象徵幸運與實力的累積；代表突破自我、邁向波士頓的榮耀門檻。這不只是成績，而是屬於你的堅持與驕傲。
               </p>
               <div className="mt-6 rounded-xl border border-[#d8c08a] bg-white/65 p-5">
                 <p className="flex items-center gap-2 text-sm font-black text-[#17120d]">
@@ -203,7 +219,7 @@ export default function AchievementsPage() {
                 </div>
               ))}
             </div>
-            <p className="mt-6 text-xs leading-6 text-white/50">每年度申請期間與領發安排不同，請以所屬跑班 LINE 群組的當期公告為準。</p>
+            <p className="mt-6 text-xs leading-6 text-white/50">每人每年限申請一款達標徽章；如同時符合多項資格，請擇一申請，且不得重複申請。每年度申請期間與領發安排不同，請以所屬跑班 LINE 群組的當期公告為準。</p>
           </div>
 
           <div className="space-y-5">

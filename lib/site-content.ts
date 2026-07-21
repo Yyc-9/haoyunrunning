@@ -25,8 +25,13 @@ export type CourseOverride = {
   classTime?: string
   meetingPoint?: string
   feeNote?: string
+  campaignLabel?: string
+  slogan?: string
   targetAudience?: string
   focus?: string
+  benefits?: string[]
+  suitableFor?: string[]
+  enrollmentNote?: string
   signupUrl?: string
   coachKeys?: string[]
 }
@@ -197,12 +202,12 @@ export const defaultAboutContent: AboutContent = {
   title: '我們想讓更多人，',
   titleHighlight: '真正愛上跑步。',
   description: '好運跑班面向台灣所有跑者。你可以是第一次想規律跑步的人，也可以是正在追逐 PB 的跑者；可以為 5000m、10000m 準備，也可以把目標放在半馬、全馬。重要的不是你現在跑得多快，而是你願意開始理解自己的身體，並且一步一步跑向更穩定的自己。',
-  beliefsLabel: '我們相信',
-  beliefsTitle: '好運不是偶然，是一次次被好好安排的訓練。',
+  beliefsLabel: 'OUR PHILOSOPHY',
+  beliefsTitle: '好的環境，創造出好的運動員。',
   beliefs: [
-    { title: '跑步可以被認識', description: '跑步不是只靠意志硬撐。當你理解節奏、強度、恢復與身體訊號，每一次訓練都會變得更有方向。' },
-    { title: '跑步值得被陪伴', description: '從第一次出門跑，到準備一場重要比賽，身邊有人一起練、有人看見你的狀態，進步會變得踏實很多。' },
-    { title: '目標需要被拆解', description: '5000m、10000m、半馬、全馬，每個目標都有不同的節奏。好運把目標拆成週期、課表與每一次能完成的訓練。' },
+    { title: '專注於速度能力與跑步經濟性', description: 'Precision Training. Smarter, Faster, Stronger.' },
+    { title: '為賽季打下穩固有氧與速度基礎', description: '用清楚的訓練節奏，讓每一次累積都能銜接賽事目標。' },
+    { title: '教學品質保障', description: '依人數配置專屬教練。' },
   ],
   audienceLabel: '適合對象',
   audienceTitle: '不同程度的跑者，都可以在這裡找到自己的節奏。',
@@ -239,9 +244,27 @@ export const defaultTestimonialsContent: TestimonialsContent = {
 }
 
 export const defaultTeamContent: TeamContent = {
+  eyebrow: 'THE COACH TEAM',
+  title: '教練團隊',
+  description: '每一堂團練由不同專長的教練與助教共同照顧。課程頁只保留姓名與負責班級，完整公開資料集中在這裡。',
+  rosterLabel: 'MEET YOUR MENTORS',
+  rosterTitle: '一起帶領每一次訓練',
+}
+
+const legacyAboutBeliefs = {
+  label: '我們相信',
+  title: '好運不是偶然，是一次次被好好安排的訓練。',
+  cards: [
+    { title: '跑步可以被認識', description: '跑步不是只靠意志硬撐。當你理解節奏、強度、恢復與身體訊號，每一次訓練都會變得更有方向。' },
+    { title: '跑步值得被陪伴', description: '從第一次出門跑，到準備一場重要比賽，身邊有人一起練、有人看見你的狀態，進步會變得踏實很多。' },
+    { title: '目標需要被拆解', description: '5000m、10000m、半馬、全馬，每個目標都有不同的節奏。好運把目標拆成週期、課表與每一次能完成的訓練。' },
+  ],
+}
+
+const legacyTeamContent: TeamContent = {
   eyebrow: 'GOOD LUCK TEAM',
   title: '團隊陣容',
-  description: '每一堂團練由不同專長的教練與助教共同照顧。課程頁只保留姓名與負責班級，完整公開資料集中在這裡。',
+  description: defaultTeamContent.description,
   rosterLabel: 'COACHES & ASSISTANTS',
   rosterTitle: '一起帶領每一次訓練',
 }
@@ -349,6 +372,8 @@ export function normalizeCourseOverrides(value: unknown): Record<string, CourseO
     const coachKeys = Array.isArray(override.coachKeys)
       ? [...new Set(override.coachKeys.map((item) => cleanString(item, 80)).filter((item) => /^[A-Za-z0-9-]+$/.test(item)))].slice(0, 20)
       : undefined
+    const benefits = cleanStringList(override.benefits, 8, 240)
+    const suitableFor = cleanStringList(override.suitableFor, 8, 240)
     result[slug] = {
       active: override.active !== false,
       templateSlug: /^[a-z0-9-]{1,120}$/.test(templateSlug) ? templateSlug : undefined,
@@ -359,13 +384,26 @@ export function normalizeCourseOverrides(value: unknown): Record<string, CourseO
       classTime: cleanString(override.classTime, 200),
       meetingPoint: cleanString(override.meetingPoint, 300),
       feeNote: cleanString(override.feeNote, 300),
+      campaignLabel: cleanString(override.campaignLabel, 120),
+      slogan: cleanString(override.slogan, 300),
       targetAudience: cleanString(override.targetAudience, 500),
       focus: cleanString(override.focus, 300),
+      benefits: benefits.length ? benefits : undefined,
+      suitableFor: suitableFor.length ? suitableFor : undefined,
+      enrollmentNote: cleanString(override.enrollmentNote, 300),
       signupUrl: signupUrl && isSafePublicUrl(signupUrl) ? signupUrl : '',
       coachKeys,
     }
   })
   return result
+}
+
+function cleanStringList(value: unknown, limit: number, maxLength: number) {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item) => cleanString(item, maxLength))
+    .filter(Boolean)
+    .slice(0, limit)
 }
 
 function cleanOr(value: unknown, fallback: string, maxLength = 500) {
@@ -428,14 +466,19 @@ export function normalizeAboutContent(value: unknown): AboutContent {
   const audienceTags = Array.isArray(source.audienceTags)
     ? source.audienceTags.map((item) => cleanString(item, 80)).filter(Boolean).slice(0, 12)
     : []
+  const storedBeliefs = Array.isArray(source.beliefs) ? source.beliefs : []
+  const usesLegacyBeliefs = cleanString(source.beliefsLabel, 80) === legacyAboutBeliefs.label
+    && cleanString(source.beliefsTitle, 180) === legacyAboutBeliefs.title
+    && legacyAboutBeliefs.cards.every((legacy, index) => cleanString(storedBeliefs[index]?.title, 120) === legacy.title)
+
   return {
     eyebrow: cleanOr(source.eyebrow, defaultAboutContent.eyebrow, 80),
     title: cleanOr(source.title, defaultAboutContent.title, 140),
     titleHighlight: cleanOr(source.titleHighlight, defaultAboutContent.titleHighlight, 140),
     description: cleanOr(source.description, defaultAboutContent.description, 1600),
-    beliefsLabel: cleanOr(source.beliefsLabel, defaultAboutContent.beliefsLabel, 80),
-    beliefsTitle: cleanOr(source.beliefsTitle, defaultAboutContent.beliefsTitle, 180),
-    beliefs: normalizeCards(source.beliefs, defaultAboutContent.beliefs, 3),
+    beliefsLabel: usesLegacyBeliefs ? defaultAboutContent.beliefsLabel : cleanOr(source.beliefsLabel, defaultAboutContent.beliefsLabel, 80),
+    beliefsTitle: usesLegacyBeliefs ? defaultAboutContent.beliefsTitle : cleanOr(source.beliefsTitle, defaultAboutContent.beliefsTitle, 180),
+    beliefs: usesLegacyBeliefs ? defaultAboutContent.beliefs : normalizeCards(source.beliefs, defaultAboutContent.beliefs, 3),
     audienceLabel: cleanOr(source.audienceLabel, defaultAboutContent.audienceLabel, 80),
     audienceTitle: cleanOr(source.audienceTitle, defaultAboutContent.audienceTitle, 180),
     audienceDescription: cleanOr(source.audienceDescription, defaultAboutContent.audienceDescription, 1200),
@@ -470,10 +513,10 @@ export function normalizeTestimonialsContent(value: unknown): TestimonialsConten
 export function normalizeTeamContent(value: unknown): TeamContent {
   const source = value && typeof value === 'object' ? value as Partial<TeamContent> : {}
   return {
-    eyebrow: cleanOr(source.eyebrow, defaultTeamContent.eyebrow, 80),
-    title: cleanOr(source.title, defaultTeamContent.title, 160),
+    eyebrow: cleanString(source.eyebrow, 80) === legacyTeamContent.eyebrow ? defaultTeamContent.eyebrow : cleanOr(source.eyebrow, defaultTeamContent.eyebrow, 80),
+    title: cleanString(source.title, 160) === legacyTeamContent.title ? defaultTeamContent.title : cleanOr(source.title, defaultTeamContent.title, 160),
     description: cleanOr(source.description, defaultTeamContent.description, 1200),
-    rosterLabel: cleanOr(source.rosterLabel, defaultTeamContent.rosterLabel, 80),
+    rosterLabel: cleanString(source.rosterLabel, 80) === legacyTeamContent.rosterLabel ? defaultTeamContent.rosterLabel : cleanOr(source.rosterLabel, defaultTeamContent.rosterLabel, 80),
     rosterTitle: cleanOr(source.rosterTitle, defaultTeamContent.rosterTitle, 160),
   }
 }

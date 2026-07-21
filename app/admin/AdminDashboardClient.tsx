@@ -111,8 +111,13 @@ type AdminCourseSummary = {
   classTime: string
   meetingPoint: string
   feeNote: string
+  campaignLabel: string
+  slogan: string
   targetAudience: string
   focus: string
+  benefits: string[]
+  suitableFor: string[]
+  enrollmentNote: string
   signupUrl: string
   coachKeys: string[]
 }
