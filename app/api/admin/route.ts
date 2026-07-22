@@ -1542,7 +1542,7 @@ export async function PATCH(request: NextRequest) {
       return json({ error: '找不到課程報名訂單。' }, { status: 404 })
     }
     if (currentOrder.status === 'approved') {
-      return json({ error: '已確認的課程報名不能刪除。' }, { status: 409 })
+      return json({ error: '已確認入帳的課程報名不能刪除。' }, { status: 409 })
     }
 
     const { error } = await supabaseAdmin!
@@ -1568,13 +1568,15 @@ export async function PATCH(request: NextRequest) {
       return json({ error: '缺少訂單 ID。' }, { status: 400 })
     }
     if (requestedStatus === 'approved') {
-      return json({ error: '「已確認」只能透過銀行對帳，由財務確認後寫入。' }, { status: 409 })
+      return json({ error: orderKind === 'shop' ? '「已確認」只能透過銀行對帳，由財務確認後寫入。' : '「已確認入帳」只能透過銀行對帳，由財務確認後寫入。' }, { status: 409 })
     }
     if (requestedStatus !== 'rejected') {
-      return json({ error: '這裡只能將訂單標記為需處理。' }, { status: 400 })
+      return json({ error: orderKind === 'shop' ? '這裡只能將訂單標記為需處理。' : '這裡只能將課程報名標記為「匯款資料需補充」。' }, { status: 400 })
     }
 
-    const finalReviewNote = reviewNote || '付款資料有異常，請補充資料或由財務重新對帳。'
+    const finalReviewNote = reviewNote || (orderKind === 'shop'
+      ? '付款資料有異常，請補充資料或由財務重新對帳。'
+      : '匯款資料有異常，請補充資料或由財務重新核對。')
 
     if (orderKind === 'shop') {
       const { data: currentOrder, error: currentOrderError } = await supabaseAdmin!

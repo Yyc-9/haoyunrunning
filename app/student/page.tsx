@@ -29,6 +29,7 @@ import Link from 'next/link'
 import { useAuth } from '@/app/providers'
 import { useLanguage } from '@/app/language-context'
 import StudentCoachBindingPanel from '@/components/StudentCoachBindingPanel'
+import { paymentOrderStatusLabels } from '@/lib/payment'
 import {
   addMyStudentRace,
   getMyStudentRaces,
@@ -700,8 +701,15 @@ export default function StudentPage() {
 
   if (!canAccessTraining) {
     const waitingText = studentAccessState === 'rejected'
-      ? '你的報名資料需要補充或重新核對，請聯絡好運跑班協助處理。'
-      : '你的匯款資料正在等待銀行對帳，確認入帳後將自動開通課表。'
+      ? '你的匯款資料需要補充或重新核對，請聯絡好運跑班協助處理。'
+      : studentAccessState === 'pending_transfer'
+        ? '請完成匯款並回報後五碼；財務確認入帳後將自動開通課表。'
+        : '你的匯款資料已回報，正在等待財務人工核對；確認入帳後將自動開通課表。'
+    const accessStatusLabel = studentAccessState === 'pending_review'
+      ? paymentOrderStatusLabels['zh-TW'].pending_review
+      : studentAccessState === 'pending_transfer'
+        ? paymentOrderStatusLabels['zh-TW'].pending_transfer
+        : paymentOrderStatusLabels['zh-TW'].rejected
 
     return (
       <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
@@ -719,7 +727,7 @@ export default function StudentPage() {
               </p>
               <div className="mt-8 grid gap-4 md:grid-cols-3">
                 {[
-                  ['目前狀態', studentAccessState === 'pending_review' ? '待對帳' : studentAccessState === 'pending_transfer' ? '待付款' : '需處理'],
+                  ['目前狀態', accessStatusLabel],
                   ['課表訪問', '確認後開通'],
                   ['訓練回饋', '確認後可提交'],
                 ].map(([label, value]) => (

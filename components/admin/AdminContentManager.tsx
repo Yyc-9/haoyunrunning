@@ -778,8 +778,8 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                     </div>
                     <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
                       <div><p className="text-xs font-bold text-apple-gray-500">報名記錄</p><p className="mt-1 text-lg font-black">{season.registrationCount}</p></div>
-                      <div><p className="text-xs font-bold text-apple-gray-500">已確認</p><p className="mt-1 text-lg font-black text-emerald-700">{season.approvedCount}</p></div>
-                      <div><p className="text-xs font-bold text-apple-gray-500">待對帳</p><p className="mt-1 text-lg font-black text-blue-700">{season.pendingReviewCount}</p></div>
+                      <div><p className="text-xs font-bold text-apple-gray-500">已確認入帳</p><p className="mt-1 text-lg font-black text-emerald-700">{season.approvedCount}</p></div>
+                      <div><p className="text-xs font-bold text-apple-gray-500">已回報，待人工核對</p><p className="mt-1 text-lg font-black text-blue-700">{season.pendingReviewCount}</p></div>
                     </div>
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">

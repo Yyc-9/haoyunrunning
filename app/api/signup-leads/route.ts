@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (isCoursePayment && !isConfirmTransfer) {
-    return NextResponse.json({ error: '請先建立報名付款單，再更新同一筆付款資料。' }, { status: 400 })
+    return NextResponse.json({ error: '請先建立課程報名記錄，再更新同一筆匯款資料。' }, { status: 400 })
   }
 
   if (source !== 'course_payment' && !phone && !email && !instagram) {
@@ -261,7 +261,7 @@ export async function POST(request: NextRequest) {
 
   const accessToken = isCoursePayment ? createCourseOrderAccessToken(data.id) : ''
   if (isCoursePayment && !accessToken) {
-    return NextResponse.json({ error: '報名付款單已建立，但安全憑證產生失敗，請聯絡客服。' }, { status: 500 })
+    return NextResponse.json({ error: '課程報名記錄已建立，但安全憑證產生失敗，請聯絡客服。' }, { status: 500 })
   }
 
   return NextResponse.json({ lead: { ...data, ...(accessToken ? { accessToken } : {}) } })
@@ -285,7 +285,7 @@ export async function PATCH(request: NextRequest) {
     const notes = cleanText(body.notes)
 
     if (!leadId || !verifyCourseOrderAccessToken(leadId, accessToken)) {
-      return NextResponse.json({ error: '報名付款單安全憑證無效，請重新建立付款單。' }, { status: 403 })
+      return NextResponse.json({ error: '課程報名安全憑證無效，請重新建立報名記錄。' }, { status: 403 })
     }
 
     if (!/^\d{5}$/.test(transferLastFive)) {
@@ -314,7 +314,7 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (error || !data) {
-      return NextResponse.json({ error: error?.message || '付款資料更新失敗。' }, { status: 500 })
+      return NextResponse.json({ error: error?.message || '匯款資料更新失敗。' }, { status: 500 })
     }
 
     return NextResponse.json({ lead: data })
@@ -348,7 +348,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: '課程匯款只能由管理員在管理後台核對。' }, { status: 403 })
   }
   if (existingLead.source === 'course_payment' && status === 'approved') {
-    return NextResponse.json({ error: '課程匯款必須由銀行對帳確認，不能直接改為已確認。' }, { status: 409 })
+    return NextResponse.json({ error: '課程匯款必須由銀行對帳確認，不能直接改為已確認入帳。' }, { status: 409 })
   }
 
   const updatePayload: { status: string; notes?: string; reviewed_at?: string; review_note?: string } = { status }

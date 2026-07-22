@@ -263,7 +263,7 @@ export default function CoachSignupsClient() {
               </p>
               <h1 className="text-3xl font-black text-apple-gray-900 sm:text-5xl">團練報名看板</h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-apple-gray-600 sm:text-base sm:leading-7">
-                優先查看團練報名，也可查看指派班級的報名與緊急聯絡資料。付款核對統一由管理員處理。
+                優先查看團練報名，也可查看指派班級的報名與緊急聯絡資料。課程匯款核對統一由管理員處理。
               </p>
             </div>
 
@@ -290,7 +290,7 @@ export default function CoachSignupsClient() {
               ['4 週年活動', stats.anniversary],
               ['團練報名', stats.group],
               ['課程報名', stats.coursePayment],
-              ['已確認', stats.approved],
+              ['已確認入帳', stats.approved],
             ].map(([label, value]) => (
               <div key={label} className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-5">
                 <p className="text-xs text-apple-gray-500 sm:text-sm">{label}</p>

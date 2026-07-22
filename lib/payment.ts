@@ -13,16 +13,16 @@ export const paymentOrderStatuses: PaymentOrderStatus[] = [
 
 export const paymentOrderStatusLabels = {
   'zh-TW': {
-    pending_transfer: '待付款',
-    pending_review: '待對帳',
-    approved: '已確認',
-    rejected: '需處理',
+    pending_transfer: '待完成匯款',
+    pending_review: '已回報，待人工核對',
+    approved: '已確認入帳',
+    rejected: '匯款資料需補充',
   },
   'zh-CN': {
-    pending_transfer: '待付款',
-    pending_review: '待對帳',
-    approved: '已確認',
-    rejected: '需處理',
+    pending_transfer: '待完成匯款',
+    pending_review: '已回報，待人工核對',
+    approved: '已確認入帳',
+    rejected: '匯款資料需補充',
   },
   en: {
     pending_transfer: 'Awaiting transfer / last five digits',
@@ -34,9 +34,9 @@ export const paymentOrderStatusLabels = {
 
 export const paymentOrderStatusDescriptions: Record<PaymentOrderStatus, string> = {
   pending_transfer: '尚未提交匯款帳號後五碼。',
-  pending_review: '已提交後五碼與申報金額，等待比對銀行流水。',
-  approved: '後五碼與金額相符，且已由財務確認。',
-  rejected: '金額不符、後五碼重複、重複報名或找不到銀行流水，需由管理員處理。',
+  pending_review: '已提交後五碼與申報金額，等待財務人工核對銀行入帳。',
+  approved: '後五碼與金額相符，且已由財務確認入帳。',
+  rejected: '匯款資料需要補充或重新核對，請依核對說明處理。',
 }
 
 export function isPaymentOrderStatus(value: string): value is PaymentOrderStatus {

@@ -452,7 +452,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
                     setIsQuoting(false)
                   }} onBlur={() => {
                     if (form.billingStartSessionDate) void loadPricingQuote({ referrer: form.referrer })
-                  }} className="apple-input min-h-12" placeholder="請填推薦人的好運報名信箱；若無可留白" /><span className="mt-2 block text-xs leading-5 text-apple-gray-500">插班新生的推薦資格會以舊生名單或已確認報名記錄自動核對。</span></label>
+                  }} className="apple-input min-h-12" placeholder="請填推薦人的好運報名信箱；若無可留白" /><span className="mt-2 block text-xs leading-5 text-apple-gray-500">插班新生的推薦資格會以舊生名單或已確認入帳的報名記錄自動核對。</span></label>
                   <label className="block"><FieldLabel>近期挑戰</FieldLabel><textarea value={form.recentChallenge} onChange={(event) => update('recentChallenge', event.target.value)} className="apple-input min-h-24 resize-y" placeholder="半年內 5K、10K、半馬或全馬成績；沒有可填「無」" /></label>
                   <label className="block"><FieldLabel>近期目標</FieldLabel><textarea value={form.recentGoal} onChange={(event) => update('recentGoal', event.target.value)} className="apple-input min-h-24 resize-y" placeholder="目標賽事、距離或完賽時間" /></label>
                   <label className="block"><FieldLabel>過去到現在是否有病史或運動傷害？</FieldLabel><textarea value={form.injuryHistory} onChange={(event) => update('injuryHistory', event.target.value)} className="apple-input min-h-24 resize-y" placeholder="沒有請填「無」" /></label>

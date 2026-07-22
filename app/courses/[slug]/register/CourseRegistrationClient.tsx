@@ -114,7 +114,7 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
       if (!response.ok || !payload.enrollment) throw new Error(payload.error || '匯款資料提交失敗。')
 
       setEnrollment(payload.enrollment)
-      setSuccess('匯款資料已送出；銀行流水與申報資料相符並經財務確認後，狀態會更新為已確認。')
+      setSuccess('匯款資料已送出，目前狀態為「已回報，待人工核對」；銀行流水與申報資料相符並經財務確認後，才會更新為「已確認入帳」。')
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : '匯款資料提交失敗。')
     } finally {

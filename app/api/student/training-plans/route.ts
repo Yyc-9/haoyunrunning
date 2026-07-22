@@ -3,6 +3,16 @@ import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { canAccessTrainingContent, getStudentAccessState } from '@/lib/student-access'
 import { getTodayInfo } from '@/lib/week-dates'
 
+function accessMessage(state: string) {
+  if (state === 'pending_transfer') {
+    return '請先完成匯款並回報後五碼；財務確認入帳後將自動開通課表。'
+  }
+  if (state === 'rejected') {
+    return '你的匯款資料需要補充或重新核對，請聯絡好運跑班協助處理。'
+  }
+  return '你的匯款資料已回報，正在等待財務人工核對；確認入帳後將自動開通課表。'
+}
+
 export async function GET(request: NextRequest) {
   if (!supabaseAdmin) {
     return NextResponse.json({ error: 'Supabase 尚未設定。' }, { status: 500 })
@@ -20,7 +30,7 @@ export async function GET(request: NextRequest) {
       count: 0,
       weekStart: getTodayInfo().weekStart,
       accessState,
-      message: '你的匯款資料正在等待銀行對帳，確認入帳後將自動開通課表。',
+      message: accessMessage(accessState),
     })
   }
 

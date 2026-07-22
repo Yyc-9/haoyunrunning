@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
   const questionEmail = findAnswer(responses, [/電子.*(信箱|郵件)/i, /email/i, /e-mail/i])
   const email = normalizeEmail(cleanText(body.respondentEmail, 320) || questionEmail)
   if (!email) {
-    return NextResponse.json({ error: 'Google 表單必須收集電子信箱，才能建立付款狀態。' }, { status: 400 })
+    return NextResponse.json({ error: 'Google 表單必須收集電子信箱，才能建立匯款狀態。' }, { status: 400 })
   }
 
   const transferLastFive = normalizeLastFive(findAnswer(responses, [
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
         .select('id, status, course_slug, created_at')
         .single()
       if (updateError || !updatedLead) {
-        return NextResponse.json({ error: updateError?.message || '更新付款資料失敗。' }, { status: 500 })
+        return NextResponse.json({ error: updateError?.message || '更新匯款資料失敗。' }, { status: 500 })
       }
       return NextResponse.json({ lead: updatedLead, duplicate: false })
     }

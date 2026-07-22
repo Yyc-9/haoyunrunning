@@ -30,9 +30,8 @@ import AdminEnrollmentAnalytics from '@/components/admin/AdminEnrollmentAnalytic
 import AdminProductCreator from '@/components/admin/AdminProductCreator'
 import AdminProductEditor, { type AdminEditableProduct } from '@/components/admin/AdminProductEditor'
 import AdminBankReconciliation from '@/components/admin/AdminBankReconciliation'
+import { paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
 import { announceSiteContentUpdated } from '@/lib/site-content-sync'
-
-type PaymentOrderStatus = 'pending_transfer' | 'pending_review' | 'approved' | 'rejected'
 
 type AdminTab = 'overview' | 'students' | 'coaches' | 'seasons' | 'products' | 'content' | 'reconciliation' | 'paymentAccounts'
 
@@ -199,12 +198,7 @@ type PaymentAccount = {
   created_at: string
 }
 
-const statusLabels: Record<PaymentOrderStatus, string> = {
-  pending_transfer: '待付款',
-  pending_review: '待對帳',
-  approved: '已確認',
-  rejected: '需處理',
-}
+const statusLabels = paymentOrderStatusLabels['zh-TW']
 
 const tabs: Array<{ id: AdminTab; label: string; icon: typeof LayoutDashboard }> = [
   { id: 'overview', label: '總覽', icon: LayoutDashboard },
@@ -562,7 +556,7 @@ export default function AdminDashboardClient() {
                 集中管理網站內容、商城商品、課程、活動、訂單與收款資料。
               </p>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-apple-gray-500">
-                付款核對已整合至季度學員名單；收款帳戶與分配結果只會顯示在超級管理員後台。
+                匯款核對已整合至季度學員名單；收款帳戶與分配結果只會顯示在超級管理員後台。
               </p>
             </div>
 
@@ -612,8 +606,8 @@ export default function AdminDashboardClient() {
             <section className="space-y-8">
               <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
                 {[
-                  ['待對帳訂單', data.overview.pendingOrderCount],
-                  ['已確認訂單', data.overview.approvedOrderCount],
+                  ['已回報，待人工核對', data.overview.pendingOrderCount],
+                  ['已確認入帳', data.overview.approvedOrderCount],
                   ['商城商品', data.overview.productCount],
                   ['低庫存商品', data.overview.lowStockCount],
                   ['收款帳戶', data.overview.paymentAccountCount],
@@ -629,10 +623,10 @@ export default function AdminDashboardClient() {
               <div className="apple-card p-6">
                 <div className="mb-5 flex items-center gap-3">
                   <ShieldCheck className="h-5 w-5 text-emerald-600" />
-                  <h2 className="text-xl font-black text-apple-gray-900">待對帳訂單</h2>
+                  <h2 className="text-xl font-black text-apple-gray-900">已回報，待人工核對</h2>
                 </div>
                 {pendingOrders.length === 0 ? (
-                  <p className="text-sm text-apple-gray-600">目前沒有待對帳訂單。</p>
+                  <p className="text-sm text-apple-gray-600">目前沒有已回報、待人工核對的記錄。</p>
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2">
                     {pendingOrders.slice(0, 4).map((order) => (
@@ -655,7 +649,7 @@ export default function AdminDashboardClient() {
                 <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
                   <div>
                     <h2 className="text-xl font-black text-apple-gray-900">學員管理</h2>
-                    <p className="mt-1 text-sm text-apple-gray-600">顯示所有學員、綁定教練、付款狀態、課表狀態與最近訓練回饋。</p>
+                    <p className="mt-1 text-sm text-apple-gray-600">顯示所有學員、綁定教練、匯款狀態、課表狀態與最近訓練回饋。</p>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-[minmax(220px,1fr)_160px] lg:w-[520px]">
                     <input
@@ -680,7 +674,7 @@ export default function AdminDashboardClient() {
                 <table className="w-full min-w-[1180px] text-left text-sm">
                   <thead className="bg-apple-gray-100 text-apple-gray-600">
                     <tr>
-                      {['姓名', '信箱', '綁定教練', '報名課程', '付款狀態', '課表', '最近回饋', '建立時間', '綁定操作'].map((header) => (
+                      {['姓名', '信箱', '綁定教練', '報名課程', '匯款狀態', '課表', '最近回饋', '建立時間', '綁定操作'].map((header) => (
                         <th key={header} className="px-4 py-3 font-bold">{header}</th>
                       ))}
                     </tr>

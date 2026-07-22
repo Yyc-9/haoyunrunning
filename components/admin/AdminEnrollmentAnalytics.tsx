@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, BarChart3, CalendarRange, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, FileSpreadsheet, Loader2, Package, RotateCcw, Search, Trash2, X } from 'lucide-react'
 import type { CourseSeason } from '@/lib/course-seasons'
+import { paymentOrderStatusDescriptions, paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
 import { supabase } from '@/lib/supabase'
 
-type PaymentStatus = 'pending_transfer' | 'pending_review' | 'approved' | 'rejected'
+type PaymentStatus = PaymentOrderStatus
 
 type AttendanceAnomaly = {
   attendanceId: string
@@ -78,12 +79,20 @@ type Props = {
   updatingId: string
 }
 
-const statusLabels: Record<PaymentStatus, string> = {
+const courseStatusLabels = paymentOrderStatusLabels['zh-TW']
+const shopStatusLabels: Record<PaymentStatus, string> = {
   pending_transfer: '待付款',
   pending_review: '待對帳',
   approved: '已確認',
   rejected: '需處理',
 }
+
+const statusLegend: Array<[PaymentStatus, string]> = [
+  ['pending_transfer', 'bg-amber-50 text-amber-800'],
+  ['pending_review', 'bg-blue-50 text-blue-800'],
+  ['approved', 'bg-emerald-50 text-emerald-800'],
+  ['rejected', 'bg-red-50 text-red-800'],
+]
 
 const statusTone: Record<PaymentStatus, string> = {
   pending_transfer: 'bg-amber-50 text-amber-700',
@@ -94,6 +103,12 @@ const statusTone: Record<PaymentStatus, string> = {
 
 function detail(order: Enrollment, label: string) {
   return order.registrationDetails.find((item) => item.label === label)?.value ?? ''
+}
+
+function statusLabel(order: Enrollment) {
+  return order.orderKind === 'course'
+    ? courseStatusLabels[order.status]
+    : shopStatusLabels[order.status]
 }
 
 function studentType(order: Enrollment) {
@@ -233,7 +248,7 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
       order.orderKind === 'course' ? (studentType(order) === 'new' ? '新生' : studentType(order) === 'returning' ? '舊生' : '') : '',
       order.amountText,
       order.transferLastFive,
-      statusLabels[order.status],
+      statusLabel(order),
       order.reviewNote ?? '',
       order.submittedAt,
     ])
@@ -315,7 +330,7 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
           ['商品', selected.items.join('、')],
           ['金額', selected.amountText],
           ['匯款後五碼', selected.transferLastFive],
-          ['狀態', statusLabels[selected.status]],
+          ['狀態', shopStatusLabels[selected.status]],
           ['提交時間', formatDate(selected.submittedAt)],
           ['付款代號', selected.paymentReference],
           ['付款通道', selected.paymentChannelLabel],
@@ -327,7 +342,7 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
           ['學員身分', detail(selected, '學員身分')],
           ['金額', selected.amountText],
           ['匯款後五碼', selected.transferLastFive],
-          ['狀態', statusLabels[selected.status]],
+          ['狀態', courseStatusLabels[selected.status]],
           ['報名時間', formatDate(selected.submittedAt)],
         ]
     : []
@@ -375,15 +390,10 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
       ) : null}
 
       <section className="grid gap-2 rounded-lg border border-black/10 bg-white p-3 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          ['待付款', '尚未提交後五碼。', 'bg-amber-50 text-amber-800'],
-          ['待對帳', '已提交後五碼與申報金額，等待銀行流水。', 'bg-blue-50 text-blue-800'],
-          ['已確認', '後五碼與金額相符，且已由財務確認。', 'bg-emerald-50 text-emerald-800'],
-          ['需處理', '金額不符、後五碼重複、重複報名或找不到流水。', 'bg-red-50 text-red-800'],
-        ].map(([label, description, tone]) => (
-          <div key={label} className={`rounded-md px-3 py-2.5 ${tone}`}>
-            <p className="text-xs font-black">{label}</p>
-            <p className="mt-1 text-[11px] font-semibold leading-5 opacity-80">{description}</p>
+        {statusLegend.map(([status, tone]) => (
+          <div key={status} className={`rounded-md px-3 py-2.5 ${tone}`}>
+            <p className="text-xs font-black">{courseStatusLabels[status]}</p>
+            <p className="mt-1 text-[11px] font-semibold leading-5 opacity-80">{paymentOrderStatusDescriptions[status]}</p>
           </div>
         ))}
       </section>
@@ -391,7 +401,7 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
           ['報名記錄', summary.records, `去重學員 ${summary.people} 人`],
-          ['已確認', summary.approved, `班額使用率 ${summary.occupancy}%`],
+          ['已確認入帳', summary.approved, `班額使用率 ${summary.occupancy}%`],
           ['新生 / 舊生', `${summary.newCount} / ${summary.returningCount}`, `新生占 ${summary.records ? Math.round(summary.newCount / summary.records * 1000) / 10 : 0}%`],
           ['已知報名金額', `NT$ ${summary.revenue.toLocaleString('zh-TW')}`, summary.unknownAmounts ? `${summary.unknownAmounts} 筆插班金額另計` : '所有金額已計入'],
         ].map(([label, value, note]) => (
@@ -428,7 +438,7 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
         <div className="flex flex-col gap-3 border-b border-black/10 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-base font-black text-apple-gray-950">名單與審核</h3>
-            <p className="mt-1 text-xs font-semibold text-apple-gray-500">在同一份緊湊名單中查看資料、核對付款與處理異常。</p>
+            <p className="mt-1 text-xs font-semibold text-apple-gray-500">{listKind === 'course' ? '在同一份緊湊名單中查看資料、核對匯款與處理異常。' : '在同一份緊湊名單中查看商城訂單、核對付款與處理異常。'}</p>
           </div>
           <div className="grid grid-cols-2 rounded-lg bg-apple-gray-100 p-1">
             <button type="button" onClick={() => setListKind('course')} className={`inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-bold ${listKind === 'course' ? 'bg-white text-black shadow-sm' : 'text-apple-gray-500'}`}><CalendarRange className="h-4 w-4" />課程報名</button>
@@ -439,14 +449,14 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
           <label className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-apple-gray-400" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={listKind === 'course' ? '搜尋姓名、信箱或後五碼' : '搜尋顧客、訂單編號或商品'} className="apple-input pl-10" /></label>
           {listKind === 'course' ? <select value={courseFilter} onChange={(event) => setCourseFilter(event.target.value)} className="apple-input"><option value="all">全部班級</option>{capacities.map((course) => <option key={course.slug} value={course.slug}>{course.name}</option>)}</select> : null}
           {listKind === 'course' ? <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as typeof typeFilter)} className="apple-input"><option value="all">全部身分</option><option value="new">新生</option><option value="returning">舊生</option></select> : null}
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} className="apple-input"><option value="all">全部狀態</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} className="apple-input"><option value="all">全部狀態</option>{Object.entries(listKind === 'course' ? courseStatusLabels : shopStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
           {listKind === 'course' ? <select value={attendanceFilter} onChange={(event) => setAttendanceFilter(event.target.value as typeof attendanceFilter)} className="apple-input"><option value="all">全部點名核對</option><option value="open">計費異常待處理</option></select> : null}
           <button type="button" onClick={exportRoster} disabled={!filtered.length} className="apple-button-outline gap-2 px-4 py-2.5 text-sm disabled:opacity-40"><Download className="h-4 w-4" />匯出</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[920px] text-left text-sm">
             <thead className="bg-apple-gray-100 text-xs text-apple-gray-600"><tr>{[listKind === 'course' ? '學員' : '顧客', listKind === 'course' ? '班級' : '訂單 / 商品', listKind === 'course' ? '身分' : '類型', '金額', '後五碼', '狀態', '提交時間', ''].map((label) => <th key={label || 'action'} className="px-3 py-2.5 font-bold">{label}</th>)}</tr></thead>
-            <tbody className="divide-y divide-black/5">{visible.map((order) => <tr key={order.id} className="hover:bg-apple-gray-50"><td className="px-3 py-2.5"><p className="font-bold">{order.studentName}</p><p className="max-w-52 truncate text-xs text-apple-gray-500">{order.email}</p></td><td className="max-w-64 px-3 py-2.5 font-semibold text-apple-gray-700">{order.orderKind === 'shop' ? <><p className="truncate">{order.orderNumber}</p><p className="mt-1 truncate text-xs font-medium text-apple-gray-500">{order.items.join('、') || '未載入商品'}</p></> : <p className="truncate">{order.courseName}</p>}</td><td className="px-3 py-2.5">{order.orderKind === 'shop' ? '商城' : studentType(order) === 'new' ? '新生' : studentType(order) === 'returning' ? '舊生' : '-'}</td><td className="px-3 py-2.5 font-semibold">{order.amountText}</td><td className="px-3 py-2.5 font-mono">{order.transferLastFive || '-'}</td><td className="px-3 py-2.5"><span className={`rounded-full px-2 py-1 text-xs font-bold ${statusTone[order.status]}`}>{statusLabels[order.status]}</span>{order.openAttendanceAnomalyCount > 0 ? <span className="mt-1 block w-fit rounded-full bg-amber-100 px-2 py-1 text-[11px] font-black text-amber-800">計費異常 {order.openAttendanceAnomalyCount}</span> : null}</td><td className="whitespace-nowrap px-3 py-2.5 text-xs text-apple-gray-500">{formatDate(order.submittedAt)}</td><td className="px-3 py-2.5 text-right"><button type="button" onClick={() => setSelected(order)} className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-black hover:text-white" aria-label={`查看 ${order.studentName} 的${order.orderKind === 'shop' ? '訂單' : '報名資料'}`}><ChevronRight className="h-4 w-4" /></button></td></tr>)}</tbody>
+            <tbody className="divide-y divide-black/5">{visible.map((order) => <tr key={order.id} className="hover:bg-apple-gray-50"><td className="px-3 py-2.5"><p className="font-bold">{order.studentName}</p><p className="max-w-52 truncate text-xs text-apple-gray-500">{order.email}</p></td><td className="max-w-64 px-3 py-2.5 font-semibold text-apple-gray-700">{order.orderKind === 'shop' ? <><p className="truncate">{order.orderNumber}</p><p className="mt-1 truncate text-xs font-medium text-apple-gray-500">{order.items.join('、') || '未載入商品'}</p></> : <p className="truncate">{order.courseName}</p>}</td><td className="px-3 py-2.5">{order.orderKind === 'shop' ? '商城' : studentType(order) === 'new' ? '新生' : studentType(order) === 'returning' ? '舊生' : '-'}</td><td className="px-3 py-2.5 font-semibold">{order.amountText}</td><td className="px-3 py-2.5 font-mono">{order.transferLastFive || '-'}</td><td className="px-3 py-2.5"><span className={`rounded-full px-2 py-1 text-xs font-bold ${statusTone[order.status]}`}>{statusLabel(order)}</span>{order.openAttendanceAnomalyCount > 0 ? <span className="mt-1 block w-fit rounded-full bg-amber-100 px-2 py-1 text-[11px] font-black text-amber-800">計費異常 {order.openAttendanceAnomalyCount}</span> : null}</td><td className="whitespace-nowrap px-3 py-2.5 text-xs text-apple-gray-500">{formatDate(order.submittedAt)}</td><td className="px-3 py-2.5 text-right"><button type="button" onClick={() => setSelected(order)} className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-black hover:text-white" aria-label={`查看 ${order.studentName} 的${order.orderKind === 'shop' ? '訂單' : '報名資料'}`}><ChevronRight className="h-4 w-4" /></button></td></tr>)}</tbody>
           </table>
         </div>
         {!filtered.length ? <p className="p-10 text-center text-sm font-semibold text-apple-gray-500">沒有符合條件的{listKind === 'course' ? '學員' : '商城訂單'}。</p> : null}
@@ -486,8 +496,8 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
               <label className="mt-5 block"><span className="mb-2 block text-xs font-bold text-apple-gray-500">管理備註</span><textarea value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} className="apple-input min-h-24 resize-y" placeholder="記錄核對結果或需要補充的資料" /></label>
             </div>
             <div className="grid gap-2 border-t bg-white p-4 sm:grid-cols-2">
-              <p className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-bold leading-5 text-blue-800 sm:col-span-2">「已確認」只能由銀行對帳完成；這裡保留異常處理與刪除，避免繞過財務確認。</p>
-              <button type="button" disabled={updatingId === selected.id || selected.status === 'rejected' || selected.status === 'approved'} onClick={flagOrderForReview} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40"><RotateCcw className="h-4 w-4" />標記需處理</button>
+              <p className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-bold leading-5 text-blue-800 sm:col-span-2">{selected.orderKind === 'course' ? '「已確認入帳」只能由銀行對帳完成；這裡保留異常處理與刪除，避免繞過財務確認。' : '商城訂單的「已確認」只能由銀行對帳完成；這裡保留異常處理與刪除。'}</p>
+              <button type="button" disabled={updatingId === selected.id || selected.status === 'rejected' || selected.status === 'approved'} onClick={flagOrderForReview} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40"><RotateCcw className="h-4 w-4" />{selected.orderKind === 'course' ? '標記匯款資料需補充' : '標記需處理'}</button>
               <button type="button" disabled={updatingId === `delete-${selected.id}` || selected.status === 'approved'} onClick={deleteOrder} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40">{updatingId === `delete-${selected.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}刪除記錄</button>
             </div>
           </aside>

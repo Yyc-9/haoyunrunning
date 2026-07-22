@@ -325,7 +325,7 @@ export async function POST(request: NextRequest) {
         : []
       const exactCandidates = candidates.filter((candidate) => candidate.expectedAmount === transaction.amount)
       let matchStatus = 'unmatched'
-      let matchReason = '沒有找到後五碼相同的待對帳訂單。'
+      let matchReason = '沒有找到後五碼相同且已回報、待人工核對的記錄。'
       if (transaction.direction === 'debit') {
         matchStatus = 'ignored'
         matchReason = '這是支出交易，不列入收款對帳。'
@@ -335,7 +335,7 @@ export async function POST(request: NextRequest) {
       } else if (exactCandidates.length === 1) {
         matchStatus = exactCandidates[0].status === 'approved' ? 'already_confirmed' : 'matched'
         matchReason = exactCandidates[0].status === 'approved'
-          ? '後五碼與金額唯一相符；訂單先前已確認，可補登銀行依據。'
+          ? '後五碼與金額唯一相符；記錄先前已確認入帳，可補登銀行依據。'
           : '後五碼與金額唯一相符，可以確認入帳。'
       } else if (candidates.length > 0) {
         matchStatus = 'amount_mismatch'
@@ -496,7 +496,7 @@ export async function POST(request: NextRequest) {
     }
 
     return json({
-      message: `已匯入 ${insertedTransactions.length} 筆交易，系統已完成初步比對${reconciliationIssues.size ? `，並標記 ${reconciliationIssues.size} 筆需處理訂單` : ''}。`,
+      message: `已匯入 ${insertedTransactions.length} 筆交易，系統已完成初步比對${reconciliationIssues.size ? `，並標記 ${reconciliationIssues.size} 筆匯款資料需補充` : ''}。`,
       warning: issueUpdateErrors.length ? '部分異常訂單未能更新狀態，請依對帳批次人工檢查。' : '',
       ...(await loadReconciliationData(createdBatchId)),
     })
