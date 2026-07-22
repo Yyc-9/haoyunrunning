@@ -57,12 +57,12 @@ export default function Footer() {
           {/* Brand Column */}
           <div className="lg:col-span-2">
             <div className="mb-6 flex items-center space-x-3">
-              <div className="relative h-14 w-14 overflow-hidden rounded-full border border-white/15 bg-white shadow-sm">
+              <div className="relative h-12 w-12 overflow-hidden rounded-full border border-white/15 bg-white shadow-sm">
                 <Image
                   src={brand.logoUrl}
                   alt={`${brand.brandName} Logo`}
                   fill
-                  sizes="56px"
+                  sizes="48px"
                   className="object-cover"
                 />
               </div>
