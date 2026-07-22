@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { canAccessTrainingContent, getStudentAccessState } from '@/lib/student-access'
+import { getIsolatedTestAccount, updateIsolatedTestState } from '@/lib/test-account'
 
 type FeedbackBody = {
   training_plan_id?: string | null
@@ -65,6 +66,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: '請先登入學員帳號。' }, { status: 401 })
   }
 
+  const testAccount = await getIsolatedTestAccount(user)
+  if (testAccount) {
+    if (testAccount.currentMode !== 'student') return NextResponse.json({ error: '請先切換至學員測試模式。' }, { status: 403 })
+    const feedback = Array.isArray(testAccount.sandboxState.trainingFeedback) ? testAccount.sandboxState.trainingFeedback : []
+    return NextResponse.json({ feedback, count: feedback.length, isolatedTest: true })
+  }
+
   const accessState = await getStudentAccessState(user.id, user.email)
   if (!canAccessTrainingContent(accessState)) {
     return NextResponse.json({
@@ -102,6 +110,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '請先登入學員帳號。' }, { status: 401 })
   }
 
+  const testAccount = await getIsolatedTestAccount(user)
+
   const accessState = await getStudentAccessState(user.id, user.email)
   if (!canAccessTrainingContent(accessState)) {
     return NextResponse.json(
@@ -115,6 +125,22 @@ export async function POST(request: NextRequest) {
 
   if (rpe !== null && (rpe < 1 || rpe > 10)) {
     return NextResponse.json({ error: 'RPE 必須在 1 到 10 之間。' }, { status: 400 })
+  }
+
+  if (testAccount) {
+    if (testAccount.currentMode !== 'student') return NextResponse.json({ error: '請先切換至學員測試模式。' }, { status: 403 })
+    const feedback = {
+      id: `test-feedback-${Date.now()}`, training_plan_id: body.training_plan_id?.trim() || null,
+      student_id: user.id, coach_id: 'isolated-test-coach', completed_at: new Date().toISOString(),
+      distance_km: cleanNumber(body.distance_km), duration_text: cleanText(body.duration_text), pace_text: cleanText(body.pace_text),
+      average_heart_rate: cleanNumber(body.average_heart_rate), rpe, feeling: cleanText(body.feeling),
+      status: rpe !== null && rpe >= 8 ? 'flagged' : 'new', created_at: new Date().toISOString(),
+    }
+    await updateIsolatedTestState(testAccount, (state) => ({
+      ...state,
+      trainingFeedback: [feedback, ...(Array.isArray(state.trainingFeedback) ? state.trainingFeedback : [])].slice(0, 20),
+    }))
+    return NextResponse.json({ feedback, isolatedTest: true })
   }
 
   let coachId: string | null = null

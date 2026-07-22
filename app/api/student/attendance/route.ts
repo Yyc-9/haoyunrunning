@@ -8,6 +8,7 @@ import {
 import { getCurrentCourseSeason } from '@/lib/course-seasons-server'
 import { getManagedCourses } from '@/lib/managed-courses-server'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
+import { getIsolatedTestAccount, updateIsolatedTestState } from '@/lib/test-account'
 
 const noStoreHeaders = { 'Cache-Control': 'no-store' }
 
@@ -41,6 +42,28 @@ async function loadStudentContext(request: NextRequest) {
 
   if (!season) {
     return { response: NextResponse.json({ error: '目前沒有可使用的季度課程。' }, { status: 404, headers: noStoreHeaders }) }
+  }
+
+  const testAccount = await getIsolatedTestAccount(user)
+  if (testAccount) {
+    if (testAccount.currentMode !== 'student') return { response: NextResponse.json({ error: '請先切換至學員測試模式。' }, { status: 403, headers: noStoreHeaders }) }
+    const courses = managedCourses.flatMap((course) => {
+      const sourceId = season.courseOfferingIds[course.slug]
+      const billing = season.courseBillingConfigs[course.slug]
+      if (!sourceId || !billing?.scheduleReady) return []
+      return [{
+        seasonId: season.id, seasonName: season.name, courseSeasonCourseId: `test-${sourceId}`, courseSlug: course.slug,
+        courseName: attendanceCourseLabel(course.name), weekday: course.weekday, classTime: course.classTime || course.time || '',
+        location: course.location, sessionDates: billing.sessionDates, capacity: season.courseCapacities[course.slug] ?? 40,
+      }]
+    })
+    const homeCourse = courses.find((course) => course.courseSlug === testAccount.assignedCourseSlug)
+      ?? courses.find((course) => course.weekday === '週一')
+    const enrollments = homeCourse ? [{
+      id: 'test-student-enrollment', season_id: season.id, course_season_course_id: homeCourse.courseSeasonCourseId,
+      course_slug: homeCourse.courseSlug, name: '測試學員', email: user.email,
+    }] : []
+    return { user, season, courses, enrollments, testAccount }
   }
 
   const { data: enrollments, error } = await supabaseAdmin
@@ -90,6 +113,24 @@ export async function GET(request: NextRequest) {
 
   const offeringIds = context.courses.map((course) => course.courseSeasonCourseId)
   const enrollmentIds = context.enrollments.map((enrollment) => enrollment.id)
+
+  const testAccount = 'testAccount' in context ? context.testAccount : undefined
+  if (testAccount) {
+    const state = testAccount.sandboxState
+    const attendance = Array.isArray(state.studentAttendance) ? state.studentAttendance : []
+    const makeups = Array.isArray(state.studentMakeups) ? state.studentMakeups : []
+    const courseNames = new Map(context.courses.map((course) => [course.courseSeasonCourseId, course.courseName]))
+    return NextResponse.json({
+      season: { id: context.season.id, name: context.season.name, code: context.season.code, endsOn: context.season.endsOn },
+      courses: context.courses.map((course) => ({ ...course, approvedCount: 0, scheduledMakeupCounts: {} })),
+      enrollments: context.enrollments.map((enrollment) => ({
+        id: enrollment.id, seasonId: enrollment.season_id, courseSeasonCourseId: enrollment.course_season_course_id,
+        courseSlug: enrollment.course_slug, courseName: courseNames.get(enrollment.course_season_course_id) ?? enrollment.course_slug,
+        name: enrollment.name, email: enrollment.email,
+      })),
+      attendance, makeups, cancellations: [], isolatedTest: true,
+    }, { headers: noStoreHeaders })
+  }
 
   const [approvedResult, scheduledResult, cancellationResult, attendanceResult, makeupResult] = await Promise.all([
     supabaseAdmin!
@@ -188,6 +229,52 @@ export async function POST(request: NextRequest) {
   const homeCourse = context.courses.find((course) => course.courseSeasonCourseId === enrollment.course_season_course_id)
   if (!homeCourse) {
     return NextResponse.json({ error: '找不到所屬班級的課次設定。' }, { status: 400, headers: noStoreHeaders })
+  }
+
+  const testAccount = 'testAccount' in context ? context.testAccount : undefined
+  if (testAccount) {
+    const now = new Date().toISOString()
+    const currentMakeups = Array.isArray(testAccount.sandboxState.studentMakeups)
+      ? testAccount.sandboxState.studentMakeups as Array<Record<string, unknown>> : []
+    if (intent === 'request_leave') {
+      const sessionDate = cleanText(body.sessionDate, 10)
+      if (!homeCourse.sessionDates.includes(sessionDate)) return NextResponse.json({ error: '請假課次不屬於測試班級。' }, { status: 400, headers: noStoreHeaders })
+      const request = {
+        id: `test-makeup:${sessionDate}`, season_id: context.season.id, enrollment_id: enrollment.id,
+        original_course_season_course_id: homeCourse.courseSeasonCourseId, original_course_slug: homeCourse.courseSlug,
+        original_session_date: sessionDate, target_course_season_course_id: null, target_course_slug: null,
+        target_session_date: null, status: 'leave_requested', requested_at: now, updated_at: now,
+      }
+      await updateIsolatedTestState(testAccount, (state) => ({
+        ...state,
+        studentMakeups: [...currentMakeups.filter((item) => item.id !== request.id), request],
+      }))
+      return NextResponse.json({ message: '測試請假已送出，可繼續驗證本季度補課選擇；不會寫入正式名單。', isolatedTest: true }, { headers: noStoreHeaders })
+    }
+    const requestId = cleanText(body.requestId, 80)
+    const existing = currentMakeups.find((item) => item.id === requestId && item.enrollment_id === enrollment.id)
+    if (!existing) return NextResponse.json({ error: '找不到測試請假資料。' }, { status: 404, headers: noStoreHeaders })
+    let updated: Record<string, unknown> | null = existing
+    if (intent === 'schedule_makeup') {
+      const targetCourseId = cleanText(body.targetCourseSeasonCourseId, 80)
+      const targetSessionDate = cleanText(body.targetSessionDate, 10)
+      const targetCourse = context.courses.find((course) => course.courseSeasonCourseId === targetCourseId)
+      if (!targetCourse || targetCourseId === homeCourse.courseSeasonCourseId || !targetCourse.sessionDates.includes(targetSessionDate)) {
+        return NextResponse.json({ error: '測試補課只能選擇本季度其他班級的有效課次。' }, { status: 400, headers: noStoreHeaders })
+      }
+      updated = { ...existing, target_course_season_course_id: targetCourseId, target_course_slug: targetCourse.courseSlug, target_session_date: targetSessionDate, status: 'scheduled', updated_at: now }
+    } else if (intent === 'cancel_makeup') {
+      updated = { ...existing, target_course_season_course_id: null, target_course_slug: null, target_session_date: null, status: 'leave_requested', updated_at: now }
+    } else if (intent === 'cancel_leave') {
+      updated = null
+    } else {
+      return NextResponse.json({ error: '無法辨識這次測試點名操作。' }, { status: 400, headers: noStoreHeaders })
+    }
+    await updateIsolatedTestState(testAccount, (state) => ({
+      ...state,
+      studentMakeups: updated ? currentMakeups.map((item) => item.id === requestId ? updated! : item) : currentMakeups.filter((item) => item.id !== requestId),
+    }))
+    return NextResponse.json({ message: intent === 'schedule_makeup' ? '測試補課已安排。' : intent === 'cancel_makeup' ? '測試補課已取消，可重新選擇。' : '測試請假已取消。', isolatedTest: true }, { headers: noStoreHeaders })
   }
 
   if (intent === 'request_leave') {

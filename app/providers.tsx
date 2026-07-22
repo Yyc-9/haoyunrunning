@@ -21,6 +21,11 @@ export interface User {
   instagram?: string
   goal?: string
   role?: 'student' | 'coach' | 'admin'
+  testAccount?: {
+    enabled: true
+    mode: 'student' | 'coach'
+    assignedCourseSlug: string
+  }
 }
 
 export interface AuthContextType {
@@ -53,6 +58,11 @@ type ProfilePayload = {
   target_event?: string | null
   instagram?: string | null
   goal?: string | null
+  test_account?: {
+    enabled?: boolean
+    mode?: 'student' | 'coach'
+    assigned_course_slug?: string
+  } | null
 }
 
 class AccountSessionError extends Error {
@@ -174,6 +184,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       instagram: data.instagram || '',
       goal: data.goal || '',
       role: data.role,
+      testAccount: data.test_account?.enabled && data.test_account.mode ? {
+        enabled: true,
+        mode: data.test_account.mode,
+        assignedCourseSlug: data.test_account.assigned_course_slug || 'zhubei-night-run-monday',
+      } : undefined,
     }
 
     setUser(nextUser)

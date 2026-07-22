@@ -6,12 +6,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
 import Link from 'next/link'
 import { useSiteContent } from '@/app/site-content-provider'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/app/providers'
 import { useLanguage } from '@/app/language-context'
 import { languages } from '@/lib/dictionary'
 import AuthModal from '@/components/AuthModal'
 import WeekdayLogo from '@/components/WeekdayLogo'
+import { supabase } from '@/lib/supabase'
 
 export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -19,12 +20,38 @@ export default function Navigation() {
   const [isLanguageOpen, setIsLanguageOpen] = useState(false)
   const [isAccountOpen, setIsAccountOpen] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [isSwitchingTestMode, setIsSwitchingTestMode] = useState(false)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
-  const { user, isLoggedIn, isLoading, logout } = useAuth()
+  const { user, isLoggedIn, isLoading, logout, refreshUser } = useAuth()
   const { language, setLanguage, t } = useLanguage()
   const { brand } = useSiteContent()
   const searchParams = useSearchParams()
   const pathname = usePathname()
+  const router = useRouter()
+
+  const switchTestMode = async (mode: 'student' | 'coach') => {
+    if (!user?.testAccount || user.testAccount.mode === mode || !supabase) return
+    setIsSwitchingTestMode(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) throw new Error('登入狀態已失效。')
+      const response = await fetch('/api/test-account/mode', {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode }),
+      })
+      const payload = await response.json().catch(() => ({})) as { error?: string }
+      if (!response.ok) throw new Error(payload.error || '切換測試身份失敗。')
+      await refreshUser()
+      setIsAccountOpen(false)
+      router.push(mode === 'coach' ? '/coach' : '/profile')
+      router.refresh()
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '切換測試身份失敗。')
+    } finally {
+      setIsSwitchingTestMode(false)
+    }
+  }
 
   useEffect(() => {
     const handleScroll = () => {
@@ -103,6 +130,25 @@ export default function Navigation() {
               <p className="mt-1 truncate text-xs text-apple-gray-500">{user?.email}</p>
               <span className="mt-3 inline-flex rounded-full bg-black px-2.5 py-1 text-[11px] font-bold text-white">{roleLabel}</span>
             </div>
+            {user?.testAccount ? (
+              <div className="border-b border-black/10 p-3">
+                <p className="mb-2 px-1 text-[11px] font-black text-apple-gray-500">專用測試身份</p>
+                <div className="grid grid-cols-2 gap-2 rounded-lg bg-apple-gray-100 p-1">
+                  {(['student', 'coach'] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      disabled={isSwitchingTestMode}
+                      onClick={() => void switchTestMode(mode)}
+                      className={clsx('min-h-9 rounded-md px-3 text-xs font-black transition-colors disabled:opacity-50', user.testAccount?.mode === mode ? 'bg-black text-white shadow-sm' : 'text-apple-gray-600 hover:bg-white')}
+                    >
+                      {mode === 'student' ? '學員測試' : '教練測試'}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 px-1 text-[10px] leading-4 text-amber-700">所有測試操作使用獨立沙盒，不寫入正式名單。</p>
+              </div>
+            ) : null}
             <div className="p-2">
               {accountEntries.map((entry) => {
                 const active = isAccountEntryActive(entry.href)

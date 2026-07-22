@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isAdminAllowlistedEmail } from '@/lib/admin-auth'
 import { getAuthedUser, isRevokedDeviceSession, supabaseAdmin } from '@/lib/supabase-server'
+import { getIsolatedTestAccount } from '@/lib/test-account'
 
 const noStoreHeaders = {
   'Cache-Control': 'no-store',
@@ -101,6 +102,11 @@ async function getCoachVerification(profile: Record<string, unknown>) {
 async function accountResponse(profile: Record<string, unknown>) {
   if (!supabaseAdmin) return NextResponse.json({ profile, achievements: [] }, { headers: noStoreHeaders })
 
+  const testAccount = await getIsolatedTestAccount({
+    id: String(profile.id),
+    email: typeof profile.email === 'string' ? profile.email : '',
+  })
+
   const [achievements, billingResult, coachVerification] = await Promise.all([
     getAchievementCollection(String(profile.id)),
     supabaseAdmin
@@ -116,6 +122,14 @@ async function accountResponse(profile: Record<string, unknown>) {
   return NextResponse.json({
     profile: {
       ...profile,
+      ...(testAccount ? {
+        role: testAccount.currentMode,
+        test_account: {
+          enabled: true,
+          mode: testAccount.currentMode,
+          assigned_course_slug: testAccount.assignedCourseSlug,
+        },
+      } : {}),
       facebook: typeof profile.facebook === 'string' ? profile.facebook : '',
       invoice_type: billingResult.data?.invoice_type ?? 'none',
       invoice_carrier: billingResult.data?.invoice_carrier ?? '',

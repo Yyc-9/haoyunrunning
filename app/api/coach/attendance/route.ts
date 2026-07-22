@@ -6,6 +6,7 @@ import { getCourseSeasons } from '@/lib/course-seasons-server'
 import { applyCourseOverrides } from '@/lib/managed-courses'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { syncCoachSessionAssignments } from '@/lib/coach-session-duty'
+import { getIsolatedMondayCourse, getIsolatedTestAccount, isolatedTestStudentFixtures, updateIsolatedTestState } from '@/lib/test-account'
 
 const noStoreHeaders = { 'Cache-Control': 'no-store' }
 const attendanceStatuses = new Set<CourseAttendanceStatus>(['present', 'excused', 'deducted'])
@@ -40,6 +41,19 @@ async function loadAccess(request: NextRequest) {
   const user = await getAuthedUser(request.headers.get('authorization'))
   if (!user) {
     return { response: NextResponse.json({ error: '請先登入教練帳號。' }, { status: 401, headers: noStoreHeaders }) }
+  }
+
+  const testAccount = await getIsolatedTestAccount(user)
+  if (testAccount) {
+    if (testAccount.currentMode !== 'coach') return { response: NextResponse.json({ error: '請先切換至教練測試模式。' }, { status: 403, headers: noStoreHeaders }) }
+    const course = await getIsolatedMondayCourse(testAccount)
+    if (!course) return { user, courses: [], courseNames: new Map<string, string>(), testAccount }
+    const courses = [{
+      seasonId: course.seasonId, seasonName: course.seasonName, courseSeasonCourseId: course.courseSeasonCourseId,
+      courseSlug: course.courseSlug, courseName: course.courseName, weekday: course.weekday, location: course.location,
+      meetingPoint: course.meetingPoint, sessionDates: course.sessionDates,
+    }]
+    return { user, courses, courseNames: new Map([[`${course.seasonId}:${course.courseSlug}`, attendanceCourseLabel(course.courseName)]]), testAccount }
   }
 
   const [{ data: account, error: accountError }, adminProfile, seasons] = await Promise.all([
@@ -127,6 +141,30 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ courses: [], enrollments: [], attendance: [], makeups: [], cancellations: [] }, { headers: noStoreHeaders })
   }
 
+  const testAccount = 'testAccount' in access ? access.testAccount : undefined
+  if (testAccount) {
+    const course = access.courses[0]
+    const students = isolatedTestStudentFixtures()
+    const saved = (testAccount.sandboxState.coachAttendance ?? {}) as Record<string, Record<string, { status: CourseAttendanceStatus; note?: string; markedAt?: string }>>
+    const cancellations = (testAccount.sandboxState.coachCancellations ?? {}) as Record<string, string>
+    const enrollments = students.map((row) => ({
+      id: row.id, season_id: course.seasonId, course_season_course_id: course.courseSeasonCourseId, course_slug: course.courseSlug,
+      home_course_name: attendanceCourseLabel(course.courseName), name: row.student?.name ?? '測試學員', email: row.student?.email ?? '',
+      status: 'approved', billing_start_session_date: null, prior_attendance_claimed: false, attendance_verification_status: 'verified',
+      emergency_contact_name: '測試聯絡人', emergency_contact_phone: '0900-000-000',
+    }))
+    const attendance = Object.entries(saved).flatMap(([sessionDate, rows]) => Object.entries(rows).map(([enrollmentId, record]) => ({
+      id: `test-attendance:${sessionDate}:${enrollmentId}`, course_season_course_id: course.courseSeasonCourseId,
+      session_date: sessionDate, enrollment_id: enrollmentId, status: record.status, note: record.note ?? '',
+      marked_by: access.user.id, marked_at: record.markedAt ?? new Date().toISOString(), updated_at: record.markedAt ?? new Date().toISOString(),
+    })))
+    return NextResponse.json({
+      courses: access.courses, enrollments, attendance, makeups: [],
+      cancellations: Object.entries(cancellations).map(([sessionDate, reason]) => ({ id: `test-cancel:${sessionDate}`, course_season_course_id: course.courseSeasonCourseId, session_date: sessionDate, reason })),
+      isolatedTest: true,
+    }, { headers: noStoreHeaders })
+  }
+
   const seasonIds = [...new Set(access.courses.map((course) => course.seasonId))]
   const offeringIds = access.courses.map((course) => course.courseSeasonCourseId)
   const courseAccess = new Set(access.courses.map((course) => `${course.seasonId}:${course.courseSlug}`))
@@ -207,6 +245,34 @@ export async function POST(request: NextRequest) {
 
   if (!course || !course.sessionDates.includes(sessionDate)) {
     return NextResponse.json({ error: '班級或課次無效。' }, { status: 400, headers: noStoreHeaders })
+  }
+  const testAccount = 'testAccount' in access ? access.testAccount : undefined
+  if (testAccount) {
+    if (body.intent === 'set_session_cancellation') {
+      await updateIsolatedTestState(testAccount, (state) => {
+        const current = { ...(state.coachCancellations as Record<string, string> | undefined) }
+        if (body.cancelled) current[sessionDate] = cleanText(body.cancellationReason, 300) || '測試停課'
+        else delete current[sessionDate]
+        return { ...state, coachCancellations: current }
+      })
+      return NextResponse.json({ message: body.cancelled ? '測試課次已標記停課，不影響正式課表。' : '測試課次已恢復。', isolatedTest: true }, { headers: noStoreHeaders })
+    }
+    const allowedIds = new Set(isolatedTestStudentFixtures().map((row) => row.id))
+    const requested = (body.records ?? []).slice(0, 20).map((record) => ({
+      enrollmentId: cleanText(record.enrollmentId, 80), status: record.status, note: cleanText(record.note, 300),
+    })).filter((record) => allowedIds.has(record.enrollmentId) && (record.status === 'unmarked' || attendanceStatuses.has(record.status as CourseAttendanceStatus)))
+    if (!requested.length) return NextResponse.json({ error: '沒有可儲存的測試點名資料。' }, { status: 400, headers: noStoreHeaders })
+    await updateIsolatedTestState(testAccount, (state) => {
+      const all = { ...(state.coachAttendance as Record<string, Record<string, unknown>> | undefined) }
+      const session = { ...(all[sessionDate] ?? {}) }
+      for (const record of requested) {
+        if (record.status === 'unmarked') delete session[record.enrollmentId]
+        else session[record.enrollmentId] = { status: record.status, note: record.note, markedAt: new Date().toISOString() }
+      }
+      all[sessionDate] = session
+      return { ...state, coachAttendance: all }
+    })
+    return NextResponse.json({ message: `已在獨立沙盒儲存 ${requested.length} 位測試學員的點名結果。`, isolatedTest: true }, { headers: noStoreHeaders })
   }
   if (body.intent === 'set_session_cancellation') {
     if (body.cancelled) {

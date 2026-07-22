@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminProfile } from '@/lib/admin-auth'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
+import { getIsolatedTestAccount } from '@/lib/test-account'
 
 export const runtime = 'nodejs'
 
@@ -28,11 +29,13 @@ export async function POST(request: NextRequest) {
 
   const user = await getAuthedUser(request.headers.get('authorization'))
   if (!user) return json({ error: '請先登入。' }, { status: 401 })
-  const [adminProfile, profileResult] = await Promise.all([
+  const [adminProfile, profileResult, testAccount] = await Promise.all([
     getAdminProfile(user),
     supabaseAdmin.from('profiles').select('role').eq('id', user.id).single(),
+    getIsolatedTestAccount(user),
   ])
   const canUploadCoachMedia = ['coach', 'admin'].includes(profileResult.data?.role ?? '')
+    || testAccount?.currentMode === 'coach'
 
   if (request.headers.get('content-type')?.includes('application/json')) {
     const payload = (await request.json().catch(() => null)) as {
@@ -95,7 +98,8 @@ export async function POST(request: NextRequest) {
     return json({ error: `圖片大小必須小於 ${folder === 'coaches' ? 15 : 8} MB。` }, { status: 400 })
   }
 
-  const path = `${folder}/${new Date().toISOString().slice(0, 10)}/${randomUUID()}.${mediaType.extension}`
+  const storageFolder = testAccount && folder === 'coaches' ? `test-accounts/${user.id}` : folder
+  const path = `${storageFolder}/${new Date().toISOString().slice(0, 10)}/${randomUUID()}.${mediaType.extension}`
   const bytes = Buffer.from(await file.arrayBuffer())
   const { error } = await supabaseAdmin.storage.from('site-media').upload(path, bytes, {
     contentType: file.type,

@@ -6,6 +6,7 @@ import { applyCourseOverrides } from '@/lib/managed-courses'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { isPaymentOrderStatus } from '@/lib/payment'
 import { createCourseOrderAccessToken, verifyCourseOrderAccessToken } from '@/lib/order-access'
+import { getIsolatedTestAccount, updateIsolatedTestState } from '@/lib/test-account'
 
 type SignupLeadBody = {
   source?: string
@@ -70,6 +71,12 @@ async function getAuthorizedProfile(request: NextRequest) {
     return { error: NextResponse.json({ error: '請先登入教練或管理員帳號。' }, { status: 401 }) }
   }
 
+  const testAccount = await getIsolatedTestAccount(user)
+  if (testAccount) {
+    if (testAccount.currentMode !== 'coach') return { error: NextResponse.json({ error: '請先切換至教練測試模式。' }, { status: 403 }) }
+    return { profile: { id: user.id, role: 'coach' }, testAccount }
+  }
+
   const { data: profile, error } = await supabaseAdmin
     .from('profiles')
     .select('id, role')
@@ -115,6 +122,17 @@ async function getCoachCourseAccess(profileId: string) {
 export async function GET(request: NextRequest) {
   const auth = await getAuthorizedProfile(request)
   if (auth.error) return auth.error
+
+  const testAccount = 'testAccount' in auth ? auth.testAccount : undefined
+  if (testAccount) {
+    const saved = Array.isArray(testAccount.sandboxState.signupLeads) ? testAccount.sandboxState.signupLeads : null
+    const leads = saved ?? [{
+      id: 'test-signup-1', source: 'group_class', name: '測試報名者', phone: '0900-000-000', email: 'signup@invalid.test', instagram: 'test.runner',
+      preferred_course: '週一測試班', running_experience: '測試資料', goal: '驗證教練端報名流程', companion_count: '0', notes: '獨立沙盒資料',
+      status: 'pending_transfer', created_at: new Date().toISOString(), emergency_contact_name: '測試聯絡人', emergency_contact_phone: '0900-000-001',
+    }]
+    return NextResponse.json({ leads, isolatedTest: true })
+  }
 
   const { searchParams } = new URL(request.url)
   const source = cleanText(searchParams.get('source'))
@@ -334,6 +352,22 @@ export async function PATCH(request: NextRequest) {
 
   if (!isPaymentOrderStatus(status)) {
     return NextResponse.json({ error: '狀態無效。' }, { status: 400 })
+  }
+
+  const testAccount = 'testAccount' in auth ? auth.testAccount : undefined
+  if (testAccount) {
+    const current = Array.isArray(testAccount.sandboxState.signupLeads)
+      ? testAccount.sandboxState.signupLeads as Array<Record<string, unknown>>
+      : [{
+          id: 'test-signup-1', source: 'group_class', name: '測試報名者', phone: '0900-000-000', email: 'signup@invalid.test', instagram: 'test.runner',
+          preferred_course: '週一測試班', running_experience: '測試資料', goal: '驗證教練端報名流程', companion_count: '0', notes: '獨立沙盒資料',
+          status: 'pending_transfer', created_at: new Date().toISOString(), emergency_contact_name: '測試聯絡人', emergency_contact_phone: '0900-000-001',
+        }]
+    const existing = current.find((lead) => lead.id === id)
+    if (!existing) return NextResponse.json({ error: '找不到測試報名資料。' }, { status: 404 })
+    const updated = { ...existing, status, ...(typeof body.notes === 'string' ? { notes } : {}) }
+    await updateIsolatedTestState(testAccount, (state) => ({ ...state, signupLeads: current.map((lead) => lead.id === id ? updated : lead) }))
+    return NextResponse.json({ lead: updated, emailMessage: '', isolatedTest: true })
   }
 
   const { data: existingLead, error: existingLeadError } = await supabaseAdmin!

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminProfile } from '@/lib/admin-auth'
-import { auditCoachDuty, coachDutyPunctuality, loadCoachDutyItems } from '@/lib/coach-session-duty'
+import { auditCoachDuty, coachDutyPunctuality, coachDutyWindow, loadCoachDutyItems } from '@/lib/coach-session-duty'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
+import { getIsolatedMondayCourse, getIsolatedTestAccount, updateIsolatedTestState } from '@/lib/test-account'
 
 const headers = { 'Cache-Control': 'no-store' }
 
@@ -13,6 +14,11 @@ async function requireCoach(request: NextRequest) {
   if (!supabaseAdmin) return { error: NextResponse.json({ error: 'Supabase 尚未設定。' }, { status: 500, headers }) }
   const user = await getAuthedUser(request.headers.get('authorization'))
   if (!user) return { error: NextResponse.json({ error: '請先登入教練帳號。' }, { status: 401, headers }) }
+  const testAccount = await getIsolatedTestAccount(user)
+  if (testAccount) {
+    if (testAccount.currentMode !== 'coach') return { error: NextResponse.json({ error: '請先切換至教練測試模式。' }, { status: 403, headers }) }
+    return { user, isAdmin: false, testAccount }
+  }
   const [{ data: profile }, admin] = await Promise.all([
     supabaseAdmin.from('profiles').select('id, role').eq('id', user.id).maybeSingle(),
     getAdminProfile(user),
@@ -25,6 +31,35 @@ export async function GET(request: NextRequest) {
   const auth = await requireCoach(request)
   if ('error' in auth) return auth.error
   try {
+    const testAccount = 'testAccount' in auth ? auth.testAccount : undefined
+    if (testAccount) {
+      const course = await getIsolatedMondayCourse(testAccount)
+      if (!course) return NextResponse.json({ items: [], coaches: [], isolatedTest: true }, { headers })
+      const checkins = (testAccount.sandboxState.dutyCheckins ?? {}) as Record<string, { checkedInAt: string; punctuality: 'on_time' | 'late' }>
+      const leaves = (testAccount.sandboxState.dutyLeaves ?? {}) as Record<string, { status: 'requested' | 'approved' | 'rejected'; reason: string }>
+      const now = new Date()
+      const items = course.sessionDates.map((sessionDate) => {
+        const id = `test-duty:${sessionDate}`
+        const checkin = checkins[sessionDate]
+        const leave = leaves[sessionDate]
+        const window = coachDutyWindow(sessionDate, course.startTime, now)
+        const attendanceState = checkin?.punctuality
+          ?? (leave?.status === 'approved' ? 'leave_approved' : window.phase === 'missing' ? 'missing_start_time' : window.phase === 'upcoming' ? 'upcoming' : window.phase === 'open' ? 'check_in_open' : 'not_checked_in')
+        return {
+          id, seasonId: course.seasonId, seasonName: course.seasonName, courseSeasonCourseId: course.courseSeasonCourseId,
+          courseSlug: course.courseSlug, courseName: course.courseName, weekday: course.weekday, location: course.location,
+          sessionDate, startTime: course.startTime, timeZone: 'Asia/Taipei', scheduledCoachId: auth.user.id,
+          scheduledCoachName: '測試教練', actualCoachId: auth.user.id, actualCoachName: '測試教練', coachRole: 'coach',
+          leaveStatus: leave?.status ?? 'none', leaveReason: leave?.reason ?? '', recommendedSubstituteId: '', recommendedSubstituteName: '',
+          substituteCoachId: '', substituteCoachName: '', substituteResponse: 'none', adminStatus: leave ? 'pending' : 'not_required', adminReason: '',
+          attendanceState, checkedInAt: checkin?.checkedInAt ?? '', punctuality: checkin?.punctuality ?? '', manualCorrection: false,
+          canCheckIn: !checkin && !leave && window.phase === 'open', checkInOpensAt: window.opensAt?.toISOString() ?? '',
+          canRequestLeave: !checkin && !leave && window.phase !== 'closed', canRespondSubstitute: false,
+          salaryStatus: 'pending_rate', salaryStatusLabel: '待設定課酬', isCancelled: false,
+        }
+      })
+      return NextResponse.json({ items, coaches: [], serverTime: now.toISOString(), timeZone: 'Asia/Taipei', isolatedTest: true }, { headers })
+    }
     const [items, coachesResult] = await Promise.all([
       loadCoachDutyItems({ userId: auth.user.id, isAdmin: auth.isAdmin }),
       supabaseAdmin!.from('profiles').select('id, name, email').in('role', ['coach', 'admin']).order('name'),
@@ -48,6 +83,35 @@ export async function POST(request: NextRequest) {
   const intent = clean(body.intent, 40)
   const assignmentId = clean(body.assignmentId, 80)
   if (!assignmentId) return NextResponse.json({ error: '缺少課次安排。' }, { status: 400, headers })
+
+  const testAccount = 'testAccount' in auth ? auth.testAccount : undefined
+  if (testAccount) {
+    const match = assignmentId.match(/^test-duty:(\d{4}-\d{2}-\d{2})$/)
+    if (!match) return NextResponse.json({ error: '測試課次無效。' }, { status: 404, headers })
+    const sessionDate = match[1]
+    const course = await getIsolatedMondayCourse(testAccount)
+    if (!course || !course.sessionDates.includes(sessionDate)) return NextResponse.json({ error: '測試課次無效。' }, { status: 404, headers })
+    if (intent === 'check_in') {
+      const now = new Date()
+      const punctuality = coachDutyPunctuality(sessionDate, course.startTime, now)
+      if (!punctuality) return NextResponse.json({ error: '目前不在簽到開放時間內；簽到僅限課前 15 分鐘至開課後 15 分鐘。' }, { status: 409, headers })
+      await updateIsolatedTestState(testAccount, (state) => ({
+        ...state,
+        dutyCheckins: { ...(state.dutyCheckins as Record<string, unknown> | undefined), [sessionDate]: { checkedInAt: now.toISOString(), punctuality } },
+      }))
+      return NextResponse.json({ message: punctuality === 'on_time' ? '測試沙盒已記錄準時簽到。' : '測試沙盒已記錄遲到簽到。', isolatedTest: true }, { headers })
+    }
+    if (intent === 'request_leave') {
+      const reason = clean(body.reason, 800)
+      if (!reason) return NextResponse.json({ error: '請填寫請假原因。' }, { status: 400, headers })
+      await updateIsolatedTestState(testAccount, (state) => ({
+        ...state,
+        dutyLeaves: { ...(state.dutyLeaves as Record<string, unknown> | undefined), [sessionDate]: { status: 'requested', reason } },
+      }))
+      return NextResponse.json({ message: '測試請假已寫入獨立沙盒，不會通知真實管理員或教練。', isolatedTest: true }, { headers })
+    }
+    return NextResponse.json({ error: '這項測試操作目前不適用。' }, { status: 400, headers })
+  }
 
   const { data: assignment, error: assignmentError } = await supabaseAdmin!
     .from('coach_session_assignments')

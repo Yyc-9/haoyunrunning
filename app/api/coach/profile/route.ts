@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { coachPublicProfilesFromRows, type CoachPublicProfileRow } from '@/lib/coach-profiles'
 import { isSafePublicUrl } from '@/lib/site-content'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
+import { getIsolatedTestAccount, updateIsolatedTestState } from '@/lib/test-account'
 
 const headers = { 'Cache-Control': 'no-store' }
 
@@ -13,6 +14,16 @@ async function requireCoach(request: NextRequest) {
   if (!supabaseAdmin) return { response: NextResponse.json({ error: 'Supabase 尚未設定。' }, { status: 500 }) }
   const user = await getAuthedUser(request.headers.get('authorization'))
   if (!user) return { response: NextResponse.json({ error: '請先登入教練帳號。' }, { status: 401 }) }
+
+  const testAccount = await getIsolatedTestAccount(user)
+  if (testAccount) {
+    if (testAccount.currentMode !== 'coach') return { response: NextResponse.json({ error: '請先切換至教練測試模式。' }, { status: 403 }) }
+    return {
+      user,
+      testAccount,
+      account: { id: user.id, role: 'coach', name: '測試教練', email: user.email ?? '', nickname: '', bio: '', avatar_url: '' },
+    }
+  }
 
   const { data: account, error } = await supabaseAdmin
     .from('profiles')
@@ -68,6 +79,20 @@ export async function GET(request: NextRequest) {
   const auth = await requireCoach(request)
   if ('response' in auth) return auth.response
 
+  const testAccount = 'testAccount' in auth ? auth.testAccount : undefined
+  if (testAccount) {
+    const avatarUrl = typeof testAccount.sandboxState.coachAvatarUrl === 'string' ? testAccount.sandboxState.coachAvatarUrl : ''
+    return NextResponse.json({
+      profile: {
+        coachKey: 'isolated-test-coach', displayName: '測試教練', nickname: '', role: '週一課程測試教練',
+        bio: '此為獨立測試帳號，不會顯示在公開團隊陣容。', avatarUrl, fullBodyImageUrl: avatarUrl,
+        avatarFocusX: 50, avatarFocusY: 25, fullBodyFocusX: 50, fullBodyFocusY: 20,
+        specialties: ['功能測試'], style: '僅供網站功能驗證', achievements: [], certifications: [], published: false,
+      },
+      account: { name: '測試教練', email: auth.account.email }, isolatedTest: true,
+    }, { headers })
+  }
+
   try {
     const row = await ensureOwnedProfile(auth.account)
     const profile = await loadMergedProfile(row.coach_key)
@@ -85,6 +110,20 @@ export async function PATCH(request: NextRequest) {
   const avatarUrl = cleanText(body.avatarUrl, 2000)
   if (!avatarUrl || !isSafePublicUrl(avatarUrl)) {
     return NextResponse.json({ error: '教練頭像網址格式無效。' }, { status: 400, headers })
+  }
+
+  const testAccount = 'testAccount' in auth ? auth.testAccount : undefined
+  if (testAccount) {
+    await updateIsolatedTestState(testAccount, (state) => ({ ...state, coachAvatarUrl: avatarUrl }))
+    return NextResponse.json({
+      profile: {
+        coachKey: 'isolated-test-coach', displayName: '測試教練', nickname: '', role: '週一課程測試教練',
+        bio: '此為獨立測試帳號，不會顯示在公開團隊陣容。', avatarUrl, fullBodyImageUrl: avatarUrl,
+        avatarFocusX: 50, avatarFocusY: 25, fullBodyFocusX: 50, fullBodyFocusY: 20,
+        specialties: ['功能測試'], style: '僅供網站功能驗證', achievements: [], certifications: [], published: false,
+      },
+      message: '測試教練頭像已更新；不會發布至公開團隊陣容。', isolatedTest: true,
+    }, { headers })
   }
 
   try {

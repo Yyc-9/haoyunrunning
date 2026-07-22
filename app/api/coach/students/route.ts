@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
+import { getIsolatedTestAccount, isolatedTestStudentFixtures } from '@/lib/test-account'
 
 const noStoreHeaders = {
   'Cache-Control': 'no-store',
@@ -20,6 +21,12 @@ export async function GET(request: NextRequest) {
   const user = await getAuthedUser(request.headers.get('authorization'))
   if (!user) {
     return NextResponse.json({ error: '請先登入教練帳號。' }, { status: 401 })
+  }
+
+  const testAccount = await getIsolatedTestAccount(user)
+  if (testAccount) {
+    if (testAccount.currentMode !== 'coach') return NextResponse.json({ error: '請先切換至教練測試模式。' }, { status: 403 })
+    return NextResponse.json({ students: isolatedTestStudentFixtures(), isolatedTest: true }, { headers: noStoreHeaders })
   }
 
   const { data: coachProfile, error: coachError } = await supabaseAdmin

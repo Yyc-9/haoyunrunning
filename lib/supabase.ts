@@ -300,6 +300,14 @@ export async function getMyTrainingFeedback(studentId: string) {
 export async function getMyStudentRaces(studentId: string) {
   if (!supabase) return []
 
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session?.access_token) {
+    const response = await fetch('/api/student/races', { headers: { Authorization: `Bearer ${session.access_token}` } })
+    const payload = await response.json().catch(() => ({})) as { races?: StudentRace[]; error?: string }
+    if (!response.ok) throw new Error(payload.error || '讀取賽事失敗。')
+    return payload.races ?? []
+  }
+
   const { data, error } = await supabase
     .from('student_races')
     .select('*')
@@ -317,6 +325,16 @@ export async function getMyStudentRaces(studentId: string) {
 export async function addMyStudentRace(input: StudentRaceInsert) {
   if (!supabase) {
     throw new Error('Supabase is not configured.')
+  }
+
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session?.access_token) {
+    const response = await fetch('/api/student/races', {
+      method: 'POST', headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(input),
+    })
+    const payload = await response.json().catch(() => ({})) as { race?: StudentRace; error?: string }
+    if (!response.ok || !payload.race) throw new Error(payload.error || '新增賽事失敗。')
+    return payload.race
   }
 
   const { data, error } = await supabase
@@ -339,6 +357,14 @@ export async function addMyStudentRace(input: StudentRaceInsert) {
 export async function removeMyStudentRace(id: string, studentId: string) {
   if (!supabase) {
     throw new Error('Supabase is not configured.')
+  }
+
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session?.access_token) {
+    const response = await fetch(`/api/student/races?id=${encodeURIComponent(id)}`, { method: 'DELETE', headers: { Authorization: `Bearer ${session.access_token}` } })
+    const payload = await response.json().catch(() => ({})) as { error?: string }
+    if (!response.ok) throw new Error(payload.error || '刪除賽事失敗。')
+    return
   }
 
   const { error } = await supabase
