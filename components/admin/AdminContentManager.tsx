@@ -243,6 +243,8 @@ function courseDraft(course: CourseSummary, override?: CourseOverride): CourseOv
     location: override?.location || course.location,
     period: override?.period || course.period,
     classTime: override?.classTime || course.classTime,
+    startTime: override?.startTime || '',
+    timeZone: 'Asia/Taipei',
     meetingPoint: override?.meetingPoint || course.meetingPoint,
     feeNote: override?.feeNote || course.feeNote,
     campaignLabel: override?.campaignLabel || course.campaignLabel,
@@ -420,6 +422,10 @@ export default function AdminContentManager({ content, courses, seasons, scope =
     }
     if (!/(?:[01]\d|2[0-3]):[0-5]\d/.test(String(draft.classTime ?? ''))) {
       setLocalError('上課時間請包含 24 小時制時間，例如 19:27（1.5-2 小時）。')
+      return
+    }
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(String(draft.startTime ?? ''))) {
+      setLocalError('請設定教練簽到使用的課程開始時間，例如 19:30。')
       return
     }
     if (!Number.isInteger(draftCapacity) || draftCapacity < 1 || draftCapacity > 500) {
@@ -824,6 +830,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
               <Field label="城市 / 地點"><input value={String(draft.location ?? '')} onChange={(e) => setDraft((current) => ({ ...current, location: e.target.value }))} className="apple-input" /></Field>
               <Field label="課程週期"><input value={String(draft.period ?? '')} onChange={(e) => setDraft((current) => ({ ...current, period: e.target.value }))} className="apple-input" placeholder="例如 7/14 - 9/29" /></Field>
               <Field label="上課時間"><input value={String(draft.classTime ?? '')} onChange={(e) => setDraft((current) => ({ ...current, classTime: e.target.value }))} className="apple-input" placeholder="例如 19:27（1.5-2 小時）" /></Field>
+              <Field label="簽到判定開始時間"><input type="time" value={String(draft.startTime ?? '')} onChange={(e) => setDraft((current) => ({ ...current, startTime: e.target.value, timeZone: 'Asia/Taipei' }))} className="apple-input" /><span className="mt-1 block text-xs font-semibold text-apple-gray-500">固定使用台灣時間（Asia/Taipei），供教練本人到課簽到判定。</span></Field>
               <Field label="集合地點" wide><input value={String(draft.meetingPoint ?? '')} onChange={(e) => setDraft((current) => ({ ...current, meetingPoint: e.target.value }))} className="apple-input" /></Field>
               <Field label="費用說明"><input value={String(draft.feeNote ?? '')} onChange={(e) => setDraft((current) => ({ ...current, feeNote: e.target.value }))} className="apple-input" /></Field>
               <Field label="班級名額"><input type="number" min={1} max={500} value={draftCapacity} onChange={(e) => setDraftCapacity(Number(e.target.value))} className="apple-input" /></Field>

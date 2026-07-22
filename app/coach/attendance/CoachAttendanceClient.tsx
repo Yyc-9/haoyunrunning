@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, Ban, CalendarCheck2, Check, CircleMinus, Clock3, Loader2, Phone, RefreshCw, RotateCcw, Save, UsersRound } from 'lucide-react'
 import CoachSubNav from '@/components/CoachSubNav'
+import CoachDutyPanel from './CoachDutyPanel'
 import type { CourseAttendanceStatus, CourseMakeupRequest } from '@/lib/course-attendance'
 import { supabase } from '@/lib/supabase'
 
@@ -296,6 +297,8 @@ export default function CoachAttendanceClient() {
 
           {error ? <p className="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-800">{error}</p> : null}
           {message ? <p className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">{message}</p> : null}
+
+          <CoachDutyPanel />
 
           {isLoading && !courses.length ? (
             <div className="py-20 text-center"><Loader2 className="mx-auto h-7 w-7 animate-spin" /><p className="mt-3 text-sm font-semibold text-apple-gray-500">正在讀取課程名單</p></div>

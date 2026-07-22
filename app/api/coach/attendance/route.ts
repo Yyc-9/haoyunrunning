@@ -5,6 +5,7 @@ import { attendanceCourseLabel, taipeiDateKey, type CourseAttendanceStatus } fro
 import { getCourseSeasons } from '@/lib/course-seasons-server'
 import { applyCourseOverrides } from '@/lib/managed-courses'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
+import { syncCoachSessionAssignments } from '@/lib/coach-session-duty'
 
 const noStoreHeaders = { 'Cache-Control': 'no-store' }
 const attendanceStatuses = new Set<CourseAttendanceStatus>(['present', 'excused', 'deducted'])
@@ -67,6 +68,17 @@ async function loadAccess(request: NextRequest) {
     return { response: NextResponse.json({ error: publicProfileError.message }, { status: 500, headers: noStoreHeaders }) }
   }
 
+  await syncCoachSessionAssignments()
+  const { data: sessionAssignments, error: assignmentError } = isAdmin
+    ? { data: [], error: null }
+    : await supabaseAdmin
+        .from('coach_session_assignments')
+        .select('course_season_course_id, session_date, scheduled_coach_id, actual_coach_id, leave_status')
+        .or(`scheduled_coach_id.eq.${user.id},actual_coach_id.eq.${user.id}`)
+  if (assignmentError) {
+    return { response: NextResponse.json({ error: assignmentError.message }, { status: 500, headers: noStoreHeaders }) }
+  }
+
   const relevantSeasons = seasons.filter((season) => season.isCurrent || ['enrolling', 'active'].includes(season.status))
   const activeSeasons = relevantSeasons.length ? relevantSeasons : seasons.slice(0, 1)
   const courseNames = new Map<string, string>()
@@ -80,7 +92,15 @@ async function loadAccess(request: NextRequest) {
       if (!courseSeasonCourseId || !billingConfig?.scheduleReady) return []
 
       const coachKeys = season.courseOverrides[course.slug]?.coachKeys ?? getDefaultCourseCoachKeys(course.slug)
-      if (!isAdmin && (!publicProfile?.coach_key || !coachKeys.includes(publicProfile.coach_key))) return []
+      const isRegularCoach = Boolean(publicProfile?.coach_key && coachKeys.includes(publicProfile.coach_key))
+      const allowedSessionDates = isAdmin
+        ? billingConfig.sessionDates
+        : (sessionAssignments ?? [])
+            .filter((assignment) => assignment.course_season_course_id === courseSeasonCourseId)
+            .filter((assignment) => assignment.actual_coach_id === user.id || (assignment.scheduled_coach_id === user.id && assignment.leave_status !== 'approved'))
+            .map((assignment) => assignment.session_date)
+      if (!isAdmin && !isRegularCoach && allowedSessionDates.length === 0) return []
+      if (!isAdmin && allowedSessionDates.length === 0) return []
 
       return [{
         seasonId: season.id,
@@ -91,7 +111,7 @@ async function loadAccess(request: NextRequest) {
         weekday: course.weekday,
         location: course.location,
         meetingPoint: course.meetingPoint || '',
-        sessionDates: billingConfig.sessionDates,
+        sessionDates: [...new Set(allowedSessionDates)].sort(),
       }]
     })
   })

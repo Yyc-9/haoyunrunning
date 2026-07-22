@@ -930,6 +930,9 @@ export async function PATCH(request: NextRequest) {
     if (!Number.isInteger(capacity) || capacity < 1 || capacity > 500) {
       return json({ error: '班級名額必須是 1 至 500 之間的整數。' }, { status: 400 })
     }
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(normalized.startTime || '')) {
+      return json({ error: '請設定有效的課程開始時間，才能進行教練到課簽到。' }, { status: 400 })
+    }
 
     const { data: season, error: seasonError } = await supabaseAdmin!
       .from('course_seasons')
@@ -969,6 +972,8 @@ export async function PATCH(request: NextRequest) {
         course_data: normalized,
         capacity,
         billing_config: billingConfig,
+        start_time: normalized.startTime,
+        time_zone: 'Asia/Taipei',
       }, { onConflict: 'season_id,course_slug' })
       .select('id, season_id, course_slug, course_data, capacity, billing_config')
       .single()

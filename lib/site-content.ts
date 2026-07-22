@@ -23,6 +23,8 @@ export type CourseOverride = {
   location?: string
   period?: string
   classTime?: string
+  startTime?: string
+  timeZone?: 'Asia/Taipei'
   meetingPoint?: string
   feeNote?: string
   campaignLabel?: string
@@ -382,6 +384,8 @@ export function normalizeCourseOverrides(value: unknown): Record<string, CourseO
       location: cleanString(override.location, 100),
       period: cleanString(override.period, 160),
       classTime: cleanString(override.classTime, 200),
+      startTime: /^([01]\d|2[0-3]):[0-5]\d$/.test(cleanString(override.startTime, 5)) ? cleanString(override.startTime, 5) : '',
+      timeZone: 'Asia/Taipei',
       meetingPoint: cleanString(override.meetingPoint, 300),
       feeNote: cleanString(override.feeNote, 300),
       campaignLabel: cleanString(override.campaignLabel, 120),

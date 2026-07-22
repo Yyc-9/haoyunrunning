@@ -32,6 +32,8 @@ type SeasonCourseRow = {
   course_data: unknown
   capacity: number
   billing_config: unknown
+  start_time: string | null
+  time_zone: string
 }
 
 type SeasonRegistrationRow = {
@@ -53,7 +55,7 @@ export async function getCourseSeasons(options: { includeRegistrationStats?: boo
       .order('code', { ascending: false }),
     supabaseAdmin
       .from('course_season_courses')
-      .select('id, season_id, course_slug, course_data, capacity, billing_config'),
+      .select('id, season_id, course_slug, course_data, capacity, billing_config, start_time, time_zone'),
   ])
   const registrationsResult = options.includeRegistrationStats === false
     ? { data: [] as SeasonRegistrationRow[], error: null }
@@ -87,7 +89,11 @@ export async function getCourseSeasons(options: { includeRegistrationStats?: boo
       courseOverrides: Object.fromEntries(
         seasonCourses.map((course) => [
           course.course_slug,
-          normalizeCourseOverrides({ [course.course_slug]: course.course_data })[course.course_slug] ?? {},
+          {
+            ...(normalizeCourseOverrides({ [course.course_slug]: course.course_data })[course.course_slug] ?? {}),
+            startTime: course.start_time?.slice(0, 5) ?? '',
+            timeZone: 'Asia/Taipei' as const,
+          },
         ])
       ),
       courseCapacities: Object.fromEntries(seasonCourses.map((course) => [course.course_slug, course.capacity])),

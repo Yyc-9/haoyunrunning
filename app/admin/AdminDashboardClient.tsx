@@ -30,6 +30,7 @@ import AdminEnrollmentAnalytics from '@/components/admin/AdminEnrollmentAnalytic
 import AdminProductCreator from '@/components/admin/AdminProductCreator'
 import AdminProductEditor, { type AdminEditableProduct } from '@/components/admin/AdminProductEditor'
 import AdminBankReconciliation from '@/components/admin/AdminBankReconciliation'
+import AdminCoachDuty from '@/components/admin/AdminCoachDuty'
 import { paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
 import { announceSiteContentUpdated } from '@/lib/site-content-sync'
 
@@ -645,6 +646,7 @@ export default function AdminDashboardClient() {
 
           {activeTab === 'students' && data ? (
             <section className="apple-card overflow-hidden">
+              <AdminCoachDuty />
               <div className="border-b border-black/10 p-5">
                 <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
                   <div>
