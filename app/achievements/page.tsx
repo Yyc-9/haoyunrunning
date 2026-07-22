@@ -136,7 +136,7 @@ export default function AchievementsPage() {
           <div className="max-w-3xl">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9a742d]">THE COLLECTION</p>
             <h2 className="mt-3 text-3xl font-black text-apple-gray-950 sm:text-4xl">全系列五款榮耀徽章</h2>
-            <p className="mt-4 text-base leading-8 text-apple-gray-600">四款對應全馬與半馬達標標準，第五款 BQ Pride 獻給完成波士頓馬拉松的跑者。</p>
+            <p className="mt-4 text-base leading-8 text-apple-gray-600">四款對應全馬與半馬達標標準，第五款 BQ Pride 獻給完成波士頓馬拉鬆的跑者。</p>
           </div>
 
           <div className="mt-9 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
@@ -159,7 +159,7 @@ export default function AchievementsPage() {
             <div className="relative min-h-[28rem]">
               <Image
                 src="/achievements/2026/bq-pride.jpg"
-                alt="BQ Pride 波士頓馬拉松完賽徽章"
+                alt="BQ Pride 波士頓馬拉鬆完賽徽章"
                 fill
                 sizes="(max-width: 1023px) 100vw, 45vw"
                 className="object-cover"
@@ -168,7 +168,7 @@ export default function AchievementsPage() {
             <div className="flex flex-col justify-center p-6 sm:p-8 lg:p-10">
               <p className="text-xs font-black uppercase tracking-[0.16em] text-[#8b6620]">BOSTON MARATHON SPECIAL</p>
               <h3 className="mt-3 text-3xl font-black text-[#17120d] sm:text-4xl">BQ Pride</h3>
-              <p className="mt-2 text-lg font-black text-[#8b6620]">獻給真正完成波士頓馬拉松的你</p>
+              <p className="mt-2 text-lg font-black text-[#8b6620]">獻給真正完成波士頓馬拉鬆的你</p>
               <p className="mt-5 text-base leading-8 text-[#5c5040]">
                 融合 U 型馬蹄鐵，象徵幸運與實力的累積；代表突破自我、邁向波士頓的榮耀門檻。這不只是成績，而是屬於你的堅持與驕傲。
               </p>
@@ -177,7 +177,7 @@ export default function AchievementsPage() {
                   <FileCheck2 className="h-4 w-4" />
                   申請資格
                 </p>
-                <p className="mt-2 text-sm leading-7 text-[#5c5040]">提供當年度波士頓馬拉松正式完賽證明，經核對後依當期公告領取。</p>
+                <p className="mt-2 text-sm leading-7 text-[#5c5040]">提供當年度波士頓馬拉鬆正式完賽證明，經核對後依當期公告領取。</p>
               </div>
             </div>
           </article>
@@ -228,7 +228,7 @@ export default function AchievementsPage() {
 
           <div className="space-y-5">
             <div className="relative aspect-square overflow-hidden rounded-2xl bg-white shadow-sm">
-              <Image src="/achievements/2026/collection-cards.jpg" alt="好運榮耀徽章完整收藏卡" fill sizes="(max-width: 1023px) 100vw, 36vw" className="object-cover" />
+              <Image src="/achievements/2026/badge-in-hand.jpg" alt="跑者手持好運半馬榮耀徽章" fill sizes="(max-width: 1023px) 100vw, 36vw" className="object-cover" />
             </div>
             <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
               <div className="flex items-start gap-3">
