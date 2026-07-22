@@ -65,7 +65,10 @@ export default function AchievementsPage() {
         <div className="container mx-auto grid max-w-7xl gap-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(520px,1.15fr)] lg:items-center">
           <div>
             <p className="text-sm font-black uppercase tracking-[0.18em] text-[#d6b66c]">SUB SERIES · SINCE 2025</p>
-            <h1 className="mt-4 text-4xl font-black leading-tight sm:text-5xl lg:text-6xl">好運跑班限定 SUB 系列榮耀徽章</h1>
+            <h1 className="mt-4 text-4xl font-black leading-tight sm:text-5xl lg:text-6xl">
+              <span className="block">好運跑班限定</span>
+              <span className="block whitespace-nowrap">SUB 系列榮耀徽章</span>
+            </h1>
             <p className="mt-5 max-w-2xl text-lg font-bold leading-8 text-white/90">
               每一步的汗水與堅持，都值得被紀念。
             </p>
@@ -108,7 +111,7 @@ export default function AchievementsPage() {
           </div>
           <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm sm:p-8 lg:p-10">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9a742d]">THE ORIGIN</p>
-            <h2 className="mt-3 text-3xl font-black text-apple-gray-950 sm:text-4xl">為什麼要做一套屬於跑者的徽章？</h2>
+            <h2 className="mt-3 text-3xl font-black text-apple-gray-950 sm:text-4xl">SUB 系列榮耀徽章的誕生。</h2>
             <div className="mt-5 space-y-4 text-base leading-8 text-apple-gray-600">
               <p>始於 2025 年，好運跑班以跑者追逐目標的歷程為靈感，打造專屬於跑班成員的 SUB 系列榮耀徽章。</p>
               <p>從 2025 年初開始企劃設計，歷經數個月的反覆討論與製作，於 2025 年 4 月完成首批實體徽章，並於同年 6 月好運跑班週年慶首次頒發給達成目標的跑班學員，正式開啟 SUB 系列的第一個里程碑。</p>
@@ -185,8 +188,8 @@ export default function AchievementsPage() {
         <div className="container mx-auto max-w-7xl">
           <div className="max-w-3xl">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[#d6b66c]">MILESTONE CARDS</p>
-            <h2 className="mt-3 text-3xl font-black sm:text-4xl">每一道成績，都有一張專屬紀念</h2>
-            <p className="mt-4 text-sm leading-7 text-white/65 sm:text-base">達標紀念卡會和榮耀徽章一起留下賽事、成績與跑者姓名，讓突破不只存在於成績查詢頁裡。</p>
+            <h2 className="mt-3 text-3xl font-black sm:text-4xl">每一次突破，都值得留下紀念。</h2>
+            <p className="mt-4 text-sm leading-7 text-white/65 sm:text-base">達標紀念卡將與榮耀徽章一同記錄賽事與成績，讓每一次突破，不只停留在成績查詢頁，而是真正成為值得珍藏的回憶。</p>
           </div>
           <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {[
