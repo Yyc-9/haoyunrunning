@@ -5,9 +5,10 @@ import Link from 'next/link'
 import { CheckCircle2, ExternalLink, Loader2, RefreshCw, ShieldCheck, WalletCards } from 'lucide-react'
 import { useAuth } from '@/app/providers'
 import { useSiteContent } from '@/app/site-content-provider'
+import ProtectedCoursePaymentInfo from '@/components/ProtectedCoursePaymentInfo'
 import { COURSE_CAPACITY, type CourseAvailability, type LegacyStudentStatus, type MyCourseEnrollment } from '@/lib/course-registration'
 import type { CoursePricingOptions } from '@/lib/course-pricing'
-import { paymentOrderStatusLabels } from '@/lib/payment'
+import { paymentOrderStatusDescriptions, paymentOrderStatusLabels } from '@/lib/payment'
 import { supabase } from '@/lib/supabase'
 import DirectCourseRegistrationForm from './DirectCourseRegistrationForm'
 
@@ -99,7 +100,7 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
 
     try {
       const { data: { session } } = supabase ? await supabase.auth.getSession() : { data: { session: null } }
-      if (!session?.access_token) throw new Error('請先登入後再提交付款資料。')
+      if (!session?.access_token) throw new Error('請先登入後再提交匯款資料。')
 
       const response = await fetch('/api/course-enrollments', {
         method: 'PATCH',
@@ -110,12 +111,12 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
         body: JSON.stringify({ leadId: enrollment.id, transferLastFive, notes }),
       })
       const payload = (await response.json().catch(() => ({}))) as RegistrationPayload
-      if (!response.ok || !payload.enrollment) throw new Error(payload.error || '付款資料提交失敗。')
+      if (!response.ok || !payload.enrollment) throw new Error(payload.error || '匯款資料提交失敗。')
 
       setEnrollment(payload.enrollment)
-      setSuccess('付款資料已送出，銀行流水與申報資料相符並經財務確認後，狀態會更新為已確認。')
+      setSuccess('匯款資料已送出；銀行流水與申報資料相符並經財務確認後，狀態會更新為已確認。')
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : '付款資料提交失敗。')
+      setError(submitError instanceof Error ? submitError.message : '匯款資料提交失敗。')
     } finally {
       setIsSubmitting(false)
     }
@@ -173,7 +174,7 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
             <div className="px-6 py-12 text-center sm:px-10">
               <ShieldCheck className="mx-auto h-10 w-10 text-apple-blue" />
               <h2 className="mt-5 text-2xl font-black">登入後填寫網站報名表</h2>
-              <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-apple-gray-600">網站會使用登入信箱建立報名記錄，避免重複報名並讓你隨時查看付款審核狀態。</p>
+              <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-apple-gray-600">網站會使用登入信箱建立報名記錄，避免重複報名並讓你隨時查看匯款核對狀態。</p>
               <Link href={`/courses/${course.slug}/register?auth=login`} className="apple-button-primary mt-6 w-full sm:w-fit">登入並開始填寫</Link>
             </div>
           ) : enrollment ? (
@@ -202,7 +203,7 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
               pricingOptions={pricingOptions}
               onSubmitted={(submittedEnrollment) => {
                 setEnrollment(submittedEnrollment)
-                setSuccess('報名與付款資料已送出，管理員核對後會更新為已付款。')
+                setSuccess('報名與匯款資料已送出，待財務比對銀行流水後更新結果。')
               }}
             />
           )}
@@ -224,7 +225,7 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
               <div className="mt-5 flex items-center gap-2 text-sm text-apple-gray-600"><Loader2 className="h-4 w-4 animate-spin" />正在同步狀態</div>
             ) : !isLoggedIn ? (
               <div className="mt-5">
-                <p className="text-sm leading-6 text-apple-gray-600">請先登入，再於網站內填寫報名與付款資料。</p>
+                <p className="text-sm leading-6 text-apple-gray-600">請先登入，再於網站內填寫報名與匯款資料。</p>
                 <Link href={`/courses/${course.slug}/register?auth=login`} className="apple-button-primary mt-4 w-full">登入查看狀態</Link>
               </div>
             ) : !enrollment ? (
@@ -236,6 +237,7 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
               <div className="mt-5">
                 <div className={`rounded-lg border px-4 py-3 text-sm font-bold ${statusTone[enrollment.status]}`}>
                   {paymentOrderStatusLabels['zh-TW'][enrollment.status]}
+                  <p className="mt-1 text-xs font-semibold leading-5 opacity-80">{paymentOrderStatusDescriptions[enrollment.status]}</p>
                 </div>
                 <dl className="mt-4 space-y-3 text-sm">
                   <div><dt className="text-apple-gray-500">報名課程</dt><dd className="mt-1 font-bold text-apple-gray-900">{enrollment.courseName}</dd></div>
@@ -251,9 +253,12 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
           {canSubmitTransfer ? (
             <section className="rounded-lg border border-black/10 bg-white p-5">
               <div className="flex items-center gap-2"><WalletCards className="h-5 w-5" /><h2 className="font-black">完成匯款後回報</h2></div>
-              <p className="mt-2 text-sm leading-6 text-apple-gray-600">依網站報名表內的收款資料完成匯款，再填寫付款帳號後五碼。</p>
+              <p className="mt-2 text-sm leading-6 text-apple-gray-600">依下方收款資料完成匯款，再填寫匯款帳號後五碼。</p>
+              <div className="mt-4 overflow-hidden rounded-lg border border-black/10 bg-[#f5f1eb] p-2">
+                <ProtectedCoursePaymentInfo courseSlug={course.slug} />
+              </div>
               <label className="mt-4 block">
-                <span className="mb-2 block text-xs font-bold text-apple-gray-500">付款帳號後五碼</span>
+                <span className="mb-2 block text-xs font-bold text-apple-gray-500">匯款帳號後五碼</span>
                 <input inputMode="numeric" maxLength={5} value={transferLastFive} onChange={(event) => setTransferLastFive(event.target.value.replace(/\D/g, '').slice(0, 5))} className="apple-input" placeholder="例如 12345" />
               </label>
               <label className="mt-3 block">
@@ -262,7 +267,7 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
               </label>
               <button type="button" disabled={isSubmitting || transferLastFive.length !== 5} onClick={submitTransfer} className="apple-button-primary mt-4 w-full gap-2 disabled:cursor-not-allowed disabled:opacity-40">
                 {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                確認已付款
+                送出匯款資料
               </button>
             </section>
           ) : null}

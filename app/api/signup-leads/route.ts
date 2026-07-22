@@ -345,7 +345,10 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: existingLeadError?.message || '找不到報名資料。' }, { status: 404 })
   }
   if (existingLead.source === 'course_payment' && auth.profile.role !== 'admin') {
-    return NextResponse.json({ error: '課程付款只能由管理員在管理後台核對。' }, { status: 403 })
+    return NextResponse.json({ error: '課程匯款只能由管理員在管理後台核對。' }, { status: 403 })
+  }
+  if (existingLead.source === 'course_payment' && status === 'approved') {
+    return NextResponse.json({ error: '課程匯款必須由銀行對帳確認，不能直接改為已確認。' }, { status: 409 })
   }
 
   const updatePayload: { status: string; notes?: string; reviewed_at?: string; review_note?: string } = { status }
@@ -375,7 +378,7 @@ export async function PATCH(request: NextRequest) {
   if (error || !data) {
     const capacityReached = /course capacity reached/i.test(error?.message ?? '')
     return NextResponse.json(
-      { error: capacityReached ? '這個班級已達目前設定的名額上限，不能再核准新的付款。' : error?.message || '報名資料更新失敗。' },
+      { error: capacityReached ? '這個班級已達目前設定的名額上限，不能再確認新的匯款。' : error?.message || '報名資料更新失敗。' },
       { status: capacityReached ? 409 : 500 }
     )
   }

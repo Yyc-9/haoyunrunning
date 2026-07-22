@@ -15,7 +15,11 @@ export async function generateMetadata({ params }: CourseRegistrationPageProps) 
   const course = (await getManagedCourses({ includeInactive: true })).find((item) => item.slug === slug)
   return {
     title: course ? `${course.name}報名 - 好運跑班` : '課程報名 - 好運跑班',
-    description: course ? `在好運網站填寫 ${course.name} 報名資料並查看付款狀態。` : '好運跑班課程報名。',
+    description: course ? `在好運網站填寫 ${course.name} 報名資料並查看匯款核對狀態。` : '好運跑班課程報名。',
+    robots: {
+      index: false,
+      follow: false,
+    },
   }
 }
 

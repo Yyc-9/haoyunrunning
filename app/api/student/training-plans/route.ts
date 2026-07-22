@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       count: 0,
       weekStart: getTodayInfo().weekStart,
       accessState,
-      message: '你的付款資料正在等待銀行對帳，確認入帳後將自動開通課表。',
+      message: '你的匯款資料正在等待銀行對帳，確認入帳後將自動開通課表。',
     })
   }
 

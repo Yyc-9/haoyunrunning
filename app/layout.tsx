@@ -10,8 +10,27 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import { SiteContentProvider } from './site-content-provider'
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://nurturerunningteam.com'),
   title: '好運跑班 - 科學訓練，跑出好運',
-  description: '專業跑步訓練平台，提供科學訓練方案與個人化指導',
+  description: '好運跑班提供系統化跑步訓練、團體課程與教練指導，陪伴跑者穩定累積、備戰目標賽事。',
+  openGraph: {
+    type: 'website',
+    locale: 'zh_TW',
+    siteName: '好運跑班',
+    title: '好運跑班 - 科學訓練，跑出好運',
+    description: '系統化跑步訓練、團體課程與教練指導，陪伴跑者穩定累積、備戰目標賽事。',
+    images: [{ url: '/goodluck-anniversary-7089.jpg', alt: '好運跑班團隊與學員' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: '好運跑班 - 科學訓練，跑出好運',
+    description: '系統化跑步訓練、團體課程與教練指導。',
+    images: ['/goodluck-anniversary-7089.jpg'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
   icons: {
     icon: [{ url: '/goodluck-logo-nav.jpg', type: 'image/jpeg' }],
     apple: '/goodluck-logo-nav.jpg',
@@ -47,7 +66,7 @@ export default function RootLayout({
             </AuthProvider>
           </SiteContentProvider>
         </LanguageProvider>
-        <SpeedInsights />
+        {process.env.VERCEL ? <SpeedInsights /> : null}
       </body>
     </html>
   )

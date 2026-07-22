@@ -1,8 +1,10 @@
+import type { Metadata } from 'next'
 import CoursesSection from '@/components/CoursesSection'
 
-export const metadata = {
+export const metadata: Metadata = {
   title: '訓練課程 - 好運跑班',
-  description: '探索好運跑班的專業訓練課程，適合各個水平的跑者',
+  description: '查看好運跑班本季度課表、上課地點、訓練方向與課程報名資訊。',
+  alternates: { canonical: '/courses' },
 }
 
 export default function CoursesPage() {

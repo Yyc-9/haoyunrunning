@@ -32,6 +32,13 @@ export const paymentOrderStatusLabels = {
   },
 } as const
 
+export const paymentOrderStatusDescriptions: Record<PaymentOrderStatus, string> = {
+  pending_transfer: '尚未提交匯款帳號後五碼。',
+  pending_review: '已提交後五碼與申報金額，等待比對銀行流水。',
+  approved: '後五碼與金額相符，且已由財務確認。',
+  rejected: '金額不符、後五碼重複、重複報名或找不到銀行流水，需由管理員處理。',
+}
+
 export function isPaymentOrderStatus(value: string): value is PaymentOrderStatus {
   return paymentOrderStatuses.includes(value as PaymentOrderStatus)
 }

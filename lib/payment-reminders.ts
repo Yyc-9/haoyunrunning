@@ -6,6 +6,7 @@ type PendingTransferLead = {
   name: string
   email: string
   preferred_course: string
+  course_slug: string | null
   created_at: string
 }
 
@@ -32,7 +33,7 @@ export async function checkPendingTransferReminders(options: { dryRun?: boolean;
 
   const { data, error } = await supabaseAdmin
     .from('signup_leads')
-    .select('id, name, email, preferred_course, created_at')
+    .select('id, name, email, preferred_course, course_slug, created_at')
     .eq('source', 'course_payment')
     .eq('status', 'pending_transfer')
     .not('email', 'is', null)
@@ -69,6 +70,7 @@ export async function checkPendingTransferReminders(options: { dryRun?: boolean;
       to: lead.email,
       studentName: lead.name,
       courseName: lead.preferred_course,
+      courseSlug: lead.course_slug ?? '',
     })
 
     results.push({

@@ -32,6 +32,28 @@ export const courseSeasonStatusLabels: Record<CourseSeasonStatus, string> = {
   archived: '已封存',
 }
 
+function taipeiDateKey(date: Date) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date)
+}
+
+export function isCourseSeasonPubliclyAvailable(season: CourseSeason) {
+  return season.isCurrent && (season.status === 'enrolling' || season.status === 'active')
+}
+
+export function isCourseSeasonEnrollmentOpen(season: CourseSeason, now = new Date()) {
+  if (!isCourseSeasonPubliclyAvailable(season)) return false
+
+  const today = taipeiDateKey(now)
+  if (season.enrollmentStartsOn && today < season.enrollmentStartsOn) return false
+  if (season.enrollmentEndsOn && today > season.enrollmentEndsOn) return false
+  return true
+}
+
 export function applyCourseSeasonToContent(content: SiteContent, season: CourseSeason | null) {
   return season ? { ...content, courseOverrides: season.courseOverrides } : content
 }

@@ -34,7 +34,7 @@ export async function sendCourseEnrollmentApprovedEmail(input: {
   const apiKey = process.env.RESEND_API_KEY
   const from = process.env.ENROLLMENT_EMAIL_FROM || process.env.RESEND_FROM_EMAIL
 
-  if (!apiKey || !from) return '郵件服務尚未設定，已完成核准但未發送郵件。'
+  if (!apiKey || !from) return '郵件服務尚未設定，已完成對帳但未發送郵件。'
 
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -45,15 +45,15 @@ export async function sendCourseEnrollmentApprovedEmail(input: {
     body: JSON.stringify({
       from,
       to: input.to,
-      subject: '好運跑班報名付款已確認',
-      text: `${input.studentName || '同學'}你好：你的 ${input.courseName || '已報名課程'} 報名付款已經核准，報名確認完成。後續課程通知將另行聯絡。`,
+      subject: '好運跑班銀行入帳已確認',
+      text: `${input.studentName || '同學'}你好：你的 ${input.courseName || '已報名課程'} 匯款已與銀行入帳紀錄核對完成，課程報名已確認。後續課程通知將另行聯絡。`,
     }),
   })
 
   if (!response.ok) {
     console.warn('[finance] Enrollment approved email failed.', { status: response.status })
-    return '核准已完成，但郵件發送失敗，請稍後檢查郵件服務設定。'
+    return '對帳已完成，但郵件發送失敗，請稍後檢查郵件服務設定。'
   }
 
-  return '核准已完成，並已發送報名確認郵件。'
+  return '對帳已完成，並已發送報名確認郵件。'
 }

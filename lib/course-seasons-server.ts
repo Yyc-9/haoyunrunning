@@ -1,7 +1,12 @@
 import 'server-only'
 
 import { normalizeCourseOverrides } from '@/lib/site-content'
-import type { CourseSeason, CourseSeasonStatus } from '@/lib/course-seasons'
+import {
+  isCourseSeasonEnrollmentOpen,
+  isCourseSeasonPubliclyAvailable,
+  type CourseSeason,
+  type CourseSeasonStatus,
+} from '@/lib/course-seasons'
 import { defaultCourseBillingConfig, normalizeCourseBillingConfig } from '@/lib/course-pricing'
 import { allCourses } from '@/lib/goodluck-data'
 import { supabaseAdmin } from '@/lib/supabase-server'
@@ -107,7 +112,11 @@ export async function getCourseSeasons(options: { includeRegistrationStats?: boo
   })
 }
 
-export async function getCurrentCourseSeason() {
+export async function getCurrentCourseSeason(options: { forEnrollment?: boolean } = {}) {
   const seasons = await getCourseSeasons({ includeRegistrationStats: false })
-  return seasons.find((season) => season.isCurrent) ?? null
+  return seasons.find((season) => (
+    options.forEnrollment
+      ? isCourseSeasonEnrollmentOpen(season)
+      : isCourseSeasonPubliclyAvailable(season)
+  )) ?? null
 }

@@ -10,6 +10,7 @@ type TransferReminderEmailInput = {
   to: string
   studentName: string
   courseName: string
+  courseSlug: string
 }
 
 type EmailResult = {
@@ -77,7 +78,7 @@ async function sendEmail(input: { to: string; subject: string; text: string; htm
 }
 
 export async function sendEnrollmentApprovedEmail(input: EnrollmentApprovedEmailInput): Promise<EmailResult> {
-  const subject = '好運跑班報名付款已確認'
+  const subject = '好運跑班銀行入帳已確認'
   const studentName = input.studentName || '同學'
   const courseName = input.courseName || '已報名課程'
   const safeStudentName = escapeHtml(studentName)
@@ -86,20 +87,20 @@ export async function sendEnrollmentApprovedEmail(input: EnrollmentApprovedEmail
   return sendEmail({
     to: input.to,
     subject,
-    text: `${studentName}你好：\n\n你的 ${courseName} 報名付款已經核准，報名確認完成。\n\n後續集合時間、地點與課程通知將由好運跑班另行聯絡。\n\n好運跑班`,
+    text: `${studentName}你好：\n\n你的 ${courseName} 匯款已與銀行入帳紀錄核對完成，課程報名已確認。\n\n後續集合時間、地點與課程通知將由好運跑班另行聯絡。\n\n好運跑班`,
     html: `
         <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.7;color:#111827;">
-          <h2>報名付款已確認</h2>
+          <h2>銀行入帳已確認</h2>
           <p>${safeStudentName}你好：</p>
-          <p>你的 <strong>${safeCourseName}</strong> 報名付款已經核准，報名確認完成。</p>
+          <p>你的 <strong>${safeCourseName}</strong> 匯款已與銀行入帳紀錄核對完成，課程報名已確認。</p>
           <p>後續集合時間、地點與課程通知將由好運跑班另行聯絡。</p>
           <p>好運跑班</p>
         </div>
       `,
     skipLog: '[email] Enrollment approved email skipped: RESEND_API_KEY or sender env is missing.',
-    skipMessage: '郵件服務尚未設定，已完成核准但未發送郵件。',
-    failMessage: '核准已完成，但郵件發送失敗，請稍後檢查郵件服務設定。',
-    successMessage: '核准已完成，並已發送報名確認郵件。',
+    skipMessage: '郵件服務尚未設定，已完成對帳但未發送郵件。',
+    failMessage: '對帳已完成，但郵件發送失敗，請稍後檢查郵件服務設定。',
+    successMessage: '對帳已完成，並已發送報名確認郵件。',
   })
 }
 
@@ -108,18 +109,22 @@ export async function sendTransferReminderEmail(input: TransferReminderEmailInpu
   const courseName = input.courseName || '已報名課程'
   const safeStudentName = escapeHtml(studentName)
   const safeCourseName = escapeHtml(courseName)
+  const siteOrigin = (process.env.NEXT_PUBLIC_SITE_URL || 'https://nurturerunningteam.com').replace(/\/$/, '')
+  const statusUrl = input.courseSlug
+    ? `${siteOrigin}/courses/${encodeURIComponent(input.courseSlug)}/register`
+    : `${siteOrigin}/payment`
 
   return sendEmail({
     to: input.to,
     subject: '提醒填寫銀行帳號後五碼',
-    text: `${studentName}你好：\n\n你已經確認報名 ${courseName}，目前系統還沒有收到你的銀行帳號後五碼。\n\n完成匯款後，請回到網站付款頁填寫後五碼，方便我們人工核對並確認報名。\n\n付款頁：https://nurturerunningteam.com/payment\n\n好運跑班`,
+    text: `${studentName}你好：\n\n你已完成 ${courseName} 課程報名，但目前尚未提交匯款帳號後五碼。\n\n完成匯款後，請回到報名與匯款狀態頁回報後五碼，我們會依銀行入帳紀錄人工核對。\n\n回報頁：${statusUrl}\n\n好運跑班`,
     html: `
       <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.7;color:#111827;">
         <h2>提醒填寫銀行帳號後五碼</h2>
         <p>${safeStudentName}你好：</p>
-        <p>你已經確認報名 <strong>${safeCourseName}</strong>，目前系統還沒有收到你的銀行帳號後五碼。</p>
-        <p>完成匯款後，請回到網站付款頁填寫後五碼，方便我們人工核對並確認報名。</p>
-        <p><a href="https://nurturerunningteam.com/payment">回到付款頁填寫後五碼</a></p>
+        <p>你已完成 <strong>${safeCourseName}</strong> 課程報名，但目前尚未提交匯款帳號後五碼。</p>
+        <p>完成匯款後，請回到報名與匯款狀態頁回報後五碼，我們會依銀行入帳紀錄人工核對。</p>
+        <p><a href="${statusUrl}">回報匯款後五碼</a></p>
         <p>好運跑班</p>
       </div>
     `,

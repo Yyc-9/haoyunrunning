@@ -1,7 +1,6 @@
 'use client'
 
 import { useMemo, useRef, useState } from 'react'
-import Image from 'next/image'
 import {
   ArrowLeft,
   ArrowRight,
@@ -18,6 +17,7 @@ import {
 import type { Course } from '@/lib/goodluck-data'
 import type { LegacyStudentStatus, MyCourseEnrollment } from '@/lib/course-registration'
 import type { CoursePricingOptions, CourseRegistrationQuote } from '@/lib/course-pricing'
+import ProtectedCoursePaymentInfo from '@/components/ProtectedCoursePaymentInfo'
 import {
   coursePolicyRules,
   invoiceDeliveryOptions,
@@ -40,7 +40,7 @@ type RegistrationResponse = {
   error?: string
 }
 
-const steps = ['課程確認', '規範同意', '報名資料', '付款發票'] as const
+const steps = ['課程確認', '規範同意', '報名資料', '匯款與發票'] as const
 
 const initialForm: DirectCourseRegistration = {
   studentType: 'new',
@@ -168,7 +168,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
 
     if (currentStep === 3) {
       if (!pricingQuote || !form.quoteToken || !/^\d{5}$/.test(form.transferLastFive)) {
-        showError('請確認系統計算的費用，並填寫付款帳號後五碼。')
+        showError('請確認系統計算的費用，並填寫匯款帳號後五碼。')
         return false
       }
       if (!form.invoiceDelivery || !form.invoiceDetail || !form.finalConsent) {
@@ -428,7 +428,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
               ) : null}
             </section>
 
-            <p className="mt-5 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-800">資料僅供好運跑班進行課程聯絡、付款核對與安全照護使用。</p>
+            <p className="mt-5 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-800">資料僅供好運跑班進行課程聯絡、匯款核對與安全照護使用。</p>
 
             <div className="mt-6 space-y-5">
               <label className="block"><FieldLabel>學員姓名</FieldLabel><input autoComplete="name" value={form.studentName} onChange={(event) => update('studentName', event.target.value)} className="apple-input min-h-12" /></label>
@@ -452,7 +452,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
                     setIsQuoting(false)
                   }} onBlur={() => {
                     if (form.billingStartSessionDate) void loadPricingQuote({ referrer: form.referrer })
-                  }} className="apple-input min-h-12" placeholder="請填推薦人的好運報名信箱；若無可留白" /><span className="mt-2 block text-xs leading-5 text-apple-gray-500">插班新生的推薦資格會以舊生名單或已付款報名記錄自動核對。</span></label>
+                  }} className="apple-input min-h-12" placeholder="請填推薦人的好運報名信箱；若無可留白" /><span className="mt-2 block text-xs leading-5 text-apple-gray-500">插班新生的推薦資格會以舊生名單或已確認報名記錄自動核對。</span></label>
                   <label className="block"><FieldLabel>近期挑戰</FieldLabel><textarea value={form.recentChallenge} onChange={(event) => update('recentChallenge', event.target.value)} className="apple-input min-h-24 resize-y" placeholder="半年內 5K、10K、半馬或全馬成績；沒有可填「無」" /></label>
                   <label className="block"><FieldLabel>近期目標</FieldLabel><textarea value={form.recentGoal} onChange={(event) => update('recentGoal', event.target.value)} className="apple-input min-h-24 resize-y" placeholder="目標賽事、距離或完賽時間" /></label>
                   <label className="block"><FieldLabel>過去到現在是否有病史或運動傷害？</FieldLabel><textarea value={form.injuryHistory} onChange={(event) => update('injuryHistory', event.target.value)} className="apple-input min-h-24 resize-y" placeholder="沒有請填「無」" /></label>
@@ -467,7 +467,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
           <div>
             <div className="flex items-center gap-2"><WalletCards className="h-5 w-5 text-apple-blue" /><h3 className="text-lg font-black">匯款資訊</h3></div>
             <div className="mt-4 overflow-hidden rounded-lg border border-black/10 bg-[#f5f1eb] p-2">
-              <Image src="/course-registration/payment-info.jpg" alt="好運跑班匯款資料" width={958} height={472} className="h-auto w-full rounded-md" priority unoptimized />
+              <ProtectedCoursePaymentInfo courseSlug={course.slug} quoteToken={form.quoteToken} />
             </div>
             <div className="mt-3 flex items-start gap-2 rounded-lg border border-black/10 bg-apple-gray-50 px-4 py-3 text-xs leading-5 text-apple-gray-600"><LockKeyhole className="mt-0.5 h-4 w-4 shrink-0" />網站只記錄匯款帳號後五碼，不會要求信用卡號、網銀密碼或完整付款帳號。</div>
 
@@ -498,7 +498,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
             </fieldset>
 
             <label className="mt-5 block"><FieldLabel>載具條碼或電子信箱</FieldLabel><input autoCapitalize="characters" value={form.invoiceDetail} onChange={(event) => update('invoiceDetail', event.target.value)} className="apple-input min-h-12" placeholder="例如 /HI77HI 或 runner@example.com" /><span className="mt-2 block text-xs leading-5 text-apple-gray-500">手機載具由「/」開頭，後接 6 碼英文大寫與數字組合。</span></label>
-            <label className="mt-5 block"><FieldLabel optional>備註</FieldLabel><textarea value={form.notes} onChange={(event) => update('notes', event.target.value)} className="apple-input min-h-24 resize-y" placeholder="想跟小編說什麼呢？請勿填寫完整付款帳號或信用卡資料" /></label>
+            <label className="mt-5 block"><FieldLabel optional>備註</FieldLabel><textarea value={form.notes} onChange={(event) => update('notes', event.target.value)} className="apple-input min-h-24 resize-y" placeholder="想跟小編說什麼呢？請勿填寫完整匯款帳號或信用卡資料" /></label>
             <label className="mt-5 block"><FieldLabel optional>統一編號與發票抬頭</FieldLabel><input value={form.taxInvoiceInfo} onChange={(event) => update('taxInvoiceInfo', event.target.value)} className="apple-input min-h-12" placeholder="若無可留白" /></label>
 
             <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
@@ -515,7 +515,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
           ) : (
             <button type="button" disabled={isSubmitting || isQuoting || !pricingQuote} onClick={submitRegistration} className="apple-button-primary min-h-12 flex-1 gap-2 disabled:cursor-not-allowed disabled:opacity-50">
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-              送出報名與付款資料
+              送出報名與匯款資料
             </button>
           )}
         </div>

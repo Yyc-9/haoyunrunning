@@ -701,7 +701,7 @@ export default function StudentPage() {
   if (!canAccessTraining) {
     const waitingText = studentAccessState === 'rejected'
       ? '你的報名資料需要補充或重新核對，請聯絡好運跑班協助處理。'
-      : '你的付款資料正在等待銀行對帳，確認入帳後將自動開通課表。'
+      : '你的匯款資料正在等待銀行對帳，確認入帳後將自動開通課表。'
 
     return (
       <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
@@ -731,7 +731,7 @@ export default function StudentPage() {
               </div>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link href="/payment" className="apple-button-primary inline-flex items-center justify-center gap-2 px-6 py-3">
-                  查看付款資料
+                  查看匯款狀態
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <a

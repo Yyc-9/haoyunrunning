@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { COURSE_CAPACITY } from '@/lib/course-registration'
+import { COURSE_CAPACITY, courseEnrollmentPayload } from '@/lib/course-registration'
 import {
   invoiceDeliveryOptions,
   type DirectCourseRegistration,
@@ -56,23 +56,6 @@ function containsSensitiveLongNumber(value: string) {
   return /\d{10,}/.test(value.replace(/\s+/g, ''))
 }
 
-function enrollmentPayload(row: Record<string, unknown>) {
-  return {
-    id: String(row.id ?? ''),
-    courseSlug: String(row.course_slug ?? ''),
-    courseName: String(row.preferred_course ?? ''),
-    status: String(row.status ?? 'pending_transfer'),
-    amountText: String(row.amount_text ?? ''),
-    billingStartSessionDate: String(row.billing_start_session_date ?? ''),
-    priorAttendanceClaimed: row.prior_attendance_claimed === true,
-    attendanceVerificationStatus: String(row.attendance_verification_status ?? 'not_required'),
-    transferLastFive: String(row.transfer_last_five ?? ''),
-    reviewNote: String(row.review_note ?? ''),
-    createdAt: String(row.created_at ?? ''),
-    paymentSubmittedAt: row.payment_submitted_at ? String(row.payment_submitted_at) : null,
-  }
-}
-
 export async function GET(request: NextRequest) {
   if (!supabaseAdmin) {
     return NextResponse.json({ error: 'Supabase 尚未設定。' }, { status: 500 })
@@ -80,7 +63,10 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url)
   const courseSlug = cleanText(searchParams.get('courseSlug'), 120)
-  const [managedCourses, currentSeason] = await Promise.all([getManagedCourses(), getCurrentCourseSeason()])
+  const [managedCourses, currentSeason] = await Promise.all([
+    getManagedCourses(),
+    getCurrentCourseSeason({ forEnrollment: true }),
+  ])
   const course = managedCourses.find((item) => item.slug === courseSlug)
   if (!course) {
     return NextResponse.json({ error: '找不到這個課程。' }, { status: 404 })
@@ -154,7 +140,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     availability,
     pricingOptions,
-    enrollment: enrollmentResult.data ? enrollmentPayload(enrollmentResult.data) : null,
+    enrollment: enrollmentResult.data ? courseEnrollmentPayload(enrollmentResult.data) : null,
     legacyStudent: {
       matched: Boolean(legacyResult.data),
       name: cleanText(legacyResult.data?.name, 200),
@@ -182,7 +168,10 @@ export async function POST(request: NextRequest) {
   }
   const intent = cleanText(body.intent, 80)
   const courseSlug = cleanText(body.courseSlug, 120)
-  const [managedCourses, currentSeason] = await Promise.all([getManagedCourses(), getCurrentCourseSeason()])
+  const [managedCourses, currentSeason] = await Promise.all([
+    getManagedCourses(),
+    getCurrentCourseSeason({ forEnrollment: true }),
+  ])
   const course = managedCourses.find((item) => item.slug === courseSlug)
 
   if (!course || !currentSeason) {
@@ -241,7 +230,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: activeLeadError.message }, { status: 500 })
   }
   if (activeLead) {
-    return NextResponse.json({ enrollment: enrollmentPayload(activeLead), duplicate: true })
+    return NextResponse.json({ enrollment: courseEnrollmentPayload(activeLead), duplicate: true })
   }
 
   const { count: paidCount, error: paidCountError } = await supabaseAdmin
@@ -257,7 +246,7 @@ export async function POST(request: NextRequest) {
   }
   const courseCapacity = currentSeason.courseCapacities[courseSlug] ?? COURSE_CAPACITY
   if ((paidCount ?? 0) >= courseCapacity) {
-    return NextResponse.json({ error: '本班目前已額滿，暫時無法建立新的付款記錄。' }, { status: 409 })
+    return NextResponse.json({ error: '本班目前已額滿，暫時無法建立新的報名記錄。' }, { status: 409 })
   }
 
   const { data: profile } = await supabaseAdmin
@@ -315,10 +304,10 @@ export async function POST(request: NextRequest) {
       tokenPayload.quote.billingStartSessionDate !== billingStartSessionDate ||
       tokenPayload.quote.priorAttendanceClaimed !== priorAttendanceClaimed
     ) {
-      return NextResponse.json({ error: '課程費用驗證失敗，請返回付款步驟重新計算。' }, { status: 409 })
+      return NextResponse.json({ error: '課程費用驗證失敗，請返回匯款步驟重新計算。' }, { status: 409 })
     }
     if (new Date(tokenPayload.quote.lockedUntil).getTime() <= Date.now()) {
-      return NextResponse.json({ error: '課程報價已超過保留時間，請返回付款步驟重新計算。' }, { status: 409 })
+      return NextResponse.json({ error: '課程報價已超過保留時間，請返回匯款步驟重新計算。' }, { status: 409 })
     }
     if (!/^\d{5}$/.test(transferLastFive)) {
       return NextResponse.json({ error: '請填寫正確的匯款帳號後五碼。' }, { status: 400 })
@@ -402,7 +391,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error?.message || '建立網站報名記錄失敗。' }, { status: 500 })
     }
 
-    return NextResponse.json({ enrollment: enrollmentPayload(data) }, { status: 201 })
+    return NextResponse.json({ enrollment: courseEnrollmentPayload(data) }, { status: 201 })
   }
 
   return NextResponse.json({ error: '請使用網站課程報名表。' }, { status: 400 })
@@ -415,7 +404,7 @@ export async function PATCH(request: NextRequest) {
 
   const user = await getAuthedUser(request.headers.get('authorization'))
   if (!user?.email) {
-    return NextResponse.json({ error: '請先登入後再提交付款資料。' }, { status: 401 })
+    return NextResponse.json({ error: '請先登入後再提交匯款資料。' }, { status: 401 })
   }
 
   const body = (await request.json().catch(() => ({}))) as {
@@ -456,5 +445,5 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: '找不到可更新的報名記錄，或這筆報名不屬於目前帳號。' }, { status: 404 })
   }
 
-  return NextResponse.json({ enrollment: enrollmentPayload(data) })
+  return NextResponse.json({ enrollment: courseEnrollmentPayload(data) })
 }

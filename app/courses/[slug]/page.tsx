@@ -28,6 +28,12 @@ export async function generateMetadata({ params }: CourseDetailPageProps) {
   return {
     title: `${course.title} - 好運跑班`,
     description: course.slogan,
+    alternates: { canonical: `/courses/${course.slug}` },
+    openGraph: {
+      title: `${course.title} - 好運跑班`,
+      description: course.slogan,
+      url: `/courses/${course.slug}`,
+    },
   }
 }
 

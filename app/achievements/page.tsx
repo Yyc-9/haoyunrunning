@@ -6,6 +6,7 @@ import { Award, CheckCircle2, FileCheck2, Medal, UsersRound } from 'lucide-react
 export const metadata: Metadata = {
   title: '榮耀徽章 - 好運跑班',
   description: '認識好運榮耀徽章全系列的設計故事、達標標準與申請方式。',
+  alternates: { canonical: '/achievements' },
 }
 
 const badgeSeries = [

@@ -1,10 +1,15 @@
-import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
+import PaymentStatusClient from './PaymentStatusClient'
 
-export const metadata = {
-  title: '課程報名 - 好運跑班',
-  description: '查看好運跑班本期課程並前往官方報名表。',
+export const metadata: Metadata = {
+  title: '我的匯款狀態 - 好運跑班',
+  description: '登入後查看好運跑班課程匯款資料與財務核對狀態。',
+  robots: {
+    index: false,
+    follow: false,
+  },
 }
 
 export default function PaymentPage() {
-  redirect('/courses')
+  return <PaymentStatusClient />
 }
