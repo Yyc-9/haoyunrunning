@@ -15,8 +15,8 @@ export default async function Home() {
     <>
       <link rel="preload" as="image" href={initialHeroSlides[0]} />
       <HeroSection initialImages={initialHeroSlides} />
-      <CoursesSection preview />
       <UpcomingActivitiesSection />
+      <CoursesSection preview />
     </>
   )
 }
