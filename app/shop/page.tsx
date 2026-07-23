@@ -60,20 +60,22 @@ export default function ShopPage() {
 
   return (
     <main className="min-h-screen bg-white pt-20 sm:pt-24">
-      <section className="border-b border-black/10 bg-apple-gray-50">
-        <div className="container mx-auto grid gap-6 px-4 py-8 md:grid-cols-[minmax(0,1fr)_360px] md:items-center sm:py-10">
-          <div>
-            <p className="text-sm font-bold text-apple-gray-500">GOOD LUCK RUNNING SHOP</p>
-            <div className="mt-2 flex flex-col justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-black text-apple-gray-950 sm:text-4xl">{pageMedia.shopTitle}</h1>
-                <p className="mt-3 max-w-2xl text-sm leading-7 text-apple-gray-600 sm:text-base">{pageMedia.shopSubtitle}</p>
-              </div>
-              <p className="text-sm font-semibold text-apple-gray-500">{isLoading ? '商品資料載入中' : `目前共 ${products.length} 件商品`}</p>
-            </div>
-          </div>
-          <div className="relative aspect-[16/7] overflow-hidden rounded-md border border-black/10 bg-white md:aspect-[4/3]">
-            <Image src={pageMedia.shopHero} alt={pageMedia.shopTitle} fill priority sizes="(min-width: 768px) 360px, 100vw" className="object-cover" />
+      <section className="relative isolate min-h-[390px] overflow-hidden border-b border-black/10 sm:min-h-[470px]">
+        <Image
+          src="/site-visuals/hero-2026/shop-hero.webp"
+          alt="好運跑班服飾與跑步裝備"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-white/60 sm:bg-white/25" />
+        <div className="container relative z-10 mx-auto flex min-h-[390px] items-center px-5 py-12 sm:min-h-[470px] sm:px-8 lg:px-12">
+          <div className="max-w-xl">
+            <p className="text-xs font-black uppercase tracking-[0.12em] text-apple-gray-800 sm:text-sm">GOOD LUCK RUNNING SHOP</p>
+            <h1 className="mt-4 text-4xl font-black text-apple-gray-950 sm:text-6xl">{pageMedia.shopTitle}</h1>
+            <p className="mt-5 max-w-lg text-sm leading-7 text-apple-gray-700 sm:text-lg sm:leading-8">{pageMedia.shopSubtitle}</p>
+            <p className="mt-7 text-sm font-black text-apple-gray-700">{isLoading ? '商品資料載入中' : `目前共 ${products.length} 件商品`}</p>
           </div>
         </div>
       </section>

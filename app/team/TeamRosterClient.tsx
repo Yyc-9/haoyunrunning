@@ -36,13 +36,24 @@ export default function TeamRosterClient() {
 
   return (
     <main className="min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
-      <section className="border-b border-black/10 bg-black px-4 py-14 text-white sm:px-6 sm:py-20 lg:px-8">
-        <div className="container mx-auto max-w-7xl">
-          <p className="text-sm font-black uppercase tracking-wide text-emerald-300">{team.eyebrow}</p>
-          <h1 className="mt-3 text-4xl font-black sm:text-5xl lg:text-6xl">{team.title}</h1>
-          <p className="mt-5 max-w-3xl text-base leading-8 text-white/70 sm:text-lg">
+      <section className="relative isolate flex min-h-[390px] overflow-hidden border-b border-black/10 text-white sm:min-h-[480px]">
+        <Image
+          src="/site-visuals/hero-2026/team-hero.webp"
+          alt="好運跑班教練團隊背影合照"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-black/60" />
+        <div className="container relative z-10 mx-auto flex w-full max-w-7xl items-center px-5 py-14 sm:px-8 sm:py-20 lg:px-12">
+          <div className="max-w-4xl">
+            <p className="text-sm font-black uppercase tracking-wide text-emerald-300">THE COACH TEAM</p>
+            <h1 className="mt-4 text-4xl font-black sm:text-6xl">教練團隊</h1>
+            <p className="mt-6 max-w-3xl text-base leading-8 text-white/80 sm:text-lg">
             {team.description}
-          </p>
+            </p>
+          </div>
         </div>
       </section>
 
@@ -50,8 +61,8 @@ export default function TeamRosterClient() {
         <div className="container mx-auto max-w-7xl">
           <div className="mb-7 flex items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-black uppercase tracking-wide text-apple-blue">{team.rosterLabel}</p>
-              <h2 className="mt-2 text-2xl font-black text-apple-gray-950 sm:text-3xl">{team.rosterTitle}</h2>
+              <p className="text-xs font-black uppercase tracking-wide text-apple-blue">MEET YOUR MENTORS</p>
+              <h2 className="mt-2 text-2xl font-black text-apple-gray-950 sm:text-3xl">帶好每一堂訓練</h2>
             </div>
             <span className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-black text-apple-gray-600 ring-1 ring-black/10">
               {coaches.length} 位

@@ -62,6 +62,53 @@ final result: passed
 
 ---
 
+# 官網五頁 SAMPLE 還原 QA
+
+## 檢查範圍
+
+- 視覺來源：`/Users/yangyichen/Downloads/好運官網照片素材`
+- 實作頁面：首頁課程預覽、`/about`、`/courses`、`/team`、`/shop`
+- 桌面尺寸：1440 × 1000
+- 手機尺寸：390 × 844
+
+## 參考圖與實作證據
+
+| 頁面 | 參考圖 | 實作截圖 |
+| --- | --- | --- |
+| 關於我們 | `design-references/hero-2026/about-sample.jpg` | `/private/tmp/about-desktop-viewport-qa.png` |
+| 商店 | `design-references/hero-2026/shop-sample.jpg` | `/private/tmp/shop-desktop-viewport-qa2.png` |
+| 首頁課程預覽 | `design-references/hero-2026/home-courses-sample.jpg` | `/private/tmp/home-courses-desktop-viewport-qa2.png` |
+| 訓練日程 | `design-references/hero-2026/courses-sample.jpg` | `/private/tmp/courses-desktop-viewport-qa2.png` |
+| 教練團隊 | `design-references/hero-2026/team-sample.jpg` | `/private/tmp/team-desktop-viewport-qa.png` |
+
+手機實作證據：
+
+- 關於我們：`/private/tmp/about-mobile-viewport-final.png`
+- 訓練日程：`/private/tmp/courses-mobile-viewport-final.png`
+- 教練團隊：`/private/tmp/team-mobile-viewport-final.png`
+- 商店：`/private/tmp/shop-mobile-viewport-final2.png`
+- 首頁課程預覽：`/private/tmp/home-courses-mobile-hero-final.png`
+
+## 驗收結果
+
+| 項目 | 結果 | 說明 |
+| --- | --- | --- |
+| 關於我們 Hero | 通過 | 以跑道實景建立全寬主視覺，還原英文眉題、品牌主標、雙語理念、三欄核心價值與白色事實卡。 |
+| 商店 Hero | 通過 | 改為全寬橫幅並保留動態標題、說明與商品數量；搜尋、分類、排序、商品與購物車邏輯未改動。 |
+| 首頁課程預覽 | 通過 | 以深色全寬主視覺承接課程標題與完整課表入口，下方繼續使用真實代表課程資料。 |
+| 訓練日程 | 通過 | 還原深色主視覺與四步驟報名說明，既有篩選器、課表、常見問題及詳情導向均保留。 |
+| 教練團隊 | 通過 | 使用指定背影合照方案，保留真實教練數量、卡片資料、照片焦點與後台編輯能力。 |
+| 響應式 | 通過 | 五個頁面在 390px 手機視窗中皆無整頁水平溢出，文字、遮罩與按鈕保持可讀。 |
+| 圖片交付 | 通過 | 實際公開背景已轉為 WebP 並存入 `public/site-visuals/hero-2026`，執行時不依賴 Downloads 絕對路徑。 |
+| 支付素材邊界 | 通過 | QR 與匯款資訊圖片沒有複製至公開資源，也沒有加入任何公開頁面。 |
+| 繁體中文 | 通過 | 新增公開文案皆使用繁體中文。 |
+
+## Final result
+
+final result: passed
+
+---
+
 # 榮耀徽章手機橫向滑動 QA
 
 ## 調整目標
