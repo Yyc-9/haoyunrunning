@@ -62,6 +62,37 @@ final result: passed
 
 ---
 
+# 關於我們品牌敘事嵌入式底圖 QA
+
+## 調整目標
+
+- 將「我們想讓更多人，真正喜歡上跑步」由左右分欄改為單一全寬圖片區。
+- 原本的標題、介紹文字與三項理念直接疊加在同一張動態主圖上。
+- 保留內容中心的「關於我們主圖」設定，管理員更換圖片後仍會同步更新。
+
+## 比對證據
+
+- 修改前參考：`/private/var/folders/zg/66z7x42d0dgdx4zbv_kk8wfh0000gn/T/chronicle/screen_recording/1min/2026-07-23T13-07-21.113091+00-00-display-2/frame-000027-2026-07-23T13-08-00Z.jpg`
+- 修改後桌面：`/private/tmp/about-embedded-after-lower-desktop-complete.png`
+- 修改後手機：`/private/tmp/about-embedded-after-mobile-complete.png`
+
+## 驗收結果
+
+| 項目 | 結果 | 說明 |
+| --- | --- | --- |
+| 嵌入式版面 | 通過 | 移除左右分欄、圖片圓角與外框，內容直接融入全寬實拍背景。 |
+| 文字層級 | 通過 | 眉題、主標、介紹與三項理念維持清楚層級，固定深色遮罩確保可讀性。 |
+| 桌面版 | 通過 | 主文案靠左集中，三項理念於底部橫向排列，與頁首主視覺保持一致節奏。 |
+| 手機版 | 通過 | 內容改為單欄堆疊，三項理念依序排列，頁面寬度 375px 且沒有水平溢出。 |
+| 動態內容 | 通過 | 繼續使用 `pageMedia.aboutHero`、`about` 文案與理念資料，沒有改成靜態內容。 |
+| 繁體中文 | 通過 | 公開文字維持繁體中文。 |
+
+## Final result
+
+final result: passed
+
+---
+
 # 官網五頁 SAMPLE 還原 QA
 
 ## 檢查範圍

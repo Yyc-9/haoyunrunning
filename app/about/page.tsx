@@ -84,35 +84,41 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="bg-apple-gray-50 px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-        <div className="container mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.88fr_1.12fr] lg:items-center">
-          <div>
-            <p className="text-sm font-black uppercase tracking-wide text-apple-blue">{about.eyebrow}</p>
-            <h2 className="mt-4 text-3xl font-black leading-tight text-apple-gray-950 sm:text-5xl">
+      <section className="relative isolate flex min-h-[660px] overflow-hidden text-white sm:min-h-[720px]">
+        <Image
+          src={pageMedia.aboutHero}
+          alt="好運跑班跑者與團隊"
+          fill
+          sizes="100vw"
+          className="object-cover"
+        />
+        <div className="absolute inset-0 bg-black/60" />
+
+        <div className="container relative z-10 mx-auto flex w-full max-w-7xl flex-col justify-between px-5 py-14 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
+          <div className="max-w-3xl">
+            <p className="text-sm font-black uppercase tracking-wide text-white/85">{about.eyebrow}</p>
+            <h2 className="mt-4 text-3xl font-black leading-tight sm:text-5xl lg:text-6xl">
               {about.title}
               <span className="block">{about.titleHighlight}</span>
             </h2>
-            <p className="mt-6 text-base leading-8 text-apple-gray-600 sm:text-lg sm:leading-9">{about.description}</p>
-            <div className="mt-8 grid gap-4 sm:grid-cols-3">
-              {about.beliefs.map((item, index) => {
-                const Icon = [Sparkles, HeartHandshake, Target][index] ?? Sparkles
-                return (
-                  <div key={item.title} className="border-l-2 border-black/15 pl-4">
-                    <Icon className="h-5 w-5 text-apple-blue" />
-                    <p className="mt-3 text-sm font-black text-apple-gray-950">{item.title}</p>
-                  </div>
-                )
-              })}
-            </div>
+            <p className="mt-6 max-w-2xl text-base leading-8 text-white/85 sm:text-lg sm:leading-9">
+              {about.description}
+            </p>
           </div>
-          <div className="relative min-h-[320px] overflow-hidden rounded-3xl border border-black/10 bg-apple-gray-100 sm:min-h-[460px]">
-            <Image
-              src={pageMedia.aboutHero}
-              alt="好運跑班跑者與團隊"
-              fill
-              sizes="(min-width: 1024px) 56vw, 100vw"
-              className="object-cover"
-            />
+
+          <div className="mt-14 grid gap-7 border-t border-white/35 pt-7 sm:grid-cols-3 sm:gap-0">
+            {about.beliefs.map((item, index) => {
+              const Icon = [Sparkles, HeartHandshake, Target][index] ?? Sparkles
+              return (
+                <div
+                  key={item.title}
+                  className={`${index > 0 ? 'sm:border-l sm:border-white/40 sm:pl-8' : ''} ${index < about.beliefs.length - 1 ? 'sm:pr-8' : ''}`}
+                >
+                  <Icon className="h-5 w-5 text-white" />
+                  <p className="mt-3 text-sm font-black leading-6 text-white">{item.title}</p>
+                </div>
+              )
+            })}
           </div>
         </div>
       </section>
