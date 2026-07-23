@@ -110,6 +110,25 @@ export default function AdminCoachDuty() {
   ] as const
 
   const courseOptions = [...new Map(items.map((item) => [item.courseSeasonCourseId, item.courseName])).entries()]
+  const scheduledCoachesBySession = useMemo(() => {
+    const grouped = new Map<string, Array<{ id: string; name: string; role: string }>>()
+    for (const item of items) {
+      const key = `${item.courseSeasonCourseId}:${item.sessionDate}`
+      const coachesForSession = grouped.get(key) ?? []
+      if (!coachesForSession.some((coach) => coach.id === item.scheduledCoachId)) {
+        coachesForSession.push({ id: item.scheduledCoachId, name: item.scheduledCoachName, role: item.coachRole })
+      }
+      grouped.set(key, coachesForSession)
+    }
+    const roleOrder: Record<string, number> = { head_coach: 0, coach: 1, assistant: 2, substitute: 3 }
+    return new Map([...grouped.entries()].map(([key, sessionCoaches]) => [
+      key,
+      sessionCoaches
+        .sort((left, right) => (roleOrder[left.role] ?? 9) - (roleOrder[right.role] ?? 9) || left.name.localeCompare(right.name, 'zh-Hant'))
+        .map((coach) => coach.name),
+    ]))
+  }, [items])
+
   const filtered = useMemo(() => items.filter((item) => {
     if (yearFilter !== 'all' && item.sessionDate.slice(0, 4) !== yearFilter) return false
     if (monthFilter !== 'all' && item.sessionDate.slice(5, 7) !== monthFilter) return false
@@ -171,8 +190,9 @@ export default function AdminCoachDuty() {
           {loading && !items.length ? <p className="p-8 text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></p> : filtered.map((item) => {
             const latestAudit = audits.find((audit) => audit.assignment_id === item.id)
             const anomaly = ['not_checked_in', 'substitute_absent', 'missing_start_time'].includes(item.attendanceState) || (item.leaveStatus === 'approved' && !item.actualCoachId)
-            return <details key={item.id} className={`rounded-lg border ${anomaly ? 'border-red-200 bg-red-50/40' : 'border-black/10 bg-white'}`}><summary className="grid cursor-pointer list-none gap-2 p-3 text-sm md:grid-cols-[140px_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_140px_130px] md:items-center"><span className="font-black">{formatDate(item.sessionDate)} {item.startTime || '未設定'}</span><span className="truncate font-bold">{item.courseName}</span><span className="truncate">原定：{item.scheduledCoachName}</span><span className="truncate">實際：{item.actualCoachName || '待安排'}</span><span className={`font-black ${anomaly ? 'text-red-700' : 'text-apple-gray-700'}`}>{attendanceLabel[item.attendanceState] || item.attendanceState}</span><span className="text-xs font-bold text-violet-700">{item.salaryStatusLabel}</span></summary><div className="border-t border-black/10 p-4">
-              <div className="grid gap-2 text-xs font-semibold text-apple-gray-600 sm:grid-cols-2 lg:grid-cols-4"><p>角色：{item.coachRole === 'substitute' ? '代班教練' : item.coachRole === 'head_coach' ? '主教練' : item.coachRole === 'assistant' ? '助教' : '教練'}</p><p>排班：{item.leaveStatus === 'requested' ? '請假待核對' : item.leaveStatus === 'approved' ? '請假已核准' : item.leaveStatus === 'rejected' ? '請假已拒絕' : '原定排班'}</p><p>代班：{item.substituteCoachName ? `${item.substituteCoachName}（${item.substituteResponse === 'accepted' ? '已接受' : item.substituteResponse === 'rejected' ? '已拒絕' : '待回覆'}）` : '未安排'}</p><p>簽到：{item.checkedInAt ? `${formatDate(item.checkedInAt, true)}${item.manualCorrection ? '（人工修正）' : ''}` : '尚無記錄'}</p></div>
+            const scheduledCoachNames = scheduledCoachesBySession.get(`${item.courseSeasonCourseId}:${item.sessionDate}`) ?? [item.scheduledCoachName]
+            return <details key={item.id} className={`rounded-lg border ${anomaly ? 'border-red-200 bg-red-50/40' : 'border-black/10 bg-white'}`}><summary className="grid cursor-pointer list-none gap-2 p-3 text-sm md:grid-cols-[140px_minmax(0,1.3fr)_minmax(0,1.35fr)_minmax(0,1fr)_140px_130px] md:items-center"><span className="font-black">{formatDate(item.sessionDate)} {item.startTime || '未設定'}</span><span className="truncate font-bold">{item.courseName}</span><span className="break-words leading-5">原定：{scheduledCoachNames.join('、')}</span><span className="truncate">實際：{item.actualCoachName || '待安排'}</span><span className={`font-black ${anomaly ? 'text-red-700' : 'text-apple-gray-700'}`}>{attendanceLabel[item.attendanceState] || item.attendanceState}</span><span className="text-xs font-bold text-violet-700">{item.salaryStatusLabel}</span></summary><div className="border-t border-black/10 p-4">
+              <div className="grid gap-2 text-xs font-semibold text-apple-gray-600 sm:grid-cols-2 lg:grid-cols-4"><p>本筆原定教練：{item.scheduledCoachName}</p><p>角色：{item.coachRole === 'substitute' ? '代班教練' : item.coachRole === 'head_coach' ? '主教練' : item.coachRole === 'assistant' ? '助教' : '教練'}</p><p>排班：{item.leaveStatus === 'requested' ? '請假待核對' : item.leaveStatus === 'approved' ? '請假已核准' : item.leaveStatus === 'rejected' ? '請假已拒絕' : '原定排班'}</p><p>代班：{item.substituteCoachName ? `${item.substituteCoachName}（${item.substituteResponse === 'accepted' ? '已接受' : item.substituteResponse === 'rejected' ? '已拒絕' : '待回覆'}）` : '未安排'}</p><p>簽到：{item.checkedInAt ? `${formatDate(item.checkedInAt, true)}${item.manualCorrection ? '（人工修正）' : ''}` : '尚無記錄'}</p></div>
               {item.leaveReason ? <p className="mt-3 rounded-lg bg-amber-50 p-3 text-xs font-bold text-amber-800">請假原因：{item.leaveReason}{item.recommendedSubstituteName ? `｜原教練推薦：${item.recommendedSubstituteName}` : ''}</p> : null}
               <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 {item.leaveStatus === 'requested' ? <><button type="button" disabled={saving === item.id} onClick={() => action(item.id, { action: 'review_leave', decision: 'approved', reason: reasonPrompt('核准備註（可留空）', false) || '' })} className="rounded-lg bg-black px-3 py-2.5 text-xs font-bold text-white">核准請假</button><button type="button" disabled={saving === item.id} onClick={() => { const reason = reasonPrompt('拒絕原因（必填）'); if (reason) action(item.id, { action: 'review_leave', decision: 'rejected', reason }) }} className="rounded-lg border border-red-200 bg-white px-3 py-2.5 text-xs font-bold text-red-700">拒絕請假</button></> : null}
