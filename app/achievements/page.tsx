@@ -139,9 +139,16 @@ export default function AchievementsPage() {
             <p className="mt-4 text-base leading-8 text-apple-gray-600">四款對應全馬與半馬達標標準，第五款 BQ Pride 獻給完成波士頓馬拉松的跑者。</p>
           </div>
 
-          <div className="mt-9 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+          <p className="mt-7 text-xs font-bold tracking-wide text-apple-gray-500 md:hidden">
+            左右滑動查看全系列
+          </p>
+          <div
+            data-mobile-carousel="badge-series"
+            aria-label="好運榮耀徽章全系列"
+            className="scrollbar-hidden -mx-4 mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain scroll-smooth px-4 pb-3 md:mx-0 md:mt-9 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pb-0 xl:grid-cols-4"
+          >
             {badgeSeries.map((badge) => (
-              <article key={badge.slug} className="overflow-hidden rounded-2xl border border-black/10 bg-[#12100f] text-white shadow-sm">
+              <article key={badge.slug} className="w-[82vw] max-w-[21rem] shrink-0 snap-start overflow-hidden rounded-2xl border border-black/10 bg-[#12100f] text-white shadow-sm md:w-auto md:max-w-none">
                 <div className="relative aspect-[2/3]">
                   <Image src={badge.image} alt={`${badge.standard} ${badge.name}徽章`} fill sizes="(max-width: 767px) 100vw, 25vw" className="object-cover" />
                 </div>
@@ -191,7 +198,14 @@ export default function AchievementsPage() {
             <h2 className="mt-3 text-3xl font-black sm:text-4xl">每一次突破，都值得留下紀念。</h2>
             <p className="mt-4 text-sm leading-7 text-white/65 sm:text-base">達標紀念卡將與榮耀徽章一同記錄賽事與成績，讓每一次突破，不只停留在成績查詢頁，而是真正成為值得珍藏的回憶。</p>
           </div>
-          <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <p className="mt-7 text-xs font-bold tracking-wide text-white/55 sm:hidden">
+            左右滑動查看全部紀念卡
+          </p>
+          <div
+            data-mobile-carousel="milestone-cards"
+            aria-label="好運榮耀徽章達標紀念卡"
+            className="scrollbar-hidden -mx-4 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain scroll-smooth px-4 pb-3 sm:mx-0 sm:mt-8 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-5"
+          >
             {[
               ['/achievements/2026/claim-sub3.jpg', '全馬 SUB 3 達標紀念卡'],
               ['/achievements/2026/claim-sub4.jpg', '全馬 SUB 4 達標紀念卡'],
@@ -199,8 +213,8 @@ export default function AchievementsPage() {
               ['/achievements/2026/claim-sub2.jpg', '半馬 SUB 2 達標紀念卡'],
               ['/achievements/2026/claim-bq-pride.jpg', 'BQ Pride 達標紀念卡'],
             ].map(([src, alt]) => (
-              <div key={src} className="relative aspect-[3/4] overflow-hidden rounded-xl border border-white/10 bg-black">
-                <Image src={src} alt={alt} fill sizes="(max-width: 639px) 50vw, 20vw" className="object-cover" />
+              <div key={src} className="relative aspect-[3/4] w-[72vw] max-w-[17rem] shrink-0 snap-start overflow-hidden rounded-xl border border-white/10 bg-black sm:w-auto sm:max-w-none">
+                <Image src={src} alt={alt} fill sizes="(max-width: 639px) 72vw, 20vw" className="object-cover" />
               </div>
             ))}
           </div>

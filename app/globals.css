@@ -51,6 +51,14 @@
     animation: toast 3s ease-in-out;
   }
 
+  .scrollbar-hidden {
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
+
   .bg-glass {
     @apply backdrop-blur-glass bg-white/80;
   }
