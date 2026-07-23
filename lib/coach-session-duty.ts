@@ -127,10 +127,10 @@ export function coachDutyPunctuality(sessionDate: string, startTime: string, now
   return now <= window.startsAt ? 'on_time' as const : 'late' as const
 }
 
-async function loadDutyCourses(): Promise<DutyCourse[]> {
+async function loadDutyCourses(options: { includeHistorical?: boolean } = {}): Promise<DutyCourse[]> {
   const seasons = await getCourseSeasons({ includeRegistrationStats: false })
   return seasons
-    .filter((season) => season.isCurrent || ['enrolling', 'active'].includes(season.status))
+    .filter((season) => options.includeHistorical || season.isCurrent || ['enrolling', 'active'].includes(season.status))
     .flatMap((season) => {
       const managedCourses = applyCourseOverrides(season.courseOverrides, { includeInactive: true })
       return managedCourses.flatMap((course) => {
@@ -201,7 +201,8 @@ function attendanceState(item: AssignmentRow, checkin: CheckinRow | undefined, c
 
 export async function loadCoachDutyItems(options: { userId?: string; isAdmin?: boolean; now?: Date } = {}) {
   if (!supabaseAdmin) throw new Error('Supabase 尚未設定。')
-  const courses = await syncCoachSessionAssignments()
+  const activeCourses = await syncCoachSessionAssignments()
+  const courses = options.isAdmin ? await loadDutyCourses({ includeHistorical: true }) : activeCourses
   const courseById = new Map(courses.map((course) => [course.courseSeasonCourseId, course]))
   const offeringIds = courses.map((course) => course.courseSeasonCourseId)
   if (!offeringIds.length) return []
@@ -210,7 +211,7 @@ export async function loadCoachDutyItems(options: { userId?: string; isAdmin?: b
     supabaseAdmin.from('coach_session_assignments').select('*').in('course_season_course_id', offeringIds).order('session_date'),
     supabaseAdmin.from('coach_session_checkins').select('*'),
     supabaseAdmin.from('course_session_cancellations').select('course_season_course_id, session_date').in('course_season_course_id', offeringIds),
-    supabaseAdmin.from('profiles').select('id, name, email').in('role', ['coach', 'admin']),
+    supabaseAdmin.from('profiles').select('id, name, email'),
   ])
   const error = [assignmentResult.error, checkinResult.error, cancellationResult.error, profileResult.error].find(Boolean)
   if (error) throw error

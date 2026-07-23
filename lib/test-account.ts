@@ -5,7 +5,6 @@ import { getCurrentCourseSeason } from '@/lib/course-seasons-server'
 import { getManagedCourses } from '@/lib/managed-courses-server'
 import { supabaseAdmin } from '@/lib/supabase-server'
 
-export const ISOLATED_TEST_ACCOUNT_EMAIL = '779374913@qq.com'
 export type IsolatedTestMode = 'student' | 'coach'
 
 export type IsolatedTestAccount = {
@@ -42,31 +41,17 @@ function fromRow(row: TestAccountRow): IsolatedTestAccount {
 }
 
 export async function getIsolatedTestAccount(user: Pick<User, 'id' | 'email'> | null | undefined) {
-  if (!supabaseAdmin || !user || normalizeEmail(user.email) !== ISOLATED_TEST_ACCOUNT_EMAIL) return null
+  if (!supabaseAdmin || !user || !normalizeEmail(user.email)) return null
 
   const { data: existing, error } = await supabaseAdmin
     .from('internal_test_accounts')
     .select('*')
     .eq('profile_id', user.id)
+    .eq('email', normalizeEmail(user.email))
+    .eq('active', true)
     .maybeSingle()
   if (error) throw error
-  if (existing) return existing.active ? fromRow(existing as TestAccountRow) : null
-
-  const { data: created, error: createError } = await supabaseAdmin
-    .from('internal_test_accounts')
-    .upsert({
-      profile_id: user.id,
-      email: ISOLATED_TEST_ACCOUNT_EMAIL,
-      active: true,
-      current_mode: 'student',
-      assigned_course_slug: 'zhubei-night-run-monday',
-      sandbox_state: {},
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'profile_id' })
-    .select('*')
-    .single()
-  if (createError || !created) throw createError || new Error('建立測試帳號沙盒失敗。')
-  return fromRow(created as TestAccountRow)
+  return existing ? fromRow(existing as TestAccountRow) : null
 }
 
 export async function setIsolatedTestMode(account: IsolatedTestAccount, mode: IsolatedTestMode) {

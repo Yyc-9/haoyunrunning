@@ -39,8 +39,12 @@ const attendanceLabel: Record<string, string> = {
   missing_start_time: '請補齊開始時間', leave_approved: '已請假，待安排代班',
 }
 
-function taipeiToday() {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+function taipeiYearMonth() {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit' }).formatToParts(new Date())
+  return {
+    year: parts.find((part) => part.type === 'year')?.value ?? String(new Date().getFullYear()),
+    month: parts.find((part) => part.type === 'month')?.value ?? String(new Date().getMonth() + 1).padStart(2, '0'),
+  }
 }
 
 function formatDate(value: string, withTime = false) {
@@ -54,6 +58,7 @@ async function accessToken() {
 }
 
 export default function AdminCoachDuty() {
+  const currentPeriod = taipeiYearMonth()
   const [items, setItems] = useState<DutyItem[]>([])
   const [coaches, setCoaches] = useState<CoachOption[]>([])
   const [audits, setAudits] = useState<Audit[]>([])
@@ -61,10 +66,12 @@ export default function AdminCoachDuty() {
   const [saving, setSaving] = useState('')
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
-  const [dateFilter, setDateFilter] = useState(taipeiToday())
+  const [yearFilter, setYearFilter] = useState(currentPeriod.year)
+  const [monthFilter, setMonthFilter] = useState(currentPeriod.month)
   const [courseFilter, setCourseFilter] = useState('all')
   const [coachFilter, setCoachFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [scheduleFilter, setScheduleFilter] = useState('all')
   const [substituteByItem, setSubstituteByItem] = useState<Record<string, string>>({})
 
   const load = useCallback(async () => {
@@ -86,26 +93,36 @@ export default function AdminCoachDuty() {
 
   useEffect(() => { void load() }, [load])
 
-  const todayItems = items.filter((item) => item.sessionDate === taipeiToday())
+  const yearOptions = [...new Set([currentPeriod.year, ...items.map((item) => item.sessionDate.slice(0, 4))])].sort((a, b) => b.localeCompare(a))
+  const periodItems = useMemo(() => items.filter((item) => {
+    if (yearFilter !== 'all' && item.sessionDate.slice(0, 4) !== yearFilter) return false
+    if (monthFilter !== 'all' && item.sessionDate.slice(5, 7) !== monthFilter) return false
+    return true
+  }), [items, monthFilter, yearFilter])
   const summaries = [
-    ['今日應到', todayItems.filter((item) => !item.isCancelled).length, 'text-black'],
-    ['準時', todayItems.filter((item) => item.attendanceState === 'on_time').length, 'text-emerald-700'],
-    ['遲到', todayItems.filter((item) => item.attendanceState === 'late').length, 'text-amber-700'],
-    ['請假代班完成', todayItems.filter((item) => item.leaveStatus === 'approved' && item.actualCoachId && ['on_time', 'late'].includes(item.attendanceState)).length, 'text-blue-700'],
-    ['待安排代班', todayItems.filter((item) => item.leaveStatus === 'approved' && !item.actualCoachId).length, 'text-amber-700'],
-    ['應到未簽到', todayItems.filter((item) => item.attendanceState === 'not_checked_in').length, 'text-red-700'],
-    ['代班未到', todayItems.filter((item) => item.attendanceState === 'substitute_absent').length, 'text-red-700'],
+    ['期間應到', periodItems.filter((item) => !item.isCancelled).length, 'text-black'],
+    ['準時', periodItems.filter((item) => item.attendanceState === 'on_time').length, 'text-emerald-700'],
+    ['遲到', periodItems.filter((item) => item.attendanceState === 'late').length, 'text-amber-700'],
+    ['請假代班完成', periodItems.filter((item) => item.leaveStatus === 'approved' && item.actualCoachId && ['on_time', 'late'].includes(item.attendanceState)).length, 'text-blue-700'],
+    ['待安排代班', periodItems.filter((item) => item.leaveStatus === 'approved' && !item.actualCoachId).length, 'text-amber-700'],
+    ['應到未簽到', periodItems.filter((item) => item.attendanceState === 'not_checked_in').length, 'text-red-700'],
+    ['代班未到', periodItems.filter((item) => item.attendanceState === 'substitute_absent').length, 'text-red-700'],
   ] as const
 
   const courseOptions = [...new Map(items.map((item) => [item.courseSeasonCourseId, item.courseName])).entries()]
   const filtered = useMemo(() => items.filter((item) => {
-    if (dateFilter && item.sessionDate !== dateFilter) return false
+    if (yearFilter !== 'all' && item.sessionDate.slice(0, 4) !== yearFilter) return false
+    if (monthFilter !== 'all' && item.sessionDate.slice(5, 7) !== monthFilter) return false
     if (courseFilter !== 'all' && item.courseSeasonCourseId !== courseFilter) return false
     if (coachFilter !== 'all' && ![item.scheduledCoachId, item.actualCoachId, item.substituteCoachId].includes(coachFilter)) return false
+    const isSubstitute = Boolean(item.substituteCoachId || item.coachRole === 'substitute' || (item.actualCoachId && item.actualCoachId !== item.scheduledCoachId))
+    if (scheduleFilter === 'leave' && item.leaveStatus === 'none') return false
+    if (scheduleFilter === 'substitute' && !isSubstitute) return false
+    if (scheduleFilter === 'regular' && (item.leaveStatus !== 'none' || isSubstitute)) return false
     if (statusFilter === 'anomaly' && !['not_checked_in', 'substitute_absent', 'missing_start_time'].includes(item.attendanceState) && !(item.leaveStatus === 'approved' && !item.actualCoachId)) return false
     if (statusFilter !== 'all' && statusFilter !== 'anomaly' && item.attendanceState !== statusFilter) return false
     return true
-  }), [coachFilter, courseFilter, dateFilter, items, statusFilter])
+  }), [coachFilter, courseFilter, items, monthFilter, scheduleFilter, statusFilter, yearFilter])
 
   async function action(id: string, body: Record<string, unknown>) {
     setSaving(id)
@@ -130,14 +147,22 @@ export default function AdminCoachDuty() {
   }
 
   return (
-    <details open className="border-b border-black/10 bg-white">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5"><div><div className="flex items-center gap-2"><UserRoundCheck className="h-5 w-5" /><h2 className="text-lg font-black">教練本人到課、請假與代班</h2></div><p className="mt-1 text-sm text-apple-gray-600">課次事實獨立保留；學員自主簽到與教練對學員的出席核實不會在這裡互相覆蓋。</p></div><ChevronDown className="h-5 w-5 shrink-0" /></summary>
+    <details className="group border-b border-black/10 bg-white">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5"><div><div className="flex items-center gap-2"><UserRoundCheck className="h-5 w-5" /><h2 className="text-lg font-black">教練本人到課、請假與代班</h2></div><p className="mt-1 text-sm text-apple-gray-600">課次事實獨立保留；學員自主簽到與教練對學員的出席核實不會在這裡互相覆蓋。</p></div><ChevronDown className="h-5 w-5 shrink-0 transition-transform group-open:rotate-180" /></summary>
       <div className="border-t border-black/10 p-4 sm:p-5">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">{summaries.map(([label, value, tone]) => <div key={label} className="rounded-lg border border-black/10 bg-apple-gray-50 p-3"><p className={`text-xl font-black ${tone}`}>{value}</p><p className="mt-1 text-[11px] font-bold text-apple-gray-500">{label}</p></div>)}</div>
-        <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-[150px_1fr_1fr_180px_auto]">
-          <input type="date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} className="apple-input" aria-label="日期篩選" />
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-[120px_130px_1fr_1fr_170px_150px_auto]">
+          <select value={yearFilter} onChange={(event) => setYearFilter(event.target.value)} className="apple-input" aria-label="年份篩選">
+            <option value="all">全部年份</option>
+            {yearOptions.map((year) => <option key={year} value={year}>{year} 年</option>)}
+          </select>
+          <select value={monthFilter} onChange={(event) => setMonthFilter(event.target.value)} className="apple-input" aria-label="月份篩選">
+            <option value="all">全部月份</option>
+            {Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, '0')).map((month) => <option key={month} value={month}>{Number(month)} 月</option>)}
+          </select>
           <select value={courseFilter} onChange={(event) => setCourseFilter(event.target.value)} className="apple-input"><option value="all">全部課程</option>{courseOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select>
           <select value={coachFilter} onChange={(event) => setCoachFilter(event.target.value)} className="apple-input"><option value="all">全部教練</option>{coaches.map((coach) => <option key={coach.id} value={coach.id}>{coach.name}</option>)}</select>
+          <select value={scheduleFilter} onChange={(event) => setScheduleFilter(event.target.value)} className="apple-input"><option value="all">全部排班</option><option value="leave">只看請假</option><option value="substitute">只看代班</option><option value="regular">原定出勤</option></select>
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="apple-input"><option value="all">全部狀態</option><option value="anomaly">只看異常</option><option value="on_time">準時</option><option value="late">遲到</option><option value="not_checked_in">應到未簽到</option><option value="substitute_absent">代班未到</option><option value="missing_start_time">未設定時間</option></select>
           <button type="button" onClick={load} className="apple-button-outline min-h-11 gap-2 px-4"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />重新整理</button>
         </div>

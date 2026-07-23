@@ -646,7 +646,6 @@ export default function AdminDashboardClient() {
 
           {activeTab === 'students' && data ? (
             <section className="apple-card overflow-hidden">
-              <AdminCoachDuty />
               <div className="border-b border-black/10 p-5">
                 <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
                   <div>
@@ -747,6 +746,7 @@ export default function AdminDashboardClient() {
 
           {activeTab === 'coaches' && data ? (
             <section className="apple-card overflow-hidden">
+              <AdminCoachDuty />
               <div className="border-b border-black/10 bg-apple-gray-100 p-5">
                 <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
                   <div>

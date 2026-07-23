@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarClock, Loader2, RefreshCw, UserRoundCheck } from 'lucide-react'
+import { CalendarClock, ChevronDown, Loader2, RefreshCw, UserRoundCheck } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 type DutyItem = {
@@ -88,13 +88,19 @@ export default function CoachDutyPanel() {
 
   const visible = useMemo(() => {
     const now = Date.now()
-    const lower = now - 7 * 86_400_000
-    const upper = now + 28 * 86_400_000
-    return items.filter((item) => {
-      const date = new Date(`${item.sessionDate}T12:00:00+08:00`).getTime()
-      return (date >= lower && date <= upper) || item.canRespondSubstitute || item.leaveStatus === 'requested'
-    }).sort((a, b) => a.sessionDate.localeCompare(b.sessionDate))
+    const candidates = items
+      .map((item) => ({
+        item,
+        timestamp: new Date(`${item.sessionDate}T${item.startTime || '12:00'}:00+08:00`).getTime(),
+      }))
+      .filter(({ timestamp }) => Number.isFinite(timestamp))
+    const upcoming = candidates
+      .filter(({ timestamp }) => timestamp >= now - 15 * 60_000)
+      .sort((a, b) => a.timestamp - b.timestamp)
+    const nearest = upcoming[0] ?? [...candidates].sort((a, b) => b.timestamp - a.timestamp)[0]
+    return nearest ? [nearest.item] : []
   }, [items])
+  const nearestItem = visible[0]
 
   async function act(id: string, body: Record<string, unknown>) {
     setSaving(id)
@@ -118,17 +124,35 @@ export default function CoachDutyPanel() {
   }
 
   return (
-    <section className="mb-6 overflow-hidden rounded-xl border border-black/10 bg-white shadow-sm">
-      <div className="flex items-center justify-between gap-3 border-b border-black/10 p-4 sm:p-5">
-        <div><p className="text-xs font-bold text-apple-blue">教練本人到課</p><h2 className="mt-1 text-xl font-black">今日到課簽到與請假代班</h2><p className="mt-1 text-xs font-semibold leading-5 text-apple-gray-500">本人到課簽到與下方學員出席核實是兩份獨立紀錄。</p></div>
-        <button type="button" onClick={load} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-black/10" aria-label="重新整理教練到課資料"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /></button>
-      </div>
-      {error ? <p className="m-4 rounded-lg bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p> : null}
-      {message ? <p className="m-4 rounded-lg bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{message}</p> : null}
-      {loading && !items.length ? <div className="p-8 text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></div> : (
-        <div className="divide-y divide-black/10">
-          {visible.map((item) => (
-            <article key={item.id} className="p-4 sm:p-5">
+    <details className="group mb-6 overflow-hidden rounded-xl border border-black/10 bg-white shadow-sm">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 sm:p-5">
+        <div className="min-w-0">
+          <p className="text-xs font-bold text-apple-blue">教練本人到課</p>
+          <h2 className="mt-1 text-lg font-black sm:text-xl">最近一堂課的簽到與請假代班</h2>
+          {nearestItem ? (
+            <p className="mt-1 truncate text-xs font-semibold leading-5 text-apple-gray-500">
+              {formatDate(nearestItem.sessionDate)} · {nearestItem.startTime || '未設定時間'} · {nearestItem.courseName}
+            </p>
+          ) : (
+            <p className="mt-1 text-xs font-semibold leading-5 text-apple-gray-500">目前沒有需要處理的課次。</p>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {nearestItem ? <span className={`hidden rounded-full px-2.5 py-1 text-[11px] font-bold sm:inline-flex ${['not_checked_in', 'substitute_absent'].includes(nearestItem.attendanceState) ? 'bg-red-50 text-red-700' : nearestItem.attendanceState === 'on_time' ? 'bg-emerald-50 text-emerald-700' : 'bg-apple-gray-100 text-apple-gray-700'}`}>{stateLabel[nearestItem.attendanceState] || nearestItem.attendanceState}</span> : null}
+          <ChevronDown className="h-5 w-5 transition-transform group-open:rotate-180" />
+        </div>
+      </summary>
+      <div className="border-t border-black/10">
+        <div className="flex items-center justify-between gap-3 border-b border-black/10 px-4 py-3 sm:px-5">
+          <p className="text-xs font-semibold leading-5 text-apple-gray-500">本人到課簽到與學員出席核實是兩份獨立紀錄。</p>
+          <button type="button" onClick={load} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-black/10" aria-label="重新整理教練到課資料"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /></button>
+        </div>
+        {error ? <p className="m-4 rounded-lg bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p> : null}
+        {message ? <p className="m-4 rounded-lg bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{message}</p> : null}
+        {loading && !items.length ? <div className="p-8 text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></div> : (
+          <div>
+            {visible.map((item) => (
+              <article key={item.id} className="p-4 sm:p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2"><h3 className="font-black">{item.courseName}</h3><span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${['not_checked_in', 'substitute_absent'].includes(item.attendanceState) ? 'bg-red-50 text-red-700' : item.attendanceState === 'on_time' ? 'bg-emerald-50 text-emerald-700' : 'bg-apple-gray-100 text-apple-gray-700'}`}>{stateLabel[item.attendanceState] || item.attendanceState}</span></div>
@@ -144,11 +168,12 @@ export default function CoachDutyPanel() {
               {item.canRequestLeave ? <details className="mt-4 rounded-lg border border-black/10 bg-apple-gray-50"><summary className="cursor-pointer list-none px-4 py-3 text-sm font-black">提出本堂請假／推薦代班</summary><div className="grid gap-3 border-t border-black/10 p-4 sm:grid-cols-2"><textarea value={leaveReason[item.id] || ''} onChange={(event) => setLeaveReason((current) => ({ ...current, [item.id]: event.target.value }))} rows={3} className="apple-input resize-y sm:col-span-2" placeholder="請假原因（必填）" /><label className="sm:col-span-2"><span className="mb-1 block text-xs font-bold text-apple-gray-500">推薦代班教練（可留空，由管理員安排）</span><select value={recommendedCoach[item.id] || ''} onChange={(event) => setRecommendedCoach((current) => ({ ...current, [item.id]: event.target.value }))} className="apple-input"><option value="">交由管理員安排</option>{coaches.filter((coach) => coach.id !== item.scheduledCoachId).map((coach) => <option key={coach.id} value={coach.id}>{coach.name}</option>)}</select></label><button type="button" disabled={saving === item.id || !leaveReason[item.id]?.trim()} onClick={() => act(item.id, { intent: 'request_leave', reason: leaveReason[item.id], recommendedSubstituteId: recommendedCoach[item.id] || '' })} className="apple-button-primary min-h-11 sm:col-span-2 disabled:opacity-40">送出請假申請</button></div></details> : null}
 
               {item.leaveStatus !== 'none' ? <p className="mt-3 flex items-center gap-2 text-xs font-bold text-amber-700"><CalendarClock className="h-4 w-4" />請假：{item.leaveStatus === 'requested' ? '待管理員核對' : item.leaveStatus === 'approved' ? '已核准' : '已拒絕'}{item.substituteCoachName ? `｜代班 ${item.substituteCoachName}（${item.substituteResponse === 'accepted' ? '已接受' : item.substituteResponse === 'rejected' ? '已拒絕' : '待回覆'}）` : '｜待安排代班'}</p> : null}
-            </article>
-          ))}
-          {!visible.length ? <p className="p-8 text-center text-sm font-semibold text-apple-gray-500">近期沒有需要簽到或處理的課次。</p> : null}
-        </div>
-      )}
-    </section>
+              </article>
+            ))}
+            {!visible.length ? <p className="p-8 text-center text-sm font-semibold text-apple-gray-500">近期沒有需要簽到或處理的課次。</p> : null}
+          </div>
+        )}
+      </div>
+    </details>
   )
 }
