@@ -707,7 +707,90 @@ export default function AdminContentManager({ content, courses, seasons, scope =
 
         {mode === 'brand' ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('品牌與聯絡','頁尾 Logo、品牌文字與聯絡資料會同步到前台；頂部 Logo 依星期自動更換。','/')}<div className="p-5"><ImageField label="頁尾品牌 Logo" value={brand.logoUrl} folder="brand" onChange={(logoUrl)=>setBrand((c)=>({...c,logoUrl}))} onError={setLocalError}/><div className="mt-5 grid gap-4 md:grid-cols-2">{([['brandName','品牌名稱'],['tagline','品牌標語'],['instagramUrl','Instagram 網址'],['instagramHandle','Instagram 帳號'],['contactText','聯絡說明'],['address','服務地區']] as const).map(([key,label])=><Field key={key} label={label}><input value={brand[key]} onChange={(e)=>setBrand((c)=>({...c,[key]:e.target.value}))} className="apple-input" /></Field>)}<Field label="頁尾品牌介紹" wide><textarea rows={4} value={brand.footerDescription} onChange={(e)=>setBrand((c)=>({...c,footerDescription:e.target.value}))} className="apple-input resize-y" /></Field></div></div><div className="border-t border-black/10 p-5">{actionBar(() => setBrand(content.brand), saveButton('save-brand','brand_content',brand))}</div></div> : null}
 
-        {mode === 'media' ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('各頁主視覺','更換關於、學員見證、商店與週年活動頁的主要圖片。')}<div className="p-5"><ImageField label="關於我們主圖" value={pageMedia.aboutHero} folder="pages" onChange={(aboutHero)=>setPageMedia((c)=>({...c,aboutHero}))} onError={setLocalError}/><ImageField label="學員見證主圖" value={pageMedia.testimonialsHero} folder="pages" onChange={(testimonialsHero)=>setPageMedia((c)=>({...c,testimonialsHero}))} onError={setLocalError}/><ImageField label="商店主視覺" value={pageMedia.shopHero} folder="pages" onChange={(shopHero)=>setPageMedia((c)=>({...c,shopHero}))} onError={setLocalError}/><ImageField label="週年活動主圖" value={pageMedia.anniversaryHero} folder="pages" onChange={(anniversaryHero)=>setPageMedia((c)=>({...c,anniversaryHero}))} onError={setLocalError}/><div className="mt-5 grid gap-4 md:grid-cols-2"><Field label="商店標題"><input value={pageMedia.shopTitle} onChange={(e)=>setPageMedia((c)=>({...c,shopTitle:e.target.value}))} className="apple-input" /></Field><Field label="商店說明"><input value={pageMedia.shopSubtitle} onChange={(e)=>setPageMedia((c)=>({...c,shopSubtitle:e.target.value}))} className="apple-input" /></Field></div></div><div className="border-t border-black/10 p-5">{actionBar(() => setPageMedia(content.pageMedia), saveButton('save-media','page_media',pageMedia))}</div></div> : null}
+        {mode === 'media' ? (
+          <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
+            {panelHeader('各頁主視覺', '更換關於、學員見證、商店與週年活動頁的主要圖片與卡片底圖。')}
+            <div className="p-5">
+              <ImageField label="關於我們主圖" value={pageMedia.aboutHero} folder="pages" onChange={(aboutHero) => setPageMedia((current) => ({ ...current, aboutHero }))} onError={setLocalError} />
+              <ImageField label="學員見證主圖" value={pageMedia.testimonialsHero} folder="pages" onChange={(testimonialsHero) => setPageMedia((current) => ({ ...current, testimonialsHero }))} onError={setLocalError} />
+              <ImageField label="商店主視覺" value={pageMedia.shopHero} folder="pages" onChange={(shopHero) => setPageMedia((current) => ({ ...current, shopHero }))} onError={setLocalError} />
+              <ImageField label="週年活動主圖" value={pageMedia.anniversaryHero} folder="pages" onChange={(anniversaryHero) => setPageMedia((current) => ({ ...current, anniversaryHero }))} onError={setLocalError} />
+
+              <div className="mt-5 space-y-3">
+                <details className="group rounded-lg border border-black/10 bg-apple-gray-50">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3">
+                    <div>
+                      <p className="font-black text-apple-gray-900">關於我們卡片底圖</p>
+                      <p className="mt-1 text-xs text-apple-gray-500">品牌理念與服務重點，共 6 張。</p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-black text-apple-gray-600 group-open:bg-black group-open:text-white">管理圖片</span>
+                  </summary>
+                  <div className="border-t border-black/10 bg-white px-4">
+                    {about.beliefs.map((item, index) => (
+                      <ImageField
+                        key={`about-belief-${index}`}
+                        label={`品牌理念 ${index + 1}：${item.title}`}
+                        value={pageMedia.aboutBeliefImages[index] ?? ''}
+                        folder="pages"
+                        onChange={(url) => setPageMedia((current) => ({
+                          ...current,
+                          aboutBeliefImages: current.aboutBeliefImages.map((image, imageIndex) => imageIndex === index ? url : image),
+                        }))}
+                        onError={setLocalError}
+                      />
+                    ))}
+                    {about.facts.map((item, index) => (
+                      <ImageField
+                        key={`about-fact-${index}`}
+                        label={`服務重點 ${index + 1}：${item.title}`}
+                        value={pageMedia.aboutFactImages[index] ?? ''}
+                        folder="pages"
+                        onChange={(url) => setPageMedia((current) => ({
+                          ...current,
+                          aboutFactImages: current.aboutFactImages.map((image, imageIndex) => imageIndex === index ? url : image),
+                        }))}
+                        onError={setLocalError}
+                      />
+                    ))}
+                  </div>
+                </details>
+
+                <details className="group rounded-lg border border-black/10 bg-apple-gray-50">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3">
+                    <div>
+                      <p className="font-black text-apple-gray-900">學員見證卡片底圖</p>
+                      <p className="mt-1 text-xs text-apple-gray-500">成長路徑主題，共 3 張。</p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-black text-apple-gray-600 group-open:bg-black group-open:text-white">管理圖片</span>
+                  </summary>
+                  <div className="border-t border-black/10 bg-white px-4">
+                    {testimonials.themes.map((item, index) => (
+                      <ImageField
+                        key={`testimonial-theme-${index}`}
+                        label={`見證主題 ${index + 1}：${item.title}`}
+                        value={pageMedia.testimonialThemeImages[index] ?? ''}
+                        folder="pages"
+                        onChange={(url) => setPageMedia((current) => ({
+                          ...current,
+                          testimonialThemeImages: current.testimonialThemeImages.map((image, imageIndex) => imageIndex === index ? url : image),
+                        }))}
+                        onError={setLocalError}
+                      />
+                    ))}
+                  </div>
+                </details>
+              </div>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <Field label="商店標題"><input value={pageMedia.shopTitle} onChange={(event) => setPageMedia((current) => ({ ...current, shopTitle: event.target.value }))} className="apple-input" /></Field>
+                <Field label="商店說明"><input value={pageMedia.shopSubtitle} onChange={(event) => setPageMedia((current) => ({ ...current, shopSubtitle: event.target.value }))} className="apple-input" /></Field>
+              </div>
+            </div>
+            <div className="border-t border-black/10 p-5">
+              {actionBar(() => setPageMedia(content.pageMedia), saveButton('save-media', 'page_media', pageMedia))}
+            </div>
+          </div>
+        ) : null}
 
         {mode === 'about' ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('關於我們','管理目前前台顯示的品牌故事、理念與服務重點。','/about')}<div className="grid gap-4 p-5 md:grid-cols-2">{([['eyebrow','頁面小標'],['title','主標題'],['titleHighlight','主標題重點'],['description','品牌介紹'],['beliefsLabel','理念小標'],['beliefsTitle','理念標題']] as const).map(([key,label])=><Field key={key} label={label} wide={['description','beliefsTitle'].includes(key)}>{key === 'description'?<textarea rows={4} value={about[key]} onChange={(e)=>setAbout((c)=>({...c,[key]:e.target.value}))} className="apple-input resize-y" />:<input value={about[key]} onChange={(e)=>setAbout((c)=>({...c,[key]:e.target.value}))} className="apple-input" />}</Field>)}<div className="md:col-span-2"><h3 className="mb-3 font-black">三項品牌理念</h3>{about.beliefs.map((item,index)=><div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2"><input value={item.title} onChange={(e)=>setAbout((c)=>({...c,beliefs:c.beliefs.map((x,i)=>i===index?{...x,title:e.target.value}:x)}))} className="apple-input" /><input value={item.description} onChange={(e)=>setAbout((c)=>({...c,beliefs:c.beliefs.map((x,i)=>i===index?{...x,description:e.target.value}:x)}))} className="apple-input" /></div>)}</div><div className="md:col-span-2"><h3 className="mb-3 font-black">三項服務重點</h3>{about.facts.map((item,index)=><div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2"><input value={item.title} onChange={(e)=>setAbout((c)=>({...c,facts:c.facts.map((x,i)=>i===index?{...x,title:e.target.value}:x)}))} className="apple-input" /><input value={item.description} onChange={(e)=>setAbout((c)=>({...c,facts:c.facts.map((x,i)=>i===index?{...x,description:e.target.value}:x)}))} className="apple-input" /></div>)}</div></div><div className="border-t border-black/10 p-5">{actionBar(() => setAbout(content.about), saveButton('save-about','about_content',about))}</div></div> : null}
 

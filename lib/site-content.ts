@@ -112,6 +112,9 @@ export type TeamContent = {
 export type PageMedia = {
   aboutHero: string
   testimonialsHero: string
+  aboutBeliefImages: string[]
+  aboutFactImages: string[]
+  testimonialThemeImages: string[]
   shopHero: string
   anniversaryHero: string
   shopTitle: string
@@ -274,6 +277,21 @@ const legacyTeamContent: TeamContent = {
 export const defaultPageMedia: PageMedia = {
   aboutHero: '/goodluck-fourth-anniversary-wallpaper.jpg',
   testimonialsHero: '/goodluck-anniversary-7089.jpg',
+  aboutBeliefImages: [
+    '/site-visuals/about-belief-speed.webp',
+    '/site-visuals/about-belief-foundation.webp',
+    '/site-visuals/about-belief-coaching.webp',
+  ],
+  aboutFactImages: [
+    '/site-visuals/about-fact-locations.webp',
+    '/site-visuals/about-fact-cycle.webp',
+    '/site-visuals/about-fact-community.webp',
+  ],
+  testimonialThemeImages: [
+    '/site-visuals/testimonial-start.webp',
+    '/site-visuals/testimonial-together.webp',
+    '/site-visuals/testimonial-goal.webp',
+  ],
   shopHero: '/goodluck-anniversary-7096.jpg',
   anniversaryHero: '/goodluck-fourth-anniversary-wallpaper.jpg',
   shopTitle: '好運商店',
@@ -531,9 +549,16 @@ export function normalizePageMedia(value: unknown): PageMedia {
     const url = stablePublicAsset(cleanString(candidate, 2000))
     return url && isSafePublicUrl(url) ? url : fallback
   }
+  const imageList = (candidate: unknown, fallback: string[]) => {
+    if (!Array.isArray(candidate) || candidate.length !== fallback.length) return fallback
+    return fallback.map((fallbackImage, index) => image(candidate[index], fallbackImage))
+  }
   return {
     aboutHero: image(source.aboutHero, defaultPageMedia.aboutHero),
     testimonialsHero: image(source.testimonialsHero, defaultPageMedia.testimonialsHero),
+    aboutBeliefImages: imageList(source.aboutBeliefImages, defaultPageMedia.aboutBeliefImages),
+    aboutFactImages: imageList(source.aboutFactImages, defaultPageMedia.aboutFactImages),
+    testimonialThemeImages: imageList(source.testimonialThemeImages, defaultPageMedia.testimonialThemeImages),
     shopHero: image(source.shopHero, defaultPageMedia.shopHero),
     anniversaryHero: image(source.anniversaryHero, defaultPageMedia.anniversaryHero),
     shopTitle: cleanOr(source.shopTitle, defaultPageMedia.shopTitle, 120),

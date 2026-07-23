@@ -2,6 +2,7 @@
 
 import { HeartHandshake, MapPin, Route, Sparkles, Target, UsersRound } from 'lucide-react'
 import { useSiteContent } from '@/app/site-content-provider'
+import ImageStoryCard from '@/components/ImageStoryCard'
 
 const beliefIcons = [Sparkles, HeartHandshake, Target]
 const factIcons = [MapPin, Route, UsersRound]
@@ -51,13 +52,15 @@ export default function AboutPage() {
             {about.beliefs.map((item, index) => {
               const Icon = beliefIcons[index] ?? Sparkles
               return (
-              <article key={item.title} className="rounded-3xl border border-apple-gray-200 bg-white p-8">
-                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-apple-blue to-apple-orange">
-                  <Icon className="h-6 w-6 text-white" />
-                </div>
-                <h3 className="mb-3 text-xl font-bold text-apple-gray-900">{item.title}</h3>
-                <p className="leading-7 text-apple-gray-600">{item.description}</p>
-              </article>
+                <ImageStoryCard
+                  key={item.title}
+                  image={pageMedia.aboutBeliefImages[index]}
+                  imageAlt={`好運跑班品牌理念：${item.title}`}
+                  title={item.title}
+                  description={item.description}
+                  icon={Icon}
+                  objectPosition={['center 50%', 'center 48%', 'center 38%'][index]}
+                />
               )
             })}
           </div>
@@ -70,13 +73,16 @@ export default function AboutPage() {
             {about.facts.map((item, index) => {
               const Icon = factIcons[index] ?? MapPin
               return (
-                <article key={item.title} className="rounded-3xl border border-apple-gray-200 bg-apple-gray-50 p-6 sm:p-7">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-apple-blue shadow-sm ring-1 ring-black/5">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <h2 className="mt-5 text-xl font-black text-apple-gray-900">{item.title}</h2>
-                  <p className="mt-3 text-sm leading-7 text-apple-gray-600">{item.description}</p>
-                </article>
+                <ImageStoryCard
+                  key={item.title}
+                  image={pageMedia.aboutFactImages[index]}
+                  imageAlt={`好運跑班服務重點：${item.title}`}
+                  title={item.title}
+                  description={item.description}
+                  icon={Icon}
+                  compact
+                  objectPosition={['center 48%', 'center 48%', 'center 42%'][index]}
+                />
               )
             })}
           </div>
