@@ -2,7 +2,7 @@
 
 ## Source visual truth
 
-- 使用者提供的 Logo 素材：`/Users/yangyichen/Downloads/logo`
+- 使用者提供的 Logo 素材：`/Users/yangyichen/Downloads/好运网站/logo`
 - 本日對照素材（週日紫色）：`/Users/yangyichen/Desktop/桌面归档/网站与项目/好运网站/public/brand/weekday-logos/sunday-purple.png`
 - 七日規則：週一紅、週二橙、週三黃、週四綠、週五青、週六藍、週日紫；依台灣時間自動切換。
 
@@ -66,7 +66,7 @@ final result: passed
 
 ## 檢查範圍
 
-- 視覺來源：`/Users/yangyichen/Downloads/網站視覺圖`
+- 視覺來源：`/Users/yangyichen/Downloads/好运网站/网站视觉图`
 - 實作頁面：`/about`、`/testimonials`
 - 比對圖：
   - `/private/tmp/about-design-comparison.jpg`
