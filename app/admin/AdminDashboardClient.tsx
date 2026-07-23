@@ -13,7 +13,6 @@ import {
   FileSpreadsheet,
   LayoutDashboard,
   Loader2,
-  RefreshCw,
   ShieldCheck,
   Landmark,
   KeyRound,
@@ -306,7 +305,6 @@ export default function AdminDashboardClient() {
   const [activeTab, setActiveTab] = useState<AdminTab>('overview')
   const [data, setData] = useState<AdminDashboardPayload | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [updatingId, setUpdatingId] = useState('')
@@ -328,8 +326,7 @@ export default function AdminDashboardClient() {
   })
 
   const loadDashboard = useCallback(async (background = false) => {
-    if (background) setIsRefreshing(true)
-    else setIsLoading(true)
+    if (!background) setIsLoading(true)
     setError('')
 
     try {
@@ -339,8 +336,7 @@ export default function AdminDashboardClient() {
       else setMessage('')
       setError(loadError instanceof Error ? loadError.message : '讀取管理員後台失敗。')
     } finally {
-      if (background) setIsRefreshing(false)
-      else setIsLoading(false)
+      if (!background) setIsLoading(false)
     }
   }, [])
 
@@ -547,7 +543,7 @@ export default function AdminDashboardClient() {
     <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
       <section className="px-4 py-10 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-7xl">
-          <div className="mb-8 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+          <div className="mb-8">
             <div>
               <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
                 超級管理員
@@ -560,11 +556,6 @@ export default function AdminDashboardClient() {
                 匯款核對已整合至季度學員名單；收款帳戶與分配結果只會顯示在超級管理員後台。
               </p>
             </div>
-
-            <button type="button" disabled={isRefreshing} onClick={() => loadDashboard(true)} className="apple-button-outline inline-flex items-center justify-center gap-2 px-5 py-3 disabled:opacity-60">
-              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              {isRefreshing ? '正在同步' : '重新整理資料'}
-            </button>
           </div>
 
           <nav aria-label="管理員後台導航" className="mb-8 overflow-x-auto">

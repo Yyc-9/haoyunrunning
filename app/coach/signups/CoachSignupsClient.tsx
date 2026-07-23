@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Download, Filter, Inbox, Phone, RefreshCw, Search } from 'lucide-react'
+import { Download, Filter, Inbox, Phone, Search } from 'lucide-react'
 import CoachSubNav from '@/components/CoachSubNav'
 import { paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
 import { supabase } from '@/lib/supabase'
@@ -267,11 +267,7 @@ export default function CoachSignupsClient() {
               </p>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <button type="button" onClick={loadLeads} className="apple-button-outline inline-flex items-center justify-center gap-2 px-5 py-3">
-                <RefreshCw className="h-4 w-4" />
-                重新整理
-              </button>
+            <div>
               <button
                 type="button"
                 onClick={exportCsv}

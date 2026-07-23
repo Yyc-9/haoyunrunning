@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, Ban, CalendarCheck2, Check, CircleMinus, Clock3, Loader2, Phone, RefreshCw, RotateCcw, Save, UsersRound } from 'lucide-react'
+import { AlertTriangle, Ban, CalendarCheck2, Check, CircleMinus, Clock3, Loader2, Phone, RotateCcw, Save, UsersRound } from 'lucide-react'
 import CoachSubNav from '@/components/CoachSubNav'
 import CoachDutyPanel from './CoachDutyPanel'
 import type { CourseAttendanceStatus, CourseMakeupRequest } from '@/lib/course-attendance'
@@ -284,15 +284,12 @@ export default function CoachAttendanceClient() {
         <div className="container mx-auto max-w-7xl">
           <CoachSubNav />
 
-          <header className="mb-6 flex flex-col justify-between gap-4 border-b border-black/10 pb-6 sm:flex-row sm:items-end">
+          <header className="mb-6 border-b border-black/10 pb-6">
             <div>
               <p className="text-xs font-bold text-apple-blue sm:text-sm">課程管理</p>
               <h1 className="mt-1 text-3xl font-black text-black sm:text-4xl">課程點名</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-apple-gray-600">點名狀態為到課、請假或已扣除；補課學生會依學員安排自動加入本堂名單。計費起點異常會交由管理員處理。</p>
             </div>
-            <button type="button" title="重新整理" onClick={() => loadAttendance(courseId)} className="apple-button-secondary min-h-10 gap-2 px-4 py-2 text-sm">
-              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />重新整理
-            </button>
           </header>
 
           {error ? <p className="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-800">{error}</p> : null}

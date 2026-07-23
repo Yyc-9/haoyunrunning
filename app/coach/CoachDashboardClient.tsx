@@ -84,12 +84,10 @@ export default function CoachDashboardClient() {
   const [students, setStudents] = useState<BoundStudentRow[]>([])
   const [groupSignups, setGroupSignups] = useState<GroupSignup[]>([])
   const [coachProfile, setCoachProfile] = useState<CoachPublicProfile | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const hasCoachAccess = user?.role === 'coach' || user?.role === 'admin'
 
   const loadWorkspace = useCallback(async () => {
-    setIsLoading(true)
     setError('')
     try {
       const data = await fetchCoachWorkspace()
@@ -98,17 +96,12 @@ export default function CoachDashboardClient() {
       setCoachProfile(data.profile)
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : '讀取教練工作台失敗。')
-    } finally {
-      setIsLoading(false)
     }
   }, [])
 
   useEffect(() => {
     if (isAuthLoading) return
-    if (!hasCoachAccess) {
-      setIsLoading(false)
-      return
-    }
+    if (!hasCoachAccess) return
     loadWorkspace()
   }, [hasCoachAccess, isAuthLoading, loadWorkspace])
 
@@ -166,11 +159,8 @@ export default function CoachDashboardClient() {
                   <p className="mt-2 text-sm leading-6 text-apple-gray-600">今天有 {students.length} 位名下學員，{pendingSignups} 項團練報名待跟進。</p>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div>
                 <Link href="/coach/profile" className="apple-button-secondary min-h-10 gap-2 px-4 py-2 text-sm"><PencilLine className="h-4 w-4" />更換頭像</Link>
-                <button type="button" title="重新整理" onClick={loadWorkspace} className="apple-button-secondary min-h-10 gap-2 px-4 py-2 text-sm">
-                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /><span className="hidden sm:inline">重新整理</span>
-                </button>
               </div>
             </div>
           </header>

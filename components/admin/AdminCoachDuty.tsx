@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ChevronDown, Loader2, RefreshCw, UserRoundCheck } from 'lucide-react'
+import { ChevronDown, Loader2, UserRoundCheck } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 type DutyItem = {
@@ -151,7 +151,7 @@ export default function AdminCoachDuty() {
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5"><div><div className="flex items-center gap-2"><UserRoundCheck className="h-5 w-5" /><h2 className="text-lg font-black">教練本人到課、請假與代班</h2></div><p className="mt-1 text-sm text-apple-gray-600">課次事實獨立保留；學員自主簽到與教練對學員的出席核實不會在這裡互相覆蓋。</p></div><ChevronDown className="h-5 w-5 shrink-0 transition-transform group-open:rotate-180" /></summary>
       <div className="border-t border-black/10 p-4 sm:p-5">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">{summaries.map(([label, value, tone]) => <div key={label} className="rounded-lg border border-black/10 bg-apple-gray-50 p-3"><p className={`text-xl font-black ${tone}`}>{value}</p><p className="mt-1 text-[11px] font-bold text-apple-gray-500">{label}</p></div>)}</div>
-        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-[120px_130px_1fr_1fr_170px_150px_auto]">
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-[120px_130px_1fr_1fr_170px_150px]">
           <select value={yearFilter} onChange={(event) => setYearFilter(event.target.value)} className="apple-input" aria-label="年份篩選">
             <option value="all">全部年份</option>
             {yearOptions.map((year) => <option key={year} value={year}>{year} 年</option>)}
@@ -164,7 +164,6 @@ export default function AdminCoachDuty() {
           <select value={coachFilter} onChange={(event) => setCoachFilter(event.target.value)} className="apple-input"><option value="all">全部教練</option>{coaches.map((coach) => <option key={coach.id} value={coach.id}>{coach.name}</option>)}</select>
           <select value={scheduleFilter} onChange={(event) => setScheduleFilter(event.target.value)} className="apple-input"><option value="all">全部排班</option><option value="leave">只看請假</option><option value="substitute">只看代班</option><option value="regular">原定出勤</option></select>
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="apple-input"><option value="all">全部狀態</option><option value="anomaly">只看異常</option><option value="on_time">準時</option><option value="late">遲到</option><option value="not_checked_in">應到未簽到</option><option value="substitute_absent">代班未到</option><option value="missing_start_time">未設定時間</option></select>
-          <button type="button" onClick={load} className="apple-button-outline min-h-11 gap-2 px-4"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />重新整理</button>
         </div>
         {error ? <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p> : null}
         {message ? <p className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{message}</p> : null}

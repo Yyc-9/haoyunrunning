@@ -90,7 +90,7 @@ export default function PaymentStatusClient() {
     <main className="min-h-screen bg-gradient-to-b from-apple-gray-50 to-white pt-24">
       <section className="px-4 py-10 sm:px-6 sm:py-14">
         <div className="mx-auto max-w-6xl">
-          <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+          <div>
             <div>
               <p className="text-sm font-bold text-apple-blue">課程報名</p>
               <h1 className="mt-2 text-3xl font-black text-apple-gray-950 sm:text-5xl">我的匯款狀態</h1>
@@ -98,11 +98,6 @@ export default function PaymentStatusClient() {
                 查看課程應匯金額、後五碼提交狀態與財務核對結果。網站不會保存完整銀行帳號、網銀密碼或信用卡資料。
               </p>
             </div>
-            {isLoggedIn ? (
-              <button type="button" disabled={isLoading} onClick={loadEnrollments} className="apple-button-outline w-full gap-2 sm:w-fit">
-                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />重新整理
-              </button>
-            ) : null}
           </div>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Ban, CalendarCheck2, Check, Clock3, Loader2, RefreshCw, RotateCcw, X } from 'lucide-react'
+import { Ban, CalendarCheck2, Check, Clock3, Loader2, RotateCcw, X } from 'lucide-react'
 import {
   courseSessionStart,
   formatAttendanceDate,
@@ -188,13 +188,12 @@ export default function StudentAttendancePanel() {
 
   return (
     <section id="attendance" className="apple-card mb-6 scroll-mt-28 overflow-hidden">
-      <div className="flex flex-col justify-between gap-4 border-b border-black/10 p-5 sm:flex-row sm:items-center md:p-6">
+      <div className="border-b border-black/10 p-5 md:p-6">
         <div>
           <p className="text-sm font-semibold text-apple-blue">{payload.season?.name || '本季度'}</p>
           <h2 className="mt-1 flex items-center gap-2 text-2xl font-black text-apple-gray-900"><CalendarCheck2 className="h-6 w-6" />我的點名表</h2>
           <p className="mt-2 text-sm leading-6 text-apple-gray-600">查看自己的到課紀錄；只能為最近一堂課請假，補課則可選擇原課次之後、本季度內其他班級的可用課次。</p>
         </div>
-        <button type="button" title="重新整理點名表" onClick={() => loadAttendance()} className="apple-button-secondary min-h-10 shrink-0 gap-2 px-4 py-2 text-sm"><RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />重新整理</button>
       </div>
 
       {error ? <p className="m-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-800">{error}</p> : null}

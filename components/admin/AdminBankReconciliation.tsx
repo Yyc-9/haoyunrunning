@@ -733,19 +733,11 @@ export default function AdminBankReconciliation({ paymentAccounts }: { paymentAc
 
         <div className="apple-card overflow-hidden">
           <div className="border-b border-black/10 p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
               <div>
                 <h3 className="font-black text-apple-gray-900">對帳批次</h3>
                 <p className="mt-1 text-xs text-apple-gray-500">保留匯入、人工選擇與確認紀錄，方便日後追查。</p>
               </div>
-              <button
-                type="button"
-                onClick={() => loadData(data?.selectedBatchId ?? '')}
-                disabled={busy === 'refresh'}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-black/10 px-3 py-2 text-xs font-bold"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />重新整理
-              </button>
             </div>
           </div>
           {!data?.batches.length ? (

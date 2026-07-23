@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarClock, ChevronDown, Loader2, RefreshCw, UserRoundCheck } from 'lucide-react'
+import { CalendarClock, ChevronDown, Loader2, UserRoundCheck } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 type DutyItem = {
@@ -143,9 +143,8 @@ export default function CoachDutyPanel() {
         </div>
       </summary>
       <div className="border-t border-black/10">
-        <div className="flex items-center justify-between gap-3 border-b border-black/10 px-4 py-3 sm:px-5">
+        <div className="border-b border-black/10 px-4 py-3 sm:px-5">
           <p className="text-xs font-semibold leading-5 text-apple-gray-500">本人到課簽到與學員出席核實是兩份獨立紀錄。</p>
-          <button type="button" onClick={load} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-black/10" aria-label="重新整理教練到課資料"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /></button>
         </div>
         {error ? <p className="m-4 rounded-lg bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p> : null}
         {message ? <p className="m-4 rounded-lg bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{message}</p> : null}
