@@ -15,9 +15,6 @@ import {
 } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
 import type { ManagedCourse } from '@/lib/managed-courses'
-import TrainingItemCard from '@/components/TrainingItemCard'
-import BenefitItem from '@/components/BenefitItem'
-import SuitabilityCard from '@/components/SuitabilityCard'
 import { useSiteContent } from '@/app/site-content-provider'
 
 type CourseDetail = ManagedCourse
@@ -36,33 +33,6 @@ function compactCourseName(name: string) {
     .replace(/^2026\s*/, '')
     .replace(/^好運跑步訓練營\s*X\s*/, '')
     .trim()
-}
-
-const trainingDescriptions: Record<string, string> = {
-  動態熱身與跑姿檢測: '透過動態熱身啟動身體，觀察跑姿細節，讓教練掌握當天狀態與需要調整的重點。',
-  動態熱身與技術跑: '先用熱身和技術跑喚醒節奏感，建立更穩定的步頻、擺臂和身體控制。',
-  基礎有氧訓練: '用穩定強度建立底層耐力，讓身體逐步適應規律跑量。',
-  呼吸與節奏控制: '練習用呼吸、步頻和體感控制速度，避免一開始過快造成後段失速。',
-  肌力與穩定性訓練: '透過核心、臀腿和下肢穩定練習，提升跑步支撐能力，降低受傷風險。',
-  跑後放鬆與恢復: '用伸展、放鬆和恢復提醒整理訓練後的肌肉張力，幫助身體進入下一次訓練。',
-  訓練回報與調整: '根據學員每週回報的里程、RPE、疲勞和疼痛情況，幫助教練調整訓練安排。',
-  間歇訓練與配速調控: '用分段高強度訓練提升速度能力，並學會控制每一組的配速和恢復時間。',
-  間歇訓練: '透過短距離或固定時間的重複訓練刺激速度，同時保留足夠恢復來維持動作品質。',
-  節奏跑與維持速度: '在接近比賽感的強度下維持穩定輸出，訓練身體適應長時間的速度壓力。',
-  節奏跑與配速訓練: '建立清楚的配速感，讓跑者知道不同距離和強度下該如何穩定分配體力。',
-  長距離耐力建立: '循序增加時間與距離，打好半馬、全馬或長距離目標基礎。',
-  長距離耐力訓練: '透過較長時間的有氧累積提升耐力，練習補給、節奏和後段穩定度。',
-  賽事策略與心理調整: '把目標賽事拆成配速、補給和心理節奏，降低比賽當天的不確定感。',
-  恢復與防傷指導: '依照訓練負荷安排恢復方式，提醒常見疼痛風險和需要提早處理的訊號。',
-  跑姿與技術調整: '透過動作提示和技術跑，修正落地、重心、擺臂與轉換效率。',
-}
-
-function getTrainingDescription(title: string, language: string) {
-  const description =
-    trainingDescriptions[title] ||
-    '依照課程目標安排當日訓練內容，讓跑者在安全節奏中完成有效累積。'
-
-  return localizeText(description, language)
 }
 
 export default function CourseDetailClient({ course }: CourseDetailClientProps) {
@@ -100,6 +70,8 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
   const text = (value: string) => localizeText(value, language)
   const instagramUrl = brand.instagramUrl || course.instagramUrl || 'https://www.instagram.com/nurture.running.team/'
   const courseCoaches = course.coaches ?? (course.coach ? [course.coach] : [])
+  const seasonFocus = course.benefits.slice(0, 3)
+  const seasonGoal = course.slogan
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-20 sm:pt-24">
@@ -150,24 +122,6 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
         <div className="container mx-auto max-w-7xl">
           <div className="space-y-10">
             <section>
-              <h2 className="mb-6 text-2xl font-black text-apple-gray-900">{t.courseDetail.trainingItems}</h2>
-              <div className="grid gap-4 md:grid-cols-2">
-                {course.trainingItems.map((item) => (
-                  <TrainingItemCard key={item} title={text(item)} description={getTrainingDescription(item, language)} />
-                ))}
-              </div>
-            </section>
-
-            <section>
-              <h2 className="mb-6 text-2xl font-black text-apple-gray-900">{t.courseDetail.whatYouWillGet}</h2>
-              <div className="apple-card grid gap-4 p-6 md:grid-cols-2 md:p-8">
-                {course.benefits.map((benefit) => (
-                  <BenefitItem key={benefit} text={text(benefit)} />
-                ))}
-              </div>
-            </section>
-
-            <section>
               <h2 className="mb-6 text-2xl font-black text-apple-gray-900">{t.courseDetail.coachIntroduction}</h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {courseCoaches.map((coach) => {
@@ -213,9 +167,22 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
               </div>
             </section>
 
-            <section>
-              <div className="max-w-4xl">
-                <SuitabilityCard type="suitable" title={t.courseDetail.suitableFor} items={course.suitableFor.map(text)} />
+            <section className="overflow-hidden rounded-[1.5rem] border border-black/10 bg-white shadow-sm">
+              <div className="border-b border-black/10 px-5 py-6 sm:px-7 sm:py-8">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-apple-blue">TRAINING BLUEPRINT</p>
+                <h2 className="mt-3 text-2xl font-black leading-tight text-apple-gray-950 sm:text-3xl">本季訓練藍圖</h2>
+                <p className="mt-3 max-w-3xl text-base font-semibold leading-7 text-apple-gray-600">{text(seasonGoal)}</p>
+              </div>
+              <div className="grid md:grid-cols-3">
+                {seasonFocus.map((item, index) => (
+                  <article
+                    key={item}
+                    className={`p-5 sm:p-7 ${index ? 'border-t border-black/10 md:border-l md:border-t-0' : ''}`}
+                  >
+                    <span className="text-xs font-black text-apple-blue">0{index + 1}</span>
+                    <h3 className="mt-3 text-lg font-black leading-7 text-apple-gray-950">{text(item)}</h3>
+                  </article>
+                ))}
               </div>
             </section>
 

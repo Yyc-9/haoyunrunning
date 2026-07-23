@@ -118,8 +118,8 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
         <>
           <div className="relative isolate flex min-h-[520px] overflow-hidden text-white sm:min-h-[620px]">
             <Image
-              src="/site-visuals/hero-2026/courses-hero.webp"
-              alt="好運跑班教練團隊動態訓練"
+              src="/site-visuals/hero-2026/home-courses.webp"
+              alt="好運跑班本期課程預覽"
               fill
               priority
               sizes="100vw"

@@ -915,10 +915,9 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                 <div className="grid gap-4 border-t border-black/10 p-4 md:grid-cols-2">
                   <Field label="季度英文小標"><input value={String(draft.campaignLabel ?? '')} onChange={(e) => setDraft((current) => ({ ...current, campaignLabel: e.target.value }))} className="apple-input" /></Field>
                   <Field label="課程主標語"><input value={String(draft.slogan ?? '')} onChange={(e) => setDraft((current) => ({ ...current, slogan: e.target.value }))} className="apple-input" /></Field>
-                  <Field label="你將獲得（每行一項）" wide><textarea rows={7} value={(draft.benefits ?? []).join('\n')} onChange={(e) => setDraft((current) => ({ ...current, benefits: e.target.value.split('\n').map((item) => item.trim()).filter(Boolean) }))} className="apple-input resize-y" /></Field>
-                  <Field label="適合這堂課的你（每行一項）" wide><textarea rows={5} value={(draft.suitableFor ?? []).join('\n')} onChange={(e) => setDraft((current) => ({ ...current, suitableFor: e.target.value.split('\n').map((item) => item.trim()).filter(Boolean) }))} className="apple-input resize-y" /></Field>
+                  <Field label="本季訓練方向（每行一項，前台顯示前三項）" wide><textarea rows={5} value={(draft.benefits ?? []).slice(0, 3).join('\n')} onChange={(e) => setDraft((current) => ({ ...current, benefits: e.target.value.split('\n').map((item) => item.trim()).filter(Boolean).slice(0, 3) }))} className="apple-input resize-y" /></Field>
                   <Field label="開班提醒" wide><input value={String(draft.enrollmentNote ?? '')} onChange={(e) => setDraft((current) => ({ ...current, enrollmentNote: e.target.value }))} className="apple-input" placeholder="沒有提醒時可留空" /></Field>
-                  <p className="text-xs font-semibold leading-5 text-apple-gray-500 md:col-span-2">這些欄位只調整現有課程詳情版位，不會新增加購商品，也不會變更匯款與付款流程。</p>
+                  <p className="text-xs font-semibold leading-5 text-apple-gray-500 md:col-span-2">課程主標語與三項訓練方向會顯示在教練介紹後方的「本季訓練藍圖」；不會新增加購商品，也不會變更匯款與付款流程。</p>
                 </div>
               </details>
               <div className="border-y border-black/10 py-5 md:col-span-2">
