@@ -2,7 +2,7 @@
 
 import { HeartHandshake, MapPin, Route, Sparkles, Target, UsersRound } from 'lucide-react'
 import { useSiteContent } from '@/app/site-content-provider'
-import ImageStoryCard from '@/components/ImageStoryCard'
+import ImageStoryBand from '@/components/ImageStoryBand'
 
 const beliefIcons = [Sparkles, HeartHandshake, Target]
 const factIcons = [MapPin, Route, UsersRound]
@@ -48,43 +48,38 @@ export default function AboutPage() {
             </h2>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-3">
-            {about.beliefs.map((item, index) => {
-              const Icon = beliefIcons[index] ?? Sparkles
-              return (
-                <ImageStoryCard
-                  key={item.title}
-                  image={pageMedia.aboutBeliefImages[index]}
-                  imageAlt={`好運跑班品牌理念：${item.title}`}
-                  title={item.title}
-                  description={item.description}
-                  icon={Icon}
-                  objectPosition={['center 50%', 'center 48%', 'center 38%'][index]}
-                />
-              )
-            })}
+          <div className="-mx-4 sm:mx-0">
+            <ImageStoryBand
+              image={pageMedia.aboutBeliefImages[0]}
+              imageAlt="好運跑班訓練理念與跑者團練"
+              items={about.beliefs.map((item, index) => ({
+                ...item,
+                icon: beliefIcons[index] ?? Sparkles,
+              }))}
+              objectPosition="center 48%"
+            />
           </div>
         </div>
       </section>
 
       <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
         <div className="container mx-auto">
-          <div className="grid gap-5 md:grid-cols-3">
-            {about.facts.map((item, index) => {
-              const Icon = factIcons[index] ?? MapPin
-              return (
-                <ImageStoryCard
-                  key={item.title}
-                  image={pageMedia.aboutFactImages[index]}
-                  imageAlt={`好運跑班服務重點：${item.title}`}
-                  title={item.title}
-                  description={item.description}
-                  icon={Icon}
-                  compact
-                  objectPosition={['center 48%', 'center 48%', 'center 42%'][index]}
-                />
-              )
-            })}
+          <div className="mb-10 max-w-3xl">
+            <p className="text-sm font-semibold uppercase tracking-wide text-apple-blue">TRAINING SUPPORT</p>
+            <h2 className="mt-3 text-3xl font-bold text-apple-gray-900 md:text-4xl">
+              從課程到社群，陪跑者穩定前進。
+            </h2>
+          </div>
+          <div className="-mx-4 sm:mx-0">
+            <ImageStoryBand
+              image={pageMedia.aboutFactImages[0]}
+              imageAlt="好運跑班多地課程與教練社群支援"
+              items={about.facts.map((item, index) => ({
+                ...item,
+                icon: factIcons[index] ?? MapPin,
+              }))}
+              objectPosition="center 45%"
+            />
           </div>
         </div>
       </section>

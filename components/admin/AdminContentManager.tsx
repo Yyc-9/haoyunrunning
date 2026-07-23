@@ -709,7 +709,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
 
         {mode === 'media' ? (
           <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
-            {panelHeader('各頁主視覺', '更換關於、學員見證、商店與週年活動頁的主要圖片與卡片底圖。')}
+            {panelHeader('各頁主視覺', '更換關於、學員見證、商店與週年活動頁的主要圖片與橫幅底圖。')}
             <div className="p-5">
               <ImageField label="關於我們主圖" value={pageMedia.aboutHero} folder="pages" onChange={(aboutHero) => setPageMedia((current) => ({ ...current, aboutHero }))} onError={setLocalError} />
               <ImageField label="學員見證主圖" value={pageMedia.testimonialsHero} folder="pages" onChange={(testimonialsHero) => setPageMedia((current) => ({ ...current, testimonialsHero }))} onError={setLocalError} />
@@ -720,63 +720,54 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                 <details className="group rounded-lg border border-black/10 bg-apple-gray-50">
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3">
                     <div>
-                      <p className="font-black text-apple-gray-900">關於我們卡片底圖</p>
-                      <p className="mt-1 text-xs text-apple-gray-500">品牌理念與服務重點，共 6 張。</p>
+                      <p className="font-black text-apple-gray-900">關於我們橫幅底圖</p>
+                      <p className="mt-1 text-xs text-apple-gray-500">兩列內容各使用一張完整圖片。</p>
                     </div>
                     <span className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-black text-apple-gray-600 group-open:bg-black group-open:text-white">管理圖片</span>
                   </summary>
                   <div className="border-t border-black/10 bg-white px-4">
-                    {about.beliefs.map((item, index) => (
-                      <ImageField
-                        key={`about-belief-${index}`}
-                        label={`品牌理念 ${index + 1}：${item.title}`}
-                        value={pageMedia.aboutBeliefImages[index] ?? ''}
-                        folder="pages"
-                        onChange={(url) => setPageMedia((current) => ({
-                          ...current,
-                          aboutBeliefImages: current.aboutBeliefImages.map((image, imageIndex) => imageIndex === index ? url : image),
-                        }))}
-                        onError={setLocalError}
-                      />
-                    ))}
-                    {about.facts.map((item, index) => (
-                      <ImageField
-                        key={`about-fact-${index}`}
-                        label={`服務重點 ${index + 1}：${item.title}`}
-                        value={pageMedia.aboutFactImages[index] ?? ''}
-                        folder="pages"
-                        onChange={(url) => setPageMedia((current) => ({
-                          ...current,
-                          aboutFactImages: current.aboutFactImages.map((image, imageIndex) => imageIndex === index ? url : image),
-                        }))}
-                        onError={setLocalError}
-                      />
-                    ))}
+                    <ImageField
+                      label="第一列｜訓練理念"
+                      value={pageMedia.aboutBeliefImages[0] ?? ''}
+                      folder="pages"
+                      onChange={(url) => setPageMedia((current) => ({
+                        ...current,
+                        aboutBeliefImages: current.aboutBeliefImages.map((image, imageIndex) => imageIndex === 0 ? url : image),
+                      }))}
+                      onError={setLocalError}
+                    />
+                    <ImageField
+                      label="第二列｜課程與社群支援"
+                      value={pageMedia.aboutFactImages[0] ?? ''}
+                      folder="pages"
+                      onChange={(url) => setPageMedia((current) => ({
+                        ...current,
+                        aboutFactImages: current.aboutFactImages.map((image, imageIndex) => imageIndex === 0 ? url : image),
+                      }))}
+                      onError={setLocalError}
+                    />
                   </div>
                 </details>
 
                 <details className="group rounded-lg border border-black/10 bg-apple-gray-50">
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3">
                     <div>
-                      <p className="font-black text-apple-gray-900">學員見證卡片底圖</p>
-                      <p className="mt-1 text-xs text-apple-gray-500">成長路徑主題，共 3 張。</p>
+                      <p className="font-black text-apple-gray-900">學員見證橫幅底圖</p>
+                      <p className="mt-1 text-xs text-apple-gray-500">成長路徑使用一張完整圖片。</p>
                     </div>
                     <span className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-black text-apple-gray-600 group-open:bg-black group-open:text-white">管理圖片</span>
                   </summary>
                   <div className="border-t border-black/10 bg-white px-4">
-                    {testimonials.themes.map((item, index) => (
-                      <ImageField
-                        key={`testimonial-theme-${index}`}
-                        label={`見證主題 ${index + 1}：${item.title}`}
-                        value={pageMedia.testimonialThemeImages[index] ?? ''}
-                        folder="pages"
-                        onChange={(url) => setPageMedia((current) => ({
-                          ...current,
-                          testimonialThemeImages: current.testimonialThemeImages.map((image, imageIndex) => imageIndex === index ? url : image),
-                        }))}
-                        onError={setLocalError}
-                      />
-                    ))}
+                    <ImageField
+                      label="成長路徑橫幅"
+                      value={pageMedia.testimonialThemeImages[0] ?? ''}
+                      folder="pages"
+                      onChange={(url) => setPageMedia((current) => ({
+                        ...current,
+                        testimonialThemeImages: current.testimonialThemeImages.map((image, imageIndex) => imageIndex === 0 ? url : image),
+                      }))}
+                      onError={setLocalError}
+                    />
                   </div>
                 </details>
               </div>

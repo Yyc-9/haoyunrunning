@@ -4,7 +4,7 @@ import Image from 'next/image'
 import { BookOpenCheck, PlayCircle, Target, UsersRound } from 'lucide-react'
 import { useSiteContent } from '@/app/site-content-provider'
 import { getYouTubeEmbedUrl } from '@/lib/youtube'
-import ImageStoryCard from '@/components/ImageStoryCard'
+import ImageStoryBand from '@/components/ImageStoryBand'
 
 const storyIcons = [BookOpenCheck, UsersRound, Target]
 
@@ -84,21 +84,16 @@ export default function TestimonialsPage() {
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-3">
-            {testimonials.themes.map((item, index) => {
-              const Icon = storyIcons[index] ?? BookOpenCheck
-              return (
-                <ImageStoryCard
-                  key={item.title}
-                  image={pageMedia.testimonialThemeImages[index]}
-                  imageAlt={`好運跑班學員成長路徑：${item.title}`}
-                  title={item.title}
-                  description={item.description}
-                  icon={Icon}
-                  objectPosition={['center 52%', 'center 44%', 'center 46%'][index]}
-                />
-              )
-            })}
+          <div className="-mx-4 sm:mx-0">
+            <ImageStoryBand
+              image={pageMedia.testimonialThemeImages[0]}
+              imageAlt="好運跑班學員一起訓練與成長"
+              items={testimonials.themes.map((item, index) => ({
+                ...item,
+                icon: storyIcons[index] ?? BookOpenCheck,
+              }))}
+              objectPosition="center 48%"
+            />
           </div>
         </div>
       </section>
