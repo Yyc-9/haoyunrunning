@@ -62,7 +62,7 @@ export default function ShopPage() {
     <main className="min-h-screen bg-white pt-20 sm:pt-24">
       <section className="relative isolate min-h-[390px] overflow-hidden border-b border-black/10 sm:min-h-[470px]">
         <Image
-          src="/site-visuals/hero-2026/shop-hero.webp"
+          src={pageMedia.shopHero}
           alt="好運跑班服飾與跑步裝備"
           fill
           priority

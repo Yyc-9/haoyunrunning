@@ -147,8 +147,8 @@ export default function AdminCoachDuty() {
   }
 
   return (
-    <details className="group border-b border-black/10 bg-white">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5"><div><div className="flex items-center gap-2"><UserRoundCheck className="h-5 w-5" /><h2 className="text-lg font-black">教練本人到課、請假與代班</h2></div><p className="mt-1 text-sm text-apple-gray-600">課次事實獨立保留；學員自主簽到與教練對學員的出席核實不會在這裡互相覆蓋。</p></div><ChevronDown className="h-5 w-5 shrink-0 transition-transform group-open:rotate-180" /></summary>
+    <details open className="group border-b border-black/10 bg-white">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5"><div><div className="flex flex-wrap items-center gap-2"><UserRoundCheck className="h-5 w-5" /><h2 className="text-lg font-black">教練簽到、請假與代班</h2><span className="rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-black text-orange-800">待處理 {periodItems.filter((item) => item.adminStatus === 'pending').length}</span><span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-black text-red-800">異常 {periodItems.filter((item) => ['not_checked_in', 'substitute_absent', 'missing_start_time'].includes(item.attendanceState) || (item.leaveStatus === 'approved' && !item.actualCoachId)).length}</span></div><p className="mt-1 text-sm text-apple-gray-600">課次事實獨立保留；學員自主簽到與教練對學員的出席核實不會在這裡互相覆蓋。</p></div><ChevronDown className="h-5 w-5 shrink-0 transition-transform group-open:rotate-180" /></summary>
       <div className="border-t border-black/10 p-4 sm:p-5">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">{summaries.map(([label, value, tone]) => <div key={label} className="rounded-lg border border-black/10 bg-apple-gray-50 p-3"><p className={`text-xl font-black ${tone}`}>{value}</p><p className="mt-1 text-[11px] font-bold text-apple-gray-500">{label}</p></div>)}</div>
         <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-[120px_130px_1fr_1fr_170px_150px]">

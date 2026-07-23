@@ -65,9 +65,19 @@ export type HomeContent = {
   coursesLabel: string
   coursesTitle: string
   coursesDescription: string
+  coursesCtaLabel: string
+}
+
+export type PhilosophyItem = ContentCard & {
+  english: string
 }
 
 export type AboutContent = {
+  heroEyebrow: string
+  heroBrandName: string
+  heroEnglishTitle: string
+  heroChineseTitle: string
+  philosophies: PhilosophyItem[]
   eyebrow: string
   title: string
   titleHighlight: string
@@ -82,6 +92,15 @@ export type AboutContent = {
   facts: ContentCard[]
   ctaTitle: string
   ctaDescription: string
+}
+
+export type CoursesPageContent = {
+  heroLabel: string
+  heroTitle: string
+  heroDescription: string
+  guideLabel: string
+  guideTitle: string
+  guideSteps: ContentCard[]
 }
 
 export type TestimonialsContent = {
@@ -110,6 +129,11 @@ export type TeamContent = {
 }
 
 export type PageMedia = {
+  homeCoursesHero: string
+  aboutPageHero: string
+  aboutStoryHero: string
+  coursesHero: string
+  teamHero: string
   aboutHero: string
   testimonialsHero: string
   aboutBeliefImages: string[]
@@ -129,6 +153,7 @@ export type SiteContent = {
   brand: BrandContent
   home: HomeContent
   about: AboutContent
+  coursesPage: CoursesPageContent
   testimonials: TestimonialsContent
   team: TeamContent
   pageMedia: PageMedia
@@ -200,9 +225,19 @@ export const defaultHomeContent: HomeContent = {
   coursesLabel: '訓練日程',
   coursesTitle: '課程預覽',
   coursesDescription: '首頁整理本期代表班級，完整時間、訓練內容、費用與報名說明請進入課程頁查看。',
+  coursesCtaLabel: '查看完整課表',
 }
 
 export const defaultAboutContent: AboutContent = {
+  heroEyebrow: 'OUR PHILOSOPHY',
+  heroBrandName: '好運跑班',
+  heroEnglishTitle: 'A great place builds great runners.',
+  heroChineseTitle: '好的環境，創造出好的運動員。',
+  philosophies: [
+    { title: '專注速度能力與跑步經濟性', english: 'Precision Training. Smarter, Faster, Stronger.', description: '不是追求更多公里，而是透過科學化訓練，提升速度能力與跑步經濟性，讓每一步都更有效率。' },
+    { title: '建立穩固的訓練基礎', english: 'Build the Base. Prepare for Your Best.', description: '真正的進步，來自一季又一季穩定累積。用清楚的訓練節奏，讓每一次努力都能銜接賽事目標。' },
+    { title: '每位跑者都值得被看見', english: 'Every Runner Matters.', description: '依班級人數配置專屬教練，確保每位學員都能獲得足夠的指導與回饋。' },
+  ],
   eyebrow: '關於好運跑班',
   title: '我們想讓更多人，',
   titleHighlight: '真正愛上跑步。',
@@ -225,6 +260,20 @@ export const defaultAboutContent: AboutContent = {
   ],
   ctaTitle: '從下一次訓練開始，跑得更清楚一點。',
   ctaDescription: '如果你還不確定自己適合哪一班，先讓我們知道你的跑步經驗、目標距離與可訓練時間，我們會協助你找到更適合的起點。',
+}
+
+export const defaultCoursesPageContent: CoursesPageContent = {
+  heroLabel: '訓練日程',
+  heroTitle: '訓練日程表',
+  heroDescription: '先看適合對象、訓練目標、時間地點與報名方式，不進入詳情頁也能初步判斷是否適合。',
+  guideLabel: 'REGISTRATION GUIDE',
+  guideTitle: '如何加入課程？',
+  guideSteps: [
+    { title: '查看本期課表', description: '先依照星期、城市與上課時間，找到能穩定參加的班級。' },
+    { title: '進入課程詳情', description: '點擊課表中的課程卡片，確認訓練方向、教練與適合對象。' },
+    { title: '填寫專屬報名表', description: '在課程詳情最下方點擊「立即報名」，登入後完成資料與計費確認。' },
+    { title: '完成匯款與核對', description: '依網站顯示的金額完成匯款並提交後五碼，財務核對後即完成報名。' },
+  ],
 }
 
 export const defaultTestimonialsContent: TestimonialsContent = {
@@ -275,6 +324,11 @@ const legacyTeamContent: TeamContent = {
 }
 
 export const defaultPageMedia: PageMedia = {
+  homeCoursesHero: '/site-visuals/hero-2026/home-courses.webp',
+  aboutPageHero: '/site-visuals/hero-2026/about-track.webp',
+  aboutStoryHero: '/goodluck-fourth-anniversary-wallpaper.jpg',
+  coursesHero: '/site-visuals/hero-2026/home-courses.webp',
+  teamHero: '/site-visuals/hero-2026/team-hero.webp',
   aboutHero: '/goodluck-fourth-anniversary-wallpaper.jpg',
   testimonialsHero: '/goodluck-anniversary-7089.jpg',
   aboutBeliefImages: [
@@ -306,6 +360,7 @@ export const defaultSiteContent: SiteContent = {
   brand: defaultBrandContent,
   home: defaultHomeContent,
   about: defaultAboutContent,
+  coursesPage: defaultCoursesPageContent,
   testimonials: defaultTestimonialsContent,
   team: defaultTeamContent,
   pageMedia: defaultPageMedia,
@@ -480,6 +535,7 @@ export function normalizeHomeContent(value: unknown): HomeContent {
     coursesLabel: cleanOr(source.coursesLabel, defaultHomeContent.coursesLabel, 80),
     coursesTitle: cleanOr(source.coursesTitle, defaultHomeContent.coursesTitle, 140),
     coursesDescription: cleanOr(source.coursesDescription, defaultHomeContent.coursesDescription, 500),
+    coursesCtaLabel: cleanOr(source.coursesCtaLabel, defaultHomeContent.coursesCtaLabel, 80),
   }
 }
 
@@ -494,6 +550,17 @@ export function normalizeAboutContent(value: unknown): AboutContent {
     && legacyAboutBeliefs.cards.every((legacy, index) => cleanString(storedBeliefs[index]?.title, 120) === legacy.title)
 
   return {
+    heroEyebrow: cleanOr(source.heroEyebrow, defaultAboutContent.heroEyebrow, 80),
+    heroBrandName: cleanOr(source.heroBrandName, defaultAboutContent.heroBrandName, 100),
+    heroEnglishTitle: cleanOr(source.heroEnglishTitle, defaultAboutContent.heroEnglishTitle, 180),
+    heroChineseTitle: cleanOr(source.heroChineseTitle, defaultAboutContent.heroChineseTitle, 180),
+    philosophies: Array.isArray(source.philosophies) && source.philosophies.length === 3
+      ? source.philosophies.map((item, index) => ({
+          title: cleanOr(item?.title, defaultAboutContent.philosophies[index].title, 140),
+          english: cleanOr(item?.english, defaultAboutContent.philosophies[index].english, 180),
+          description: cleanOr(item?.description, defaultAboutContent.philosophies[index].description, 800),
+        }))
+      : defaultAboutContent.philosophies,
     eyebrow: cleanOr(source.eyebrow, defaultAboutContent.eyebrow, 80),
     title: cleanOr(source.title, defaultAboutContent.title, 140),
     titleHighlight: cleanOr(source.titleHighlight, defaultAboutContent.titleHighlight, 140),
@@ -508,6 +575,18 @@ export function normalizeAboutContent(value: unknown): AboutContent {
     facts: normalizeCards(source.facts, defaultAboutContent.facts, 3),
     ctaTitle: cleanOr(source.ctaTitle, defaultAboutContent.ctaTitle, 180),
     ctaDescription: cleanOr(source.ctaDescription, defaultAboutContent.ctaDescription, 800),
+  }
+}
+
+export function normalizeCoursesPageContent(value: unknown): CoursesPageContent {
+  const source = value && typeof value === 'object' ? value as Partial<CoursesPageContent> : {}
+  return {
+    heroLabel: cleanOr(source.heroLabel, defaultCoursesPageContent.heroLabel, 80),
+    heroTitle: cleanOr(source.heroTitle, defaultCoursesPageContent.heroTitle, 160),
+    heroDescription: cleanOr(source.heroDescription, defaultCoursesPageContent.heroDescription, 800),
+    guideLabel: cleanOr(source.guideLabel, defaultCoursesPageContent.guideLabel, 80),
+    guideTitle: cleanOr(source.guideTitle, defaultCoursesPageContent.guideTitle, 160),
+    guideSteps: normalizeCards(source.guideSteps, defaultCoursesPageContent.guideSteps, 4),
   }
 }
 
@@ -554,6 +633,11 @@ export function normalizePageMedia(value: unknown): PageMedia {
     return fallback.map((fallbackImage, index) => image(candidate[index], fallbackImage))
   }
   return {
+    homeCoursesHero: image(source.homeCoursesHero, defaultPageMedia.homeCoursesHero),
+    aboutPageHero: image(source.aboutPageHero, defaultPageMedia.aboutPageHero),
+    aboutStoryHero: image(source.aboutStoryHero, source.aboutHero || defaultPageMedia.aboutStoryHero),
+    coursesHero: image(source.coursesHero, defaultPageMedia.coursesHero),
+    teamHero: image(source.teamHero, defaultPageMedia.teamHero),
     aboutHero: image(source.aboutHero, defaultPageMedia.aboutHero),
     testimonialsHero: image(source.testimonialsHero, defaultPageMedia.testimonialsHero),
     aboutBeliefImages: imageList(source.aboutBeliefImages, defaultPageMedia.aboutBeliefImages),
@@ -577,6 +661,7 @@ export function siteContentFromRows(rows: Array<{ key: string; value: unknown }>
     brand: normalizeBrandContent(values.get('brand_content')),
     home: normalizeHomeContent(values.get('home_content')),
     about: normalizeAboutContent(values.get('about_content')),
+    coursesPage: normalizeCoursesPageContent(values.get('courses_page_content')),
     testimonials: normalizeTestimonialsContent(values.get('testimonials_content')),
     team: normalizeTeamContent(values.get('team_content')),
     pageMedia: normalizePageMedia(values.get('page_media')),

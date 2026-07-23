@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, Ban, CalendarCheck2, Check, CircleMinus, Clock3, Loader2, Phone, RotateCcw, Save, UsersRound } from 'lucide-react'
 import CoachSubNav from '@/components/CoachSubNav'
-import CoachDutyPanel from './CoachDutyPanel'
 import type { CourseAttendanceStatus, CourseMakeupRequest } from '@/lib/course-attendance'
 import { supabase } from '@/lib/supabase'
 
@@ -288,14 +287,12 @@ export default function CoachAttendanceClient() {
             <div>
               <p className="text-xs font-bold text-apple-blue sm:text-sm">課程管理</p>
               <h1 className="mt-1 text-3xl font-black text-black sm:text-4xl">課程點名</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-apple-gray-600">點名狀態為到課、請假或已扣除；補課學生會依學員安排自動加入本堂名單。計費起點異常會交由管理員處理。</p>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-apple-gray-600">本頁只記錄教練對學員出席的現場核實；教練本人到課簽到請回工作台「我的授課日程」完成。兩份紀錄彼此獨立。點名狀態為到課、請假或已扣除，補課學生會依學員安排自動加入本堂名單。</p>
             </div>
           </header>
 
           {error ? <p className="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-800">{error}</p> : null}
           {message ? <p className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">{message}</p> : null}
-
-          <CoachDutyPanel />
 
           {isLoading && !courses.length ? (
             <div className="py-20 text-center"><Loader2 className="mx-auto h-7 w-7 animate-spin" /><p className="mt-3 text-sm font-semibold text-apple-gray-500">正在讀取課程名單</p></div>

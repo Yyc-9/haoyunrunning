@@ -1,24 +1,17 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowRight, CalendarCheck2, ClipboardList, LockKeyhole, Mail, MessageSquareText, PencilLine, RefreshCw, UserRound, UsersRound } from 'lucide-react'
+import { ArrowRight, CalendarCheck2, ClipboardList, LockKeyhole, PencilLine, RefreshCw, UserRound, UsersRound } from 'lucide-react'
 import { useAuth } from '@/app/providers'
 import CoachAccessPanel from '@/components/CoachAccessPanel'
 import CoachSubNav from '@/components/CoachSubNav'
+import CoachDutyPanel from '@/app/coach/attendance/CoachDutyPanel'
 import { paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
 import { supabase } from '@/lib/supabase'
-import { getStudentDisplayEmail, getStudentDisplayName, hasStudentName } from '@/lib/student-display'
+import { getStudentDisplayName } from '@/lib/student-display'
 import type { CoachPublicProfile } from '@/lib/coach-profiles'
-
-type RecentFeedback = {
-  id: string
-  created_at: string
-  rpe: number | null
-  feeling: string | null
-  status: 'new' | 'flagged' | 'reviewed'
-}
 
 type BoundStudentRow = {
   id: string
@@ -32,7 +25,6 @@ type BoundStudentRow = {
     goal: string | null
     pb: string | null
   } | null
-  recentFeedback?: RecentFeedback[]
 }
 
 type GroupSignup = {
@@ -105,11 +97,6 @@ export default function CoachDashboardClient() {
     loadWorkspace()
   }, [hasCoachAccess, isAuthLoading, loadWorkspace])
 
-  const recentFeedback = useMemo(() => students
-    .flatMap((row) => (row.recentFeedback ?? []).map((feedback) => ({ row, feedback })))
-    .sort((a, b) => new Date(b.feedback.created_at).getTime() - new Date(a.feedback.created_at).getTime())
-    .slice(0, 5), [students])
-
   const pendingSignups = groupSignups.filter((signup) => signup.status !== 'approved').length
   const statusLabels = paymentOrderStatusLabels['zh-TW']
   const hour = new Date().getHours()
@@ -167,12 +154,11 @@ export default function CoachDashboardClient() {
 
           {error ? <p className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-800">{error}</p> : null}
 
-          <div className="mb-5 grid grid-cols-2 gap-3 sm:mb-8 sm:grid-cols-4 sm:gap-4">
+          <div className="mb-5 grid grid-cols-3 gap-3 sm:mb-8 sm:gap-4">
             {[
               { label: '名下學員', value: students.length, icon: UsersRound },
               { label: '團練報名', value: groupSignups.length, icon: ClipboardList },
               { label: '待跟進', value: pendingSignups, icon: CalendarCheck2 },
-              { label: '近期回饋', value: recentFeedback.length, icon: MessageSquareText },
             ].map(({ label, value, icon: Icon }) => (
               <div key={label} className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-5">
                 <Icon className="h-4 w-4 text-apple-gray-500 sm:h-5 sm:w-5" />
@@ -181,6 +167,8 @@ export default function CoachDashboardClient() {
               </div>
             ))}
           </div>
+
+          <CoachDutyPanel />
 
           <div className="mb-6 grid gap-5 lg:grid-cols-[360px_1fr]">
             <CoachAccessPanel onStudentBound={loadWorkspace} />
@@ -208,7 +196,7 @@ export default function CoachDashboardClient() {
             </section>
           </div>
 
-          <div className="grid gap-5 lg:grid-cols-2">
+          <div>
             <section className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-6">
               <div className="flex items-center justify-between gap-3">
                 <div><p className="text-xs font-bold text-apple-blue">GROUP TRAINING</p><h2 className="mt-1 text-xl font-black text-black sm:text-2xl">團練報名</h2></div>
@@ -225,26 +213,6 @@ export default function CoachDashboardClient() {
               </div>
             </section>
 
-            <section className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-6">
-              <div className="flex items-center justify-between gap-3">
-                <div><p className="text-xs font-bold text-apple-blue">RECENT FEEDBACK</p><h2 className="mt-1 text-xl font-black text-black sm:text-2xl">近期學員回饋</h2></div>
-                <Link href="/coach/students" className="inline-flex items-center gap-1 text-sm font-bold">學員列表<ArrowRight className="h-4 w-4" /></Link>
-              </div>
-              <div className="mt-4 space-y-2">
-                {recentFeedback.map(({ row, feedback }) => {
-                  const student = row.student
-                  if (!student) return null
-                  return (
-                    <article key={feedback.id} className="rounded-md bg-apple-gray-100 p-3">
-                      <div className="flex items-center justify-between gap-3"><p className="truncate text-sm font-black text-black">{getStudentDisplayName(student) || student.email}</p><span className="shrink-0 text-xs font-bold text-apple-gray-500">RPE {feedback.rpe ?? '-'}</span></div>
-                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-apple-gray-600">{feedback.feeling || '學員未填寫文字感受。'}</p>
-                      {hasStudentName(student) ? <p className="mt-1 flex items-center gap-1 truncate text-[11px] text-apple-gray-400"><Mail className="h-3 w-3" />{getStudentDisplayEmail(student)}</p> : null}
-                    </article>
-                  )
-                })}
-                {!recentFeedback.length ? <p className="rounded-md border border-dashed border-black/15 p-5 text-sm text-apple-gray-600">學員提交訓練回饋後會出現在這裡。</p> : null}
-              </div>
-            </section>
           </div>
         </div>
       </section>

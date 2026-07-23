@@ -16,6 +16,7 @@ import {
   normalizeAboutContent,
   normalizeBrandContent,
   normalizeCourseOverrides,
+  normalizeCoursesPageContent,
   normalizeHeroSlides,
   normalizeHomeContent,
   normalizePageMedia,
@@ -492,7 +493,7 @@ export async function GET(request: NextRequest) {
     supabaseAdmin!
       .from('site_content')
       .select('key, value')
-      .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'testimonials_content', 'team_content', 'page_media']),
+      .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'courses_page_content', 'testimonials_content', 'team_content', 'page_media']),
     supabaseAdmin!
       .from('coach_invites')
       .select('id, code, coach_key, used_by, used_at, expires_at, created_at')
@@ -1918,6 +1919,8 @@ export async function PATCH(request: NextRequest) {
       value = normalizeHomeContent(body.value)
     } else if (section === 'about_content') {
       value = normalizeAboutContent(body.value)
+    } else if (section === 'courses_page_content') {
+      value = normalizeCoursesPageContent(body.value)
     } else if (section === 'testimonials_content') {
       value = normalizeTestimonialsContent(body.value)
     } else if (section === 'team_content') {
@@ -1941,7 +1944,7 @@ export async function PATCH(request: NextRequest) {
     const { data: contentRows, error: contentRowsError } = await supabaseAdmin!
       .from('site_content')
       .select('key, value')
-      .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'testimonials_content', 'team_content', 'page_media'])
+      .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'courses_page_content', 'testimonials_content', 'team_content', 'page_media'])
 
     if (contentRowsError) {
       return json({ error: contentRowsError.message || '內容已儲存，但重新讀取失敗。' }, { status: 500 })

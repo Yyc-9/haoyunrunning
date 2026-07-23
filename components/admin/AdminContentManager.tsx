@@ -36,6 +36,7 @@ import type {
   AboutContent,
   BrandContent,
   CourseOverride,
+  CoursesPageContent,
   HomeActivity,
   HomeContent,
   PageMedia,
@@ -74,7 +75,7 @@ type AdminContentManagerProps = {
   runAction: (id: string, action: Record<string, unknown>) => Promise<boolean>
 }
 
-type ContentMode = 'overview' | 'hero' | 'home' | 'activities' | 'team' | 'seasons' | 'brand' | 'media' | 'about' | 'testimonials' | 'courses'
+type ContentMode = 'overview' | 'hero' | 'home' | 'activities' | 'schedule' | 'team' | 'seasons' | 'brand' | 'media' | 'about' | 'testimonials' | 'courses'
 
 async function uploadSiteImage(file: File, folder: 'hero' | 'brand' | 'pages' | 'coaches') {
   if (!supabase) throw new Error('圖片服務尚未設定。')
@@ -268,6 +269,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
   const [brand, setBrand] = useState<BrandContent>(content.brand)
   const [home, setHome] = useState<HomeContent>(content.home)
   const [about, setAbout] = useState<AboutContent>(content.about)
+  const [coursesPage, setCoursesPage] = useState<CoursesPageContent>(content.coursesPage)
   const [testimonials, setTestimonials] = useState<TestimonialsContent>(content.testimonials)
   const [team, setTeam] = useState<TeamContent>(content.team)
   const [coachDrafts, setCoachDrafts] = useState<Record<string, CoachPublicProfile>>(content.coachProfiles)
@@ -304,6 +306,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
     setBrand(content.brand)
     setHome(content.home)
     setAbout(content.about)
+    setCoursesPage(content.coursesPage)
     setTestimonials(content.testimonials)
     setTeam(content.team)
     setCoachDrafts(content.coachProfiles)
@@ -368,6 +371,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
     { id: 'hero' as const, label: '首頁輪播', description: '圖片與排序', destination: '首頁首屏輪播', icon: GalleryHorizontalEnd },
     { id: 'home' as const, label: '首頁文案', description: '近期報名與課程預覽', destination: '首頁近期報名、課程預覽', icon: Home },
     { id: 'activities' as const, label: '活動入口', description: '報名與活動連結', destination: '首頁近期報名入口', icon: Megaphone },
+    { id: 'schedule' as const, label: '訓練日程頁', description: '首屏與加入流程', destination: '完整訓練日程頁', icon: CalendarRange },
     { id: 'team' as const, label: '團隊陣容', description: '頁面介紹與教練資料', destination: '團隊陣容完整頁面', icon: UsersRound },
     { id: 'seasons' as const, label: '季度設定', description: '切換、複製與歷史資料', destination: '課程、日程表、報名與歷史報表', icon: CalendarRange },
     { id: 'brand' as const, label: '品牌與聯絡', description: '頁尾 Logo、社群與聯絡', destination: '頁尾與聯絡入口', icon: BadgeInfo },
@@ -544,6 +548,17 @@ export default function AdminContentManager({ content, courses, seasons, scope =
     </button>
   )
 
+  const multiSaveButton = (id: string, entries: Array<{ section: string; value: unknown }>, label = '儲存並發布') => (
+    <button type="button" onClick={async () => {
+      for (const [index, entry] of entries.entries()) {
+        const saved = await runAction(`${id}-${index}`, { action: 'save_site_content', section: entry.section, value: entry.value })
+        if (!saved) break
+      }
+    }} className="apple-button-primary gap-2 px-6 py-3">
+      <Save className="h-4 w-4" />{label}
+    </button>
+  )
+
   const restoreButton = (onRestore: () => void) => (
     <button type="button" onClick={() => { onRestore(); setLocalError(''); setCourseMessage('') }} className="apple-button-outline gap-2 px-5 py-3">
       <Undo2 className="h-4 w-4" />還原未儲存變更
@@ -610,9 +625,39 @@ export default function AdminContentManager({ content, courses, seasons, scope =
         {mode === 'home' ? (
           <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
             {panelHeader('首頁文案', '管理近期報名與課程預覽的標題及說明；首頁順序固定為近期報名、課程預覽。', '/')}
-            <div className="grid gap-4 p-5 md:grid-cols-2">
-              {([['activitiesLabel','近期報名小標'],['activitiesTitle','近期報名標題'],['activitiesDescription','近期報名說明'],['coursesLabel','課程預覽小標'],['coursesTitle','課程預覽標題'],['coursesDescription','課程預覽說明']] as const).map(([key,label]) => <Field key={key} label={label} wide={key.endsWith('Description')}><input value={home[key]} onChange={(e)=>setHome((c)=>({...c,[key]:e.target.value}))} className="apple-input" /></Field>)}
-            </div><div className="border-t border-black/10 p-5">{actionBar(() => setHome(content.home), saveButton('save-home', 'home_content', home))}</div>
+            <div className="p-5">
+              <ImageField label="首頁課程預覽背景圖" value={pageMedia.homeCoursesHero} folder="pages" onChange={(homeCoursesHero) => setPageMedia((current) => ({ ...current, homeCoursesHero }))} onError={setLocalError} />
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                {([['activitiesLabel','近期報名小標'],['activitiesTitle','近期報名標題'],['activitiesDescription','近期報名說明'],['coursesLabel','課程預覽小標'],['coursesTitle','課程預覽標題'],['coursesDescription','課程預覽說明'],['coursesCtaLabel','課程預覽按鈕']] as const).map(([key,label]) => <Field key={key} label={label} wide={key.endsWith('Description')}><input value={home[key]} onChange={(e)=>setHome((c)=>({...c,[key]:e.target.value}))} className="apple-input" /></Field>)}
+              </div>
+            </div>
+            <div className="border-t border-black/10 p-5">{actionBar(() => { setHome(content.home); setPageMedia(content.pageMedia) }, multiSaveButton('save-home', [{ section: 'home_content', value: home }, { section: 'page_media', value: pageMedia }]))}</div>
+          </div>
+        ) : null}
+
+        {mode === 'schedule' ? (
+          <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
+            {panelHeader('訓練日程頁', '管理完整課程頁的首屏與加入課程四步驟；班級資料仍由季度管理維護。', '/courses')}
+            <div className="p-5">
+              <ImageField label="訓練日程首屏背景圖" value={pageMedia.coursesHero} folder="pages" onChange={(coursesHero) => setPageMedia((current) => ({ ...current, coursesHero }))} onError={setLocalError} />
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <Field label="首屏小標"><input value={coursesPage.heroLabel} onChange={(event) => setCoursesPage((current) => ({ ...current, heroLabel: event.target.value }))} className="apple-input" /></Field>
+                <Field label="首屏標題"><input value={coursesPage.heroTitle} onChange={(event) => setCoursesPage((current) => ({ ...current, heroTitle: event.target.value }))} className="apple-input" /></Field>
+                <Field label="首屏說明" wide><textarea rows={4} value={coursesPage.heroDescription} onChange={(event) => setCoursesPage((current) => ({ ...current, heroDescription: event.target.value }))} className="apple-input resize-y" /></Field>
+                <Field label="加入流程小標"><input value={coursesPage.guideLabel} onChange={(event) => setCoursesPage((current) => ({ ...current, guideLabel: event.target.value }))} className="apple-input" /></Field>
+                <Field label="加入流程標題"><input value={coursesPage.guideTitle} onChange={(event) => setCoursesPage((current) => ({ ...current, guideTitle: event.target.value }))} className="apple-input" /></Field>
+                <div className="md:col-span-2">
+                  <h3 className="mb-3 font-black">四個加入步驟</h3>
+                  {coursesPage.guideSteps.map((step, index) => (
+                    <div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2">
+                      <input value={step.title} onChange={(event) => setCoursesPage((current) => ({ ...current, guideSteps: current.guideSteps.map((item, itemIndex) => itemIndex === index ? { ...item, title: event.target.value } : item) }))} className="apple-input" />
+                      <textarea rows={2} value={step.description} onChange={(event) => setCoursesPage((current) => ({ ...current, guideSteps: current.guideSteps.map((item, itemIndex) => itemIndex === index ? { ...item, description: event.target.value } : item) }))} className="apple-input resize-y" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="border-t border-black/10 p-5">{actionBar(() => { setCoursesPage(content.coursesPage); setPageMedia(content.pageMedia) }, multiSaveButton('save-schedule', [{ section: 'courses_page_content', value: coursesPage }, { section: 'page_media', value: pageMedia }]))}</div>
           </div>
         ) : null}
 
@@ -630,14 +675,17 @@ export default function AdminContentManager({ content, courses, seasons, scope =
           <div className="space-y-5">
             <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
               {panelHeader('團隊陣容頁面介紹', '管理首屏介紹與教練名單上方標題。', '/team')}
-              <div className="grid gap-4 p-5 md:grid-cols-2">
-                <Field label="首屏小標"><input value={team.eyebrow} onChange={(event) => setTeam((current) => ({ ...current, eyebrow: event.target.value }))} className="apple-input" /></Field>
-                <Field label="首屏標題"><input value={team.title} onChange={(event) => setTeam((current) => ({ ...current, title: event.target.value }))} className="apple-input" /></Field>
-                <Field label="首屏說明" wide><textarea rows={4} value={team.description} onChange={(event) => setTeam((current) => ({ ...current, description: event.target.value }))} className="apple-input resize-y" /></Field>
-                <Field label="名單小標"><input value={team.rosterLabel} onChange={(event) => setTeam((current) => ({ ...current, rosterLabel: event.target.value }))} className="apple-input" /></Field>
-                <Field label="名單標題"><input value={team.rosterTitle} onChange={(event) => setTeam((current) => ({ ...current, rosterTitle: event.target.value }))} className="apple-input" /></Field>
+              <div className="p-5">
+                <ImageField label="教練團隊首屏背景圖" value={pageMedia.teamHero} folder="pages" onChange={(teamHero) => setPageMedia((current) => ({ ...current, teamHero }))} onError={setLocalError} />
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  <Field label="首屏小標"><input value={team.eyebrow} onChange={(event) => setTeam((current) => ({ ...current, eyebrow: event.target.value }))} className="apple-input" /></Field>
+                  <Field label="首屏標題"><input value={team.title} onChange={(event) => setTeam((current) => ({ ...current, title: event.target.value }))} className="apple-input" /></Field>
+                  <Field label="首屏說明" wide><textarea rows={4} value={team.description} onChange={(event) => setTeam((current) => ({ ...current, description: event.target.value }))} className="apple-input resize-y" /></Field>
+                  <Field label="名單小標"><input value={team.rosterLabel} onChange={(event) => setTeam((current) => ({ ...current, rosterLabel: event.target.value }))} className="apple-input" /></Field>
+                  <Field label="名單標題"><input value={team.rosterTitle} onChange={(event) => setTeam((current) => ({ ...current, rosterTitle: event.target.value }))} className="apple-input" /></Field>
+                </div>
               </div>
-              <div className="border-t border-black/10 p-5">{actionBar(() => setTeam(content.team), saveButton('save-team', 'team_content', team))}</div>
+              <div className="border-t border-black/10 p-5">{actionBar(() => { setTeam(content.team); setPageMedia(content.pageMedia) }, multiSaveButton('save-team', [{ section: 'team_content', value: team }, { section: 'page_media', value: pageMedia }]))}</div>
             </div>
 
             <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
@@ -709,46 +757,13 @@ export default function AdminContentManager({ content, courses, seasons, scope =
 
         {mode === 'media' ? (
           <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
-            {panelHeader('各頁主視覺', '更換關於、學員見證、商店與週年活動頁的主要圖片與橫幅底圖。')}
+            {panelHeader('各頁主視覺', '管理學員見證、商店與週年活動目前實際使用的圖片。關於、課程與團隊圖片請到各自頁面設定。')}
             <div className="p-5">
-              <ImageField label="關於我們主圖" value={pageMedia.aboutHero} folder="pages" onChange={(aboutHero) => setPageMedia((current) => ({ ...current, aboutHero }))} onError={setLocalError} />
               <ImageField label="學員見證主圖" value={pageMedia.testimonialsHero} folder="pages" onChange={(testimonialsHero) => setPageMedia((current) => ({ ...current, testimonialsHero }))} onError={setLocalError} />
               <ImageField label="商店主視覺" value={pageMedia.shopHero} folder="pages" onChange={(shopHero) => setPageMedia((current) => ({ ...current, shopHero }))} onError={setLocalError} />
               <ImageField label="週年活動主圖" value={pageMedia.anniversaryHero} folder="pages" onChange={(anniversaryHero) => setPageMedia((current) => ({ ...current, anniversaryHero }))} onError={setLocalError} />
 
               <div className="mt-5 space-y-3">
-                <details className="group rounded-lg border border-black/10 bg-apple-gray-50">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3">
-                    <div>
-                      <p className="font-black text-apple-gray-900">關於我們橫幅底圖</p>
-                      <p className="mt-1 text-xs text-apple-gray-500">兩列內容各使用一張完整圖片。</p>
-                    </div>
-                    <span className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-black text-apple-gray-600 group-open:bg-black group-open:text-white">管理圖片</span>
-                  </summary>
-                  <div className="border-t border-black/10 bg-white px-4">
-                    <ImageField
-                      label="第一列｜訓練理念"
-                      value={pageMedia.aboutBeliefImages[0] ?? ''}
-                      folder="pages"
-                      onChange={(url) => setPageMedia((current) => ({
-                        ...current,
-                        aboutBeliefImages: current.aboutBeliefImages.map((image, imageIndex) => imageIndex === 0 ? url : image),
-                      }))}
-                      onError={setLocalError}
-                    />
-                    <ImageField
-                      label="第二列｜課程與社群支援"
-                      value={pageMedia.aboutFactImages[0] ?? ''}
-                      folder="pages"
-                      onChange={(url) => setPageMedia((current) => ({
-                        ...current,
-                        aboutFactImages: current.aboutFactImages.map((image, imageIndex) => imageIndex === 0 ? url : image),
-                      }))}
-                      onError={setLocalError}
-                    />
-                  </div>
-                </details>
-
                 <details className="group rounded-lg border border-black/10 bg-apple-gray-50">
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3">
                     <div>
@@ -783,7 +798,60 @@ export default function AdminContentManager({ content, courses, seasons, scope =
           </div>
         ) : null}
 
-        {mode === 'about' ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('關於我們','管理目前前台顯示的品牌故事、理念與服務重點。','/about')}<div className="grid gap-4 p-5 md:grid-cols-2">{([['eyebrow','頁面小標'],['title','主標題'],['titleHighlight','主標題重點'],['description','品牌介紹'],['beliefsLabel','理念小標'],['beliefsTitle','理念標題']] as const).map(([key,label])=><Field key={key} label={label} wide={['description','beliefsTitle'].includes(key)}>{key === 'description'?<textarea rows={4} value={about[key]} onChange={(e)=>setAbout((c)=>({...c,[key]:e.target.value}))} className="apple-input resize-y" />:<input value={about[key]} onChange={(e)=>setAbout((c)=>({...c,[key]:e.target.value}))} className="apple-input" />}</Field>)}<div className="md:col-span-2"><h3 className="mb-3 font-black">三項品牌理念</h3>{about.beliefs.map((item,index)=><div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2"><input value={item.title} onChange={(e)=>setAbout((c)=>({...c,beliefs:c.beliefs.map((x,i)=>i===index?{...x,title:e.target.value}:x)}))} className="apple-input" /><input value={item.description} onChange={(e)=>setAbout((c)=>({...c,beliefs:c.beliefs.map((x,i)=>i===index?{...x,description:e.target.value}:x)}))} className="apple-input" /></div>)}</div><div className="md:col-span-2"><h3 className="mb-3 font-black">三項服務重點</h3>{about.facts.map((item,index)=><div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2"><input value={item.title} onChange={(e)=>setAbout((c)=>({...c,facts:c.facts.map((x,i)=>i===index?{...x,title:e.target.value}:x)}))} className="apple-input" /><input value={item.description} onChange={(e)=>setAbout((c)=>({...c,facts:c.facts.map((x,i)=>i===index?{...x,description:e.target.value}:x)}))} className="apple-input" /></div>)}</div></div><div className="border-t border-black/10 p-5">{actionBar(() => setAbout(content.about), saveButton('save-about','about_content',about))}</div></div> : null}
+        {mode === 'about' ? (
+          <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
+            {panelHeader('關於我們', '管理目前前台實際顯示的首屏、三項理念、服務重點與下方品牌故事。', '/about')}
+            <div className="space-y-8 p-5">
+              <section>
+                <h3 className="mb-4 text-lg font-black">首屏</h3>
+                <ImageField label="首屏跑道背景圖" value={pageMedia.aboutPageHero} folder="pages" onChange={(aboutPageHero) => setPageMedia((current) => ({ ...current, aboutPageHero }))} onError={setLocalError} />
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  <Field label="首屏小標"><input value={about.heroEyebrow} onChange={(event) => setAbout((current) => ({ ...current, heroEyebrow: event.target.value }))} className="apple-input" /></Field>
+                  <Field label="品牌名稱"><input value={about.heroBrandName} onChange={(event) => setAbout((current) => ({ ...current, heroBrandName: event.target.value }))} className="apple-input" /></Field>
+                  <Field label="英文主句" wide><input value={about.heroEnglishTitle} onChange={(event) => setAbout((current) => ({ ...current, heroEnglishTitle: event.target.value }))} className="apple-input" /></Field>
+                  <Field label="中文主句" wide><input value={about.heroChineseTitle} onChange={(event) => setAbout((current) => ({ ...current, heroChineseTitle: event.target.value }))} className="apple-input" /></Field>
+                </div>
+              </section>
+
+              <section className="border-t border-black/10 pt-7">
+                <h3 className="mb-3 text-lg font-black">三項訓練理念</h3>
+                {about.philosophies.map((item, index) => (
+                  <div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2">
+                    <input value={item.title} onChange={(event) => setAbout((current) => ({ ...current, philosophies: current.philosophies.map((entry, itemIndex) => itemIndex === index ? { ...entry, title: event.target.value } : entry) }))} className="apple-input" placeholder="理念標題" />
+                    <input value={item.english} onChange={(event) => setAbout((current) => ({ ...current, philosophies: current.philosophies.map((entry, itemIndex) => itemIndex === index ? { ...entry, english: event.target.value } : entry) }))} className="apple-input" placeholder="英文短句" />
+                    <textarea rows={3} value={item.description} onChange={(event) => setAbout((current) => ({ ...current, philosophies: current.philosophies.map((entry, itemIndex) => itemIndex === index ? { ...entry, description: event.target.value } : entry) }))} className="apple-input resize-y md:col-span-2" placeholder="理念說明" />
+                  </div>
+                ))}
+              </section>
+
+              <section className="border-t border-black/10 pt-7">
+                <h3 className="mb-3 text-lg font-black">三項服務重點</h3>
+                {about.facts.map((item, index) => (
+                  <div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2">
+                    <input value={item.title} onChange={(event) => setAbout((current) => ({ ...current, facts: current.facts.map((entry, itemIndex) => itemIndex === index ? { ...entry, title: event.target.value } : entry) }))} className="apple-input" />
+                    <textarea rows={2} value={item.description} onChange={(event) => setAbout((current) => ({ ...current, facts: current.facts.map((entry, itemIndex) => itemIndex === index ? { ...entry, description: event.target.value } : entry) }))} className="apple-input resize-y" />
+                  </div>
+                ))}
+              </section>
+
+              <section className="border-t border-black/10 pt-7">
+                <h3 className="mb-4 text-lg font-black">下方品牌故事</h3>
+                <ImageField label="品牌故事背景圖" value={pageMedia.aboutStoryHero} folder="pages" onChange={(aboutStoryHero) => setPageMedia((current) => ({ ...current, aboutStoryHero }))} onError={setLocalError} />
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  <Field label="故事小標"><input value={about.eyebrow} onChange={(event) => setAbout((current) => ({ ...current, eyebrow: event.target.value }))} className="apple-input" /></Field>
+                  <Field label="故事標題"><input value={about.title} onChange={(event) => setAbout((current) => ({ ...current, title: event.target.value }))} className="apple-input" /></Field>
+                  <Field label="故事標題重點" wide><input value={about.titleHighlight} onChange={(event) => setAbout((current) => ({ ...current, titleHighlight: event.target.value }))} className="apple-input" /></Field>
+                  <Field label="品牌介紹" wide><textarea rows={5} value={about.description} onChange={(event) => setAbout((current) => ({ ...current, description: event.target.value }))} className="apple-input resize-y" /></Field>
+                  <div className="md:col-span-2">
+                    <h4 className="mb-3 font-black">三項支持重點</h4>
+                    {about.beliefs.map((item, index) => <input key={index} value={item.title} onChange={(event) => setAbout((current) => ({ ...current, beliefs: current.beliefs.map((entry, itemIndex) => itemIndex === index ? { ...entry, title: event.target.value } : entry) }))} className="apple-input mb-3" />)}
+                  </div>
+                </div>
+              </section>
+            </div>
+            <div className="border-t border-black/10 p-5">{actionBar(() => { setAbout(content.about); setPageMedia(content.pageMedia) }, multiSaveButton('save-about', [{ section: 'about_content', value: about }, { section: 'page_media', value: pageMedia }]))}</div>
+          </div>
+        ) : null}
 
         {mode === 'testimonials' ? (
           <div className="overflow-hidden rounded-lg border border-black/10 bg-white">

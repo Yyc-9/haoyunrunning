@@ -1,7 +1,15 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarClock, ChevronDown, Loader2, UserRoundCheck } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  CalendarClock,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  MapPin,
+  UserRoundCheck,
+  X,
+} from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 type DutyItem = {
@@ -31,25 +39,57 @@ type DutyItem = {
 
 type CoachOption = { id: string; name: string }
 
-const stateLabel: Record<string, string> = {
-  upcoming: '尚未開放',
-  check_in_open: '可簽到',
-  on_time: '準時簽到',
-  late: '遲到簽到',
-  not_checked_in: '應到未簽到',
-  substitute_absent: '代班未到',
-  cancelled: '本堂停課',
-  missing_start_time: '請補齊開始時間',
-  leave_approved: '已請假，待完成代班',
+const weekdays = ['週一', '週二', '週三', '週四', '週五', '週六', '週日']
+
+const stateMeta: Record<string, { label: string; chip: string; dot: string }> = {
+  upcoming: { label: '尚未開放', chip: 'border-blue-200 bg-blue-50 text-blue-800', dot: 'bg-blue-400' },
+  check_in_open: { label: '可簽到', chip: 'border-blue-700 bg-blue-700 text-white', dot: 'bg-blue-700' },
+  on_time: { label: '準時簽到', chip: 'border-emerald-200 bg-emerald-50 text-emerald-800', dot: 'bg-emerald-500' },
+  late: { label: '遲到簽到', chip: 'border-amber-200 bg-amber-50 text-amber-800', dot: 'bg-amber-500' },
+  not_checked_in: { label: '應到未簽到', chip: 'border-red-200 bg-red-50 text-red-800', dot: 'bg-red-500' },
+  substitute_absent: { label: '代班未到', chip: 'border-red-200 bg-red-50 text-red-800', dot: 'bg-red-500' },
+  cancelled: { label: '本堂停課', chip: 'border-gray-200 bg-gray-100 text-gray-700', dot: 'bg-gray-400' },
+  missing_start_time: { label: '請補齊開始時間', chip: 'border-red-200 bg-red-50 text-red-800', dot: 'bg-red-500' },
+  leave_approved: { label: '已請假，待完成代班', chip: 'border-orange-200 bg-orange-50 text-orange-800', dot: 'bg-orange-500' },
+}
+
+function taipeiDateKey(value: string | Date) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(typeof value === 'string' ? new Date(value) : value)
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? ''
+  return `${part('year')}-${part('month')}-${part('day')}`
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat('zh-TW', { timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric', weekday: 'short' }).format(new Date(`${value}T12:00:00+08:00`))
+  return new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+  }).format(new Date(`${value}T12:00:00+08:00`))
 }
 
 function formatTime(value: string) {
   if (!value) return ''
-  return new Intl.DateTimeFormat('zh-TW', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
+  return new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value))
+}
+
+function monthLabel(year: number, month: number) {
+  return new Intl.DateTimeFormat('zh-TW', { year: 'numeric', month: 'long', timeZone: 'Asia/Taipei' })
+    .format(new Date(Date.UTC(year, month - 1, 15)))
+}
+
+function shortCourseName(value: string) {
+  return value.replace(/^2026\s*/, '').replace(/^好運跑步訓練營\s*X\s*/, '').trim()
 }
 
 async function token() {
@@ -61,46 +101,128 @@ async function token() {
 export default function CoachDutyPanel() {
   const [items, setItems] = useState<DutyItem[]>([])
   const [coaches, setCoaches] = useState<CoachOption[]>([])
+  const [serverTime, setServerTime] = useState('')
+  const [viewYear, setViewYear] = useState(0)
+  const [viewMonth, setViewMonth] = useState(0)
+  const [selectedId, setSelectedId] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState('')
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [leaveReason, setLeaveReason] = useState<Record<string, string>>({})
   const [recommendedCoach, setRecommendedCoach] = useState<Record<string, string>>({})
+  const desktopDialogRef = useRef<HTMLDivElement>(null)
+  const mobileDialogRef = useRef<HTMLDivElement>(null)
+  const calendarRef = useRef<HTMLDivElement>(null)
+  const eventRefs = useRef(new Map<string, HTMLButtonElement>())
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async (quiet = false) => {
+    if (!quiet) setLoading(true)
     setError('')
     try {
-      const response = await fetch('/api/coach/session-duty', { cache: 'no-store', headers: { Authorization: `Bearer ${await token()}` } })
-      const payload = await response.json().catch(() => ({})) as { items?: DutyItem[]; coaches?: CoachOption[]; error?: string }
+      const response = await fetch('/api/coach/session-duty', {
+        cache: 'no-store',
+        headers: { Authorization: `Bearer ${await token()}` },
+      })
+      const payload = await response.json().catch(() => ({})) as {
+        items?: DutyItem[]
+        coaches?: CoachOption[]
+        serverTime?: string
+        error?: string
+      }
       if (!response.ok) throw new Error(payload.error || '讀取到課資料失敗。')
       setItems(payload.items ?? [])
       setCoaches(payload.coaches ?? [])
+      setServerTime(payload.serverTime || new Date().toISOString())
+      if (!viewYear || !viewMonth) {
+        const today = taipeiDateKey(payload.serverTime || new Date())
+        setViewYear(Number(today.slice(0, 4)))
+        setViewMonth(Number(today.slice(5, 7)))
+      }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : '讀取到課資料失敗。')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [viewMonth, viewYear])
 
   useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === 'visible') void load(true) }
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [load])
 
-  const visible = useMemo(() => {
-    const now = Date.now()
-    const candidates = items
-      .map((item) => ({
-        item,
-        timestamp: new Date(`${item.sessionDate}T${item.startTime || '12:00'}:00+08:00`).getTime(),
-      }))
-      .filter(({ timestamp }) => Number.isFinite(timestamp))
-    const upcoming = candidates
-      .filter(({ timestamp }) => timestamp >= now - 15 * 60_000)
-      .sort((a, b) => a.timestamp - b.timestamp)
-    const nearest = upcoming[0] ?? [...candidates].sort((a, b) => b.timestamp - a.timestamp)[0]
-    return nearest ? [nearest.item] : []
+  const selectedItem = items.find((item) => item.id === selectedId) ?? null
+  const closeSelected = useCallback(() => {
+    const activeId = selectedId
+    setSelectedId('')
+    window.requestAnimationFrame(() => eventRefs.current.get(activeId)?.focus())
+  }, [selectedId])
+
+  useEffect(() => {
+    if (!selectedItem) return
+    const activeDialog = () => window.matchMedia('(min-width: 768px)').matches
+      ? desktopDialogRef.current
+      : mobileDialogRef.current
+    window.requestAnimationFrame(() => activeDialog()?.focus())
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeSelected()
+    }
+    const closeOnOutside = (event: PointerEvent) => {
+      if (activeDialog()?.contains(event.target as Node)) return
+      if (eventRefs.current.get(selectedItem.id)?.contains(event.target as Node)) return
+      closeSelected()
+    }
+    document.addEventListener('keydown', closeOnEscape)
+    document.addEventListener('pointerdown', closeOnOutside)
+    return () => {
+      document.removeEventListener('keydown', closeOnEscape)
+      document.removeEventListener('pointerdown', closeOnOutside)
+    }
+  }, [closeSelected, selectedItem])
+
+  const todayKey = taipeiDateKey(serverTime || new Date())
+  const monthDays = useMemo(() => {
+    if (!viewYear || !viewMonth) return []
+    const first = new Date(Date.UTC(viewYear, viewMonth - 1, 1))
+    const mondayOffset = (first.getUTCDay() + 6) % 7
+    const daysInMonth = new Date(Date.UTC(viewYear, viewMonth, 0)).getUTCDate()
+    const slots = Math.ceil((mondayOffset + daysInMonth) / 7) * 7
+    return Array.from({ length: slots }, (_, index) => {
+      const date = new Date(Date.UTC(viewYear, viewMonth - 1, index - mondayOffset + 1))
+      const key = date.toISOString().slice(0, 10)
+      return {
+        key,
+        day: date.getUTCDate(),
+        inMonth: date.getUTCMonth() === viewMonth - 1,
+        column: index % 7,
+      }
+    })
+  }, [viewMonth, viewYear])
+  const eventsByDate = useMemo(() => {
+    const map = new Map<string, DutyItem[]>()
+    items.forEach((item) => map.set(item.sessionDate, [...(map.get(item.sessionDate) ?? []), item]))
+    map.forEach((events) => events.sort((left, right) => left.startTime.localeCompare(right.startTime)))
+    return map
   }, [items])
-  const nearestItem = visible[0]
+
+  function moveMonth(offset: number) {
+    const date = new Date(Date.UTC(viewYear, viewMonth - 1 + offset, 1))
+    setViewYear(date.getUTCFullYear())
+    setViewMonth(date.getUTCMonth() + 1)
+    closeSelected()
+  }
+
+  function goToday() {
+    setViewYear(Number(todayKey.slice(0, 4)))
+    setViewMonth(Number(todayKey.slice(5, 7)))
+    closeSelected()
+  }
 
   async function act(id: string, body: Record<string, unknown>) {
     setSaving(id)
@@ -115,7 +237,7 @@ export default function CoachDutyPanel() {
       const payload = await response.json().catch(() => ({})) as { error?: string; message?: string }
       if (!response.ok) throw new Error(payload.error || '操作失敗。')
       setMessage(payload.message || '資料已更新。')
-      await load()
+      await load(true)
     } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : '操作失敗。')
     } finally {
@@ -123,56 +245,160 @@ export default function CoachDutyPanel() {
     }
   }
 
-  return (
-    <details className="group mb-6 overflow-hidden rounded-xl border border-black/10 bg-white shadow-sm">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 sm:p-5">
-        <div className="min-w-0">
-          <p className="text-xs font-bold text-apple-blue">教練本人到課</p>
-          <h2 className="mt-1 text-lg font-black sm:text-xl">最近一堂課的簽到與請假代班</h2>
-          {nearestItem ? (
-            <p className="mt-1 truncate text-xs font-semibold leading-5 text-apple-gray-500">
-              {formatDate(nearestItem.sessionDate)} · {nearestItem.startTime || '未設定時間'} · {nearestItem.courseName}
-            </p>
-          ) : (
-            <p className="mt-1 text-xs font-semibold leading-5 text-apple-gray-500">目前沒有需要處理的課次。</p>
-          )}
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {nearestItem ? <span className={`hidden rounded-full px-2.5 py-1 text-[11px] font-bold sm:inline-flex ${['not_checked_in', 'substitute_absent'].includes(nearestItem.attendanceState) ? 'bg-red-50 text-red-700' : nearestItem.attendanceState === 'on_time' ? 'bg-emerald-50 text-emerald-700' : 'bg-apple-gray-100 text-apple-gray-700'}`}>{stateLabel[nearestItem.attendanceState] || nearestItem.attendanceState}</span> : null}
-          <ChevronDown className="h-5 w-5 transition-transform group-open:rotate-180" />
-        </div>
-      </summary>
-      <div className="border-t border-black/10">
-        <div className="border-b border-black/10 px-4 py-3 sm:px-5">
-          <p className="text-xs font-semibold leading-5 text-apple-gray-500">本人到課簽到與學員出席核實是兩份獨立紀錄。</p>
-        </div>
-        {error ? <p className="m-4 rounded-lg bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p> : null}
-        {message ? <p className="m-4 rounded-lg bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{message}</p> : null}
-        {loading && !items.length ? <div className="p-8 text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></div> : (
-          <div>
-            {visible.map((item) => (
-              <article key={item.id} className="p-4 sm:p-5">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2"><h3 className="font-black">{item.courseName}</h3><span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${['not_checked_in', 'substitute_absent'].includes(item.attendanceState) ? 'bg-red-50 text-red-700' : item.attendanceState === 'on_time' ? 'bg-emerald-50 text-emerald-700' : 'bg-apple-gray-100 text-apple-gray-700'}`}>{stateLabel[item.attendanceState] || item.attendanceState}</span></div>
-                  <p className="mt-1 text-sm font-semibold text-apple-gray-600">{formatDate(item.sessionDate)} · {item.startTime || '未設定時間'} · {item.location}</p>
-                  <p className="mt-1 text-xs text-apple-gray-500">原定：{item.scheduledCoachName}｜實際：{item.actualCoachName || '待安排'}</p>
-                  {item.checkedInAt ? <p className="mt-1 text-xs font-bold text-emerald-700">伺服器記錄 {formatTime(item.checkedInAt)}</p> : item.checkInOpensAt && item.attendanceState === 'upcoming' ? <p className="mt-1 text-xs text-apple-gray-500">{formatTime(item.checkInOpensAt)} 開放簽到</p> : null}
-                </div>
-                {item.canCheckIn ? <button type="button" disabled={saving === item.id} onClick={() => act(item.id, { intent: 'check_in' })} className="apple-button-primary min-h-11 shrink-0 gap-2 px-5"><UserRoundCheck className="h-4 w-4" />本人到課簽到</button> : null}
-              </div>
-
-              {item.canRespondSubstitute ? <div className="mt-4 flex flex-wrap items-center gap-2 rounded-lg bg-blue-50 p-3"><p className="mr-auto text-sm font-bold text-blue-900">邀請你代班本堂課程</p><button type="button" onClick={() => act(item.id, { intent: 'respond_substitute', response: 'accepted' })} className="rounded-lg bg-black px-4 py-2 text-xs font-bold text-white">接受</button><button type="button" onClick={() => act(item.id, { intent: 'respond_substitute', response: 'rejected' })} className="rounded-lg border border-black/10 bg-white px-4 py-2 text-xs font-bold">拒絕</button></div> : null}
-
-              {item.canRequestLeave ? <details className="mt-4 rounded-lg border border-black/10 bg-apple-gray-50"><summary className="cursor-pointer list-none px-4 py-3 text-sm font-black">提出本堂請假／推薦代班</summary><div className="grid gap-3 border-t border-black/10 p-4 sm:grid-cols-2"><textarea value={leaveReason[item.id] || ''} onChange={(event) => setLeaveReason((current) => ({ ...current, [item.id]: event.target.value }))} rows={3} className="apple-input resize-y sm:col-span-2" placeholder="請假原因（必填）" /><label className="sm:col-span-2"><span className="mb-1 block text-xs font-bold text-apple-gray-500">推薦代班教練（可留空，由管理員安排）</span><select value={recommendedCoach[item.id] || ''} onChange={(event) => setRecommendedCoach((current) => ({ ...current, [item.id]: event.target.value }))} className="apple-input"><option value="">交由管理員安排</option>{coaches.filter((coach) => coach.id !== item.scheduledCoachId).map((coach) => <option key={coach.id} value={coach.id}>{coach.name}</option>)}</select></label><button type="button" disabled={saving === item.id || !leaveReason[item.id]?.trim()} onClick={() => act(item.id, { intent: 'request_leave', reason: leaveReason[item.id], recommendedSubstituteId: recommendedCoach[item.id] || '' })} className="apple-button-primary min-h-11 sm:col-span-2 disabled:opacity-40">送出請假申請</button></div></details> : null}
-
-              {item.leaveStatus !== 'none' ? <p className="mt-3 flex items-center gap-2 text-xs font-bold text-amber-700"><CalendarClock className="h-4 w-4" />請假：{item.leaveStatus === 'requested' ? '待管理員核對' : item.leaveStatus === 'approved' ? '已核准' : '已拒絕'}{item.substituteCoachName ? `｜代班 ${item.substituteCoachName}（${item.substituteResponse === 'accepted' ? '已接受' : item.substituteResponse === 'rejected' ? '已拒絕' : '待回覆'}）` : '｜待安排代班'}</p> : null}
-              </article>
-            ))}
-            {!visible.length ? <p className="p-8 text-center text-sm font-semibold text-apple-gray-500">近期沒有需要簽到或處理的課次。</p> : null}
+  function DutyDetails({ item }: { item: DutyItem }) {
+    const meta = stateMeta[item.attendanceState] ?? stateMeta.upcoming
+    return (
+      <>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase tracking-wide text-apple-blue">授課安排</p>
+            <h3 className="mt-1 text-xl font-black text-black">{item.courseName}</h3>
           </div>
-        )}
+          <button type="button" onClick={closeSelected} aria-label="關閉課程詳情" className="rounded-full p-2 hover:bg-black/5">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="mt-4 space-y-2 text-sm font-semibold text-apple-gray-600">
+          <p>{formatDate(item.sessionDate)} · {item.startTime || '未設定開始時間'}</p>
+          <p className="flex items-center gap-2"><MapPin className="h-4 w-4 shrink-0" />{item.location || '地點待確認'}</p>
+          <p>原定教練：{item.scheduledCoachName}</p>
+          <p>實際授課：{item.actualCoachName || '待安排'}</p>
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className={`rounded-full border px-3 py-1.5 text-xs font-black ${meta.chip}`}>{meta.label}</span>
+          {item.adminStatus === 'pending' ? <span className="rounded-full bg-orange-50 px-3 py-1.5 text-xs font-black text-orange-800">等待管理員處理</span> : null}
+          {item.adminStatus === 'approved' ? <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-800">管理員已確認</span> : null}
+        </div>
+        {item.checkedInAt ? <p className="mt-3 text-xs font-bold text-emerald-700">伺服器簽到時間：{formatTime(item.checkedInAt)}</p> : item.checkInOpensAt ? <p className="mt-3 text-xs font-semibold text-apple-gray-500">簽到開放時間：{formatTime(item.checkInOpensAt)}（Asia/Taipei）</p> : null}
+
+        {item.canCheckIn ? (
+          <button type="button" disabled={saving === item.id} onClick={() => act(item.id, { intent: 'check_in' })} className="apple-button-primary mt-5 min-h-11 w-full gap-2 px-5">
+            {saving === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserRoundCheck className="h-4 w-4" />}
+            本人到課簽到
+          </button>
+        ) : null}
+
+        {item.canRespondSubstitute ? (
+          <div className="mt-4 rounded-xl bg-blue-50 p-3">
+            <p className="text-sm font-black text-blue-950">邀請你代班本堂課程</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button type="button" disabled={saving === item.id} onClick={() => act(item.id, { intent: 'respond_substitute', response: 'accepted' })} className="rounded-lg bg-black px-4 py-2.5 text-xs font-bold text-white">接受代班</button>
+              <button type="button" disabled={saving === item.id} onClick={() => act(item.id, { intent: 'respond_substitute', response: 'rejected' })} className="rounded-lg border border-black/10 bg-white px-4 py-2.5 text-xs font-bold">拒絕代班</button>
+            </div>
+          </div>
+        ) : null}
+
+        {item.canRequestLeave ? (
+          <details className="mt-4 rounded-xl border border-black/10 bg-apple-gray-50">
+            <summary className="cursor-pointer list-none px-4 py-3 text-sm font-black">申請請假／推薦代班</summary>
+            <div className="space-y-3 border-t border-black/10 p-4">
+              <textarea value={leaveReason[item.id] || ''} onChange={(event) => setLeaveReason((current) => ({ ...current, [item.id]: event.target.value }))} rows={3} className="apple-input resize-y" placeholder="請假原因（必填）" />
+              <label>
+                <span className="mb-1 block text-xs font-bold text-apple-gray-500">推薦代班教練（可留空）</span>
+                <select value={recommendedCoach[item.id] || ''} onChange={(event) => setRecommendedCoach((current) => ({ ...current, [item.id]: event.target.value }))} className="apple-input">
+                  <option value="">交由管理員安排</option>
+                  {coaches.filter((coach) => coach.id !== item.scheduledCoachId).map((coach) => <option key={coach.id} value={coach.id}>{coach.name}</option>)}
+                </select>
+              </label>
+              <button type="button" disabled={saving === item.id || !leaveReason[item.id]?.trim()} onClick={() => act(item.id, { intent: 'request_leave', reason: leaveReason[item.id], recommendedSubstituteId: recommendedCoach[item.id] || '' })} className="apple-button-primary min-h-11 w-full disabled:opacity-40">送出請假申請</button>
+            </div>
+          </details>
+        ) : null}
+
+        {item.leaveStatus !== 'none' ? (
+          <p className="mt-4 flex items-start gap-2 rounded-xl bg-orange-50 p-3 text-xs font-bold leading-5 text-orange-800">
+            <CalendarClock className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>請假：{item.leaveStatus === 'requested' ? '等待管理員核對' : item.leaveStatus === 'approved' ? '已核准' : '已拒絕'}{item.substituteCoachName ? `｜代班 ${item.substituteCoachName}（${item.substituteResponse === 'accepted' ? '已接受' : item.substituteResponse === 'rejected' ? '已拒絕' : '待回覆'}）` : '｜待安排代班'}</span>
+          </p>
+        ) : null}
+      </>
+    )
+  }
+
+  return (
+    <section className="mb-6 overflow-visible rounded-2xl border border-black/10 bg-white shadow-sm sm:mb-8">
+      <div className="flex flex-col gap-4 border-b border-black/10 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <div>
+          <p className="text-xs font-bold text-apple-blue">教練本人到課</p>
+          <h2 className="mt-1 text-xl font-black text-black sm:text-2xl">我的授課日程</h2>
+          <p className="mt-1 text-xs font-semibold leading-5 text-apple-gray-500">本人到課簽到與學員出席核實是兩份獨立紀錄。</p>
+        </div>
+        <div className="flex items-center justify-between gap-2 sm:justify-end">
+          <button type="button" onClick={goToday} className="rounded-lg border border-black/10 px-3 py-2 text-sm font-bold">今天</button>
+          <button type="button" onClick={() => moveMonth(-1)} aria-label="上個月" className="rounded-lg border border-black/10 p-2.5"><ChevronLeft className="h-4 w-4" /></button>
+          <button type="button" onClick={() => moveMonth(1)} aria-label="下個月" className="rounded-lg border border-black/10 p-2.5"><ChevronRight className="h-4 w-4" /></button>
+        </div>
       </div>
-    </details>
+      {error ? <p className="m-4 rounded-lg bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p> : null}
+      {message ? <p className="m-4 rounded-lg bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{message}</p> : null}
+      {loading && !items.length ? (
+        <div className="p-12 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></div>
+      ) : (
+        <div ref={calendarRef} className="relative p-3 sm:p-5">
+          <h3 className="mb-3 text-center text-lg font-black text-black sm:text-xl">{viewYear && viewMonth ? monthLabel(viewYear, viewMonth) : ''}</h3>
+          <div className="grid grid-cols-7 border-l border-t border-black/10">
+            {weekdays.map((weekday) => <div key={weekday} className="border-b border-r border-black/10 bg-apple-gray-50 px-1 py-2 text-center text-[10px] font-black text-apple-gray-500 sm:text-xs">{weekday}</div>)}
+            {monthDays.map((day) => {
+              const events = eventsByDate.get(day.key) ?? []
+              return (
+                <div key={day.key} className={`relative min-h-20 border-b border-r border-black/10 p-1 sm:min-h-28 sm:p-1.5 ${day.inMonth ? 'bg-white' : 'bg-apple-gray-50/70'}`}>
+                  <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold sm:h-7 sm:w-7 sm:text-xs ${day.key === todayKey ? 'bg-apple-blue text-white' : day.inMonth ? 'text-black' : 'text-apple-gray-300'}`}>{day.day}</span>
+                  <div className="mt-1 space-y-1">
+                    {events.map((item) => {
+                      const meta = stateMeta[item.attendanceState] ?? stateMeta.upcoming
+                      return (
+                        <div key={item.id} className="relative">
+                          <button
+                            ref={(node) => { if (node) eventRefs.current.set(item.id, node); else eventRefs.current.delete(item.id) }}
+                            type="button"
+                            aria-haspopup="dialog"
+                            aria-expanded={selectedId === item.id}
+                            onClick={() => setSelectedId((current) => current === item.id ? '' : item.id)}
+                            className={`w-full rounded-md border px-1.5 py-1 text-left text-[9px] font-black leading-3 transition hover:brightness-95 sm:px-2 sm:py-1.5 sm:text-[11px] sm:leading-4 ${meta.chip}`}
+                          >
+                            <span className="block text-[8px] leading-3 sm:inline sm:text-inherit">{item.startTime || '--:--'} </span>
+                            <span className="line-clamp-2">{shortCourseName(item.courseName)}</span>
+                          </button>
+                          {selectedId === item.id ? (
+                            <div
+                              ref={desktopDialogRef}
+                              role="dialog"
+                              aria-modal="false"
+                              aria-label={`${item.courseName}授課安排`}
+                              tabIndex={-1}
+                              className={`absolute top-[calc(100%+10px)] z-50 hidden w-[360px] max-w-[calc(100vw-3rem)] rounded-2xl border border-black/10 bg-white p-5 shadow-2xl outline-none md:block ${day.column >= 5 ? 'right-0' : 'left-0'}`}
+                            >
+                              <span className={`absolute -top-2 h-4 w-4 rotate-45 border-l border-t border-black/10 bg-white ${day.column >= 5 ? 'right-6' : 'left-6'}`} />
+                              <DutyDetails item={item} />
+                            </div>
+                          ) : null}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          {!items.length ? <p className="py-8 text-center text-sm font-semibold text-apple-gray-500">目前沒有需要簽到或處理的授課課次。</p> : null}
+        </div>
+      )}
+
+      {selectedItem ? (
+        <div className="fixed inset-0 z-[80] flex items-end bg-black/30 md:hidden">
+          <div
+            ref={mobileDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${selectedItem.courseName}授課安排`}
+            tabIndex={-1}
+            className="max-h-[86dvh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl outline-none"
+          >
+            <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-black/15" />
+            <DutyDetails item={selectedItem} />
+          </div>
+        </div>
+      ) : null}
+    </section>
   )
 }

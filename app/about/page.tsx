@@ -4,24 +4,6 @@ import Image from 'next/image'
 import { HeartHandshake, MapPin, Route, Sparkles, Target, UsersRound } from 'lucide-react'
 import { useSiteContent } from '@/app/site-content-provider'
 
-const philosophyItems = [
-  {
-    title: '專注速度能力與跑步經濟性',
-    english: 'Precision Training. Smarter, Faster, Stronger.',
-    description: '不是追求更多公里，而是透過科學化訓練，提升速度能力與跑步經濟性，讓每一步都更有效率。',
-  },
-  {
-    title: '建立穩固的訓練基礎',
-    english: 'Build the Base. Prepare for Your Best.',
-    description: '真正的進步，來自一季又一季穩定累積。用清楚的訓練節奏，讓每一次努力都能銜接賽事目標。',
-  },
-  {
-    title: '每位跑者都值得被看見',
-    english: 'Every Runner Matters.',
-    description: '依班級人數配置專屬教練，確保每位學員都能獲得足夠的指導與回饋。',
-  },
-]
-
 const factIcons = [MapPin, Route, UsersRound]
 
 export default function AboutPage() {
@@ -31,7 +13,7 @@ export default function AboutPage() {
     <main className="min-h-screen bg-white pt-20 sm:pt-24">
       <section className="relative isolate flex min-h-[680px] overflow-hidden text-white sm:min-h-[700px]">
         <Image
-          src="/site-visuals/hero-2026/about-track.webp"
+          src={pageMedia.aboutPageHero}
           alt="陽光下的田徑跑道"
           fill
           priority
@@ -42,21 +24,21 @@ export default function AboutPage() {
 
         <div className="container relative z-10 mx-auto flex w-full max-w-7xl flex-col justify-between px-5 py-14 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
           <div className="max-w-4xl">
-            <p className="text-xs font-black uppercase tracking-[0.42em] text-white/85 sm:text-sm">OUR PHILOSOPHY</p>
-            <h1 className="mt-4 text-4xl font-black tracking-[0.16em] sm:text-6xl">好運跑班</h1>
+            <p className="text-xs font-black uppercase tracking-[0.42em] text-white/85 sm:text-sm">{about.heroEyebrow}</p>
+            <h1 className="mt-4 text-4xl font-black tracking-[0.16em] sm:text-6xl">{about.heroBrandName}</h1>
             <p className="mt-7 text-2xl font-black leading-tight sm:text-4xl lg:text-5xl">
-              A great place builds great runners.
+              {about.heroEnglishTitle}
             </p>
             <p className="mt-6 text-xl font-black tracking-[0.12em] sm:text-3xl">
-              好的環境，創造出好的運動員。
+              {about.heroChineseTitle}
             </p>
           </div>
 
           <div className="mt-16 grid gap-7 border-t border-white/35 pt-7 lg:grid-cols-3 lg:gap-0 lg:border-t-0 lg:pt-0">
-            {philosophyItems.map((item, index) => (
+            {about.philosophies.map((item, index) => (
               <article
                 key={item.title}
-                className={`min-w-0 ${index > 0 ? 'lg:border-l lg:border-white/55 lg:pl-10' : ''} ${index < philosophyItems.length - 1 ? 'lg:pr-10' : ''}`}
+                className={`min-w-0 ${index > 0 ? 'lg:border-l lg:border-white/55 lg:pl-10' : ''} ${index < about.philosophies.length - 1 ? 'lg:pr-10' : ''}`}
               >
                 <h2 className="text-lg font-black tracking-[0.08em] sm:text-xl">{item.title}</h2>
                 <p className="mt-2 text-sm font-bold text-white/90">{item.english}</p>
@@ -86,7 +68,7 @@ export default function AboutPage() {
 
       <section className="relative isolate flex min-h-[660px] overflow-hidden text-white sm:min-h-[720px]">
         <Image
-          src={pageMedia.aboutHero}
+          src={pageMedia.aboutStoryHero}
           alt="好運跑班跑者與團隊"
           fill
           sizes="100vw"

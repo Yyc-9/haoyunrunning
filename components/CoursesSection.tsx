@@ -14,15 +14,9 @@ type CoursesSectionProps = {
 
 export default function CoursesSection({ preview = false }: CoursesSectionProps) {
   const { language, t } = useLanguage()
-  const { courses: managedCourses } = useSiteContent()
+  const { courses: managedCourses, home, coursesPage, pageMedia } = useSiteContent()
   const sortedCourses = managedCourses
   const courses = preview ? sortedCourses.slice(0, 4) : sortedCourses
-  const joinSteps = [
-    { title: '查看本期課表', description: '先依照星期、城市與上課時間，找到能穩定參加的班級。' },
-    { title: '進入課程詳情', description: '點擊課表中的課程卡片，確認訓練方向、教練與適合對象。' },
-    { title: '填寫專屬報名表', description: '在課程詳情最下方點擊「立即報名」，登入後完成資料與計費確認。' },
-    { title: '完成匯款與核對', description: '依網站顯示的金額完成匯款並提交後五碼，財務核對後即完成報名。' },
-  ]
   const faqItems = Array.from(
     new Map(
       sortedCourses
@@ -64,7 +58,7 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
         <>
           <div className="relative isolate flex min-h-[500px] overflow-hidden text-white sm:min-h-[560px]">
             <Image
-              src="/site-visuals/hero-2026/home-courses.webp"
+              src={pageMedia.homeCoursesHero}
               alt="好運跑班教練與跑者賽前集結"
               fill
               sizes="100vw"
@@ -73,13 +67,13 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
             <div className="absolute inset-0 bg-black/55" />
             <div className="container relative z-10 mx-auto flex w-full max-w-7xl items-center px-5 py-16 sm:px-8 lg:px-12">
               <div className="max-w-3xl">
-                <p className="text-sm font-black tracking-wide text-amber-300">訓練日程</p>
-                <h2 className="mt-4 text-4xl font-black sm:text-6xl">課程預覽</h2>
+                <p className="text-sm font-black tracking-wide text-amber-300">{home.coursesLabel}</p>
+                <h2 className="mt-4 text-4xl font-black sm:text-6xl">{home.coursesTitle}</h2>
                 <p className="mt-6 max-w-2xl text-base leading-8 text-white/80 sm:text-xl sm:leading-9">
-                  首頁整理本期代表班級，完整時間、訓練內容、費用與報名說明請進入課程頁查看。
+                  {home.coursesDescription}
                 </p>
                 <Link href="/courses" className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-black text-black transition hover:bg-white/90">
-                  查看完整課表
+                  {home.coursesCtaLabel}
                   <ChevronRight className="h-4 w-4" />
                 </Link>
               </div>
@@ -108,7 +102,7 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
             </div>
             <div className="mt-8 flex justify-center">
               <Link href="/courses" className="apple-button-secondary inline-flex items-center gap-2 px-6 py-3">
-                查看完整課表
+                {home.coursesCtaLabel}
                 <ChevronRight className="h-4 w-4" />
               </Link>
             </div>
@@ -118,7 +112,7 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
         <>
           <div className="relative isolate flex min-h-[520px] overflow-hidden text-white sm:min-h-[620px]">
             <Image
-              src="/site-visuals/hero-2026/home-courses.webp"
+              src={pageMedia.coursesHero}
               alt="好運跑班本期課程預覽"
               fill
               priority
@@ -128,10 +122,10 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
             <div className="absolute inset-0 bg-black/50" />
             <div className="container relative z-10 mx-auto flex w-full max-w-7xl items-start px-5 py-14 sm:px-8 sm:py-20 lg:px-12">
               <div className="max-w-4xl">
-                <p className="text-sm font-black tracking-wide text-amber-200">訓練日程</p>
-                <h1 className="mt-4 text-4xl font-black sm:text-6xl">訓練日程表</h1>
+                <p className="text-sm font-black tracking-wide text-amber-200">{coursesPage.heroLabel}</p>
+                <h1 className="mt-4 text-4xl font-black sm:text-6xl">{coursesPage.heroTitle}</h1>
                 <p className="mt-6 max-w-3xl text-base leading-8 text-white/85 sm:text-xl sm:leading-9">
-                  先看適合對象、訓練目標、時間地點與報名方式，不進入詳情頁也能初步判斷是否適合。
+                  {coursesPage.heroDescription}
                 </p>
               </div>
             </div>
@@ -139,10 +133,10 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
 
           <section className="border-b border-black/10 bg-white px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
             <div className="container mx-auto max-w-7xl">
-              <p className="text-sm font-black uppercase tracking-wide text-apple-blue">REGISTRATION GUIDE</p>
-              <h2 className="mt-3 text-3xl font-black text-apple-gray-950 sm:text-4xl">如何加入課程？</h2>
+              <p className="text-sm font-black uppercase tracking-wide text-apple-blue">{coursesPage.guideLabel}</p>
+              <h2 className="mt-3 text-3xl font-black text-apple-gray-950 sm:text-4xl">{coursesPage.guideTitle}</h2>
               <div className="mt-8 grid gap-7 md:grid-cols-2 xl:grid-cols-4">
-                {joinSteps.map((step, index) => (
+                {coursesPage.guideSteps.map((step, index) => (
                   <article key={step.title} className="flex gap-4">
                     <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-apple-blue text-lg font-black text-white">
                       {index + 1}
