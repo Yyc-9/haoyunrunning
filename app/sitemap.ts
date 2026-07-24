@@ -19,7 +19,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: '/refund-policy', priority: 0.4, changeFrequency: 'monthly' as const },
     { path: '/invoice', priority: 0.4, changeFrequency: 'monthly' as const },
   ]
-  const courses = await getManagedCourses()
+  let courses: Awaited<ReturnType<typeof getManagedCourses>> = []
+
+  try {
+    courses = await getManagedCourses()
+  } catch (error) {
+    // A transient content-service error must not block the entire production
+    // deployment. Static routes remain discoverable and course routes return
+    // on the next successful sitemap generation.
+    console.error('Load sitemap courses error:', error)
+  }
 
   return [
     ...staticRoutes.map((route) => ({
