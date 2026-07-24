@@ -249,7 +249,13 @@ export async function loadCoachDutyItems(options: { userId?: string; isAdmin?: b
           && window.phase === 'open'
           && !checkin,
         checkInOpensAt: window.opensAt?.toISOString() ?? '',
-        canRequestLeave: !cancelled && row.scheduled_coach_id === options.userId && row.leave_status === 'none' && !checkin,
+        canRequestLeave: !cancelled
+          && row.scheduled_coach_id === options.userId
+          && (
+            row.leave_status === 'none'
+            || (row.leave_status === 'requested' && row.substitute_response === 'rejected')
+          )
+          && !checkin,
         canRespondSubstitute: row.substitute_coach_id === options.userId && row.substitute_response === 'pending',
         salaryStatus: 'pending_rate',
         salaryStatusLabel: '待設定課酬',

@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminProfile } from '@/lib/admin-auth'
 import { APP_TIME_ZONE_LABEL } from '@/lib/app-time'
 import { auditCoachDuty, coachDutyPunctuality, coachDutyWindow, loadCoachDutyItems } from '@/lib/coach-session-duty'
+import {
+  createDirectSubstituteInvitation,
+  respondToDirectSubstituteInvitation,
+  type ScheduledCoachRole,
+} from '@/lib/coach-substitution-policy'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { getIsolatedMondayCourse, getIsolatedTestAccount, updateIsolatedTestState } from '@/lib/test-account'
 
@@ -9,6 +14,10 @@ const headers = { 'Cache-Control': 'no-store' }
 
 function clean(value: unknown, length = 500) {
   return typeof value === 'string' ? value.trim().slice(0, length) : ''
+}
+
+function scheduledRole(value: string): ScheduledCoachRole {
+  return value === 'head_coach' || value === 'assistant' ? value : 'coach'
 }
 
 async function requireCoach(request: NextRequest) {
@@ -152,22 +161,44 @@ export async function POST(request: NextRequest) {
 
     if (intent === 'request_leave') {
       const reason = clean(body.reason, 800)
-      const recommendedSubstituteId = clean(body.recommendedSubstituteId, 80) || null
+      const invitedSubstituteId = clean(body.invitedSubstituteId ?? body.recommendedSubstituteId, 80)
       if (assignment.scheduled_coach_id !== auth.user.id) return NextResponse.json({ error: '只有原定教練可以提出本堂請假。' }, { status: 403, headers })
       if (!reason) return NextResponse.json({ error: '請填寫請假原因。' }, { status: 400, headers })
-      if (assignment.leave_status !== 'none') return NextResponse.json({ error: '本堂已經有請假處理紀錄。' }, { status: 409, headers })
-      if (recommendedSubstituteId === auth.user.id) return NextResponse.json({ error: '不能推薦自己作為代班教練。' }, { status: 400, headers })
+      if (!invitedSubstituteId) return NextResponse.json({ error: '請選擇要邀請的代班教練。' }, { status: 400, headers })
+      const canInvite = assignment.leave_status === 'none'
+        || (assignment.leave_status === 'requested' && assignment.substitute_response === 'rejected')
+      if (!canInvite) return NextResponse.json({ error: '本堂已有正在處理或已生效的代班安排。' }, { status: 409, headers })
+      const { data: invitedCoach, error: invitedCoachError } = await supabaseAdmin!
+        .from('profiles')
+        .select('id, role')
+        .eq('id', invitedSubstituteId)
+        .in('role', ['coach', 'admin'])
+        .maybeSingle()
+      if (invitedCoachError) throw invitedCoachError
+      if (!invitedCoach) return NextResponse.json({ error: '受邀帳號目前沒有教練權限。' }, { status: 400, headers })
       const now = new Date().toISOString()
-      const { error } = await supabaseAdmin!.from('coach_session_assignments').update({
-        leave_status: 'requested',
-        leave_reason: reason,
-        leave_requested_at: now,
-        recommended_substitute_id: recommendedSubstituteId,
-        admin_status: 'pending',
-      }).eq('id', assignment.id).eq('scheduled_coach_id', auth.user.id)
+      const update = createDirectSubstituteInvitation({
+        scheduledCoachId: auth.user.id,
+        scheduledCoachRole: scheduledRole(assignment.coach_role),
+        invitedCoachId: invitedSubstituteId,
+        reason,
+        requestedAt: now,
+      })
+      const { data: updated, error } = await supabaseAdmin!
+        .from('coach_session_assignments')
+        .update(update)
+        .eq('id', assignment.id)
+        .eq('scheduled_coach_id', auth.user.id)
+        .eq('substitute_response', assignment.substitute_response)
+        .select('id')
+        .maybeSingle()
       if (error) throw error
-      await auditCoachDuty(assignment.id, auth.user.id, 'leave_requested', reason, { recommendedSubstituteId })
-      return NextResponse.json({ message: '請假申請已送出，等待管理員核對與安排代班。' }, { headers })
+      if (!updated) return NextResponse.json({ error: '代班狀態已更新，請重新整理後再操作。' }, { status: 409, headers })
+      await auditCoachDuty(assignment.id, auth.user.id, 'direct_substitute_invited', reason, {
+        invitedSubstituteId,
+        previousSubstituteResponse: assignment.substitute_response,
+      })
+      return NextResponse.json({ message: '請假與代班邀請已送出，等待受邀教練回覆。' }, { headers })
     }
 
     if (intent === 'respond_substitute') {
@@ -175,13 +206,45 @@ export async function POST(request: NextRequest) {
       if (!['accepted', 'rejected'].includes(response)) return NextResponse.json({ error: '代班回覆無效。' }, { status: 400, headers })
       if (assignment.substitute_coach_id !== auth.user.id || assignment.substitute_response !== 'pending') return NextResponse.json({ error: '這堂課目前沒有等待你回覆的代班邀請。' }, { status: 403, headers })
       const now = new Date().toISOString()
-      const { error } = await supabaseAdmin!.from('coach_session_assignments').update({
-        substitute_response: response,
-        substitute_responded_at: now,
-      }).eq('id', assignment.id).eq('substitute_coach_id', auth.user.id)
+      const isDirectInvitation = assignment.admin_status === 'not_required'
+      const update = isDirectInvitation
+        ? respondToDirectSubstituteInvitation({
+            scheduledCoachId: assignment.scheduled_coach_id,
+            scheduledCoachRole: scheduledRole(assignment.coach_role),
+            invitedCoachId: assignment.substitute_coach_id,
+            respondingCoachId: auth.user.id,
+            response: response as 'accepted' | 'rejected',
+            respondedAt: now,
+          })
+        : {
+            substitute_response: response,
+            substitute_responded_at: now,
+          }
+      const { data: updated, error } = await supabaseAdmin!
+        .from('coach_session_assignments')
+        .update(update)
+        .eq('id', assignment.id)
+        .eq('substitute_coach_id', auth.user.id)
+        .eq('substitute_response', 'pending')
+        .select('id')
+        .maybeSingle()
       if (error) throw error
-      await auditCoachDuty(assignment.id, auth.user.id, `substitute_${response}`, '', {})
-      return NextResponse.json({ message: response === 'accepted' ? '已接受代班邀請，等待管理員最終確認。' : '已拒絕代班邀請，管理員會另行安排。' }, { headers })
+      if (!updated) return NextResponse.json({ error: '代班邀請已被處理，請重新整理後確認最新狀態。' }, { status: 409, headers })
+      await auditCoachDuty(assignment.id, auth.user.id, `${isDirectInvitation ? 'direct_' : ''}substitute_${response}`, '', {
+        scheduledCoachId: assignment.scheduled_coach_id,
+        actualCoachId: isDirectInvitation && response === 'accepted'
+          ? auth.user.id
+          : assignment.actual_coach_id,
+      })
+      return NextResponse.json({
+        message: response === 'accepted'
+          ? isDirectInvitation
+            ? '已接受代班邀請；代班已生效，並同步至管理員後台。'
+            : '已接受管理員指派的代班邀請，等待管理員最終確認。'
+          : isDirectInvitation
+            ? '已拒絕代班邀請；原教練可以重新邀請其他教練。'
+            : '已拒絕管理員指派的代班邀請，管理員將重新安排。',
+      }, { headers })
     }
 
     return NextResponse.json({ error: '不支援的操作。' }, { status: 400, headers })

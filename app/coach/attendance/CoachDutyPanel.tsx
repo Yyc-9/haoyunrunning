@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  BellRing,
   CalendarClock,
   ChevronLeft,
   ChevronRight,
@@ -159,6 +160,12 @@ export default function CoachDutyPanel() {
   }, [load])
 
   const selectedItem = items.find((item) => item.id === selectedId) ?? null
+  const pendingInvitations = useMemo(
+    () => items
+      .filter((item) => item.canRespondSubstitute)
+      .sort((left, right) => `${left.sessionDate}${left.startTime}`.localeCompare(`${right.sessionDate}${right.startTime}`)),
+    [items],
+  )
   const closeSelected = useCallback(() => {
     const activeId = selectedId
     setSelectedId('')
@@ -291,17 +298,17 @@ export default function CoachDutyPanel() {
 
         {item.canRequestLeave ? (
           <details className="mt-4 rounded-xl border border-black/10 bg-apple-gray-50">
-            <summary className="cursor-pointer list-none px-4 py-3 text-sm font-black">申請請假／推薦代班</summary>
+            <summary className="cursor-pointer list-none px-4 py-3 text-sm font-black">{item.substituteResponse === 'rejected' ? '重新邀請代班教練' : '申請請假並邀請代班'}</summary>
             <div className="space-y-3 border-t border-black/10 p-4">
               <textarea value={leaveReason[item.id] || ''} onChange={(event) => setLeaveReason((current) => ({ ...current, [item.id]: event.target.value }))} rows={3} className="apple-input resize-y" placeholder="請假原因（必填）" />
               <label>
-                <span className="mb-1 block text-xs font-bold text-apple-gray-500">推薦代班教練（可留空）</span>
+                <span className="mb-1 block text-xs font-bold text-apple-gray-500">邀請代班教練（必選）</span>
                 <select value={recommendedCoach[item.id] || ''} onChange={(event) => setRecommendedCoach((current) => ({ ...current, [item.id]: event.target.value }))} className="apple-input">
-                  <option value="">交由管理員安排</option>
+                  <option value="">選擇代班教練</option>
                   {coaches.filter((coach) => coach.id !== item.scheduledCoachId).map((coach) => <option key={coach.id} value={coach.id}>{coach.name}</option>)}
                 </select>
               </label>
-              <button type="button" disabled={saving === item.id || !leaveReason[item.id]?.trim()} onClick={() => act(item.id, { intent: 'request_leave', reason: leaveReason[item.id], recommendedSubstituteId: recommendedCoach[item.id] || '' })} className="apple-button-primary min-h-11 w-full disabled:opacity-40">送出請假申請</button>
+              <button type="button" disabled={saving === item.id || !leaveReason[item.id]?.trim() || !recommendedCoach[item.id]} onClick={() => act(item.id, { intent: 'request_leave', reason: leaveReason[item.id], invitedSubstituteId: recommendedCoach[item.id] })} className="apple-button-primary min-h-11 w-full disabled:opacity-40">{item.substituteResponse === 'rejected' ? '重新送出代班邀請' : '送出請假與代班邀請'}</button>
             </div>
           </details>
         ) : null}
@@ -309,7 +316,13 @@ export default function CoachDutyPanel() {
         {item.leaveStatus !== 'none' ? (
           <p className="mt-4 flex items-start gap-2 rounded-xl bg-orange-50 p-3 text-xs font-bold leading-5 text-orange-800">
             <CalendarClock className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>請假：{item.leaveStatus === 'requested' ? '等待管理員核對' : item.leaveStatus === 'approved' ? '已核准' : '已拒絕'}{item.substituteCoachName ? `｜代班 ${item.substituteCoachName}（${item.substituteResponse === 'accepted' ? '已接受' : item.substituteResponse === 'rejected' ? '已拒絕' : '待回覆'}）` : '｜待安排代班'}</span>
+            <span>{item.substituteResponse === 'accepted'
+              ? `原教練已請假｜代班 ${item.substituteCoachName} 已接受並生效`
+              : item.substituteResponse === 'rejected'
+                ? `代班 ${item.substituteCoachName} 已拒絕，可重新邀請其他教練`
+                : item.substituteCoachName
+                  ? `請假邀請已送出｜等待 ${item.substituteCoachName} 回覆`
+                  : `請假：${item.leaveStatus === 'approved' ? '已核准' : item.leaveStatus === 'rejected' ? '已拒絕' : '處理中'}｜待安排代班`}</span>
           </p>
         ) : null}
       </>
@@ -317,7 +330,40 @@ export default function CoachDutyPanel() {
   }
 
   return (
-    <section className="mb-6 overflow-visible rounded-2xl border border-black/10 bg-white shadow-sm sm:mb-8">
+    <>
+      {pendingInvitations.length ? (
+        <details open className="mb-4 overflow-hidden rounded-2xl border border-blue-200 bg-blue-50 shadow-sm sm:mb-6">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 sm:p-5">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-700 text-white"><BellRing className="h-5 w-5" /></span>
+              <div className="min-w-0">
+                <p className="text-xs font-black text-blue-700">系統訊息</p>
+                <h2 className="truncate text-base font-black text-blue-950 sm:text-lg">代班邀請</h2>
+              </div>
+            </div>
+            <span className="rounded-full bg-blue-700 px-3 py-1.5 text-xs font-black text-white">待回覆 {pendingInvitations.length}</span>
+          </summary>
+          <div className="space-y-3 border-t border-blue-200 p-4 sm:p-5">
+            {pendingInvitations.map((item) => (
+              <article key={item.id} className="rounded-xl border border-blue-200 bg-white p-4">
+                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                  <div className="min-w-0">
+                    <p className="text-sm font-black text-black">{item.courseName}</p>
+                    <p className="mt-1 text-xs font-semibold leading-5 text-apple-gray-600">{formatDate(item.sessionDate)} · {item.startTime || '未設定開始時間'} · {item.location || '地點待確認'}</p>
+                    <p className="mt-1 text-xs font-bold text-blue-800">邀請人：{item.scheduledCoachName}{item.leaveReason ? `｜請假原因：${item.leaveReason}` : ''}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" disabled={saving === item.id} onClick={() => act(item.id, { intent: 'respond_substitute', response: 'accepted' })} className="rounded-lg bg-black px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">接受代班</button>
+                    <button type="button" disabled={saving === item.id} onClick={() => act(item.id, { intent: 'respond_substitute', response: 'rejected' })} className="rounded-lg border border-black/10 bg-white px-4 py-2.5 text-xs font-bold disabled:opacity-50">拒絕代班</button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </details>
+      ) : null}
+
+      <section className="mb-6 overflow-visible rounded-2xl border border-black/10 bg-white shadow-sm sm:mb-8">
       <div className="flex flex-col gap-4 border-b border-black/10 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
         <div>
           <p className="text-xs font-bold text-apple-blue">教練本人到課</p>
@@ -400,6 +446,7 @@ export default function CoachDutyPanel() {
           </div>
         </div>
       ) : null}
-    </section>
+      </section>
+    </>
   )
 }
