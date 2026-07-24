@@ -10,6 +10,7 @@ import {
   UserRoundCheck,
   X,
 } from 'lucide-react'
+import { APP_TIME_ZONE_LABEL } from '@/lib/app-time'
 import { supabase } from '@/lib/supabase'
 
 type DutyItem = {
@@ -269,7 +270,7 @@ export default function CoachDutyPanel() {
           {item.adminStatus === 'pending' ? <span className="rounded-full bg-orange-50 px-3 py-1.5 text-xs font-black text-orange-800">等待管理員處理</span> : null}
           {item.adminStatus === 'approved' ? <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-800">管理員已確認</span> : null}
         </div>
-        {item.checkedInAt ? <p className="mt-3 text-xs font-bold text-emerald-700">伺服器簽到時間：{formatTime(item.checkedInAt)}</p> : item.checkInOpensAt ? <p className="mt-3 text-xs font-semibold text-apple-gray-500">簽到開放時間：{formatTime(item.checkInOpensAt)}（Asia/Taipei）</p> : null}
+        {item.checkedInAt ? <p className="mt-3 text-xs font-bold text-emerald-700">伺服器簽到時間：{formatTime(item.checkedInAt)}</p> : item.checkInOpensAt ? <p className="mt-3 text-xs font-semibold text-apple-gray-500">簽到開放時間：{formatTime(item.checkInOpensAt)}（{APP_TIME_ZONE_LABEL}）</p> : null}
 
         {item.canCheckIn ? (
           <button type="button" disabled={saving === item.id} onClick={() => act(item.id, { intent: 'check_in' })} className="apple-button-primary mt-5 min-h-11 w-full gap-2 px-5">

@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   attendanceCourseLabel,
   isBeforeCourseStart,
-  isCourseSessionAfter,
   nearestUpcomingCourseSession,
+  validateMakeupTarget,
 } from '@/lib/course-attendance'
 import { getCurrentCourseSeason } from '@/lib/course-seasons-server'
 import { getManagedCourses } from '@/lib/managed-courses-server'
@@ -338,31 +338,17 @@ export async function POST(request: NextRequest) {
     const targetSessionDate = cleanText(body.targetSessionDate, 10)
     const targetCourse = context.courses.find((course) => course.courseSeasonCourseId === targetCourseId)
 
-    if (!targetCourse || targetCourse.seasonId !== context.season.id || targetCourse.courseSeasonCourseId === homeCourse.courseSeasonCourseId) {
-      return NextResponse.json({ error: '補課只能選擇本季度的其他班級。' }, { status: 400, headers: noStoreHeaders })
-    }
-    if (!targetCourse.sessionDates.includes(targetSessionDate)) {
-      return NextResponse.json({ error: '補課課次不在本季度課表內。' }, { status: 400, headers: noStoreHeaders })
-    }
-    if (context.season.endsOn && targetSessionDate > context.season.endsOn) {
-      return NextResponse.json({ error: '補課課次不可超過本季度結束日。' }, { status: 400, headers: noStoreHeaders })
+    if (!targetCourse) {
+      return NextResponse.json(
+        { error: '補課只能選擇本季度的其他班級。' },
+        { status: 400, headers: noStoreHeaders },
+      )
     }
     if (
       makeupRequest.original_course_season_course_id !== homeCourse.courseSeasonCourseId
       || !homeCourse.sessionDates.includes(makeupRequest.original_session_date)
     ) {
       return NextResponse.json({ error: '原請假課次與你的所屬班級不一致。' }, { status: 409, headers: noStoreHeaders })
-    }
-    if (!isCourseSessionAfter(
-      targetSessionDate,
-      targetCourse.classTime,
-      makeupRequest.original_session_date,
-      homeCourse.classTime,
-    )) {
-      return NextResponse.json({ error: '補課只能選擇原請假課次之後的課程。' }, { status: 400, headers: noStoreHeaders })
-    }
-    if (!isBeforeCourseStart(targetSessionDate, targetCourse.classTime)) {
-      return NextResponse.json({ error: '只能選擇尚未開始的補課課次。' }, { status: 409, headers: noStoreHeaders })
     }
 
     const { data: cancellation, error: cancellationError } = await supabaseAdmin!
@@ -372,7 +358,28 @@ export async function POST(request: NextRequest) {
       .eq('session_date', targetSessionDate)
       .maybeSingle()
     if (cancellationError) return NextResponse.json({ error: cancellationError.message }, { status: 500, headers: noStoreHeaders })
-    if (cancellation) return NextResponse.json({ error: '這一堂目前停課，請選擇其他補課課次。' }, { status: 409, headers: noStoreHeaders })
+
+    const targetValidation = validateMakeupTarget({
+      seasonId: context.season.id,
+      seasonEndsOn: context.season.endsOn,
+      homeCourseId: homeCourse.courseSeasonCourseId,
+      originalSessionDate: makeupRequest.original_session_date,
+      originalClassTime: homeCourse.classTime,
+      targetCourse: {
+        seasonId: targetCourse.seasonId,
+        courseId: targetCourse.courseSeasonCourseId,
+        sessionDates: targetCourse.sessionDates,
+        classTime: targetCourse.classTime,
+      },
+      targetSessionDate,
+      cancelled: Boolean(cancellation),
+    })
+    if (!targetValidation.valid) {
+      return NextResponse.json(
+        { error: targetValidation.message },
+        { status: targetValidation.status, headers: noStoreHeaders },
+      )
+    }
 
     const { error } = await supabaseAdmin!.rpc('schedule_course_makeup', {
       p_request_id: makeupRequest.id,

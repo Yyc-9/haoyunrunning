@@ -5,6 +5,7 @@ import { getCourseSeasons } from '@/lib/course-seasons-server'
 import { applyCourseOverrides } from '@/lib/managed-courses'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { isPaymentOrderStatus } from '@/lib/payment'
+import { transitionRemittanceStatus } from '@/lib/payment-workflow'
 import { createCourseOrderAccessToken, verifyCourseOrderAccessToken } from '@/lib/order-access'
 import { getIsolatedTestAccount, updateIsolatedTestState } from '@/lib/test-account'
 
@@ -322,7 +323,7 @@ export async function PATCH(request: NextRequest) {
       .update({
         transfer_last_five: transferLastFive,
         notes,
-        status: 'pending_review',
+        status: transitionRemittanceStatus('pending_transfer', 'report_transfer'),
         payment_submitted_at: new Date().toISOString(),
       })
       .eq('id', leadId)

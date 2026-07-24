@@ -27,6 +27,7 @@ import {
   Undo2,
   UsersRound,
 } from 'lucide-react'
+import { APP_TIME_ZONE_LABEL } from '@/lib/app-time'
 import { supabase } from '@/lib/supabase'
 import { courseSeasonStatusLabels, type CourseSeason, type CourseSeasonStatus } from '@/lib/course-seasons'
 import { isLegacyCourseTargetAudience } from '@/lib/managed-courses'
@@ -1012,7 +1013,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
               <Field label="城市 / 地點"><input value={String(draft.location ?? '')} onChange={(e) => setDraft((current) => ({ ...current, location: e.target.value }))} className="apple-input" /></Field>
               <Field label="課程週期"><input value={String(draft.period ?? '')} onChange={(e) => setDraft((current) => ({ ...current, period: e.target.value }))} className="apple-input" placeholder="例如 7/14 - 9/29" /></Field>
               <Field label="上課時間"><input value={String(draft.classTime ?? '')} onChange={(e) => setDraft((current) => ({ ...current, classTime: e.target.value }))} className="apple-input" placeholder="例如 19:27（1.5-2 小時）" /></Field>
-              <Field label="簽到判定開始時間"><input type="time" value={String(draft.startTime ?? '')} onChange={(e) => setDraft((current) => ({ ...current, startTime: e.target.value, timeZone: 'Asia/Taipei' }))} className="apple-input" /><span className="mt-1 block text-xs font-semibold text-apple-gray-500">固定使用台灣時間（Asia/Taipei），供教練本人到課簽到判定。</span></Field>
+              <Field label="簽到判定開始時間"><input type="time" value={String(draft.startTime ?? '')} onChange={(e) => setDraft((current) => ({ ...current, startTime: e.target.value, timeZone: 'Asia/Taipei' }))} className="apple-input" /><span className="mt-1 block text-xs font-semibold text-apple-gray-500">固定使用台灣時間（{APP_TIME_ZONE_LABEL}），供教練本人到課簽到判定。</span></Field>
               <Field label="集合地點" wide><input value={String(draft.meetingPoint ?? '')} onChange={(e) => setDraft((current) => ({ ...current, meetingPoint: e.target.value }))} className="apple-input" /></Field>
               <Field label="費用說明"><input value={String(draft.feeNote ?? '')} onChange={(e) => setDraft((current) => ({ ...current, feeNote: e.target.value }))} className="apple-input" /></Field>
               <Field label="班級名額"><input type="number" min={1} max={500} value={draftCapacity} onChange={(e) => setDraftCapacity(Number(e.target.value))} className="apple-input" /></Field>

@@ -110,6 +110,63 @@ export function isCourseSessionAfter(
     > courseSessionStart(referenceDate, referenceTime).getTime()
 }
 
+export type MakeupTargetValidation = {
+  valid: boolean
+  status?: 400 | 409
+  message?: string
+}
+
+export function validateMakeupTarget(input: {
+  seasonId: string
+  seasonEndsOn: string
+  homeCourseId: string
+  originalSessionDate: string
+  originalClassTime: string
+  targetCourse: {
+    seasonId: string
+    courseId: string
+    sessionDates: readonly string[]
+    classTime: string
+  } | null
+  targetSessionDate: string
+  cancelled: boolean
+  now?: Date
+}): MakeupTargetValidation {
+  const { targetCourse } = input
+  if (
+    !targetCourse
+    || targetCourse.seasonId !== input.seasonId
+    || targetCourse.courseId === input.homeCourseId
+  ) {
+    return { valid: false, status: 400, message: '補課只能選擇本季度的其他班級。' }
+  }
+  if (!targetCourse.sessionDates.includes(input.targetSessionDate)) {
+    return { valid: false, status: 400, message: '補課課次不在本季度課表內。' }
+  }
+  if (input.seasonEndsOn && input.targetSessionDate > input.seasonEndsOn) {
+    return { valid: false, status: 400, message: '補課課次不可超過本季度結束日。' }
+  }
+  if (!isCourseSessionAfter(
+    input.targetSessionDate,
+    targetCourse.classTime,
+    input.originalSessionDate,
+    input.originalClassTime,
+  )) {
+    return { valid: false, status: 400, message: '補課只能選擇原請假課次之後的課程。' }
+  }
+  if (!isBeforeCourseStart(
+    input.targetSessionDate,
+    targetCourse.classTime,
+    input.now,
+  )) {
+    return { valid: false, status: 409, message: '只能選擇尚未開始的補課課次。' }
+  }
+  if (input.cancelled) {
+    return { valid: false, status: 409, message: '這一堂目前停課，請選擇其他補課課次。' }
+  }
+  return { valid: true }
+}
+
 export function formatAttendanceDate(date: string) {
   return new Intl.DateTimeFormat('zh-TW', {
     timeZone: 'Asia/Taipei',

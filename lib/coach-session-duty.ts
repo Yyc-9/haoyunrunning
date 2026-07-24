@@ -1,22 +1,21 @@
 import 'server-only'
 
+import {
+  coachDutyWindow,
+  resolveCoachDutyAttendanceState,
+  type CoachDutyAttendanceState,
+} from '@/lib/coach-duty-policy'
 import { getDefaultCourseCoachKeys } from '@/lib/coach-profiles'
 import { getCourseSeasons } from '@/lib/course-seasons-server'
 import { applyCourseOverrides } from '@/lib/managed-courses'
 import { supabaseAdmin } from '@/lib/supabase-server'
 
 export const COACH_DUTY_TIME_ZONE = 'Asia/Taipei' as const
-
-export type CoachDutyAttendanceState =
-  | 'upcoming'
-  | 'check_in_open'
-  | 'on_time'
-  | 'late'
-  | 'not_checked_in'
-  | 'substitute_absent'
-  | 'cancelled'
-  | 'missing_start_time'
-  | 'leave_approved'
+export {
+  coachDutyPunctuality,
+  coachDutyWindow,
+  type CoachDutyAttendanceState,
+} from '@/lib/coach-duty-policy'
 
 type DutyCourse = {
   seasonId: string
@@ -107,26 +106,6 @@ export type CoachDutyItem = {
   isCancelled: boolean
 }
 
-function sessionStart(sessionDate: string, startTime: string) {
-  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime)) return null
-  return new Date(`${sessionDate}T${startTime}:00+08:00`)
-}
-
-export function coachDutyWindow(sessionDate: string, startTime: string, now = new Date()) {
-  const startsAt = sessionStart(sessionDate, startTime)
-  if (!startsAt) return { startsAt: null, opensAt: null, closesAt: null, phase: 'missing' as const }
-  const opensAt = new Date(startsAt.getTime() - 15 * 60_000)
-  const closesAt = new Date(startsAt.getTime() + 15 * 60_000)
-  const phase = now < opensAt ? 'upcoming' : now <= closesAt ? 'open' : 'closed'
-  return { startsAt, opensAt, closesAt, phase }
-}
-
-export function coachDutyPunctuality(sessionDate: string, startTime: string, now = new Date()) {
-  const window = coachDutyWindow(sessionDate, startTime, now)
-  if (!window.startsAt || window.phase !== 'open') return null
-  return now <= window.startsAt ? 'on_time' as const : 'late' as const
-}
-
 async function loadDutyCourses(options: { includeHistorical?: boolean } = {}): Promise<DutyCourse[]> {
   const seasons = await getCourseSeasons({ includeRegistrationStats: false })
   return seasons
@@ -187,16 +166,19 @@ export async function syncCoachSessionAssignments() {
 }
 
 function attendanceState(item: AssignmentRow, checkin: CheckinRow | undefined, cancelled: boolean, startTime: string, now: Date): CoachDutyAttendanceState {
-  if (cancelled) return 'cancelled'
-  if (!startTime) return 'missing_start_time'
-  if (checkin) return checkin.punctuality
-  if (item.leave_status === 'approved' && !item.actual_coach_id) return 'leave_approved'
-  const window = coachDutyWindow(item.session_date, startTime, now)
-  if (window.phase === 'upcoming') return 'upcoming'
-  if (window.phase === 'open') return 'check_in_open'
-  return item.actual_coach_id && item.actual_coach_id !== item.scheduled_coach_id
-    ? 'substitute_absent'
-    : 'not_checked_in'
+  return resolveCoachDutyAttendanceState({
+    sessionDate: item.session_date,
+    startTime,
+    now,
+    checkedInPunctuality: checkin?.punctuality ?? null,
+    leaveApproved: item.leave_status === 'approved',
+    hasActualCoach: Boolean(item.actual_coach_id),
+    isSubstitute: Boolean(
+      item.actual_coach_id
+      && item.actual_coach_id !== item.scheduled_coach_id,
+    ),
+    cancelled,
+  })
 }
 
 export async function loadCoachDutyItems(options: { userId?: string; isAdmin?: boolean; now?: Date } = {}) {

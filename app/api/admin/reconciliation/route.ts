@@ -10,6 +10,7 @@ import {
   readBankWorkbook,
 } from '@/lib/bank-reconciliation'
 import { authenticateFinanceRequest, financeNoStoreHeaders } from '@/lib/finance-access'
+import { transitionRemittanceStatus } from '@/lib/payment-workflow'
 import { supabaseAdmin } from '@/lib/supabase-server'
 
 export const runtime = 'nodejs'
@@ -461,7 +462,7 @@ export async function POST(request: NextRequest) {
       const { error } = await supabaseAdmin!
         .from('signup_leads')
         .update({
-          status: 'rejected',
+          status: transitionRemittanceStatus('pending_review', 'flag_exception'),
           review_note: '銀行對帳發現金額不符或後五碼重複，請由財務人工處理。',
           reviewed_at: new Date().toISOString(),
         })
@@ -473,7 +474,7 @@ export async function POST(request: NextRequest) {
       const { error } = await supabaseAdmin!
         .from('shop_orders')
         .update({
-          status: 'rejected',
+          status: transitionRemittanceStatus('pending_review', 'flag_exception'),
           review_note: '銀行對帳發現金額不符或後五碼重複，請由財務人工處理。',
           reviewed_at: new Date().toISOString(),
         })

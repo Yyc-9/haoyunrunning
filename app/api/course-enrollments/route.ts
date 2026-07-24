@@ -8,6 +8,7 @@ import { getManagedCourses } from '@/lib/managed-courses-server'
 import { getCurrentCourseSeason } from '@/lib/course-seasons-server'
 import { calculateCourseRegistrationQuote, getCoursePricingOptions } from '@/lib/course-pricing'
 import { createCourseQuoteToken, verifyCourseQuoteToken } from '@/lib/course-pricing-token'
+import { transitionRemittanceStatus } from '@/lib/payment-workflow'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import {
   COURSE_TERMS_VERSION,
@@ -359,7 +360,7 @@ export async function POST(request: NextRequest) {
         amount_text: tokenPayload.quote.amountText,
         notes,
         transfer_last_five: transferLastFive,
-        status: 'pending_review',
+        status: transitionRemittanceStatus('pending_transfer', 'report_transfer'),
         form_submitted_at: formSubmittedAt,
         payment_submitted_at: formSubmittedAt,
         payload: {
@@ -439,7 +440,7 @@ export async function PATCH(request: NextRequest) {
     .update({
       transfer_last_five: transferLastFive,
       notes,
-      status: 'pending_review',
+      status: transitionRemittanceStatus('pending_transfer', 'report_transfer'),
       payment_submitted_at: new Date().toISOString(),
     })
     .eq('id', leadId)
