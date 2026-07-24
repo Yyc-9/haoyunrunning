@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminProfile } from '@/lib/admin-auth'
+import { APP_TIME_ZONE_LABEL } from '@/lib/app-time'
 import { auditCoachDuty, coachDutyPunctuality, coachDutyWindow, loadCoachDutyItems } from '@/lib/coach-session-duty'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { getIsolatedMondayCourse, getIsolatedTestAccount, updateIsolatedTestState } from '@/lib/test-account'
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
         return {
           id, seasonId: course.seasonId, seasonName: course.seasonName, courseSeasonCourseId: course.courseSeasonCourseId,
           courseSlug: course.courseSlug, courseName: course.courseName, weekday: course.weekday, location: course.location,
-          sessionDate, startTime: course.startTime, timeZone: 'Asia/Taipei', scheduledCoachId: auth.user.id,
+          sessionDate, startTime: course.startTime, timeZone: APP_TIME_ZONE_LABEL, scheduledCoachId: auth.user.id,
           scheduledCoachName: '測試教練', actualCoachId: auth.user.id, actualCoachName: '測試教練', coachRole: 'coach',
           leaveStatus: leave?.status ?? 'none', leaveReason: leave?.reason ?? '', recommendedSubstituteId: '', recommendedSubstituteName: '',
           substituteCoachId: '', substituteCoachName: '', substituteResponse: 'none', adminStatus: leave ? 'pending' : 'not_required', adminReason: '',
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
           salaryStatus: 'pending_rate', salaryStatusLabel: '待設定課酬', isCancelled: false,
         }
       })
-      return NextResponse.json({ items, coaches: [], serverTime: now.toISOString(), timeZone: 'Asia/Taipei', isolatedTest: true }, { headers })
+      return NextResponse.json({ items, coaches: [], serverTime: now.toISOString(), timeZone: APP_TIME_ZONE_LABEL, isolatedTest: true }, { headers })
     }
     const [items, coachesResult] = await Promise.all([
       loadCoachDutyItems({ userId: auth.user.id, isAdmin: auth.isAdmin }),
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
       items,
       coaches: (coachesResult.data ?? []).map((coach) => ({ id: coach.id, name: coach.name || coach.email || '未命名教練' })),
       serverTime: new Date().toISOString(),
-      timeZone: 'Asia/Taipei',
+      timeZone: APP_TIME_ZONE_LABEL,
     }, { headers })
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : '讀取教練到課資料失敗。' }, { status: 500, headers })

@@ -5,6 +5,7 @@ import {
   resolveCoachDutyAttendanceState,
   type CoachDutyAttendanceState,
 } from '@/lib/coach-duty-policy'
+import { APP_TIME_ZONE_LABEL } from '@/lib/app-time'
 import { getDefaultCourseCoachKeys } from '@/lib/coach-profiles'
 import { getCourseSeasons } from '@/lib/course-seasons-server'
 import { applyCourseOverrides } from '@/lib/managed-courses'
@@ -78,7 +79,7 @@ export type CoachDutyItem = {
   location: string
   sessionDate: string
   startTime: string
-  timeZone: typeof COACH_DUTY_TIME_ZONE
+  timeZone: typeof APP_TIME_ZONE_LABEL
   scheduledCoachId: string
   scheduledCoachName: string
   actualCoachId: string
@@ -223,7 +224,7 @@ export async function loadCoachDutyItems(options: { userId?: string; isAdmin?: b
         location: course.location,
         sessionDate: row.session_date,
         startTime: course.startTime,
-        timeZone: course.timeZone,
+        timeZone: APP_TIME_ZONE_LABEL,
         scheduledCoachId: row.scheduled_coach_id,
         scheduledCoachName: profiles.get(row.scheduled_coach_id) ?? '未命名教練',
         actualCoachId,

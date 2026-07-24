@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminProfile } from '@/lib/admin-auth'
+import { APP_TIME_ZONE_LABEL } from '@/lib/app-time'
 import { auditCoachDuty, loadCoachDutyItems } from '@/lib/coach-session-duty'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
       coaches: (coachResult.data ?? []).map((coach) => ({ id: coach.id, name: coach.name || coach.email || '未命名教練', email: coach.email || '' })),
       audits: auditResult.data ?? [],
       serverTime: new Date().toISOString(),
-      timeZone: 'Asia/Taipei',
+      timeZone: APP_TIME_ZONE_LABEL,
     }, { headers })
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : '讀取教練到課管理資料失敗。' }, { status: 500, headers })

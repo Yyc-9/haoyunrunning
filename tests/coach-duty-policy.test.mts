@@ -6,6 +6,11 @@ import {
   coachDutyWindow,
   resolveCoachDutyAttendanceState,
 } from '../lib/coach-duty-policy.ts'
+import { APP_TIME_ZONE_LABEL } from '../lib/app-time.ts'
+
+test('所有可見時區名稱統一為 UTC+8', () => {
+  assert.equal(APP_TIME_ZONE_LABEL, 'UTC+8')
+})
 
 test('教練本人簽到於課前十五分鐘開放並於課後十五分鐘關閉', () => {
   const window = coachDutyWindow(
