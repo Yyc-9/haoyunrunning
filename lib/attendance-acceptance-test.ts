@@ -1,5 +1,5 @@
 export const ATTENDANCE_ACCEPTANCE_TEST = {
-  enabled: false,
+  enabled: true,
   key: 'attendance-acceptance-2026-07-25',
   courseName: '網站驗收測試',
   dateLabel: '7 月 25 日',

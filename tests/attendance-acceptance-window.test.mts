@@ -6,11 +6,11 @@ import {
   canSubmitAcceptanceCheckIn,
 } from '../lib/attendance-acceptance-test.ts'
 
-test('暫停驗收測試後，正式網站不顯示入口也不接受簽到', () => {
-  assert.equal(ATTENDANCE_ACCEPTANCE_TEST.enabled, false)
-  assert.equal(acceptanceTestPhase(new Date('2026-07-25T02:30:00.000Z')), 'hidden')
+test('啟用驗收測試後，開放前顯示即將開始且不能提前簽到', () => {
+  assert.equal(ATTENDANCE_ACCEPTANCE_TEST.enabled, true)
+  assert.equal(acceptanceTestPhase(new Date('2026-07-25T00:30:00.000Z')), 'upcoming')
   assert.equal(canSubmitAcceptanceCheckIn({
-    now: new Date('2026-07-25T02:30:00.000Z'),
+    now: new Date('2026-07-25T00:30:00.000Z'),
     alreadyCheckedIn: false,
   }), false)
 })

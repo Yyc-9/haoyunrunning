@@ -71,8 +71,7 @@ export default function TestimonialsPage() {
         </section>
       ) : null}
 
-      <section className="border-b border-black/10 bg-white">
-        <div className="relative isolate flex min-h-[500px] overflow-hidden text-white sm:min-h-[560px]">
+      <section className="relative isolate flex min-h-[680px] overflow-hidden border-b border-black/10 bg-black text-white">
           <Image
             src={pageMedia.testimonialPathHero}
             alt="好運跑班學員一起訓練與成長"
@@ -80,43 +79,33 @@ export default function TestimonialsPage() {
             sizes="100vw"
             className="object-cover object-center"
           />
-          <div className="absolute inset-0 bg-black/60" />
-          <div className="container relative z-10 mx-auto flex w-full max-w-7xl items-center px-5 py-16 sm:px-8 lg:px-12">
-            <div className="max-w-3xl">
+          <div className="absolute inset-0 bg-black/65" />
+          <div className="container relative z-10 mx-auto flex w-full max-w-7xl items-center px-5 py-16 sm:px-8 sm:py-20 lg:px-12 lg:py-24">
+            <div className="w-full">
+              <div className="max-w-3xl">
               <p className="text-sm font-black uppercase tracking-wide text-amber-300">{testimonials.pathLabel}</p>
               <h2 className="mt-4 text-4xl font-black leading-tight sm:text-6xl">{testimonials.pathTitle}</h2>
               <p className="mt-6 max-w-2xl text-base leading-8 text-white/80 sm:text-xl sm:leading-9">
                 {testimonials.pathDescription}
               </p>
+              </div>
+
+              <div className="mt-10 grid border-t border-white/25 pt-2 md:grid-cols-3 md:pt-6">
+                {testimonials.themes.map((item, index) => (
+                  <div
+                    key={item.title}
+                    className="border-b border-white/20 py-5 last:border-b-0 md:border-b-0 md:border-l md:px-7 md:first:border-l-0 md:first:pl-0"
+                  >
+                    <p className="text-xs font-black tracking-[0.18em] text-amber-300">
+                      {String(index + 1).padStart(2, '0')}
+                    </p>
+                    <h3 className="mt-3 text-xl font-black leading-7">{item.title}</h3>
+                    <p className="mt-3 text-sm leading-7 text-white/72">{item.description}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-
-        <div className="container mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
-          <div className="grid gap-5 md:grid-cols-3">
-            {testimonials.themes.map((item, index) => (
-              <article key={item.title} className="overflow-hidden rounded-3xl border border-black/10 bg-white shadow-sm">
-                <div className="relative aspect-[4/3] bg-apple-gray-100">
-                  <Image
-                    src={pageMedia.testimonialThemeImages[index] ?? pageMedia.testimonialPathHero}
-                    alt={item.title}
-                    fill
-                    sizes="(min-width: 768px) 33vw, 100vw"
-                    className="object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
-                  <span className="absolute bottom-4 left-4 flex h-9 w-9 items-center justify-center rounded-full bg-white text-sm font-black text-black">
-                    {index + 1}
-                  </span>
-                </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-black leading-7 text-apple-gray-950">{item.title}</h3>
-                  <p className="mt-3 text-sm leading-7 text-apple-gray-600">{item.description}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
       </section>
 
     </main>

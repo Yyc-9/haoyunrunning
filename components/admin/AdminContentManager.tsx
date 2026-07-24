@@ -924,28 +924,10 @@ export default function AdminContentManager({ content, courses, seasons, scope =
 
         {mode === 'testimonials' ? (
           <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
-            {panelHeader('學員見證', '首屏、影片、成長路徑主視覺與三張故事卡集中在這裡；沒有影片時前台會自動收合。', '/testimonials')}
+            {panelHeader('學員見證', '首屏、影片、成長路徑主視覺與三段路徑內容集中在這裡；沒有影片時前台會自動收合。', '/testimonials')}
             <div className="p-5">
               <ImageField label="學員見證首屏背景圖" value={pageMedia.testimonialsHero} folder="pages" onChange={(testimonialsHero) => setPageMedia((current) => ({ ...current, testimonialsHero }))} onError={setLocalError} />
               <ImageField label="成長路徑主視覺" value={pageMedia.testimonialPathHero} folder="pages" onChange={(testimonialPathHero) => setPageMedia((current) => ({ ...current, testimonialPathHero }))} onError={setLocalError} />
-              <div className="mt-5 grid gap-4 md:grid-cols-3">
-                {pageMedia.testimonialThemeImages.map((image, index) => (
-                  <ImageField
-                    key={index}
-                    label={`成長卡片 ${index + 1} 圖片`}
-                    value={image}
-                    folder="pages"
-                    aspectRatio={4 / 3}
-                    aspectLabel="4:3"
-                    outputWidth={1400}
-                    onChange={(url) => setPageMedia((current) => ({
-                      ...current,
-                      testimonialThemeImages: current.testimonialThemeImages.map((item, itemIndex) => itemIndex === index ? url : item),
-                    }))}
-                    onError={setLocalError}
-                  />
-                ))}
-              </div>
               <div className="mt-8 grid gap-4 md:grid-cols-2">
               <VideoField
                 label="學員見證影片"
@@ -981,7 +963,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                 </Field>
               ))}
               <div className="md:col-span-2">
-                <h3 className="mb-3 font-black">三段成長路徑</h3>
+                <h3 className="mb-3 font-black">主視覺內的三段成長路徑</h3>
                 {testimonials.themes.map((item, index) => (
                   <div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2">
                     <input value={item.title} onChange={(event) => setTestimonials((current) => ({ ...current, themes: current.themes.map((theme, themeIndex) => themeIndex === index ? { ...theme, title: event.target.value } : theme) }))} className="apple-input" />

@@ -76,4 +76,7 @@ test('學員見證成長路徑有獨立且安全的主視覺', async () => {
 
   assert.match(admin, /value=\{pageMedia\.testimonialPathHero\}/)
   assert.match(publicPage, /src=\{pageMedia\.testimonialPathHero\}/)
+  assert.match(publicPage, /testimonials\.themes\.map/)
+  assert.doesNotMatch(publicPage, /testimonialThemeImages/)
+  assert.doesNotMatch(publicPage, /<article/)
 })
