@@ -367,13 +367,13 @@ function getCourseCoaches(course: Course): Coach[] {
 
   const coachesBySlug: Record<string, Coach[]> = {
     'zhubei-night-run-monday': [coachProfiles.liuChengEn, coachProfiles.bianbian, coachProfiles.luoPeiCi],
-    'taipei-pb-tuesday': [coachProfiles.chenShengQi, coachProfiles.wuWeiQiao, coachProfiles.wuPeiCi, coachProfiles.yongXin],
-    'hsinchu-beginner-tuesday': [coachProfiles.bianbian],
+    'taipei-pb-tuesday': [coachProfiles.chenShengQi, coachProfiles.wuPeiCi, coachProfiles.yongXin],
+    'hsinchu-beginner-tuesday': [coachProfiles.bianbian, coachProfiles.wuWeiQiao],
     'hsinchu-morning-run-wednesday': [coachProfiles.chenShengQi, coachProfiles.liuChengEn, coachProfiles.xiaoHe],
-    'taipei-night-run-wednesday': [coachProfiles.wuWeiQiao],
-    'zhubei-night-run-wednesday': [coachProfiles.chenShengQi, coachProfiles.liuChengEn, coachProfiles.bianbian, coachProfiles.zhouXianFeng, coachProfiles.zhengYiQun],
+    'taipei-night-run-wednesday': [],
+    'zhubei-night-run-wednesday': [coachProfiles.chenShengQi, coachProfiles.liuChengEn, coachProfiles.bianbian, coachProfiles.zhouXianFeng],
     'hsinchu-night-run-thursday': [coachProfiles.liuChengEn, coachProfiles.xiaoHe, coachProfiles.zhongLiChen],
-    'zhunan-beginner-thursday': [coachProfiles.zhouXianFeng, coachProfiles.yangShengHao],
+    'zhunan-beginner-thursday': [coachProfiles.zhouXianFeng, coachProfiles.yangShengHao, coachProfiles.zhengYiQun],
     'taipei-morning-run-saturday': [coachProfiles.luoMinYao],
   }
 
