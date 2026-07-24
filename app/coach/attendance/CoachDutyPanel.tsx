@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react'
 import { APP_TIME_ZONE_LABEL } from '@/lib/app-time'
+import AcceptanceTestCheckin from '@/components/AcceptanceTestCheckin'
 import { supabase } from '@/lib/supabase'
 
 type DutyItem = {
@@ -331,6 +332,8 @@ export default function CoachDutyPanel() {
 
   return (
     <>
+      <AcceptanceTestCheckin role="coach" className="mb-4 sm:mb-6" />
+
       {pendingInvitations.length ? (
         <details open className="mb-4 overflow-hidden rounded-2xl border border-blue-200 bg-blue-50 shadow-sm sm:mb-6">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 sm:p-5">

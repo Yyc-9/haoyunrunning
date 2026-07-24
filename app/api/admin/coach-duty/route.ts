@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminProfile } from '@/lib/admin-auth'
 import { APP_TIME_ZONE_LABEL } from '@/lib/app-time'
+import { ATTENDANCE_ACCEPTANCE_TEST, acceptanceTestPhase } from '@/lib/attendance-acceptance-test'
 import { auditCoachDuty, loadCoachDutyItems } from '@/lib/coach-session-duty'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 
@@ -23,17 +24,42 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request)
   if ('error' in auth) return auth.error
   try {
-    const [items, coachResult, auditResult] = await Promise.all([
+    const [items, coachResult, auditResult, acceptanceResult] = await Promise.all([
       loadCoachDutyItems({ isAdmin: true }),
       supabaseAdmin!.from('profiles').select('id, name, email').in('role', ['coach', 'admin']).order('name'),
       supabaseAdmin!.from('coach_session_duty_audit_log').select('assignment_id, action, reason, actor_profile_id, created_at').order('created_at', { ascending: false }).limit(300),
+      supabaseAdmin!
+        .from('site_acceptance_test_checkins')
+        .select('participant_profile_id, participant_role, checked_in_at')
+        .eq('test_key', ATTENDANCE_ACCEPTANCE_TEST.key)
+        .order('checked_in_at', { ascending: true }),
     ])
-    const error = [coachResult.error, auditResult.error].find(Boolean)
+    const error = [coachResult.error, auditResult.error, acceptanceResult.error].find(Boolean)
     if (error) throw error
+    const participantIds = [...new Set((acceptanceResult.data ?? []).map((row) => row.participant_profile_id))]
+    const participantResult = participantIds.length
+      ? await supabaseAdmin!.from('profiles').select('id, name, email').in('id', participantIds)
+      : { data: [], error: null }
+    if (participantResult.error) throw participantResult.error
+    const participants = new Map((participantResult.data ?? []).map((profile) => [
+      profile.id,
+      { name: profile.name || profile.email || '未命名帳號', email: profile.email || '' },
+    ]))
     return NextResponse.json({
       items,
       coaches: (coachResult.data ?? []).map((coach) => ({ id: coach.id, name: coach.name || coach.email || '未命名教練', email: coach.email || '' })),
       audits: auditResult.data ?? [],
+      acceptanceTest: {
+        test: ATTENDANCE_ACCEPTANCE_TEST,
+        phase: acceptanceTestPhase(),
+        checkins: (acceptanceResult.data ?? []).map((row) => ({
+          participantProfileId: row.participant_profile_id,
+          participantRole: row.participant_role,
+          checkedInAt: row.checked_in_at,
+          name: participants.get(row.participant_profile_id)?.name ?? '未命名帳號',
+          email: participants.get(row.participant_profile_id)?.email ?? '',
+        })),
+      },
       serverTime: new Date().toISOString(),
       timeZone: APP_TIME_ZONE_LABEL,
     }, { headers })

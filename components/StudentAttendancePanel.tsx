@@ -14,6 +14,7 @@ import {
   type StudentAttendanceCourse,
   type StudentAttendanceEnrollment,
 } from '@/lib/course-attendance'
+import AcceptanceTestCheckin from '@/components/AcceptanceTestCheckin'
 import { supabase } from '@/lib/supabase'
 
 type AttendancePayload = {
@@ -195,6 +196,8 @@ export default function StudentAttendancePanel() {
           <p className="mt-2 text-sm leading-6 text-apple-gray-600">查看自己的到課紀錄；只能為最近一堂課請假，補課則可選擇原課次之後、本季度內其他班級的可用課次。</p>
         </div>
       </div>
+
+      <AcceptanceTestCheckin role="student" className="m-4 sm:m-5" />
 
       {error ? <p className="m-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-800">{error}</p> : null}
       {message ? <p className="m-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">{message}</p> : null}

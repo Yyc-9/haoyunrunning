@@ -1,7 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ChevronDown, Loader2, UserRoundCheck } from 'lucide-react'
+import { CheckCircle2, ChevronDown, Loader2, ShieldCheck, UserRoundCheck } from 'lucide-react'
+import type { AcceptanceTestPhase } from '@/lib/attendance-acceptance-test'
 import { supabase } from '@/lib/supabase'
 
 type DutyItem = {
@@ -32,6 +33,17 @@ type DutyItem = {
 
 type CoachOption = { id: string; name: string; email: string }
 type Audit = { assignment_id: string; action: string; reason: string; actor_profile_id: string; created_at: string }
+type AcceptanceTest = {
+  test: { dateLabel: string; timeLabel: string; timeZoneLabel: string }
+  phase: AcceptanceTestPhase
+  checkins: Array<{
+    participantProfileId: string
+    participantRole: 'coach' | 'student'
+    checkedInAt: string
+    name: string
+    email: string
+  }>
+}
 
 const attendanceLabel: Record<string, string> = {
   upcoming: '尚未開放', check_in_open: '待簽到', on_time: '準時', late: '遲到',
@@ -62,6 +74,7 @@ export default function AdminCoachDuty() {
   const [items, setItems] = useState<DutyItem[]>([])
   const [coaches, setCoaches] = useState<CoachOption[]>([])
   const [audits, setAudits] = useState<Audit[]>([])
+  const [acceptanceTest, setAcceptanceTest] = useState<AcceptanceTest | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState('')
   const [error, setError] = useState('')
@@ -74,24 +87,30 @@ export default function AdminCoachDuty() {
   const [scheduleFilter, setScheduleFilter] = useState('all')
   const [substituteByItem, setSubstituteByItem] = useState<Record<string, string>>({})
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async (quiet = false) => {
+    if (!quiet) setLoading(true)
     setError('')
     try {
       const response = await fetch('/api/admin/coach-duty', { cache: 'no-store', headers: { Authorization: `Bearer ${await accessToken()}` } })
-      const payload = await response.json().catch(() => ({})) as { items?: DutyItem[]; coaches?: CoachOption[]; audits?: Audit[]; error?: string }
+      const payload = await response.json().catch(() => ({})) as { items?: DutyItem[]; coaches?: CoachOption[]; audits?: Audit[]; acceptanceTest?: AcceptanceTest; error?: string }
       if (!response.ok) throw new Error(payload.error || '讀取教練到課資料失敗。')
       setItems(payload.items ?? [])
       setCoaches(payload.coaches ?? [])
       setAudits(payload.audits ?? [])
+      setAcceptanceTest(payload.acceptanceTest ?? null)
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : '讀取教練到課資料失敗。')
     } finally {
-      setLoading(false)
+      if (!quiet) setLoading(false)
     }
   }, [])
 
   useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    if (acceptanceTest?.phase !== 'open') return
+    const timer = window.setInterval(() => { void load(true) }, 30_000)
+    return () => window.clearInterval(timer)
+  }, [acceptanceTest?.phase, load])
 
   const yearOptions = [...new Set([currentPeriod.year, ...items.map((item) => item.sessionDate.slice(0, 4))])].sort((a, b) => b.localeCompare(a))
   const periodItems = useMemo(() => items.filter((item) => {
@@ -169,6 +188,39 @@ export default function AdminCoachDuty() {
     <details open className="group border-b border-black/10 bg-white">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5"><div><div className="flex flex-wrap items-center gap-2"><UserRoundCheck className="h-5 w-5" /><h2 className="text-lg font-black">教練簽到、請假與代班</h2><span className="rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-black text-orange-800">待處理 {periodItems.filter((item) => item.adminStatus === 'pending').length}</span><span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-black text-blue-800">代班待回覆 {periodItems.filter((item) => item.adminStatus === 'not_required' && item.substituteResponse === 'pending').length}</span><span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-black text-red-800">異常 {periodItems.filter((item) => ['not_checked_in', 'substitute_absent', 'missing_start_time'].includes(item.attendanceState) || (item.leaveStatus === 'approved' && !item.actualCoachId)).length}</span></div><p className="mt-1 text-sm text-apple-gray-600">原教練可直接邀請代班；受邀教練接受後立即生效，管理員保留查看與修正權限。</p></div><ChevronDown className="h-5 w-5 shrink-0 transition-transform group-open:rotate-180" /></summary>
       <div className="border-t border-black/10 p-4 sm:p-5">
+        {acceptanceTest && acceptanceTest.phase !== 'hidden' ? (
+          <details open className="mb-4 overflow-hidden rounded-xl border border-blue-200 bg-blue-50">
+            <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 p-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-700 text-white"><ShieldCheck className="h-5 w-5" /></span>
+                <div>
+                  <p className="text-xs font-black text-blue-700">網站驗收測試</p>
+                  <p className="text-sm font-black text-blue-950">{acceptanceTest.test.dateLabel} · {acceptanceTest.test.timeLabel}（{acceptanceTest.test.timeZoneLabel}）</p>
+                </div>
+              </div>
+              <div className="flex gap-2 text-xs font-black">
+                <span className="rounded-full bg-white px-3 py-1.5 text-blue-800">教練 {acceptanceTest.checkins.filter((item) => item.participantRole === 'coach').length}</span>
+                <span className="rounded-full bg-white px-3 py-1.5 text-blue-800">學員 {acceptanceTest.checkins.filter((item) => item.participantRole === 'student').length}</span>
+              </div>
+            </summary>
+            <div className="border-t border-blue-200 p-4">
+              <p className="mb-3 text-xs font-semibold leading-5 text-blue-800">測試期間每 30 秒自動更新；這些紀錄不會進入正式出勤、點名、課酬或季度統計。</p>
+              {acceptanceTest.checkins.length ? (
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                  {acceptanceTest.checkins.map((item) => (
+                    <div key={`${item.participantRole}:${item.participantProfileId}`} className="flex items-center gap-2 rounded-lg bg-white p-3 text-xs">
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                      <div className="min-w-0">
+                        <p className="truncate font-black text-black">{item.name} · {item.participantRole === 'coach' ? '教練' : '學員'}</p>
+                        <p className="truncate font-semibold text-apple-gray-500">{formatDate(item.checkedInAt, true)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="rounded-lg border border-dashed border-blue-200 bg-white p-6 text-center text-sm font-semibold text-blue-700">尚未有人完成測試簽到。</p>}
+            </div>
+          </details>
+        ) : null}
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">{summaries.map(([label, value, tone]) => <div key={label} className="rounded-lg border border-black/10 bg-apple-gray-50 p-3"><p className={`text-xl font-black ${tone}`}>{value}</p><p className="mt-1 text-[11px] font-bold text-apple-gray-500">{label}</p></div>)}</div>
         <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-[120px_130px_1fr_1fr_170px_150px]">
           <select value={yearFilter} onChange={(event) => setYearFilter(event.target.value)} className="apple-input" aria-label="年份篩選">
