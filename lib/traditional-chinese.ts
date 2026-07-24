@@ -92,5 +92,7 @@ const conversionPairs = [...simplifiedToTraditionalPhrases, ...simplifiedToTradi
   .sort((a, b) => b[0].length - a[0].length)
 
 export function toTraditionalWebsiteText(value: string) {
-  return conversionPairs.reduce((text, [from, to]) => text.replaceAll(from, to), value)
+  return conversionPairs
+    .reduce((text, [from, to]) => text.replaceAll(from, to), value)
+    .replaceAll('馬拉鬆', '馬拉松')
 }
