@@ -9,6 +9,9 @@ import {
   SITE_CONTENT_UPDATED_STORAGE_KEY,
   type SiteContentUpdatedDetail,
 } from '@/lib/site-content-sync'
+import { useLanguage } from '@/app/language-context'
+import { localizeWebsiteValue } from '@/lib/english-website'
+import { toSimplifiedWebsiteText } from '@/lib/traditional-chinese'
 
 type SiteContentContextValue = SiteContent & {
   courses: ManagedCourse[]
@@ -20,6 +23,7 @@ const SiteContentContext = createContext<SiteContentContextValue | null>(null)
 
 export function SiteContentProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const { language } = useLanguage()
   const [content, setContent] = useState<SiteContent>(defaultSiteContent)
   const [isLoading, setIsLoading] = useState(true)
   const [hasSyncedContent, setHasSyncedContent] = useState(false)
@@ -80,18 +84,28 @@ export function SiteContentProvider({ children }: { children: React.ReactNode })
     }
   }, [loadContent])
 
-  const value = useMemo(
-    () => ({
-      ...content,
-      courses: applyCourseOverrides(content.courseOverrides, {
-        coachProfiles: content.coachProfiles,
-        onlyConfigured: Object.keys(content.courseOverrides).length > 0,
+  const value = useMemo(() => {
+    const localize = <T,>(value: T): T => {
+      if (pathname.startsWith('/admin') || language === 'zh-TW') return value
+      if (language === 'en') return localizeWebsiteValue(value, language)
+      if (typeof value === 'string') return toSimplifiedWebsiteText(value) as T
+      if (Array.isArray(value)) return value.map((item) => localize(item)) as T
+      if (value && typeof value === 'object') {
+        return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, localize(item)])) as T
+      }
+      return value
+    }
+    const localizedContent = localize(content)
+    return {
+      ...localizedContent,
+      courses: applyCourseOverrides(localizedContent.courseOverrides, {
+        coachProfiles: localizedContent.coachProfiles,
+        onlyConfigured: Object.keys(localizedContent.courseOverrides).length > 0,
       }),
       isLoading,
       hasSyncedContent,
-    }),
-    [content, hasSyncedContent, isLoading]
-  )
+    }
+  }, [content, hasSyncedContent, isLoading, language, pathname])
 
   return <SiteContentContext.Provider value={value}>{children}</SiteContentContext.Provider>
 }

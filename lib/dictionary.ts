@@ -1,5 +1,7 @@
 export const languages = [
   { code: 'zh-TW', label: '繁', name: '繁體中文' },
+  { code: 'zh-CN', label: '\u7b80', name: '\u7b80\u4f53\u4e2d\u6587' },
+  { code: 'en', label: 'EN', name: 'English' },
 ] as const
 
 export type Language = 'zh-TW' | 'zh-CN' | 'en'

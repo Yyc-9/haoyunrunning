@@ -101,6 +101,9 @@ export type CoursesPageContent = {
   guideLabel: string
   guideTitle: string
   guideSteps: ContentCard[]
+  faqTitle: string
+  faqs: ContentCard[]
+  highlights: ContentCard[]
 }
 
 export type TestimonialsContent = {
@@ -136,6 +139,7 @@ export type PageMedia = {
   teamHero: string
   aboutHero: string
   testimonialsHero: string
+  testimonialPathHero: string
   aboutBeliefImages: string[]
   aboutFactImages: string[]
   testimonialThemeImages: string[]
@@ -274,6 +278,19 @@ export const defaultCoursesPageContent: CoursesPageContent = {
     { title: '填寫專屬報名表', description: '在課程詳情最下方點擊「立即報名」，登入後完成資料與計費確認。' },
     { title: '完成匯款與核對', description: '依網站顯示的金額完成匯款並提交後五碼，財務核對後即完成報名。' },
   ],
+  faqTitle: '常見問題',
+  faqs: [
+    { title: '新手可以參加嗎？', description: '可以。請先依目前跑步經驗、可訓練時間與目標選擇適合班級，不確定時可透過 Instagram 諮詢。' },
+    { title: '下雨怎麼辦？', description: '是否停課或調整場地，會依現場天候與安全狀況由教練在班級群組公告。' },
+    { title: '課程費用是多少？', description: '各班費用與插班計價會依季度及剩餘課次不同，請進入課程詳情與報名頁查看當期金額。' },
+    { title: '可以請假嗎？', description: '可以依當期規則申請最近一堂課請假，並在本季度符合條件的其他班級課次安排補課。' },
+    { title: '可以試上嗎？', description: '試上安排依當期班級名額、場地與教練配置確認，請先透過 Instagram 詢問。' },
+  ],
+  highlights: [
+    { title: '新一期課程', description: '當期日期與開放班級以本頁課表及課程詳情為準。' },
+    { title: '多目標備賽', description: '涵蓋 5000m、10000m、半馬、全馬與 PB 目標。' },
+    { title: '多地團練', description: '台北、新竹、竹北、竹南等班級依季度安排開課。' },
+  ],
 }
 
 export const defaultTestimonialsContent: TestimonialsContent = {
@@ -331,6 +348,7 @@ export const defaultPageMedia: PageMedia = {
   teamHero: '/site-visuals/hero-2026/team-hero.webp',
   aboutHero: '/goodluck-fourth-anniversary-wallpaper.jpg',
   testimonialsHero: '/goodluck-anniversary-7089.jpg',
+  testimonialPathHero: '/site-visuals/testimonial-together.webp',
   aboutBeliefImages: [
     '/site-visuals/about-belief-speed.webp',
     '/site-visuals/about-belief-foundation.webp',
@@ -587,6 +605,9 @@ export function normalizeCoursesPageContent(value: unknown): CoursesPageContent 
     guideLabel: cleanOr(source.guideLabel, defaultCoursesPageContent.guideLabel, 80),
     guideTitle: cleanOr(source.guideTitle, defaultCoursesPageContent.guideTitle, 160),
     guideSteps: normalizeCards(source.guideSteps, defaultCoursesPageContent.guideSteps, 4),
+    faqTitle: cleanOr(source.faqTitle, defaultCoursesPageContent.faqTitle, 120),
+    faqs: normalizeCards(source.faqs, defaultCoursesPageContent.faqs, defaultCoursesPageContent.faqs.length),
+    highlights: normalizeCards(source.highlights, defaultCoursesPageContent.highlights, 3),
   }
 }
 
@@ -640,6 +661,7 @@ export function normalizePageMedia(value: unknown): PageMedia {
     teamHero: image(source.teamHero, defaultPageMedia.teamHero),
     aboutHero: image(source.aboutHero, defaultPageMedia.aboutHero),
     testimonialsHero: image(source.testimonialsHero, defaultPageMedia.testimonialsHero),
+    testimonialPathHero: image(source.testimonialPathHero, defaultPageMedia.testimonialPathHero),
     aboutBeliefImages: imageList(source.aboutBeliefImages, defaultPageMedia.aboutBeliefImages),
     aboutFactImages: imageList(source.aboutFactImages, defaultPageMedia.aboutFactImages),
     testimonialThemeImages: imageList(source.testimonialThemeImages, defaultPageMedia.testimonialThemeImages),

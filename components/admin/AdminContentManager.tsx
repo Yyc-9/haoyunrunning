@@ -399,19 +399,31 @@ export default function AdminContentManager({ content, courses, seasons, scope =
     { id: 'hero' as const, label: '首頁輪播', description: '圖片與排序', destination: '首頁首屏輪播', icon: GalleryHorizontalEnd },
     { id: 'home' as const, label: '首頁文案', description: '近期報名與課程預覽', destination: '首頁近期報名、課程預覽', icon: Home },
     { id: 'activities' as const, label: '活動入口', description: '報名與活動連結', destination: '首頁近期報名入口', icon: Megaphone },
-    { id: 'schedule' as const, label: '訓練日程頁', description: '首屏與加入流程', destination: '完整訓練日程頁', icon: CalendarRange },
+    { id: 'schedule' as const, label: '訓練日程頁', description: '首屏、加入流程與常見問題', destination: '完整訓練日程頁', icon: CalendarRange },
     { id: 'team' as const, label: '團隊陣容', description: '頁面介紹與教練資料', destination: '團隊陣容完整頁面', icon: UsersRound },
     { id: 'seasons' as const, label: '季度設定', description: '切換、複製與歷史資料', destination: '課程、日程表、報名與歷史報表', icon: CalendarRange },
     { id: 'brand' as const, label: '品牌與聯絡', description: '頁尾 Logo、社群與聯絡', destination: '頁尾與聯絡入口', icon: BadgeInfo },
-    { id: 'media' as const, label: '各頁主視覺', description: '商店、關於與見證', destination: '商店、關於我們、學員見證與週年頁', icon: ImageIcon },
+    { id: 'media' as const, label: '商店與週年', description: '主視覺與商店文案', destination: '商店與週年活動頁', icon: ImageIcon },
     { id: 'about' as const, label: '關於我們', description: '品牌故事與對象', destination: '關於我們完整頁面', icon: Sparkles },
-    { id: 'testimonials' as const, label: '學員見證', description: '見證頁文案', destination: '學員見證完整頁面', icon: FileText },
+    { id: 'testimonials' as const, label: '學員見證', description: '首屏、影片與成長路徑', destination: '學員見證完整頁面', icon: FileText },
     { id: 'courses' as const, label: '課程資料', description: '班級日期與內容', destination: '首頁、日程表、課程詳情與網站報名表', icon: ShoppingBag },
   ]
   const modes = allModes.filter((item) => scope === 'seasons'
     ? item.id === 'seasons' || item.id === 'courses'
     : item.id !== 'seasons' && item.id !== 'courses')
   const activeMode = modes.find((item) => item.id === mode) ?? modes[0]
+  const groupedModes = (scope === 'seasons'
+    ? [
+        { label: '季度與課程', ids: ['seasons', 'courses'] as ContentMode[] },
+      ]
+    : [
+        { label: '首頁與活動', ids: ['overview', 'hero', 'home', 'activities'] as ContentMode[] },
+        { label: '公開頁面', ids: ['schedule', 'team', 'about', 'testimonials', 'media'] as ContentMode[] },
+        { label: '全站設定', ids: ['brand'] as ContentMode[] },
+      ]).map((group) => ({
+    ...group,
+    items: modes.filter((item) => group.ids.includes(item.id)),
+  })).filter((group) => group.items.length > 0)
 
   function changeMode(nextMode: ContentMode) {
     if (nextMode === mode) return
@@ -618,11 +630,24 @@ export default function AdminContentManager({ content, courses, seasons, scope =
   return (
     <section className="grid min-w-0 max-w-full gap-5 lg:min-h-[720px] lg:grid-cols-[232px_minmax(0,1fr)] lg:items-start">
       <aside className="min-w-0 max-w-full lg:w-[232px] lg:self-start">
-        <div className="flex w-full max-w-full gap-2 overflow-x-auto border-b border-black/10 pb-3 lg:flex-col lg:overflow-visible lg:border-b-0 lg:pb-0">
+        <div className="flex w-full max-w-full gap-2 overflow-x-auto border-b border-black/10 pb-3 lg:hidden">
           {modes.map((item) => {
             const Icon = item.icon
-            return <button key={item.id} type="button" aria-pressed={mode === item.id} aria-controls="admin-content-panel" onClick={() => changeMode(item.id)} className={`flex min-w-max shrink-0 items-center gap-3 rounded-lg px-3 py-3 text-left ring-1 ring-inset transition-colors lg:min-h-[68px] lg:w-full lg:min-w-0 ${mode === item.id ? 'bg-black text-white ring-black' : 'bg-white text-apple-gray-700 ring-black/10 hover:bg-apple-gray-100'}`}><Icon className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1"><span className="block text-sm font-bold">{item.label}</span><span className={`hidden text-xs lg:block lg:h-8 lg:overflow-hidden ${mode === item.id ? 'text-white/60' : 'text-apple-gray-500'}`}>{item.description}</span></span></button>
+            return <button key={item.id} type="button" aria-pressed={mode === item.id} aria-controls="admin-content-panel" onClick={() => changeMode(item.id)} className={`flex min-w-max shrink-0 items-center gap-3 rounded-lg px-3 py-3 text-left ring-1 ring-inset transition-colors ${mode === item.id ? 'bg-black text-white ring-black' : 'bg-white text-apple-gray-700 ring-black/10 hover:bg-apple-gray-100'}`}><Icon className="h-4 w-4 shrink-0" /><span className="text-sm font-bold">{item.label}</span></button>
           })}
+        </div>
+        <div className="hidden space-y-5 lg:block">
+          {groupedModes.map((group) => (
+            <section key={group.label}>
+              <p className="mb-2 px-2 text-[11px] font-black tracking-wide text-apple-gray-400">{group.label}</p>
+              <div className="space-y-2">
+                {group.items.map((item) => {
+                  const Icon = item.icon
+                  return <button key={item.id} type="button" aria-pressed={mode === item.id} aria-controls="admin-content-panel" onClick={() => changeMode(item.id)} className={`flex min-h-[68px] w-full items-center gap-3 rounded-lg px-3 py-3 text-left ring-1 ring-inset transition-colors ${mode === item.id ? 'bg-black text-white ring-black' : 'bg-white text-apple-gray-700 ring-black/10 hover:bg-apple-gray-100'}`}><Icon className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1"><span className="block text-sm font-bold">{item.label}</span><span className={`block h-8 overflow-hidden text-xs ${mode === item.id ? 'text-white/60' : 'text-apple-gray-500'}`}>{item.description}</span></span></button>
+                })}
+              </div>
+            </section>
+          ))}
         </div>
       </aside>
 
@@ -633,8 +658,15 @@ export default function AdminContentManager({ content, courses, seasons, scope =
         {mode === 'overview' ? (
           <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
             {panelHeader('網站內容中心', '所有日常可替換的圖片與文案集中在這裡。商品本身請到「商城商品」管理。')}
-            <div className="grid md:grid-cols-2">
-              {modes.filter((item) => item.id !== 'overview').map((item) => { const Icon = item.icon; return <button key={item.id} type="button" aria-controls="admin-content-panel" onClick={() => changeMode(item.id)} className="flex items-start gap-4 border-b border-black/10 p-5 text-left transition hover:bg-apple-gray-50 md:odd:border-r"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-apple-gray-100"><Icon className="h-5 w-5" /></span><span className="min-w-0"><span className="block font-black text-apple-gray-900">{item.label}</span><span className="mt-1 block text-sm text-apple-gray-500">{item.description}</span><span className="mt-2 block text-xs font-bold text-apple-blue">發布位置：{item.destination}</span></span></button> })}
+            <div className="divide-y divide-black/10">
+              {groupedModes.map((group) => (
+                <section key={group.label} className="p-5">
+                  <h3 className="mb-3 text-sm font-black text-apple-gray-500">{group.label}</h3>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {group.items.filter((item) => item.id !== 'overview').map((item) => { const Icon = item.icon; return <button key={item.id} type="button" aria-controls="admin-content-panel" onClick={() => changeMode(item.id)} className="flex items-start gap-4 rounded-lg border border-black/10 p-4 text-left transition hover:bg-apple-gray-50"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-apple-gray-100"><Icon className="h-5 w-5" /></span><span className="min-w-0"><span className="block font-black text-apple-gray-900">{item.label}</span><span className="mt-1 block text-sm text-apple-gray-500">{item.description}</span><span className="mt-2 block text-xs font-bold text-apple-blue">發布位置：{item.destination}</span></span></button> })}
+                  </div>
+                </section>
+              ))}
             </div>
           </div>
         ) : null}
@@ -690,6 +722,27 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                     <div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2">
                       <input value={step.title} onChange={(event) => setCoursesPage((current) => ({ ...current, guideSteps: current.guideSteps.map((item, itemIndex) => itemIndex === index ? { ...item, title: event.target.value } : item) }))} className="apple-input" />
                       <textarea rows={2} value={step.description} onChange={(event) => setCoursesPage((current) => ({ ...current, guideSteps: current.guideSteps.map((item, itemIndex) => itemIndex === index ? { ...item, description: event.target.value } : item) }))} className="apple-input resize-y" />
+                    </div>
+                  ))}
+                </div>
+                <div className="md:col-span-2 border-t border-black/10 pt-6">
+                  <Field label="常見問題標題" wide>
+                    <input value={coursesPage.faqTitle} onChange={(event) => setCoursesPage((current) => ({ ...current, faqTitle: event.target.value }))} className="apple-input" />
+                  </Field>
+                  <h3 className="mb-3 mt-6 font-black">常見問題內容</h3>
+                  {coursesPage.faqs.map((item, index) => (
+                    <div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2">
+                      <input value={item.title} onChange={(event) => setCoursesPage((current) => ({ ...current, faqs: current.faqs.map((entry, itemIndex) => itemIndex === index ? { ...entry, title: event.target.value } : entry) }))} className="apple-input" placeholder="問題" />
+                      <textarea rows={3} value={item.description} onChange={(event) => setCoursesPage((current) => ({ ...current, faqs: current.faqs.map((entry, itemIndex) => itemIndex === index ? { ...entry, description: event.target.value } : entry) }))} className="apple-input resize-y" placeholder="回答" />
+                    </div>
+                  ))}
+                </div>
+                <div className="md:col-span-2 border-t border-black/10 pt-6">
+                  <h3 className="mb-3 font-black">課表下方三項重點</h3>
+                  {coursesPage.highlights.map((item, index) => (
+                    <div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2">
+                      <input value={item.title} onChange={(event) => setCoursesPage((current) => ({ ...current, highlights: current.highlights.map((entry, itemIndex) => itemIndex === index ? { ...entry, title: event.target.value } : entry) }))} className="apple-input" placeholder="重點標題" />
+                      <textarea rows={2} value={item.description} onChange={(event) => setCoursesPage((current) => ({ ...current, highlights: current.highlights.map((entry, itemIndex) => itemIndex === index ? { ...entry, description: event.target.value } : entry) }))} className="apple-input resize-y" placeholder="重點說明" />
                     </div>
                   ))}
                 </div>
@@ -798,35 +851,10 @@ export default function AdminContentManager({ content, courses, seasons, scope =
 
         {mode === 'media' ? (
           <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
-            {panelHeader('各頁主視覺', '管理學員見證、商店與週年活動目前實際使用的圖片。關於、課程與團隊圖片請到各自頁面設定。')}
+            {panelHeader('商店與週年', '管理商店與週年活動目前實際使用的圖片與商店文案。', '/shop')}
             <div className="p-5">
-              <ImageField label="學員見證主圖" value={pageMedia.testimonialsHero} folder="pages" onChange={(testimonialsHero) => setPageMedia((current) => ({ ...current, testimonialsHero }))} onError={setLocalError} />
               <ImageField label="商店主視覺" value={pageMedia.shopHero} folder="pages" onChange={(shopHero) => setPageMedia((current) => ({ ...current, shopHero }))} onError={setLocalError} />
               <ImageField label="週年活動主圖" value={pageMedia.anniversaryHero} folder="pages" onChange={(anniversaryHero) => setPageMedia((current) => ({ ...current, anniversaryHero }))} onError={setLocalError} />
-
-              <div className="mt-5 space-y-3">
-                <details className="group rounded-lg border border-black/10 bg-apple-gray-50">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3">
-                    <div>
-                      <p className="font-black text-apple-gray-900">學員見證橫幅底圖</p>
-                      <p className="mt-1 text-xs text-apple-gray-500">成長路徑使用一張完整圖片。</p>
-                    </div>
-                    <span className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-black text-apple-gray-600 group-open:bg-black group-open:text-white">管理圖片</span>
-                  </summary>
-                  <div className="border-t border-black/10 bg-white px-4">
-                    <ImageField
-                      label="成長路徑橫幅"
-                      value={pageMedia.testimonialThemeImages[0] ?? ''}
-                      folder="pages"
-                      onChange={(url) => setPageMedia((current) => ({
-                        ...current,
-                        testimonialThemeImages: current.testimonialThemeImages.map((image, imageIndex) => imageIndex === 0 ? url : image),
-                      }))}
-                      onError={setLocalError}
-                    />
-                  </div>
-                </details>
-              </div>
 
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 <Field label="商店標題"><input value={pageMedia.shopTitle} onChange={(event) => setPageMedia((current) => ({ ...current, shopTitle: event.target.value }))} className="apple-input" /></Field>
@@ -896,8 +924,29 @@ export default function AdminContentManager({ content, courses, seasons, scope =
 
         {mode === 'testimonials' ? (
           <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
-            {panelHeader('學員見證', '管理見證頁首屏、影片與成長路徑；沒有影片時前台會自動收合。', '/testimonials')}
-            <div className="grid gap-4 p-5 md:grid-cols-2">
+            {panelHeader('學員見證', '首屏、影片、成長路徑主視覺與三張故事卡集中在這裡；沒有影片時前台會自動收合。', '/testimonials')}
+            <div className="p-5">
+              <ImageField label="學員見證首屏背景圖" value={pageMedia.testimonialsHero} folder="pages" onChange={(testimonialsHero) => setPageMedia((current) => ({ ...current, testimonialsHero }))} onError={setLocalError} />
+              <ImageField label="成長路徑主視覺" value={pageMedia.testimonialPathHero} folder="pages" onChange={(testimonialPathHero) => setPageMedia((current) => ({ ...current, testimonialPathHero }))} onError={setLocalError} />
+              <div className="mt-5 grid gap-4 md:grid-cols-3">
+                {pageMedia.testimonialThemeImages.map((image, index) => (
+                  <ImageField
+                    key={index}
+                    label={`成長卡片 ${index + 1} 圖片`}
+                    value={image}
+                    folder="pages"
+                    aspectRatio={4 / 3}
+                    aspectLabel="4:3"
+                    outputWidth={1400}
+                    onChange={(url) => setPageMedia((current) => ({
+                      ...current,
+                      testimonialThemeImages: current.testimonialThemeImages.map((item, itemIndex) => itemIndex === index ? url : item),
+                    }))}
+                    onError={setLocalError}
+                  />
+                ))}
+              </div>
+              <div className="mt-8 grid gap-4 md:grid-cols-2">
               <VideoField
                 label="學員見證影片"
                 value={testimonials.videoUrl}
@@ -941,7 +990,8 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                 ))}
               </div>
             </div>
-            <div className="border-t border-black/10 p-5">{actionBar(() => setTestimonials(content.testimonials), saveButton('save-testimonials', 'testimonials_content', testimonials))}</div>
+            </div>
+            <div className="border-t border-black/10 p-5">{actionBar(() => { setTestimonials(content.testimonials); setPageMedia(content.pageMedia) }, multiSaveButton('save-testimonials', [{ section: 'testimonials_content', value: testimonials }, { section: 'page_media', value: pageMedia }]))}</div>
           </div>
         ) : null}
 

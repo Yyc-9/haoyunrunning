@@ -2,7 +2,8 @@
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { defaultLanguage, dictionary, type Dictionary, type Language } from '@/lib/dictionary'
-import { toTraditionalWebsiteText } from '@/lib/traditional-chinese'
+import { toEnglishWebsiteText } from '@/lib/english-website'
+import { toSimplifiedWebsiteText, toTraditionalWebsiteText } from '@/lib/traditional-chinese'
 
 interface LanguageContextType {
   language: Language
@@ -14,7 +15,12 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 export { LanguageContext }
 
-function convertVisibleText(root: ParentNode) {
+function convertVisibleText(root: ParentNode, language: Language) {
+  const convert = language === 'zh-CN'
+    ? toSimplifiedWebsiteText
+    : language === 'en'
+      ? toEnglishWebsiteText
+      : toTraditionalWebsiteText
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
       const parent = node.parentElement
@@ -29,7 +35,7 @@ function convertVisibleText(root: ParentNode) {
   while (walker.nextNode()) textNodes.push(walker.currentNode as Text)
 
   textNodes.forEach((node) => {
-    const nextValue = toTraditionalWebsiteText(node.nodeValue ?? '')
+    const nextValue = convert(node.nodeValue ?? '')
     if (node.nodeValue !== nextValue) node.nodeValue = nextValue
   })
 
@@ -38,7 +44,7 @@ function convertVisibleText(root: ParentNode) {
     ;['placeholder', 'aria-label', 'title'].forEach((attribute) => {
       const value = element.getAttribute(attribute)
       if (!value) return
-      const nextValue = toTraditionalWebsiteText(value)
+      const nextValue = convert(value)
       if (value !== nextValue) element.setAttribute(attribute, nextValue)
     })
   })
@@ -48,26 +54,27 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>(defaultLanguage)
 
   useEffect(() => {
-    window.localStorage.setItem('language', defaultLanguage)
-    setLanguageState(defaultLanguage)
+    const storedLanguage = window.localStorage.getItem('language')
+    if (storedLanguage === 'zh-TW' || storedLanguage === 'zh-CN' || storedLanguage === 'en') {
+      setLanguageState(storedLanguage)
+    }
   }, [])
 
   const setLanguage = (nextLanguage: Language) => {
-    void nextLanguage
-    setLanguageState(defaultLanguage)
-    window.localStorage.setItem('language', defaultLanguage)
+    setLanguageState(nextLanguage)
+    window.localStorage.setItem('language', nextLanguage)
   }
 
   useEffect(() => {
-    document.documentElement.lang = 'zh-TW'
-    let frame = window.requestAnimationFrame(() => convertVisibleText(document.body))
+    document.documentElement.lang = language
+    let frame = window.requestAnimationFrame(() => convertVisibleText(document.body, language))
 
     const observer = new MutationObserver((mutations) => {
       window.cancelAnimationFrame(frame)
       frame = window.requestAnimationFrame(() => {
         mutations.forEach((mutation) => {
-          if (mutation.target instanceof Element) convertVisibleText(mutation.target)
-          else if (mutation.target.parentElement) convertVisibleText(mutation.target.parentElement)
+          if (mutation.target instanceof Element) convertVisibleText(mutation.target, language)
+          else if (mutation.target.parentElement) convertVisibleText(mutation.target.parentElement, language)
         })
       })
     })
@@ -84,11 +91,27 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       window.cancelAnimationFrame(frame)
       observer.disconnect()
     }
-  }, [])
+  }, [language])
+
+  const localizedDictionary = useMemo(() => {
+    const selected = dictionary[language]
+    if (language !== 'zh-CN') return selected as Dictionary
+
+    const convertValue = (value: unknown): unknown => {
+      if (typeof value === 'string') return toSimplifiedWebsiteText(value)
+      if (Array.isArray(value)) return value.map(convertValue)
+      if (value && typeof value === 'object') {
+        return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, convertValue(item)]))
+      }
+      return value
+    }
+
+    return convertValue(selected) as Dictionary
+  }, [language])
 
   const value = useMemo(
-    () => ({ language, setLanguage, t: dictionary[language] }),
-    [language]
+    () => ({ language, setLanguage, t: localizedDictionary }),
+    [language, localizedDictionary]
   )
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>

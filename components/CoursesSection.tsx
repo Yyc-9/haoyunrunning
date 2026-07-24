@@ -7,48 +7,20 @@ import CoursesTable from '@/components/CoursesTable'
 import FAQItem from '@/components/FAQItem'
 import { useLanguage } from '@/app/language-context'
 import { useSiteContent } from '@/app/site-content-provider'
+import { toSimplifiedWebsiteText, toTraditionalWebsiteText } from '@/lib/traditional-chinese'
 
 type CoursesSectionProps = {
   preview?: boolean
 }
 
 export default function CoursesSection({ preview = false }: CoursesSectionProps) {
-  const { language, t } = useLanguage()
+  const { language } = useLanguage()
   const { courses: managedCourses, home, coursesPage, pageMedia } = useSiteContent()
   const sortedCourses = managedCourses
   const courses = preview ? sortedCourses.slice(0, 4) : sortedCourses
-  const faqItems = Array.from(
-    new Map(
-      sortedCourses
-        .flatMap((course) => course.faq ?? [])
-        .map((item) => [item.question, item])
-    ).values()
-  ).slice(0, 6)
-
   const localeText = (text: string) => {
-    if (language === 'zh-TW') {
-      return text
-        .replaceAll('好運', '好運')
-        .replaceAll('訓練', '訓練')
-        .replaceAll('課程', '課程')
-        .replaceAll('周', '週')
-        .replaceAll('節奏', '節奏')
-        .replaceAll('舊生', '舊生')
-        .replaceAll('適合', '適合')
-        .replaceAll('請', '請')
-        .replaceAll('諮詢', '諮詢')
-        .replaceAll('費用', '費用')
-    }
-    if (language === 'zh-CN') {
-      return text
-        .replaceAll('好運', '好運')
-        .replaceAll('訓練', '訓練')
-        .replaceAll('課程', '課程')
-        .replaceAll('週', '周')
-        .replaceAll('節奏', '節奏')
-        .replaceAll('舊生', '舊生')
-        .replaceAll('費用', '費用')
-    }
+    if (language === 'zh-CN') return toSimplifiedWebsiteText(text)
+    if (language === 'zh-TW') return toTraditionalWebsiteText(text)
     return text
   }
 
@@ -154,19 +126,19 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
           <div className="container mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
             <CoursesTable />
 
-            {faqItems.length ? (
+            {coursesPage.faqs.length ? (
               <section className="mt-10">
-                <h3 className="mb-5 text-2xl font-black text-apple-gray-950 sm:text-3xl">常見問題</h3>
+                <h3 className="mb-5 text-2xl font-black text-apple-gray-950 sm:text-3xl">{coursesPage.faqTitle}</h3>
                 <div className="rounded-lg border border-black/10 bg-white p-5 sm:p-7">
-                  {faqItems.map((item) => (
-                    <FAQItem key={item.question} question={localeText(item.question)} answer={localeText(item.answer)} />
+                  {coursesPage.faqs.map((item) => (
+                    <FAQItem key={item.title} question={localeText(item.title)} answer={localeText(item.description)} />
                   ))}
                 </div>
               </section>
             ) : null}
 
             <div className="mt-8 grid gap-4 md:grid-cols-3">
-              {t.courses.highlightsDecision.map((item, index) => {
+              {coursesPage.highlights.map((item, index) => {
                 const Icon = [Clock, Target, Users][index] ?? Clock
                 return (
                   <div key={item.title} className="rounded-2xl border border-black/10 bg-white p-5">

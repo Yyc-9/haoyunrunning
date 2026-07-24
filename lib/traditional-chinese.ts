@@ -1,3 +1,5 @@
+import { Converter } from 'opencc-js'
+
 export const simplifiedToTraditionalPhrases: ReadonlyArray<readonly [string, string]> = [
   ['喜欢', '喜歡'],
   ['挑战赛', '挑戰賽'],
@@ -54,6 +56,7 @@ export const simplifiedToTraditionalPhrases: ReadonlyArray<readonly [string, str
   ['田径场', '田徑場'],
   ['运动场', '運動場'],
   ['长距离', '長距離'],
+  ['周期', '週期'],
   ['手机', '手機'],
   ['截图', '截圖'],
   ['旧生', '舊生'],
@@ -63,6 +66,7 @@ export const simplifiedToTraditionalPhrases: ReadonlyArray<readonly [string, str
 
 const simplifiedToTraditionalCharacters: ReadonlyArray<readonly [string, string]> = [
   ['运', '運'], ['训', '訓'], ['练', '練'], ['课', '課'], ['学', '學'], ['员', '員'],
+  ['顿', '頓'],
   ['见', '見'], ['证', '證'], ['关', '關'], ['页', '頁'], ['账', '帳'], ['户', '戶'],
   ['录', '錄'], ['体', '體'], ['划', '劃'], ['计', '計'], ['个', '個'], ['专', '專'],
   ['业', '業'], ['实', '實'], ['现', '現'], ['选', '選'], ['择', '擇'], ['适', '適'],
@@ -91,8 +95,21 @@ const simplifiedToTraditionalCharacters: ReadonlyArray<readonly [string, string]
 const conversionPairs = [...simplifiedToTraditionalPhrases, ...simplifiedToTraditionalCharacters]
   .sort((a, b) => b[0].length - a[0].length)
 
+const simplifiedToTaiwanTraditional = Converter({ from: 'cn', to: 'tw' })
+const taiwanTraditionalToSimplified = Converter({ from: 'tw', to: 'cn' })
+
 export function toTraditionalWebsiteText(value: string) {
-  return conversionPairs
-    .reduce((text, [from, to]) => text.replaceAll(from, to), value)
+  const curated = conversionPairs.reduce((text, [from, to]) => text.replaceAll(from, to), value)
+  return simplifiedToTaiwanTraditional(curated)
     .replaceAll('馬拉鬆', '馬拉松')
+}
+
+const traditionalToSimplifiedPairs = [...simplifiedToTraditionalPhrases, ...simplifiedToTraditionalCharacters]
+  .map(([simplified, traditional]) => [traditional, simplified] as const)
+  .sort((a, b) => b[0].length - a[0].length)
+
+export function toSimplifiedWebsiteText(value: string) {
+  const curated = traditionalToSimplifiedPairs.reduce((text, [from, to]) => text.replaceAll(from, to), value)
+  return taiwanTraditionalToSimplified(curated)
+    .replaceAll('马拉鬆', '马拉松')
 }
