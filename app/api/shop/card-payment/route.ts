@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-server'
 import { verifyOrderAccessToken } from '@/lib/order-access'
 import { getStripeClient } from '@/lib/stripe'
+import { isShopCardPaymentEnabled } from '@/lib/payment-features'
 
 type CardPaymentBody = {
   orderId?: string
@@ -29,6 +30,13 @@ function getSiteOrigin(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  if (!isShopCardPaymentEnabled()) {
+    return NextResponse.json(
+      { error: '信用卡付款尚未開放，目前請依網站提供的銀行匯款流程完成付款。' },
+      { status: 503 }
+    )
+  }
+
   if (!supabaseAdmin) {
     return NextResponse.json({ error: 'Supabase 尚未設定。' }, { status: 500 })
   }
@@ -36,7 +44,7 @@ export async function POST(request: NextRequest) {
   const stripe = getStripeClient()
   if (!stripe) {
     return NextResponse.json(
-      { error: '信用卡安全收單通道尚未設定。請先設定 STRIPE_SECRET_KEY，本站不會自行收集卡號或 CVV。' },
+      { error: '信用卡安全收單通道尚未完成設定，本站不會自行收集卡號或 CVC。' },
       { status: 501 }
     )
   }

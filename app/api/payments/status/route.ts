@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-server'
+import { isShopCardPaymentEnabled } from '@/lib/payment-features'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const stripeConfigured = Boolean(
-    process.env.STRIPE_SECRET_KEY?.trim() && process.env.STRIPE_WEBHOOK_SECRET?.trim()
-  )
+  const stripeConfigured = isShopCardPaymentEnabled()
 
   let manualTransferConfigured = false
   if (supabaseAdmin) {

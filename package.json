@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "check:traditional": "node scripts/check-traditional-chinese.mjs"
+    "check:traditional": "node scripts/check-traditional-chinese.mjs",
+    "test": "node --no-warnings --test --experimental-strip-types tests/*.test.mts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.0",

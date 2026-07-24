@@ -46,6 +46,7 @@ import type {
 } from '@/lib/site-content'
 import type { CoachPublicProfile } from '@/lib/coach-profiles'
 import { getYouTubeEmbedUrl } from '@/lib/youtube'
+import CroppableImageInput from '@/components/admin/CroppableImageInput'
 
 type CourseSummary = {
   slug: string
@@ -135,7 +136,27 @@ function Field({ label, children, wide = false }: { label: string; children: Rea
   return <label className={wide ? 'md:col-span-2' : ''}><span className="mb-2 block text-xs font-bold text-apple-gray-500">{label}</span>{children}</label>
 }
 
-function ImageField({ label, value, folder, objectPosition, onChange, onError }: { label: string; value: string; folder: 'brand' | 'pages' | 'coaches'; objectPosition?: string; onChange: (url: string) => void; onError: (message: string) => void }) {
+function ImageField({
+  label,
+  value,
+  folder,
+  objectPosition,
+  aspectRatio = 16 / 9,
+  aspectLabel = '16:9',
+  outputWidth = 2000,
+  onChange,
+  onError,
+}: {
+  label: string
+  value: string
+  folder: 'brand' | 'pages' | 'coaches'
+  objectPosition?: string
+  aspectRatio?: number
+  aspectLabel?: string
+  outputWidth?: number
+  onChange: (url: string) => void
+  onError: (message: string) => void
+}) {
   const [uploading, setUploading] = useState(false)
   async function upload(file?: File) {
     if (!file) return
@@ -158,11 +179,17 @@ function ImageField({ label, value, folder, objectPosition, onChange, onError }:
         <div className="min-w-0 flex-1">
           <p className="font-bold text-apple-gray-900">{label}</p>
           <p className="mt-1 truncate text-xs text-apple-gray-500">{value || '尚未設定圖片'}</p>
-          <label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-black/10 bg-white px-4 py-2 text-sm font-bold hover:bg-apple-gray-100">
+          <CroppableImageInput
+            className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-black/10 bg-white px-4 py-2 text-sm font-bold hover:bg-apple-gray-100"
+            disabled={uploading}
+            aspectRatio={aspectRatio}
+            aspectLabel={aspectLabel}
+            outputWidth={outputWidth}
+            onCroppedFile={upload}
+          >
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
             更換圖片
-            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={uploading} onChange={(event) => upload(event.target.files?.[0])} />
-          </label>
+          </CroppableImageInput>
         </div>
       </div>
     </div>
@@ -616,7 +643,17 @@ export default function AdminContentManager({ content, courses, seasons, scope =
             {panelHeader('首頁輪播圖片', '最多 8 張，可調整順序或刪除。建議使用橫式高解析度照片。', '/')}
             <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
               {slides.map((slide, index) => <article key={`${slide}-${index}`} className="overflow-hidden rounded-lg border border-black/10"><div className="relative aspect-video bg-apple-gray-100"><Image src={slide} alt={`首頁輪播 ${index + 1}`} fill sizes="360px" className="object-cover" /></div><div className="flex items-center justify-between p-3"><span className="text-xs font-bold text-apple-gray-500">第 {index + 1} 張</span><div className="flex gap-1"><button title="向前移動" type="button" disabled={index === 0} onClick={() => moveSlide(index, -1)} className="p-2 disabled:opacity-30"><ArrowUp className="h-4 w-4" /></button><button title="向後移動" type="button" disabled={index === slides.length - 1} onClick={() => moveSlide(index, 1)} className="p-2 disabled:opacity-30"><ArrowDown className="h-4 w-4" /></button><button title="刪除圖片" type="button" disabled={slides.length <= 1} onClick={() => setSlides((current) => current.filter((_, i) => i !== index))} className="p-2 text-red-500 disabled:opacity-30"><Trash2 className="h-4 w-4" /></button></div></div></article>)}
-              <label className="flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-black/20 bg-apple-gray-50 text-sm font-bold text-apple-gray-600"><ImagePlus className="mb-3 h-6 w-6" />{isUploading ? '圖片上傳中...' : '新增輪播圖片'}<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={isUploading || slides.length >= 8} onChange={(event) => addHeroImage(event.target.files?.[0])} /></label>
+              <CroppableImageInput
+                className="flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-black/20 bg-apple-gray-50 text-sm font-bold text-apple-gray-600"
+                disabled={isUploading || slides.length >= 8}
+                aspectRatio={16 / 9}
+                aspectLabel="16:9"
+                outputWidth={2000}
+                onCroppedFile={addHeroImage}
+              >
+                <ImagePlus className="mb-3 h-6 w-6" />
+                {isUploading ? '圖片上傳中...' : '新增輪播圖片'}
+              </CroppableImageInput>
             </div>
             <div className="border-t border-black/10 p-5">{actionBar(() => setSlides(content.heroSlides), saveButton('save-hero', 'hero_slides', slides, '儲存輪播'))}</div>
           </div>
@@ -707,6 +744,9 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                           label="團隊頁長方形上半身照片"
                           value={profile.fullBodyImageUrl}
                           folder="coaches"
+                          aspectRatio={3 / 2}
+                          aspectLabel="3:2"
+                          outputWidth={1600}
                           objectPosition={`${profile.fullBodyFocusX}% ${profile.fullBodyFocusY}%`}
                           onChange={(fullBodyImageUrl) => setCoachDrafts((current) => ({
                             ...current,
@@ -753,7 +793,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
           </div>
         ) : null}
 
-        {mode === 'brand' ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('品牌與聯絡','頁尾 Logo、品牌文字與聯絡資料會同步到前台；頂部 Logo 依星期自動更換。','/')}<div className="p-5"><ImageField label="頁尾品牌 Logo" value={brand.logoUrl} folder="brand" onChange={(logoUrl)=>setBrand((c)=>({...c,logoUrl}))} onError={setLocalError}/><div className="mt-5 grid gap-4 md:grid-cols-2">{([['brandName','品牌名稱'],['tagline','品牌標語'],['instagramUrl','Instagram 網址'],['instagramHandle','Instagram 帳號'],['contactText','聯絡說明'],['address','服務地區']] as const).map(([key,label])=><Field key={key} label={label}><input value={brand[key]} onChange={(e)=>setBrand((c)=>({...c,[key]:e.target.value}))} className="apple-input" /></Field>)}<Field label="頁尾品牌介紹" wide><textarea rows={4} value={brand.footerDescription} onChange={(e)=>setBrand((c)=>({...c,footerDescription:e.target.value}))} className="apple-input resize-y" /></Field></div></div><div className="border-t border-black/10 p-5">{actionBar(() => setBrand(content.brand), saveButton('save-brand','brand_content',brand))}</div></div> : null}
+        {mode === 'brand' ? <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('品牌與聯絡','頁尾 Logo、品牌文字與聯絡資料會同步到前台；頂部 Logo 依星期自動更換。','/')}<div className="p-5"><ImageField label="頁尾品牌 Logo" value={brand.logoUrl} folder="brand" aspectRatio={1} aspectLabel="1:1" outputWidth={1000} onChange={(logoUrl)=>setBrand((c)=>({...c,logoUrl}))} onError={setLocalError}/><div className="mt-5 grid gap-4 md:grid-cols-2">{([['brandName','品牌名稱'],['tagline','品牌標語'],['instagramUrl','Instagram 網址'],['instagramHandle','Instagram 帳號'],['contactText','聯絡說明'],['address','服務地區']] as const).map(([key,label])=><Field key={key} label={label}><input value={brand[key]} onChange={(e)=>setBrand((c)=>({...c,[key]:e.target.value}))} className="apple-input" /></Field>)}<Field label="頁尾品牌介紹" wide><textarea rows={4} value={brand.footerDescription} onChange={(e)=>setBrand((c)=>({...c,footerDescription:e.target.value}))} className="apple-input resize-y" /></Field></div></div><div className="border-t border-black/10 p-5">{actionBar(() => setBrand(content.brand), saveButton('save-brand','brand_content',brand))}</div></div> : null}
 
         {mode === 'media' ? (
           <div className="overflow-hidden rounded-lg border border-black/10 bg-white">

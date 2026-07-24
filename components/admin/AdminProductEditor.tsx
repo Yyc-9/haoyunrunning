@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { ChevronDown, ChevronLeft, ChevronRight, Film, ImagePlus, Loader2, Pencil, Plus, Save, Trash2 } from 'lucide-react'
 import { uploadProductMedia } from '@/components/admin/AdminProductCreator'
+import CroppableImageInput from '@/components/admin/CroppableImageInput'
 
 export type AdminEditableProduct = {
   id: string
@@ -234,11 +235,10 @@ export default function AdminProductEditor({ product, runAction }: AdminProductE
             <div className="relative aspect-square overflow-hidden rounded-lg border border-black/10 bg-apple-gray-100">
               <Image src={draft.image} alt={`${draft.name}主圖`} fill sizes="180px" className="object-contain p-2" />
             </div>
-            <label className="apple-button-outline mt-3 flex cursor-pointer gap-2 px-4 py-2.5 text-sm">
+            <CroppableImageInput className="apple-button-outline mt-3 flex cursor-pointer gap-2 px-4 py-2.5 text-sm" disabled={Boolean(uploadingKey)} aspectRatio={1} aspectLabel="1:1" outputWidth={1600} onCroppedFile={(file) => uploadMedia(file, 'image')}>
               {uploadingKey === 'main' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
               更換主圖
-              <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={Boolean(uploadingKey)} onChange={(event) => uploadMedia(event.target.files?.[0], 'image')} />
-            </label>
+            </CroppableImageInput>
           </div>
           <div>
             <div className="relative aspect-square overflow-hidden rounded-lg border border-black/10 bg-black">
@@ -273,11 +273,10 @@ export default function AdminProductEditor({ product, runAction }: AdminProductE
       <div className="border-t border-black/10 px-5 py-5">
         <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <div><h3 className="font-black text-apple-gray-950">商品詳情圖片</h3><p className="mt-1 text-xs text-apple-gray-500">最多 12 張，顧客可在商品頁逐張查看。</p></div>
-          <label className="apple-button-outline inline-flex cursor-pointer gap-2 px-4 py-2 text-sm">
+          <CroppableImageInput className="apple-button-outline inline-flex cursor-pointer gap-2 px-4 py-2 text-sm" disabled={Boolean(uploadingKey) || draft.gallery.length >= 12} aspectRatio={4 / 3} aspectLabel="4:3" outputWidth={1600} onCroppedFile={(file) => uploadMedia(file, 'image', 'gallery')}>
             {uploadingKey === 'gallery' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
             加入圖片
-            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={Boolean(uploadingKey) || draft.gallery.length >= 12} onChange={(event) => uploadMedia(event.target.files?.[0], 'image', 'gallery')} />
-          </label>
+          </CroppableImageInput>
         </div>
         {draft.gallery.length > 0 ? (
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
@@ -318,22 +317,20 @@ export default function AdminProductEditor({ product, runAction }: AdminProductE
                       {variant.image ? <Image src={variant.image} alt={`${variant.name || '款式'}主圖`} fill sizes="220px" className="object-contain p-2" /> : <div className="flex h-full items-center justify-center text-xs font-bold text-apple-gray-400">尚未上傳款式主圖</div>}
                     </div>
                     <input value={variant.name} onChange={(event) => setDraft((current) => ({ ...current, variants: current.variants.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item) }))} placeholder="款式名稱" className="apple-input mt-3" />
-                    <label className="apple-button-outline mt-2 flex cursor-pointer gap-2 px-4 py-2 text-sm">
+                    <CroppableImageInput className="apple-button-outline mt-2 flex cursor-pointer gap-2 px-4 py-2 text-sm" disabled={Boolean(uploadingKey)} aspectRatio={1} aspectLabel="1:1" outputWidth={1600} onCroppedFile={(file) => uploadMedia(file, 'image', index)}>
                       {uploadingKey === `variant-${index}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
                       {variant.image ? '更換款式主圖' : '上傳款式主圖'}
-                      <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={Boolean(uploadingKey)} onChange={(event) => uploadMedia(event.target.files?.[0], 'image', index)} />
-                    </label>
+                    </CroppableImageInput>
                     <button type="button" onClick={() => setDraft((current) => ({ ...current, variants: current.variants.filter((_, itemIndex) => itemIndex !== index) }))} className="mt-2 inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-xs font-bold text-red-600 transition hover:bg-red-50" aria-label={`刪除${variant.name || '款式'}`}><Trash2 className="h-4 w-4" />刪除款式</button>
                   </div>
 
                   <div className="min-w-0">
                     <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
                       <div><p className="text-sm font-black text-apple-gray-900">{variant.name || `款式 ${index + 1}`}詳情圖片</p><p className="mt-1 text-xs text-apple-gray-500">拖曳替代操作：使用左右箭頭調整顯示順序。</p></div>
-                      <label className="apple-button-outline inline-flex cursor-pointer gap-2 px-4 py-2 text-sm">
+                      <CroppableImageInput className="apple-button-outline inline-flex cursor-pointer gap-2 px-4 py-2 text-sm" disabled={Boolean(uploadingKey) || variant.detailImages.length >= 12} aspectRatio={4 / 3} aspectLabel="4:3" outputWidth={1600} onCroppedFile={(file) => uploadVariantDetail(file, index)}>
                         {uploadingKey === `variant-detail-${index}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
                         加入款式詳情圖
-                        <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={Boolean(uploadingKey) || variant.detailImages.length >= 12} onChange={(event) => uploadVariantDetail(event.target.files?.[0], index)} />
-                      </label>
+                      </CroppableImageInput>
                     </div>
                     {variant.detailImages.length ? (
                       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">

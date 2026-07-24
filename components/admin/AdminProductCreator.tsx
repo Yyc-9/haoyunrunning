@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useState } from 'react'
 import { ChevronDown, ChevronLeft, ChevronRight, Film, ImagePlus, Loader2, PackagePlus, Plus, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import CroppableImageInput from '@/components/admin/CroppableImageInput'
 
 type AdminProductCreatorProps = {
   runAction: (id: string, action: Record<string, unknown>) => Promise<boolean>
@@ -215,21 +216,19 @@ export default function AdminProductCreator({ runAction }: AdminProductCreatorPr
           <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
             <p className="max-w-xl text-sm leading-6 text-apple-gray-600">主圖為必填，也可加入一支商品影片。可先儲存為下架狀態，確認完成後再公開。</p>
         <div className="flex flex-wrap gap-2">
-          <label title="上傳商品主圖" className="apple-button-outline inline-flex cursor-pointer items-center justify-center gap-2 px-4 py-3">
+          <CroppableImageInput className="apple-button-outline inline-flex cursor-pointer items-center justify-center gap-2 px-4 py-3" disabled={Boolean(uploadingKind)} aspectRatio={1} aspectLabel="1:1" outputWidth={1600} onCroppedFile={(file) => handleMedia(file, 'image')}>
             {uploadingKind === 'image' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
             {form.image ? '更換主圖' : '上傳主圖'}
-            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={Boolean(uploadingKind)} onChange={(event) => handleMedia(event.target.files?.[0], 'image')} />
-          </label>
+          </CroppableImageInput>
           <label title="上傳商品影片" className="apple-button-outline inline-flex cursor-pointer items-center justify-center gap-2 px-4 py-3">
             {uploadingKind === 'video' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Film className="h-4 w-4" />}
             {form.video ? '更換影片' : '上傳影片'}
             <input type="file" accept="video/mp4,video/webm,video/quicktime" className="sr-only" disabled={Boolean(uploadingKind)} onChange={(event) => handleMedia(event.target.files?.[0], 'video')} />
           </label>
-          <label title="加入商品詳情圖片" className="apple-button-outline inline-flex cursor-pointer items-center justify-center gap-2 px-4 py-3">
+          <CroppableImageInput className="apple-button-outline inline-flex cursor-pointer items-center justify-center gap-2 px-4 py-3" disabled={Boolean(uploadingKind) || form.gallery.length >= 12} aspectRatio={4 / 3} aspectLabel="4:3" outputWidth={1600} onCroppedFile={(file) => handleMedia(file, 'image', 'gallery')}>
             {uploadingKind === 'gallery' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             加入詳情圖
-            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={Boolean(uploadingKind) || form.gallery.length >= 12} onChange={(event) => handleMedia(event.target.files?.[0], 'image', 'gallery')} />
-          </label>
+          </CroppableImageInput>
         </div>
           </div>
 
@@ -318,11 +317,11 @@ export default function AdminProductCreator({ runAction }: AdminProductCreatorPr
                       {variant.image ? <Image src={variant.image} alt={`${variant.name || '款式'}主圖`} fill sizes="200px" className="object-contain p-2" /> : <div className="flex h-full items-center justify-center text-xs font-bold text-apple-gray-400">尚未上傳款式主圖</div>}
                     </div>
                     <input value={variant.name} onChange={(event) => setForm((current) => ({ ...current, variants: current.variants.map((item, index) => index === variantIndex ? { ...item, name: event.target.value } : item) }))} placeholder="款式名稱" className="apple-input mt-3" />
-                    <label className="apple-button-outline mt-2 flex cursor-pointer gap-2 px-4 py-2 text-sm">{uploadingKind === `variant-image-${variantIndex}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}{variant.image ? '更換款式主圖' : '上傳款式主圖'}<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={Boolean(uploadingKind)} onChange={(event) => handleVariantMedia(event.target.files?.[0], variantIndex, 'image')} /></label>
+                    <CroppableImageInput className="apple-button-outline mt-2 flex cursor-pointer gap-2 px-4 py-2 text-sm" disabled={Boolean(uploadingKind)} aspectRatio={1} aspectLabel="1:1" outputWidth={1600} onCroppedFile={(file) => handleVariantMedia(file, variantIndex, 'image')}>{uploadingKind === `variant-image-${variantIndex}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}{variant.image ? '更換款式主圖' : '上傳款式主圖'}</CroppableImageInput>
                     <button type="button" onClick={() => setForm((current) => ({ ...current, variants: current.variants.filter((_, index) => index !== variantIndex) }))} className="mt-2 inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-xs font-bold text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" />刪除款式</button>
                   </div>
                   <div className="min-w-0">
-                    <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center"><p className="text-sm font-black text-apple-gray-900">{variant.name || `款式 ${variantIndex + 1}`}詳情圖片</p><label className="apple-button-outline inline-flex cursor-pointer gap-2 px-4 py-2 text-sm">{uploadingKind === `variant-detail-${variantIndex}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}加入詳情圖<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={Boolean(uploadingKind) || variant.detailImages.length >= 12} onChange={(event) => handleVariantMedia(event.target.files?.[0], variantIndex, 'detail')} /></label></div>
+                    <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center"><p className="text-sm font-black text-apple-gray-900">{variant.name || `款式 ${variantIndex + 1}`}詳情圖片</p><CroppableImageInput className="apple-button-outline inline-flex cursor-pointer gap-2 px-4 py-2 text-sm" disabled={Boolean(uploadingKind) || variant.detailImages.length >= 12} aspectRatio={4 / 3} aspectLabel="4:3" outputWidth={1600} onCroppedFile={(file) => handleVariantMedia(file, variantIndex, 'detail')}>{uploadingKind === `variant-detail-${variantIndex}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}加入詳情圖</CroppableImageInput></div>
                     {variant.detailImages.length ? <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">{variant.detailImages.map((imageUrl, imageIndex) => <div key={imageUrl} className="overflow-hidden rounded-lg border border-black/10 bg-white"><div className="relative aspect-square"><Image src={imageUrl} alt={`${variant.name || '款式'}詳情圖 ${imageIndex + 1}`} fill sizes="150px" className="object-contain p-1" /></div><div className="grid grid-cols-3 border-t border-black/10"><button type="button" disabled={imageIndex === 0} onClick={() => moveVariantDetail(variantIndex, imageIndex, -1)} title="向前移動" className="flex h-9 items-center justify-center disabled:opacity-25"><ChevronLeft className="h-4 w-4" /></button><button type="button" disabled={imageIndex === variant.detailImages.length - 1} onClick={() => moveVariantDetail(variantIndex, imageIndex, 1)} title="向後移動" className="flex h-9 items-center justify-center border-x border-black/10 disabled:opacity-25"><ChevronRight className="h-4 w-4" /></button><button type="button" onClick={() => setForm((current) => ({ ...current, variants: current.variants.map((item, index) => index === variantIndex ? { ...item, detailImages: item.detailImages.filter((_, detailIndex) => detailIndex !== imageIndex) } : item) }))} title="移除圖片" className="flex h-9 items-center justify-center text-red-600"><Trash2 className="h-4 w-4" /></button></div></div>)}</div> : <p className="mt-4 rounded-lg border border-dashed border-black/15 bg-white p-6 text-center text-sm text-apple-gray-500">可加入這個款式專屬的正面、背面與細節圖片。</p>}
                   </div>
                 </div>

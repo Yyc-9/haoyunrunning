@@ -7,6 +7,7 @@ import CoachSubNav from '@/components/CoachSubNav'
 import type { CoachPublicProfile } from '@/lib/coach-profiles'
 import { announceSiteContentUpdated } from '@/lib/site-content-sync'
 import { supabase } from '@/lib/supabase'
+import CroppableImageInput from '@/components/admin/CroppableImageInput'
 
 async function accessToken() {
   if (!supabase) return null
@@ -49,10 +50,9 @@ function AvatarEditor({ profile, uploading, onUpload }: { profile: CoachPublicPr
         <div>
           <h2 className="text-xl font-black text-apple-gray-900">{profile.displayName}</h2>
           <p className="mt-2 text-sm leading-6 text-apple-gray-500">支援 JPG、PNG 或 WebP，建議使用清晰的正方形個人照片。選擇圖片後會自動儲存。</p>
-          <label className="mt-5 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg bg-black px-5 py-2.5 text-sm font-bold text-white transition hover:bg-apple-gray-800">
+          <CroppableImageInput className="mt-5 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg bg-black px-5 py-2.5 text-sm font-bold text-white transition hover:bg-apple-gray-800" disabled={uploading} aspectRatio={1} aspectLabel="1:1" outputWidth={1000} onCroppedFile={onUpload}>
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}{uploading ? '正在上傳' : '更換頭像'}
-            <input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploading} onChange={(event) => onUpload(event.target.files?.[0])} className="sr-only" />
-          </label>
+          </CroppableImageInput>
         </div>
     </section>
   )

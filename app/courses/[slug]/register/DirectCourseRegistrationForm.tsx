@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useMemo, useRef, useState } from 'react'
 import {
   ArrowLeft,
@@ -24,6 +25,12 @@ import {
   type DirectCourseRegistration,
 } from '@/lib/course-registration-form'
 import { supabase } from '@/lib/supabase'
+import {
+  COURSE_TERMS_VERSION,
+  INVOICE_NOTICE_VERSION,
+  PRIVACY_POLICY_VERSION,
+  REFUND_POLICY_VERSION,
+} from '@/lib/legal-content'
 
 type DirectCourseRegistrationFormProps = {
   course: Course
@@ -355,6 +362,19 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
                 <input type="checkbox" checked={form.rulesConsent} onChange={(event) => update('rulesConsent', event.target.checked)} className="mt-1 h-5 w-5 shrink-0 accent-black" />
                 <span className="text-sm font-bold leading-6">本人已詳細閱讀上述說明，同意課程規範及學員權益，並以網路同意確認代替紙本。</span>
               </label>
+              <div className="rounded-lg border border-black/10 bg-apple-gray-50 p-4 text-sm leading-6 text-apple-gray-600">
+                <p>
+                  送出即表示同意
+                  <Link href="/terms" target="_blank" className="mx-1 font-black text-apple-gray-950 underline underline-offset-4">課程服務條款</Link>、
+                  <Link href="/refund-policy" target="_blank" className="mx-1 font-black text-apple-gray-950 underline underline-offset-4">取消與退費政策</Link>、
+                  <Link href="/privacy" target="_blank" className="mx-1 font-black text-apple-gray-950 underline underline-offset-4">隱私權政策</Link>
+                  與
+                  <Link href="/invoice" target="_blank" className="mx-1 font-black text-apple-gray-950 underline underline-offset-4">電子發票說明</Link>。
+                </p>
+                <p className="mt-2 text-xs font-semibold text-apple-gray-400">
+                  條款 {COURSE_TERMS_VERSION} · 退費 {REFUND_POLICY_VERSION} · 隱私 {PRIVACY_POLICY_VERSION} · 發票 {INVOICE_NOTICE_VERSION}
+                </p>
+              </div>
             </div>
           </div>
         ) : null}

@@ -41,7 +41,7 @@ Stripe 目前的官方支援地區清單未列出台灣。除非商家已有 Str
 
 藍新：`NEWEBPAY_MERCHANT_ID`、`NEWEBPAY_HASH_KEY`、`NEWEBPAY_HASH_IV`
 
-Stripe（僅在商家資格符合時）：`STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`
+Stripe（僅在商家資格符合且完成正式驗收時）：`STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`，並由負責人明確設定 `SHOP_CARD_PAYMENTS_ENABLED=true`。未設定此開關時，信用卡接口保持關閉。
 
 所有金鑰只放在 Vercel 的伺服器端環境變數，不使用 `NEXT_PUBLIC_` 前綴，也不寫入 GitHub。
 

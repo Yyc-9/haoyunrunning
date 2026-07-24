@@ -38,6 +38,15 @@ export default function Footer() {
         { name: '商品諮詢', href: brand.instagramUrl },
       ],
     },
+    {
+      title: '法律與政策',
+      links: [
+        { name: '隱私權政策', href: '/privacy' },
+        { name: '課程服務條款', href: '/terms' },
+        { name: '取消與退費政策', href: '/refund-policy' },
+        { name: '電子發票說明', href: '/invoice' },
+      ],
+    },
   ]
 
   const contactInfo = [
@@ -53,7 +62,7 @@ export default function Footer() {
   return (
     <footer className="mt-auto border-t border-white/10 bg-black text-white">
       <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-5 lg:gap-12">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-6 lg:gap-10">
           {/* Brand Column */}
           <div className="lg:col-span-2">
             <div className="mb-6 flex items-center space-x-3">

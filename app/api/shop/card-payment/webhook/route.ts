@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import type Stripe from 'stripe'
 import { supabaseAdmin } from '@/lib/supabase-server'
 import { getStripeClient } from '@/lib/stripe'
+import { isShopCardPaymentEnabled } from '@/lib/payment-features'
 
 export const runtime = 'nodejs'
 
@@ -64,6 +65,10 @@ async function releaseExpiredOrder(session: Stripe.Checkout.Session) {
 }
 
 export async function POST(request: Request) {
+  if (!isShopCardPaymentEnabled()) {
+    return NextResponse.json({ error: '信用卡付款尚未開放。' }, { status: 503 })
+  }
+
   const stripe = getStripeClient()
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET?.trim()
   const signature = request.headers.get('stripe-signature')

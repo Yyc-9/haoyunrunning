@@ -373,7 +373,7 @@ export default function CoachSignupsClient() {
                         </div>
                       </div>
 
-                      {lead.source === 'course_payment' ? <p className="max-w-xs text-xs font-semibold leading-5 text-apple-gray-500">付款與核准狀態請由管理員後台處理。</p> : (
+                      {lead.source === 'course_payment' ? <p className="max-w-xs text-xs font-semibold leading-5 text-apple-gray-500">匯款與核准狀態請由管理員後台處理。</p> : (
                         <select
                           value={lead.status}
                           disabled={updatingId === lead.id}

@@ -80,12 +80,7 @@ type Props = {
 }
 
 const courseStatusLabels = paymentOrderStatusLabels['zh-TW']
-const shopStatusLabels: Record<PaymentStatus, string> = {
-  pending_transfer: '待付款',
-  pending_review: '待對帳',
-  approved: '已確認',
-  rejected: '需處理',
-}
+const shopStatusLabels: Record<PaymentStatus, string> = courseStatusLabels
 
 const statusLegend: Array<[PaymentStatus, string]> = [
   ['pending_transfer', 'bg-amber-50 text-amber-800'],
@@ -496,8 +491,8 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
               <label className="mt-5 block"><span className="mb-2 block text-xs font-bold text-apple-gray-500">管理備註</span><textarea value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} className="apple-input min-h-24 resize-y" placeholder="記錄核對結果或需要補充的資料" /></label>
             </div>
             <div className="grid gap-2 border-t bg-white p-4 sm:grid-cols-2">
-              <p className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-bold leading-5 text-blue-800 sm:col-span-2">{selected.orderKind === 'course' ? '「已確認入帳」只能由銀行對帳完成；這裡保留異常處理與刪除，避免繞過財務確認。' : '商城訂單的「已確認」只能由銀行對帳完成；這裡保留異常處理與刪除。'}</p>
-              <button type="button" disabled={updatingId === selected.id || selected.status === 'rejected' || selected.status === 'approved'} onClick={flagOrderForReview} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40"><RotateCcw className="h-4 w-4" />{selected.orderKind === 'course' ? '標記匯款資料需補充' : '標記需處理'}</button>
+              <p className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-bold leading-5 text-blue-800 sm:col-span-2">「已確認入帳」只能由銀行對帳完成；這裡保留異常處理與刪除，避免繞過財務確認。</p>
+              <button type="button" disabled={updatingId === selected.id || selected.status === 'rejected' || selected.status === 'approved'} onClick={flagOrderForReview} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40"><RotateCcw className="h-4 w-4" />標記匯款資料需補充</button>
               <button type="button" disabled={updatingId === `delete-${selected.id}` || selected.status === 'approved'} onClick={deleteOrder} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40">{updatingId === `delete-${selected.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}刪除記錄</button>
             </div>
           </aside>

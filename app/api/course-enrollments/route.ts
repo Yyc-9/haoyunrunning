@@ -9,6 +9,12 @@ import { getCurrentCourseSeason } from '@/lib/course-seasons-server'
 import { calculateCourseRegistrationQuote, getCoursePricingOptions } from '@/lib/course-pricing'
 import { createCourseQuoteToken, verifyCourseQuoteToken } from '@/lib/course-pricing-token'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
+import {
+  COURSE_TERMS_VERSION,
+  INVOICE_NOTICE_VERSION,
+  PRIVACY_POLICY_VERSION,
+  REFUND_POLICY_VERSION,
+} from '@/lib/legal-content'
 
 async function getLegacyStudent(email: string) {
   const { data, error } = await supabaseAdmin!
@@ -381,6 +387,11 @@ export async function POST(request: NextRequest) {
             coachSubstituteConsent: true,
             rulesConsent: true,
             finalConsent: true,
+            agreedAt: formSubmittedAt,
+            courseTermsVersion: COURSE_TERMS_VERSION,
+            refundPolicyVersion: REFUND_POLICY_VERSION,
+            privacyPolicyVersion: PRIVACY_POLICY_VERSION,
+            invoiceNoticeVersion: INVOICE_NOTICE_VERSION,
           },
         },
       })
