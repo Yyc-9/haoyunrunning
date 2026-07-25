@@ -105,6 +105,7 @@ export type CoachDutyItem = {
   checkInOpensAt: string
   canRequestLeave: boolean
   canRespondSubstitute: boolean
+  managedByAdmin: boolean
   salaryStatus: 'pending_rate'
   salaryStatusLabel: '待設定課酬'
   isCancelled: boolean
@@ -219,6 +220,7 @@ export async function loadCoachDutyItems(options: { userId?: string; isAdmin?: b
       const canViewCheckIn = canCoachViewCheckInControl({
         cancelled,
         actualCoachId,
+        isAdmin: options.isAdmin,
         userId: options.userId,
         scheduledCoachId: row.scheduled_coach_id,
         leaveStatus: row.leave_status,
@@ -260,6 +262,7 @@ export async function loadCoachDutyItems(options: { userId?: string; isAdmin?: b
         checkInOpensAt: window.opensAt?.toISOString() ?? '',
         canRequestLeave: canCoachRequestLeave({
           cancelled,
+          isAdmin: options.isAdmin,
           scheduledCoachId: row.scheduled_coach_id,
           userId: options.userId,
           leaveStatus: row.leave_status,
@@ -267,6 +270,7 @@ export async function loadCoachDutyItems(options: { userId?: string; isAdmin?: b
           hasCheckin: Boolean(checkin),
         }),
         canRespondSubstitute: row.substitute_coach_id === options.userId && row.substitute_response === 'pending',
+        managedByAdmin: Boolean(options.isAdmin),
         salaryStatus: 'pending_rate',
         salaryStatusLabel: '待設定課酬',
         isCancelled: cancelled,

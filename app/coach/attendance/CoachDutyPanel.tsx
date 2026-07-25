@@ -43,6 +43,7 @@ type DutyItem = {
   checkInOpensAt: string
   canRequestLeave: boolean
   canRespondSubstitute: boolean
+  managedByAdmin: boolean
   isCancelled: boolean
 }
 
@@ -261,7 +262,7 @@ export default function CoachDutyPanel() {
     const checkInLabel = item.checkedInAt
       ? item.punctuality === 'late' ? '已完成遲到簽到' : '已完成準時簽到'
       : item.canCheckIn
-        ? '本人到課簽到'
+        ? item.managedByAdmin ? '確認教練到課' : '本人到課簽到'
         : item.attendanceState === 'missing_start_time'
           ? '尚未設定簽到時間'
           : ['not_checked_in', 'substitute_absent'].includes(item.attendanceState)
@@ -286,6 +287,11 @@ export default function CoachDutyPanel() {
           <p>原定教練：{item.scheduledCoachName}</p>
           <p>實際授課：{item.actualCoachName || '待安排'}</p>
         </div>
+        {item.managedByAdmin ? (
+          <p className="mt-3 rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold leading-5 text-blue-800">
+            管理員可操作所有課次；簽到會記錄本堂實際授課教練，請假會保留本堂原定教練，並留下管理員操作紀錄。
+          </p>
+        ) : null}
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <span className={`rounded-full border px-3 py-1.5 text-xs font-black ${meta.chip}`}>{meta.label}</span>
           {item.adminStatus === 'pending' ? <span className="rounded-full bg-orange-50 px-3 py-1.5 text-xs font-black text-orange-800">等待管理員處理</span> : null}
@@ -326,7 +332,11 @@ export default function CoachDutyPanel() {
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
               <span className="flex items-center gap-2 text-sm font-black">
                 <CalendarClock className="h-4 w-4 text-orange-600" />
-                {item.substituteResponse === 'rejected' ? '重新邀請代班教練' : '申請請假並邀請代班'}
+                {item.substituteResponse === 'rejected'
+                  ? '重新邀請代班教練'
+                  : item.managedByAdmin
+                    ? '為原定教練登記請假並邀請代班'
+                    : '申請請假並邀請代班'}
               </span>
               <span className="text-[11px] font-bold text-apple-gray-500">不限簽到時段</span>
             </summary>
@@ -378,7 +388,7 @@ export default function CoachDutyPanel() {
                       active ? 'border-black bg-black text-white' : 'border-black/10 bg-white text-black'
                     }`}
                   >
-                    {dateItem.startTime || '--:--'} · {dateItem.courseName}
+                    {dateItem.startTime || '--:--'} · {dateItem.courseName} · {dateItem.scheduledCoachName}
                   </button>
                 )
               })}
@@ -452,7 +462,11 @@ export default function CoachDutyPanel() {
               const events = eventsByDate.get(day.key) ?? []
               const selected = selectedDate === day.key && selectedItem
               return (
-                <div key={day.key} className={`relative min-h-16 border-b border-r border-black/10 p-1 sm:min-h-20 sm:p-1.5 ${day.inMonth ? 'bg-white' : 'bg-apple-gray-50/70'}`}>
+                <div
+                  key={day.key}
+                  data-calendar-day={day.key}
+                  className={`relative flex min-h-16 flex-col items-center border-b border-r border-black/10 p-1 text-center sm:min-h-20 sm:p-1.5 ${day.inMonth ? 'bg-white' : 'bg-apple-gray-50/70'}`}
+                >
                   {events.length ? (
                     <button
                       ref={(node) => { if (node) dateRefs.current.set(day.key, node); else dateRefs.current.delete(day.key) }}
@@ -469,7 +483,12 @@ export default function CoachDutyPanel() {
                         selected ? 'bg-blue-50' : ''
                       }`}
                     >
-                      <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${day.key === todayKey ? 'bg-apple-blue text-white' : day.inMonth ? 'text-black' : 'text-apple-gray-300'}`}>{day.day}</span>
+                      <span
+                        data-calendar-day-number
+                        className={`mx-auto flex h-7 w-7 items-center justify-center rounded-full text-center text-xs font-bold leading-none tabular-nums ${day.key === todayKey ? 'bg-apple-blue text-white' : day.inMonth ? 'text-black' : 'text-apple-gray-300'}`}
+                      >
+                        {day.day}
+                      </span>
                       <span className="mt-auto flex min-h-3 max-w-full items-center justify-center gap-1" aria-hidden="true">
                         {events.slice(0, 4).map((item) => {
                           const meta = stateMeta[item.attendanceState] ?? stateMeta.upcoming
@@ -479,7 +498,12 @@ export default function CoachDutyPanel() {
                       </span>
                     </button>
                   ) : (
-                    <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${day.key === todayKey ? 'bg-apple-blue text-white' : day.inMonth ? 'text-black' : 'text-apple-gray-300'}`}>{day.day}</span>
+                    <span
+                      data-calendar-day-number
+                      className={`mx-auto flex h-7 w-7 items-center justify-center rounded-full text-center text-xs font-bold leading-none tabular-nums ${day.key === todayKey ? 'bg-apple-blue text-white' : day.inMonth ? 'text-black' : 'text-apple-gray-300'}`}
+                    >
+                      {day.day}
+                    </span>
                   )}
                   {selected ? (
                     <div

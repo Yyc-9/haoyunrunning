@@ -9,21 +9,43 @@ export type CoachDutyAttendanceState =
   | 'missing_start_time'
   | 'leave_approved'
 
+export function coachDutyActionCoachId(input: {
+  action: 'check_in' | 'request_leave'
+  actualCoachId: string
+  isAdmin?: boolean
+  scheduledCoachId: string
+  userId?: string
+}) {
+  if (input.action === 'check_in') {
+    return input.actualCoachId
+      && (input.isAdmin || input.actualCoachId === input.userId)
+      ? input.actualCoachId
+      : null
+  }
+
+  return input.scheduledCoachId
+    && (input.isAdmin || input.scheduledCoachId === input.userId)
+    ? input.scheduledCoachId
+    : null
+}
+
 export function canCoachViewCheckInControl(input: {
   cancelled: boolean
   actualCoachId: string
+  isAdmin?: boolean
   userId?: string
   scheduledCoachId: string
   leaveStatus: 'none' | 'requested' | 'approved' | 'rejected'
 }) {
   return !input.cancelled
-    && Boolean(input.userId)
-    && input.actualCoachId === input.userId
-    && !(input.leaveStatus === 'approved' && input.scheduledCoachId === input.userId)
+    && Boolean(input.actualCoachId)
+    && (input.isAdmin || (Boolean(input.userId) && input.actualCoachId === input.userId))
+    && !(input.leaveStatus === 'approved' && input.actualCoachId === input.scheduledCoachId)
 }
 
 export function canCoachRequestLeave(input: {
   cancelled: boolean
+  isAdmin?: boolean
   scheduledCoachId: string
   userId?: string
   leaveStatus: 'none' | 'requested' | 'approved' | 'rejected'
@@ -31,7 +53,7 @@ export function canCoachRequestLeave(input: {
   hasCheckin: boolean
 }) {
   return !input.cancelled
-    && input.scheduledCoachId === input.userId
+    && (input.isAdmin || input.scheduledCoachId === input.userId)
     && (
       input.leaveStatus === 'none'
       || (input.leaveStatus === 'requested' && input.substituteResponse === 'rejected')

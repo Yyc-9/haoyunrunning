@@ -4,6 +4,7 @@ import test from 'node:test'
 import {
   canCoachRequestLeave,
   canCoachViewCheckInControl,
+  coachDutyActionCoachId,
   coachDutyPunctuality,
   coachDutyWindow,
   resolveCoachDutyAttendanceState,
@@ -79,6 +80,8 @@ test('原定教練申請請假不受簽到時間窗限制', () => {
   assert.equal(canCoachRequestLeave({ ...base, hasCheckin: true }), false)
   assert.equal(canCoachRequestLeave({ ...base, cancelled: true }), false)
   assert.equal(canCoachRequestLeave({ ...base, userId: 'coach-b' }), false)
+  assert.equal(canCoachRequestLeave({ ...base, userId: 'admin-a', isAdmin: true }), true)
+  assert.equal(canCoachRequestLeave({ ...base, hasCheckin: true, userId: 'admin-a', isAdmin: true }), false)
 })
 
 test('實際授課教練可持續看到簽到控制，是否開放由時間窗另行決定', () => {
@@ -94,4 +97,44 @@ test('實際授課教練可持續看到簽到控制，是否開放由時間窗�
   assert.equal(canCoachViewCheckInControl({ ...base, cancelled: true }), false)
   assert.equal(canCoachViewCheckInControl({ ...base, userId: 'coach-b' }), false)
   assert.equal(canCoachViewCheckInControl({ ...base, leaveStatus: 'approved' }), false)
+  assert.equal(canCoachViewCheckInControl({ ...base, userId: 'admin-a', isAdmin: true }), true)
+  assert.equal(canCoachViewCheckInControl({
+    ...base,
+    actualCoachId: 'coach-b',
+    leaveStatus: 'approved',
+    userId: 'admin-a',
+    isAdmin: true,
+  }), true)
+})
+
+test('管理員可操作任一課次，但簽到與請假仍寫入該堂對應教練', () => {
+  const assignment = {
+    actualCoachId: 'actual-coach',
+    scheduledCoachId: 'scheduled-coach',
+  }
+
+  assert.equal(coachDutyActionCoachId({
+    ...assignment,
+    action: 'check_in',
+    isAdmin: true,
+    userId: 'admin-a',
+  }), 'actual-coach')
+  assert.equal(coachDutyActionCoachId({
+    ...assignment,
+    action: 'request_leave',
+    isAdmin: true,
+    userId: 'admin-a',
+  }), 'scheduled-coach')
+  assert.equal(coachDutyActionCoachId({
+    ...assignment,
+    action: 'check_in',
+    isAdmin: false,
+    userId: 'other-coach',
+  }), null)
+  assert.equal(coachDutyActionCoachId({
+    ...assignment,
+    action: 'request_leave',
+    isAdmin: false,
+    userId: 'other-coach',
+  }), null)
 })

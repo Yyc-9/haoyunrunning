@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminProfile } from '@/lib/admin-auth'
 import { APP_TIME_ZONE_LABEL } from '@/lib/app-time'
+import { coachDutyActionCoachId } from '@/lib/coach-duty-policy'
 import { auditCoachDuty, coachDutyPunctuality, coachDutyWindow, loadCoachDutyItems } from '@/lib/coach-session-duty'
 import {
   createDirectSubstituteInvitation,
@@ -66,6 +67,7 @@ export async function GET(request: NextRequest) {
           canViewCheckIn: !leave,
           canCheckIn: !checkin && !leave && window.phase === 'open', checkInOpensAt: window.opensAt?.toISOString() ?? '',
           canRequestLeave: !checkin && !leave, canRespondSubstitute: false,
+          managedByAdmin: false,
           salaryStatus: 'pending_rate', salaryStatusLabel: '待設定課酬', isCancelled: false,
         }
       })
@@ -133,8 +135,15 @@ export async function POST(request: NextRequest) {
 
   try {
     if (intent === 'check_in') {
-      if (assignment.actual_coach_id !== auth.user.id) return NextResponse.json({ error: '只有本堂實際授課教練可以完成本人到課簽到。' }, { status: 403, headers })
-      if (assignment.leave_status === 'approved' && assignment.scheduled_coach_id === auth.user.id) return NextResponse.json({ error: '你的本堂請假已核准，不能再進行本人到課簽到。' }, { status: 409, headers })
+      const actualCoachId = coachDutyActionCoachId({
+        action: 'check_in',
+        actualCoachId: assignment.actual_coach_id ?? '',
+        isAdmin: auth.isAdmin,
+        scheduledCoachId: assignment.scheduled_coach_id,
+        userId: auth.user.id,
+      })
+      if (!actualCoachId) return NextResponse.json({ error: '只有本堂實際授課教練或管理員可以完成到課簽到。' }, { status: 403, headers })
+      if (assignment.leave_status === 'approved' && assignment.actual_coach_id === assignment.scheduled_coach_id) return NextResponse.json({ error: '本堂原定教練請假已生效，必須先完成代班安排才能簽到。' }, { status: 409, headers })
       const [{ data: cancellation }, { data: course, error: courseError }] = await Promise.all([
         supabaseAdmin!.from('course_session_cancellations').select('id').eq('course_season_course_id', assignment.course_season_course_id).eq('session_date', assignment.session_date).maybeSingle(),
         supabaseAdmin!.from('course_season_courses').select('start_time, time_zone').eq('id', assignment.course_season_course_id).single(),
@@ -148,7 +157,7 @@ export async function POST(request: NextRequest) {
       if (!punctuality) return NextResponse.json({ error: '目前不在簽到開放時間內；簽到僅限課前 15 分鐘至開課後 15 分鐘。' }, { status: 409, headers })
       const { data: checkin, error } = await supabaseAdmin!.from('coach_session_checkins').insert({
         assignment_id: assignment.id,
-        actual_coach_id: auth.user.id,
+        actual_coach_id: actualCoachId,
         checked_in_at: now.toISOString(),
         punctuality,
       }).select('*').single()
@@ -156,14 +165,31 @@ export async function POST(request: NextRequest) {
         const duplicate = error?.code === '23505'
         return NextResponse.json({ error: duplicate ? '本堂已經完成簽到。' : error?.message || '簽到失敗。' }, { status: duplicate ? 409 : 500, headers })
       }
-      await auditCoachDuty(assignment.id, auth.user.id, 'coach_checked_in', '', { checkedInAt: checkin.checked_in_at, punctuality })
-      return NextResponse.json({ message: punctuality === 'on_time' ? '已完成準時簽到。' : '已完成遲到簽到。', checkin }, { headers })
+      await auditCoachDuty(assignment.id, auth.user.id, auth.isAdmin ? 'admin_recorded_coach_checkin' : 'coach_checked_in', '', {
+        checkedInAt: checkin.checked_in_at,
+        punctuality,
+        actualCoachId,
+        managedByAdmin: auth.isAdmin,
+      })
+      return NextResponse.json({
+        message: auth.isAdmin
+          ? punctuality === 'on_time' ? '已為本堂實際授課教練確認準時到課。' : '已為本堂實際授課教練確認遲到到課。'
+          : punctuality === 'on_time' ? '已完成準時簽到。' : '已完成遲到簽到。',
+        checkin,
+      }, { headers })
     }
 
     if (intent === 'request_leave') {
       const reason = clean(body.reason, 800)
       const invitedSubstituteId = clean(body.invitedSubstituteId ?? body.recommendedSubstituteId, 80)
-      if (assignment.scheduled_coach_id !== auth.user.id) return NextResponse.json({ error: '只有原定教練可以提出本堂請假。' }, { status: 403, headers })
+      const scheduledCoachId = coachDutyActionCoachId({
+        action: 'request_leave',
+        actualCoachId: assignment.actual_coach_id ?? '',
+        isAdmin: auth.isAdmin,
+        scheduledCoachId: assignment.scheduled_coach_id,
+        userId: auth.user.id,
+      })
+      if (!scheduledCoachId) return NextResponse.json({ error: '只有原定教練或管理員可以提出本堂請假。' }, { status: 403, headers })
       if (!reason) return NextResponse.json({ error: '請填寫請假原因。' }, { status: 400, headers })
       if (!invitedSubstituteId) return NextResponse.json({ error: '請選擇要邀請的代班教練。' }, { status: 400, headers })
       const canInvite = assignment.leave_status === 'none'
@@ -179,7 +205,7 @@ export async function POST(request: NextRequest) {
       if (!invitedCoach) return NextResponse.json({ error: '受邀帳號目前沒有教練權限。' }, { status: 400, headers })
       const now = new Date().toISOString()
       const update = createDirectSubstituteInvitation({
-        scheduledCoachId: auth.user.id,
+        scheduledCoachId,
         scheduledCoachRole: scheduledRole(assignment.coach_role),
         invitedCoachId: invitedSubstituteId,
         reason,
@@ -189,17 +215,23 @@ export async function POST(request: NextRequest) {
         .from('coach_session_assignments')
         .update(update)
         .eq('id', assignment.id)
-        .eq('scheduled_coach_id', auth.user.id)
+        .eq('scheduled_coach_id', scheduledCoachId)
         .eq('substitute_response', assignment.substitute_response)
         .select('id')
         .maybeSingle()
       if (error) throw error
       if (!updated) return NextResponse.json({ error: '代班狀態已更新，請重新整理後再操作。' }, { status: 409, headers })
-      await auditCoachDuty(assignment.id, auth.user.id, 'direct_substitute_invited', reason, {
+      await auditCoachDuty(assignment.id, auth.user.id, auth.isAdmin ? 'admin_direct_substitute_invited' : 'direct_substitute_invited', reason, {
         invitedSubstituteId,
+        scheduledCoachId,
+        managedByAdmin: auth.isAdmin,
         previousSubstituteResponse: assignment.substitute_response,
       })
-      return NextResponse.json({ message: '請假與代班邀請已送出，等待受邀教練回覆。' }, { headers })
+      return NextResponse.json({
+        message: auth.isAdmin
+          ? '已為本堂原定教練登記請假並送出代班邀請。'
+          : '請假與代班邀請已送出，等待受邀教練回覆。',
+      }, { headers })
     }
 
     if (intent === 'respond_substitute') {
