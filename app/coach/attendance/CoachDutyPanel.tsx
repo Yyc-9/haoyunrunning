@@ -13,6 +13,10 @@ import {
 } from 'lucide-react'
 import { APP_TIME_ZONE_LABEL } from '@/lib/app-time'
 import AcceptanceTestCheckin from '@/components/AcceptanceTestCheckin'
+import {
+  groupCoachDutyCalendarItems,
+  selectCoachDutyCalendarDate,
+} from '@/lib/coach-duty-calendar'
 import { supabase } from '@/lib/supabase'
 
 type DutyItem = {
@@ -91,10 +95,6 @@ function monthLabel(year: number, month: number) {
     .format(new Date(Date.UTC(year, month - 1, 15)))
 }
 
-function shortCourseName(value: string) {
-  return value.replace(/^2026\s*/, '').replace(/^好運跑步訓練營\s*X\s*/, '').trim()
-}
-
 async function token() {
   const { data: { session } } = supabase ? await supabase.auth.getSession() : { data: { session: null } }
   if (!session?.access_token) throw new Error('登入狀態已失效，請重新登入。')
@@ -107,6 +107,7 @@ export default function CoachDutyPanel() {
   const [serverTime, setServerTime] = useState('')
   const [viewYear, setViewYear] = useState(0)
   const [viewMonth, setViewMonth] = useState(0)
+  const [selectedDate, setSelectedDate] = useState('')
   const [selectedId, setSelectedId] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState('')
@@ -117,7 +118,7 @@ export default function CoachDutyPanel() {
   const desktopDialogRef = useRef<HTMLDivElement>(null)
   const mobileDialogRef = useRef<HTMLDivElement>(null)
   const calendarRef = useRef<HTMLDivElement>(null)
-  const eventRefs = useRef(new Map<string, HTMLButtonElement>())
+  const dateRefs = useRef(new Map<string, HTMLButtonElement>())
 
   const load = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true)
@@ -161,6 +162,9 @@ export default function CoachDutyPanel() {
   }, [load])
 
   const selectedItem = items.find((item) => item.id === selectedId) ?? null
+  const selectedDateItems = selectedDate
+    ? groupCoachDutyCalendarItems(items).get(selectedDate) ?? []
+    : []
   const pendingInvitations = useMemo(
     () => items
       .filter((item) => item.canRespondSubstitute)
@@ -168,10 +172,11 @@ export default function CoachDutyPanel() {
     [items],
   )
   const closeSelected = useCallback(() => {
-    const activeId = selectedId
+    const activeDate = selectedDate
+    setSelectedDate('')
     setSelectedId('')
-    window.requestAnimationFrame(() => eventRefs.current.get(activeId)?.focus())
-  }, [selectedId])
+    window.requestAnimationFrame(() => dateRefs.current.get(activeDate)?.focus())
+  }, [selectedDate])
 
   useEffect(() => {
     if (!selectedItem) return
@@ -184,7 +189,7 @@ export default function CoachDutyPanel() {
     }
     const closeOnOutside = (event: PointerEvent) => {
       if (activeDialog()?.contains(event.target as Node)) return
-      if (eventRefs.current.get(selectedItem.id)?.contains(event.target as Node)) return
+      if (dateRefs.current.get(selectedDate)?.contains(event.target as Node)) return
       closeSelected()
     }
     document.addEventListener('keydown', closeOnEscape)
@@ -193,7 +198,7 @@ export default function CoachDutyPanel() {
       document.removeEventListener('keydown', closeOnEscape)
       document.removeEventListener('pointerdown', closeOnOutside)
     }
-  }, [closeSelected, selectedItem])
+  }, [closeSelected, selectedDate, selectedItem])
 
   const todayKey = taipeiDateKey(serverTime || new Date())
   const monthDays = useMemo(() => {
@@ -213,12 +218,7 @@ export default function CoachDutyPanel() {
       }
     })
   }, [viewMonth, viewYear])
-  const eventsByDate = useMemo(() => {
-    const map = new Map<string, DutyItem[]>()
-    items.forEach((item) => map.set(item.sessionDate, [...(map.get(item.sessionDate) ?? []), item]))
-    map.forEach((events) => events.sort((left, right) => left.startTime.localeCompare(right.startTime)))
-    return map
-  }, [items])
+  const eventsByDate = useMemo(() => groupCoachDutyCalendarItems(items), [items])
 
   function moveMonth(offset: number) {
     const date = new Date(Date.UTC(viewYear, viewMonth - 1 + offset, 1))
@@ -330,6 +330,36 @@ export default function CoachDutyPanel() {
     )
   }
 
+  function DateDutyDetails({ item, dateItems }: { item: DutyItem; dateItems: DutyItem[] }) {
+    return (
+      <>
+        {dateItems.length > 1 ? (
+          <div className="mb-4">
+            <p className="mb-2 text-xs font-black text-apple-gray-500">{formatDate(item.sessionDate)} · 本日 {dateItems.length} 堂</p>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {dateItems.map((dateItem) => {
+                const active = dateItem.id === item.id
+                return (
+                  <button
+                    key={dateItem.id}
+                    type="button"
+                    onClick={() => setSelectedId(dateItem.id)}
+                    className={`shrink-0 rounded-full border px-3 py-2 text-xs font-black ${
+                      active ? 'border-black bg-black text-white' : 'border-black/10 bg-white text-black'
+                    }`}
+                  >
+                    {dateItem.startTime || '--:--'} · {dateItem.courseName}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ) : null}
+        <DutyDetails item={item} />
+      </>
+    )
+  }
+
   return (
     <>
       <AcceptanceTestCheckin role="coach" className="mb-4 sm:mb-6" />
@@ -390,42 +420,50 @@ export default function CoachDutyPanel() {
             {weekdays.map((weekday) => <div key={weekday} className="border-b border-r border-black/10 bg-apple-gray-50 px-1 py-2 text-center text-[10px] font-black text-apple-gray-500 sm:text-xs">{weekday}</div>)}
             {monthDays.map((day) => {
               const events = eventsByDate.get(day.key) ?? []
+              const selected = selectedDate === day.key && selectedItem
               return (
-                <div key={day.key} className={`relative min-h-20 border-b border-r border-black/10 p-1 sm:min-h-28 sm:p-1.5 ${day.inMonth ? 'bg-white' : 'bg-apple-gray-50/70'}`}>
-                  <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold sm:h-7 sm:w-7 sm:text-xs ${day.key === todayKey ? 'bg-apple-blue text-white' : day.inMonth ? 'text-black' : 'text-apple-gray-300'}`}>{day.day}</span>
-                  <div className="mt-1 space-y-1">
-                    {events.map((item) => {
-                      const meta = stateMeta[item.attendanceState] ?? stateMeta.upcoming
-                      return (
-                        <div key={item.id} className="relative">
-                          <button
-                            ref={(node) => { if (node) eventRefs.current.set(item.id, node); else eventRefs.current.delete(item.id) }}
-                            type="button"
-                            aria-haspopup="dialog"
-                            aria-expanded={selectedId === item.id}
-                            onClick={() => setSelectedId((current) => current === item.id ? '' : item.id)}
-                            className={`w-full rounded-md border px-1.5 py-1 text-left text-[9px] font-black leading-3 transition hover:brightness-95 sm:px-2 sm:py-1.5 sm:text-[11px] sm:leading-4 ${meta.chip}`}
-                          >
-                            <span className="block text-[8px] leading-3 sm:inline sm:text-inherit">{item.startTime || '--:--'} </span>
-                            <span className="line-clamp-2">{shortCourseName(item.courseName)}</span>
-                          </button>
-                          {selectedId === item.id ? (
-                            <div
-                              ref={desktopDialogRef}
-                              role="dialog"
-                              aria-modal="false"
-                              aria-label={`${item.courseName}授課安排`}
-                              tabIndex={-1}
-                              className={`absolute top-[calc(100%+10px)] z-50 hidden w-[360px] max-w-[calc(100vw-3rem)] rounded-2xl border border-black/10 bg-white p-5 shadow-2xl outline-none md:block ${day.column >= 5 ? 'right-0' : 'left-0'}`}
-                            >
-                              <span className={`absolute -top-2 h-4 w-4 rotate-45 border-l border-t border-black/10 bg-white ${day.column >= 5 ? 'right-6' : 'left-6'}`} />
-                              <DutyDetails item={item} />
-                            </div>
-                          ) : null}
-                        </div>
-                      )
-                    })}
-                  </div>
+                <div key={day.key} className={`relative min-h-16 border-b border-r border-black/10 p-1 sm:min-h-20 sm:p-1.5 ${day.inMonth ? 'bg-white' : 'bg-apple-gray-50/70'}`}>
+                  {events.length ? (
+                    <button
+                      ref={(node) => { if (node) dateRefs.current.set(day.key, node); else dateRefs.current.delete(day.key) }}
+                      type="button"
+                      aria-haspopup="dialog"
+                      aria-expanded={Boolean(selected)}
+                      aria-label={`${formatDate(day.key)}，${events.length} 堂授課日程`}
+                      onClick={() => {
+                        const next = selectCoachDutyCalendarDate(eventsByDate, day.key, selectedDate)
+                        setSelectedDate(next.selectedDate)
+                        setSelectedId(next.selectedId)
+                      }}
+                      className={`flex h-full min-h-14 w-full flex-col items-center rounded-xl px-1 py-1.5 transition hover:bg-black/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-apple-blue sm:min-h-[68px] ${
+                        selected ? 'bg-blue-50' : ''
+                      }`}
+                    >
+                      <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${day.key === todayKey ? 'bg-apple-blue text-white' : day.inMonth ? 'text-black' : 'text-apple-gray-300'}`}>{day.day}</span>
+                      <span className="mt-auto flex min-h-3 max-w-full items-center justify-center gap-1" aria-hidden="true">
+                        {events.slice(0, 4).map((item) => {
+                          const meta = stateMeta[item.attendanceState] ?? stateMeta.upcoming
+                          return <span key={item.id} className={`h-2 w-2 shrink-0 rounded-full ${meta.dot}`} />
+                        })}
+                        {events.length > 4 ? <span className="text-[9px] font-black text-apple-gray-500">+{events.length - 4}</span> : null}
+                      </span>
+                    </button>
+                  ) : (
+                    <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${day.key === todayKey ? 'bg-apple-blue text-white' : day.inMonth ? 'text-black' : 'text-apple-gray-300'}`}>{day.day}</span>
+                  )}
+                  {selected ? (
+                    <div
+                      ref={desktopDialogRef}
+                      role="dialog"
+                      aria-modal="false"
+                      aria-label={`${formatDate(day.key)}授課安排`}
+                      tabIndex={-1}
+                      className={`absolute top-[calc(100%-4px)] z-50 hidden w-[390px] max-w-[calc(100vw-3rem)] rounded-2xl border border-black/10 bg-white p-5 shadow-2xl outline-none md:block ${day.column >= 5 ? 'right-0' : 'left-0'}`}
+                    >
+                      <span className={`absolute -top-2 h-4 w-4 rotate-45 border-l border-t border-black/10 bg-white ${day.column >= 5 ? 'right-6' : 'left-6'}`} />
+                      <DateDutyDetails item={selected} dateItems={selectedDateItems} />
+                    </div>
+                  ) : null}
                 </div>
               )
             })}
@@ -445,7 +483,7 @@ export default function CoachDutyPanel() {
             className="max-h-[86dvh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl outline-none"
           >
             <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-black/15" />
-            <DutyDetails item={selectedItem} />
+            <DateDutyDetails item={selectedItem} dateItems={selectedDateItems} />
           </div>
         </div>
       ) : null}
