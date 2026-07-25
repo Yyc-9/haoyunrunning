@@ -1,6 +1,8 @@
 import 'server-only'
 
 import {
+  canCoachRequestLeave,
+  canCoachViewCheckInControl,
   coachDutyWindow,
   resolveCoachDutyAttendanceState,
   type CoachDutyAttendanceState,
@@ -98,6 +100,7 @@ export type CoachDutyItem = {
   checkedInAt: string
   punctuality: '' | CheckinRow['punctuality']
   manualCorrection: boolean
+  canViewCheckIn: boolean
   canCheckIn: boolean
   checkInOpensAt: string
   canRequestLeave: boolean
@@ -213,6 +216,13 @@ export async function loadCoachDutyItems(options: { userId?: string; isAdmin?: b
       const state = attendanceState(row, checkin, cancelled, course.startTime, now)
       const window = coachDutyWindow(row.session_date, course.startTime, now)
       const actualCoachId = row.actual_coach_id ?? ''
+      const canViewCheckIn = canCoachViewCheckInControl({
+        cancelled,
+        actualCoachId,
+        userId: options.userId,
+        scheduledCoachId: row.scheduled_coach_id,
+        leaveStatus: row.leave_status,
+      })
       return [{
         id: row.id,
         seasonId: row.season_id,
@@ -243,19 +253,19 @@ export async function loadCoachDutyItems(options: { userId?: string; isAdmin?: b
         checkedInAt: checkin?.checked_in_at ?? '',
         punctuality: checkin?.punctuality ?? '',
         manualCorrection: checkin?.manual_correction ?? false,
-        canCheckIn: !cancelled
-          && actualCoachId === options.userId
-          && !(row.leave_status === 'approved' && row.scheduled_coach_id === options.userId)
+        canViewCheckIn,
+        canCheckIn: canViewCheckIn
           && window.phase === 'open'
           && !checkin,
         checkInOpensAt: window.opensAt?.toISOString() ?? '',
-        canRequestLeave: !cancelled
-          && row.scheduled_coach_id === options.userId
-          && (
-            row.leave_status === 'none'
-            || (row.leave_status === 'requested' && row.substitute_response === 'rejected')
-          )
-          && !checkin,
+        canRequestLeave: canCoachRequestLeave({
+          cancelled,
+          scheduledCoachId: row.scheduled_coach_id,
+          userId: options.userId,
+          leaveStatus: row.leave_status,
+          substituteResponse: row.substitute_response,
+          hasCheckin: Boolean(checkin),
+        }),
         canRespondSubstitute: row.substitute_coach_id === options.userId && row.substitute_response === 'pending',
         salaryStatus: 'pending_rate',
         salaryStatusLabel: '待設定課酬',

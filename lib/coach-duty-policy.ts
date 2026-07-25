@@ -9,6 +9,36 @@ export type CoachDutyAttendanceState =
   | 'missing_start_time'
   | 'leave_approved'
 
+export function canCoachViewCheckInControl(input: {
+  cancelled: boolean
+  actualCoachId: string
+  userId?: string
+  scheduledCoachId: string
+  leaveStatus: 'none' | 'requested' | 'approved' | 'rejected'
+}) {
+  return !input.cancelled
+    && Boolean(input.userId)
+    && input.actualCoachId === input.userId
+    && !(input.leaveStatus === 'approved' && input.scheduledCoachId === input.userId)
+}
+
+export function canCoachRequestLeave(input: {
+  cancelled: boolean
+  scheduledCoachId: string
+  userId?: string
+  leaveStatus: 'none' | 'requested' | 'approved' | 'rejected'
+  substituteResponse: 'none' | 'pending' | 'accepted' | 'rejected'
+  hasCheckin: boolean
+}) {
+  return !input.cancelled
+    && input.scheduledCoachId === input.userId
+    && (
+      input.leaveStatus === 'none'
+      || (input.leaveStatus === 'requested' && input.substituteResponse === 'rejected')
+    )
+    && !input.hasCheckin
+}
+
 function sessionStart(sessionDate: string, startTime: string) {
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime)) return null
   return new Date(`${sessionDate}T${startTime}:00+08:00`)
@@ -65,4 +95,3 @@ export function resolveCoachDutyAttendanceState(input: {
   if (window.phase === 'open') return 'check_in_open'
   return input.isSubstitute ? 'substitute_absent' : 'not_checked_in'
 }
-

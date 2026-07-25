@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
+  canCoachRequestLeave,
+  canCoachViewCheckInControl,
   coachDutyPunctuality,
   coachDutyWindow,
   resolveCoachDutyAttendanceState,
@@ -61,4 +63,35 @@ test('停課、缺少時間、請假及代班未到各自保留不同事實', ()
   }), 'leave_approved')
   assert.equal(resolveCoachDutyAttendanceState({ ...base, isSubstitute: true }), 'substitute_absent')
   assert.equal(resolveCoachDutyAttendanceState(base), 'not_checked_in')
+})
+
+test('原定教練申請請假不受簽到時間窗限制', () => {
+  const base = {
+    cancelled: false,
+    scheduledCoachId: 'coach-a',
+    userId: 'coach-a',
+    leaveStatus: 'none' as const,
+    substituteResponse: 'none' as const,
+    hasCheckin: false,
+  }
+
+  assert.equal(canCoachRequestLeave(base), true)
+  assert.equal(canCoachRequestLeave({ ...base, hasCheckin: true }), false)
+  assert.equal(canCoachRequestLeave({ ...base, cancelled: true }), false)
+  assert.equal(canCoachRequestLeave({ ...base, userId: 'coach-b' }), false)
+})
+
+test('實際授課教練可持續看到簽到控制，是否開放由時間窗另行決定', () => {
+  const base = {
+    cancelled: false,
+    actualCoachId: 'coach-a',
+    userId: 'coach-a',
+    scheduledCoachId: 'coach-a',
+    leaveStatus: 'none' as const,
+  }
+
+  assert.equal(canCoachViewCheckInControl(base), true)
+  assert.equal(canCoachViewCheckInControl({ ...base, cancelled: true }), false)
+  assert.equal(canCoachViewCheckInControl({ ...base, userId: 'coach-b' }), false)
+  assert.equal(canCoachViewCheckInControl({ ...base, leaveStatus: 'approved' }), false)
 })

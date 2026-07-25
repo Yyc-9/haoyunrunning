@@ -63,8 +63,9 @@ export async function GET(request: NextRequest) {
           leaveStatus: leave?.status ?? 'none', leaveReason: leave?.reason ?? '', recommendedSubstituteId: '', recommendedSubstituteName: '',
           substituteCoachId: '', substituteCoachName: '', substituteResponse: 'none', adminStatus: leave ? 'pending' : 'not_required', adminReason: '',
           attendanceState, checkedInAt: checkin?.checkedInAt ?? '', punctuality: checkin?.punctuality ?? '', manualCorrection: false,
+          canViewCheckIn: !leave,
           canCheckIn: !checkin && !leave && window.phase === 'open', checkInOpensAt: window.opensAt?.toISOString() ?? '',
-          canRequestLeave: !checkin && !leave && window.phase !== 'closed', canRespondSubstitute: false,
+          canRequestLeave: !checkin && !leave, canRespondSubstitute: false,
           salaryStatus: 'pending_rate', salaryStatusLabel: '待設定課酬', isCancelled: false,
         }
       })

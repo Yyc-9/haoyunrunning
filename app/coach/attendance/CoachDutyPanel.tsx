@@ -37,6 +37,8 @@ type DutyItem = {
   adminStatus: 'not_required' | 'pending' | 'approved' | 'rejected'
   attendanceState: string
   checkedInAt: string
+  punctuality: '' | 'on_time' | 'late'
+  canViewCheckIn: boolean
   canCheckIn: boolean
   checkInOpensAt: string
   canRequestLeave: boolean
@@ -256,6 +258,17 @@ export default function CoachDutyPanel() {
 
   function DutyDetails({ item }: { item: DutyItem }) {
     const meta = stateMeta[item.attendanceState] ?? stateMeta.upcoming
+    const checkInLabel = item.checkedInAt
+      ? item.punctuality === 'late' ? '已完成遲到簽到' : '已完成準時簽到'
+      : item.canCheckIn
+        ? '本人到課簽到'
+        : item.attendanceState === 'missing_start_time'
+          ? '尚未設定簽到時間'
+          : ['not_checked_in', 'substitute_absent'].includes(item.attendanceState)
+            ? '簽到時間已結束'
+            : item.checkInOpensAt
+              ? `將於 ${formatTime(item.checkInOpensAt)} 開放簽到`
+              : '簽到尚未開放'
     return (
       <>
         <div className="flex items-start justify-between gap-4">
@@ -280,10 +293,21 @@ export default function CoachDutyPanel() {
         </div>
         {item.checkedInAt ? <p className="mt-3 text-xs font-bold text-emerald-700">伺服器簽到時間：{formatTime(item.checkedInAt)}</p> : item.checkInOpensAt ? <p className="mt-3 text-xs font-semibold text-apple-gray-500">簽到開放時間：{formatTime(item.checkInOpensAt)}（{APP_TIME_ZONE_LABEL}）</p> : null}
 
-        {item.canCheckIn ? (
-          <button type="button" disabled={saving === item.id} onClick={() => act(item.id, { intent: 'check_in' })} className="apple-button-primary mt-5 min-h-11 w-full gap-2 px-5">
+        {item.canViewCheckIn ? (
+          <button
+            type="button"
+            disabled={!item.canCheckIn || saving === item.id}
+            onClick={() => act(item.id, { intent: 'check_in' })}
+            className={`mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-full px-5 text-sm font-black transition-colors ${
+              item.checkedInAt
+                ? 'cursor-default bg-emerald-100 text-emerald-800'
+                : item.canCheckIn
+                  ? 'bg-blue-700 text-white hover:bg-blue-800'
+                  : 'cursor-not-allowed bg-apple-gray-100 text-apple-gray-500'
+            }`}
+          >
             {saving === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserRoundCheck className="h-4 w-4" />}
-            本人到課簽到
+            {checkInLabel}
           </button>
         ) : null}
 
@@ -299,7 +323,13 @@ export default function CoachDutyPanel() {
 
         {item.canRequestLeave ? (
           <details className="mt-4 rounded-xl border border-black/10 bg-apple-gray-50">
-            <summary className="cursor-pointer list-none px-4 py-3 text-sm font-black">{item.substituteResponse === 'rejected' ? '重新邀請代班教練' : '申請請假並邀請代班'}</summary>
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+              <span className="flex items-center gap-2 text-sm font-black">
+                <CalendarClock className="h-4 w-4 text-orange-600" />
+                {item.substituteResponse === 'rejected' ? '重新邀請代班教練' : '申請請假並邀請代班'}
+              </span>
+              <span className="text-[11px] font-bold text-apple-gray-500">不限簽到時段</span>
+            </summary>
             <div className="space-y-3 border-t border-black/10 p-4">
               <textarea value={leaveReason[item.id] || ''} onChange={(event) => setLeaveReason((current) => ({ ...current, [item.id]: event.target.value }))} rows={3} className="apple-input resize-y" placeholder="請假原因（必填）" />
               <label>
