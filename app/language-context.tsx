@@ -1,9 +1,13 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { defaultLanguage, dictionary, type Dictionary, type Language } from '@/lib/dictionary'
-import { toEnglishWebsiteText } from '@/lib/english-website'
-import { toSimplifiedWebsiteText, toTraditionalWebsiteText } from '@/lib/traditional-chinese'
+import {
+  createLocalizationMemory,
+  localizeRememberedValue,
+  type LocalizationMemory,
+} from '@/lib/language-dom'
+import { toSimplifiedWebsiteText } from '@/lib/traditional-chinese'
 
 interface LanguageContextType {
   language: Language
@@ -15,12 +19,11 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 export { LanguageContext }
 
-function convertVisibleText(root: ParentNode, language: Language) {
-  const convert = language === 'zh-CN'
-    ? toSimplifiedWebsiteText
-    : language === 'en'
-      ? toEnglishWebsiteText
-      : toTraditionalWebsiteText
+function convertVisibleText(
+  root: ParentNode,
+  language: Language,
+  memory: LocalizationMemory,
+) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
       const parent = node.parentElement
@@ -35,16 +38,34 @@ function convertVisibleText(root: ParentNode, language: Language) {
   while (walker.nextNode()) textNodes.push(walker.currentNode as Text)
 
   textNodes.forEach((node) => {
-    const nextValue = convert(node.nodeValue ?? '')
+    const nextValue = localizeRememberedValue(
+      node,
+      'text',
+      node.nodeValue ?? '',
+      language,
+      memory,
+    )
     if (node.nodeValue !== nextValue) node.nodeValue = nextValue
   })
 
   const scope = root instanceof Element ? root : document
-  scope.querySelectorAll<HTMLElement>('[placeholder], [aria-label], [title]').forEach((element) => {
+  const elements = [
+    ...(root instanceof HTMLElement && root.matches('[placeholder], [aria-label], [title]')
+      ? [root]
+      : []),
+    ...scope.querySelectorAll<HTMLElement>('[placeholder], [aria-label], [title]'),
+  ]
+  elements.forEach((element) => {
     ;['placeholder', 'aria-label', 'title'].forEach((attribute) => {
       const value = element.getAttribute(attribute)
       if (!value) return
-      const nextValue = convert(value)
+      const nextValue = localizeRememberedValue(
+        element,
+        attribute,
+        value,
+        language,
+        memory,
+      )
       if (value !== nextValue) element.setAttribute(attribute, nextValue)
     })
   })
@@ -52,6 +73,7 @@ function convertVisibleText(root: ParentNode, language: Language) {
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>(defaultLanguage)
+  const localizationMemory = useRef(createLocalizationMemory()).current
 
   useEffect(() => {
     const storedLanguage = window.localStorage.getItem('language')
@@ -67,14 +89,19 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     document.documentElement.lang = language
-    let frame = window.requestAnimationFrame(() => convertVisibleText(document.body, language))
+    let frame = window.requestAnimationFrame(() => {
+      convertVisibleText(document.body, language, localizationMemory)
+    })
 
     const observer = new MutationObserver((mutations) => {
       window.cancelAnimationFrame(frame)
       frame = window.requestAnimationFrame(() => {
         mutations.forEach((mutation) => {
-          if (mutation.target instanceof Element) convertVisibleText(mutation.target, language)
-          else if (mutation.target.parentElement) convertVisibleText(mutation.target.parentElement, language)
+          if (mutation.target instanceof Element) {
+            convertVisibleText(mutation.target, language, localizationMemory)
+          } else if (mutation.target.parentElement) {
+            convertVisibleText(mutation.target.parentElement, language, localizationMemory)
+          }
         })
       })
     })
@@ -91,7 +118,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       window.cancelAnimationFrame(frame)
       observer.disconnect()
     }
-  }, [language])
+  }, [language, localizationMemory])
 
   const localizedDictionary = useMemo(() => {
     const selected = dictionary[language]

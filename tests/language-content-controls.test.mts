@@ -42,6 +42,29 @@ test('英文入口涵蓋內容中心的學員見證與常見問題', async () =>
   )
 })
 
+test('英文切回繁體或簡體時會從原始中文重新轉換', async () => {
+  const {
+    createLocalizationMemory,
+    localizeRememberedValue,
+  } = await import('../lib/language-dom.ts')
+  const memory = createLocalizationMemory()
+  const textNode = {}
+  const traditional = '跑者的成長路徑'
+
+  const english = localizeRememberedValue(textNode, 'text', traditional, 'en', memory)
+  assert.equal(english, 'Runner Growth Path')
+  assert.equal(
+    localizeRememberedValue(textNode, 'text', english, 'zh-TW', memory),
+    traditional,
+  )
+
+  const englishAgain = localizeRememberedValue(textNode, 'text', traditional, 'en', memory)
+  assert.equal(
+    localizeRememberedValue(textNode, 'text', englishAgain, 'zh-CN', memory),
+    '跑者的成长路径',
+  )
+})
+
 test('訓練日程內容資料會補齊常見問題與頁尾重點', async () => {
   const { normalizeCoursesPageContent, siteContentFromRows } = await import('../lib/site-content.ts')
   const normalized = normalizeCoursesPageContent({ heroTitle: '自訂訓練日程' })
