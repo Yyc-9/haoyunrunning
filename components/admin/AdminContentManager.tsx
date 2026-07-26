@@ -869,7 +869,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
 
         {mode === 'about' ? (
           <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
-            {panelHeader('關於我們', '管理目前前台實際顯示的首屏、三項理念、服務重點與下方品牌故事。', '/about')}
+            {panelHeader('關於我們', '管理目前前台實際顯示的首屏、服務重點與下方品牌故事。', '/about')}
             <div className="space-y-8 p-5">
               <section>
                 <h3 className="mb-4 text-lg font-black">首屏</h3>
@@ -880,17 +880,6 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                   <Field label="英文主句" wide><input value={about.heroEnglishTitle} onChange={(event) => setAbout((current) => ({ ...current, heroEnglishTitle: event.target.value }))} className="apple-input" /></Field>
                   <Field label="中文主句" wide><input value={about.heroChineseTitle} onChange={(event) => setAbout((current) => ({ ...current, heroChineseTitle: event.target.value }))} className="apple-input" /></Field>
                 </div>
-              </section>
-
-              <section className="border-t border-black/10 pt-7">
-                <h3 className="mb-3 text-lg font-black">三項訓練理念</h3>
-                {about.philosophies.map((item, index) => (
-                  <div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2">
-                    <input value={item.title} onChange={(event) => setAbout((current) => ({ ...current, philosophies: current.philosophies.map((entry, itemIndex) => itemIndex === index ? { ...entry, title: event.target.value } : entry) }))} className="apple-input" placeholder="理念標題" />
-                    <input value={item.english} onChange={(event) => setAbout((current) => ({ ...current, philosophies: current.philosophies.map((entry, itemIndex) => itemIndex === index ? { ...entry, english: event.target.value } : entry) }))} className="apple-input" placeholder="英文短句" />
-                    <textarea rows={3} value={item.description} onChange={(event) => setAbout((current) => ({ ...current, philosophies: current.philosophies.map((entry, itemIndex) => itemIndex === index ? { ...entry, description: event.target.value } : entry) }))} className="apple-input resize-y md:col-span-2" placeholder="理念說明" />
-                  </div>
-                ))}
               </section>
 
               <section className="border-t border-black/10 pt-7">
@@ -1100,7 +1089,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                     )
                   })}
                 </div>
-                <p className="mt-2 text-xs leading-5 text-apple-gray-500">只在這裡設定課程歸屬；教練端僅開放更換頭像，姓名、經歷與課程介紹由超級管理員統一維護。</p>
+                <p className="mt-2 text-xs leading-5 text-apple-gray-500">只在這裡設定課程歸屬；教練照片、姓名、經歷與課程介紹均由超級管理員統一維護。</p>
               </fieldset>
               <div className="md:col-span-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3"><p className="text-sm font-black text-emerald-900">報名方式：網站內建報名表</p><p className="mt-1 text-sm leading-6 text-emerald-800">發布後，「立即報名」會進入本課程的網站報名頁，不再使用 Google 表單。</p></div>
               <label className="flex items-center gap-3 text-sm font-bold"><input type="checkbox" checked={draft.active !== false} onChange={(e) => setDraft((current) => ({ ...current, active: e.target.checked }))} className="h-4 w-4" />這門課程對外顯示</label>

@@ -1,9 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowRight, CalendarCheck2, ClipboardList, LockKeyhole, PencilLine, RefreshCw, UserRound, UsersRound } from 'lucide-react'
+import { ArrowRight, CalendarCheck2, ClipboardList, LockKeyhole, RefreshCw, UsersRound } from 'lucide-react'
 import { useAuth } from '@/app/providers'
 import CoachAccessPanel from '@/components/CoachAccessPanel'
 import CoachSubNav from '@/components/CoachSubNav'
@@ -135,20 +134,10 @@ export default function CoachDashboardClient() {
           <CoachSubNav />
 
           <header className="mb-6 border-b border-black/10 pb-6 sm:mb-8 sm:pb-8">
-            <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
-              <div className="flex min-w-0 items-center gap-4">
-                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-white ring-1 ring-black/10 sm:h-20 sm:w-20">
-                  {coachProfile?.avatarUrl ? <Image src={coachProfile.avatarUrl} alt={coachName} fill quality={95} sizes="80px" className="object-cover" style={{ objectPosition: `${coachProfile.avatarFocusX}% ${coachProfile.avatarFocusY}%` }} /> : <UserRound className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 text-apple-gray-300" />}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-bold text-apple-blue sm:text-sm">教練工作台</p>
-                  <h1 className="mt-1 truncate text-2xl font-black text-black sm:text-4xl">{greeting}，{coachName}</h1>
-                  <p className="mt-2 text-sm leading-6 text-apple-gray-600">今天有 {students.length} 位名下學員，{pendingSignups} 項團練報名待跟進。</p>
-                </div>
-              </div>
-              <div>
-                <Link href="/coach/profile" className="apple-button-secondary min-h-10 gap-2 px-4 py-2 text-sm"><PencilLine className="h-4 w-4" />更換頭像</Link>
-              </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-apple-blue sm:text-sm">教練工作台</p>
+              <h1 className="mt-1 truncate text-2xl font-black text-black sm:text-4xl">{greeting}，{coachName}</h1>
+              <p className="mt-2 text-sm leading-6 text-apple-gray-600">今天有 {students.length} 位名下學員，{pendingSignups} 項團練報名待跟進。</p>
             </div>
           </header>
 

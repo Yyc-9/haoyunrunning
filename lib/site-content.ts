@@ -364,7 +364,7 @@ export const defaultPageMedia: PageMedia = {
     '/site-visuals/testimonial-together.webp',
     '/site-visuals/testimonial-goal.webp',
   ],
-  shopHero: '/goodluck-anniversary-7096.jpg',
+  shopHero: '/site-visuals/hero-2026/shop-hero-02.jpg',
   anniversaryHero: '/goodluck-fourth-anniversary-wallpaper.jpg',
   shopTitle: '好運商店',
   shopSubtitle: '跑班裝備與訓練補給，先把真正會用上的東西整理好。',
@@ -645,6 +645,10 @@ export function normalizeTeamContent(value: unknown): TeamContent {
 
 export function normalizePageMedia(value: unknown): PageMedia {
   const source = value && typeof value === 'object' ? value as Partial<PageMedia> : {}
+  const replacedShopHeroes = new Set([
+    '/goodluck-anniversary-7096.jpg',
+    'https://vmnbthmssiizbsvzeahz.supabase.co/storage/v1/object/public/site-media/pages/2026-07-24/a75fcf26-acc9-4d99-a993-6c81971301ee.webp',
+  ])
   const image = (candidate: unknown, fallback: string) => {
     const url = stablePublicAsset(cleanString(candidate, 2000))
     return url && isSafePublicUrl(url) ? url : fallback
@@ -665,7 +669,9 @@ export function normalizePageMedia(value: unknown): PageMedia {
     aboutBeliefImages: imageList(source.aboutBeliefImages, defaultPageMedia.aboutBeliefImages),
     aboutFactImages: imageList(source.aboutFactImages, defaultPageMedia.aboutFactImages),
     testimonialThemeImages: imageList(source.testimonialThemeImages, defaultPageMedia.testimonialThemeImages),
-    shopHero: image(source.shopHero, defaultPageMedia.shopHero),
+    shopHero: replacedShopHeroes.has(image(source.shopHero, defaultPageMedia.shopHero))
+      ? defaultPageMedia.shopHero
+      : image(source.shopHero, defaultPageMedia.shopHero),
     anniversaryHero: image(source.anniversaryHero, defaultPageMedia.anniversaryHero),
     shopTitle: cleanOr(source.shopTitle, defaultPageMedia.shopTitle, 120),
     shopSubtitle: cleanOr(source.shopSubtitle, defaultPageMedia.shopSubtitle, 500),

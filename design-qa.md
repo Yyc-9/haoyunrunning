@@ -62,6 +62,42 @@ final result: passed
 
 ---
 
+# 關於我們首屏精簡、教練頭像入口與商店主視覺 QA（2026-07-26）
+
+## 調整目標
+
+- 移除「關於我們」首屏底部的三項理念文字帶，保留首屏標題及跑道背景。
+- 教練工作台不顯示個人頭像、不提供教練自行上傳入口；正式教練照片仍由超級管理員統一維護。
+- 商店改用指定的 `商店圖-02.jpg`，保留內容中心日後更換商店主視覺的能力。
+
+## 比對證據
+
+- 使用者標記的移除區域：`/var/folders/zg/66z7x42d0dgdx4zbv_kk8wfh0000gn/T/codex-clipboard-cac01200-823c-4317-bc9d-00ef5a57d805.png`
+- 移除前後合併比較：`/private/tmp/about-strip-removal-comparison.png`
+- 關於我們桌面：`/private/tmp/about-without-philosophy-strip-desktop.png`
+- 關於我們手機：`/private/tmp/about-without-philosophy-strip-mobile.png`
+- 商店來源與桌面實作合併比較：`/private/tmp/shop-hero-02-comparison.jpg`
+- 商店桌面：`/private/tmp/shop-hero-02-desktop-reload.png`
+- 商店手機：`/private/tmp/shop-hero-02-mobile.png`
+
+## 驗收結果
+
+| 項目 | 結果 | 說明 |
+| --- | --- | --- |
+| 關於我們首屏 | 通過 | 指定三項文字帶完整移除；桌面與手機都只保留首屏主標與背景。 |
+| 內容中心一致性 | 通過 | 不再顯示已從前台移除的「三項訓練理念」假控制項。 |
+| 教練工作台 | 通過 | 移除頭像圓框、更換頭像按鈕及子導航入口；舊網址會返回工作台。 |
+| 上傳權限 | 通過 | 教練資料更新接口拒絕自行上傳；網站媒體上傳接口只允許超級管理員。 |
+| 商店主視覺 | 通過 | 指定圖片已複製至公開資源並以深色遮罩確保白色文案可讀。 |
+| 商店手機版 | 通過 | 375px 實際內容寬度與捲動寬度相同，沒有橫向溢出；主要圖案與文字同時可辨識。 |
+| 商店桌面版 | 通過 | 1425px 視窗中主視覺高度 396px，圖片比例、焦點與左側文字區穩定。 |
+
+## Final result
+
+final result: passed
+
+---
+
 # 關於我們品牌敘事嵌入式底圖 QA
 
 ## 調整目標

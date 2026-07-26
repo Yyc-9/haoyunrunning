@@ -60,22 +60,22 @@ export default function ShopPage() {
 
   return (
     <main className="min-h-screen bg-white pt-20 sm:pt-24">
-      <section className="relative isolate min-h-[390px] overflow-hidden border-b border-black/10 sm:min-h-[470px]">
+      <section className="relative isolate min-h-[390px] overflow-hidden border-b border-black/10 sm:min-h-[395px]">
         <Image
           src={pageMedia.shopHero}
           alt="好運跑班服飾與跑步裝備"
           fill
           priority
           sizes="100vw"
-          className="object-cover object-center"
+          className="object-cover object-[62%_center] sm:object-center"
         />
-        <div className="absolute inset-0 bg-white/60 sm:bg-white/25" />
-        <div className="container relative z-10 mx-auto flex min-h-[390px] items-center px-5 py-12 sm:min-h-[470px] sm:px-8 lg:px-12">
+        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/45 to-black/15" />
+        <div className="container relative z-10 mx-auto flex min-h-[390px] items-center px-5 py-12 sm:min-h-[395px] sm:px-8 lg:px-12">
           <div className="max-w-xl">
-            <p className="text-xs font-black uppercase tracking-[0.12em] text-apple-gray-800 sm:text-sm">GOOD LUCK RUNNING SHOP</p>
-            <h1 className="mt-4 text-4xl font-black text-apple-gray-950 sm:text-6xl">{pageMedia.shopTitle}</h1>
-            <p className="mt-5 max-w-lg text-sm leading-7 text-apple-gray-700 sm:text-lg sm:leading-8">{pageMedia.shopSubtitle}</p>
-            <p className="mt-7 text-sm font-black text-apple-gray-700">{isLoading ? '商品資料載入中' : `目前共 ${products.length} 件商品`}</p>
+            <p className="text-xs font-black uppercase tracking-[0.12em] text-white/80 sm:text-sm">GOOD LUCK RUNNING SHOP</p>
+            <h1 className="mt-4 text-4xl font-black text-white sm:text-6xl">{pageMedia.shopTitle}</h1>
+            <p className="mt-5 max-w-lg text-sm leading-7 text-white/85 sm:text-lg sm:leading-8">{pageMedia.shopSubtitle}</p>
+            <p className="mt-7 text-sm font-black text-white/80">{isLoading ? '商品資料載入中' : `目前共 ${products.length} 件商品`}</p>
           </div>
         </div>
       </section>

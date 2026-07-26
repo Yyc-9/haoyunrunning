@@ -103,3 +103,31 @@ test('學員見證成長路徑有獨立且安全的主視覺', async () => {
   assert.doesNotMatch(publicPage, /testimonialThemeImages/)
   assert.doesNotMatch(publicPage, /<article/)
 })
+
+test('商店使用目前核准主視覺且關於我們首屏不再顯示三項理念帶', async () => {
+  const { normalizePageMedia } = await import('../lib/site-content.ts')
+  const media = normalizePageMedia({})
+  const replacedMedia = normalizePageMedia({
+    shopHero: 'https://vmnbthmssiizbsvzeahz.supabase.co/storage/v1/object/public/site-media/pages/2026-07-24/a75fcf26-acc9-4d99-a993-6c81971301ee.webp',
+  })
+  const aboutPage = readFileSync(new URL('../app/about/page.tsx', import.meta.url), 'utf8')
+  const admin = readFileSync(new URL('../components/admin/AdminContentManager.tsx', import.meta.url), 'utf8')
+
+  assert.equal(media.shopHero, '/site-visuals/hero-2026/shop-hero-02.jpg')
+  assert.equal(replacedMedia.shopHero, '/site-visuals/hero-2026/shop-hero-02.jpg')
+  assert.doesNotMatch(aboutPage, /about\.philosophies/)
+  assert.doesNotMatch(admin, /三項訓練理念/)
+})
+
+test('教練端不提供自行上傳頭像入口', () => {
+  const dashboard = readFileSync(new URL('../app/coach/CoachDashboardClient.tsx', import.meta.url), 'utf8')
+  const subNav = readFileSync(new URL('../components/CoachSubNav.tsx', import.meta.url), 'utf8')
+  const profileRoute = readFileSync(new URL('../app/api/coach/profile/route.ts', import.meta.url), 'utf8')
+  const uploadRoute = readFileSync(new URL('../app/api/admin/upload/route.ts', import.meta.url), 'utf8')
+
+  assert.doesNotMatch(dashboard, /更換頭像|href="\/coach\/profile"/)
+  assert.doesNotMatch(subNav, /頭像設定|\/coach\/profile/)
+  assert.match(profileRoute, /教練帳號不可自行上傳/)
+  assert.doesNotMatch(uploadRoute, /canUploadCoachMedia/)
+  assert.match(uploadRoute, /只有超級管理員可以上傳網站媒體/)
+})

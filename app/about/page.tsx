@@ -22,7 +22,7 @@ export default function AboutPage() {
         />
         <div className="absolute inset-0 bg-black/45" />
 
-        <div className="container relative z-10 mx-auto flex w-full max-w-7xl flex-col justify-between px-5 py-14 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
+        <div className="container relative z-10 mx-auto flex w-full max-w-7xl flex-col px-5 py-14 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
           <div className="max-w-4xl">
             <p className="text-xs font-black uppercase tracking-[0.42em] text-white/85 sm:text-sm">{about.heroEyebrow}</p>
             <h1 className="mt-4 text-4xl font-black tracking-[0.16em] sm:text-6xl">{about.heroBrandName}</h1>
@@ -32,19 +32,6 @@ export default function AboutPage() {
             <p className="mt-6 text-xl font-black tracking-[0.12em] sm:text-3xl">
               {about.heroChineseTitle}
             </p>
-          </div>
-
-          <div className="mt-16 grid gap-7 border-t border-white/35 pt-7 lg:grid-cols-3 lg:gap-0 lg:border-t-0 lg:pt-0">
-            {about.philosophies.map((item, index) => (
-              <article
-                key={item.title}
-                className={`min-w-0 ${index > 0 ? 'lg:border-l lg:border-white/55 lg:pl-10' : ''} ${index < about.philosophies.length - 1 ? 'lg:pr-10' : ''}`}
-              >
-                <h2 className="text-lg font-black tracking-[0.08em] sm:text-xl">{item.title}</h2>
-                <p className="mt-2 text-sm font-bold text-white/90">{item.english}</p>
-                <p className="mt-2 text-sm leading-6 text-white/75">{item.description}</p>
-              </article>
-            ))}
           </div>
         </div>
       </section>

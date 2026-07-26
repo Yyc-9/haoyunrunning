@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { coachPublicProfilesFromRows, type CoachPublicProfileRow } from '@/lib/coach-profiles'
-import { isSafePublicUrl } from '@/lib/site-content'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
-import { getIsolatedTestAccount, updateIsolatedTestState } from '@/lib/test-account'
+import { getIsolatedTestAccount } from '@/lib/test-account'
 
 const headers = { 'Cache-Control': 'no-store' }
 
@@ -58,8 +57,8 @@ async function ensureOwnedProfile(account: { id: string; name: string; email: st
       nickname: cleanText(account.nickname, 80),
       role_title: '好運跑班教練',
       bio: cleanText(account.bio, 1600),
-      avatar_url: cleanText(account.avatar_url, 2000),
-      full_body_image_url: cleanText(account.avatar_url, 2000),
+      avatar_url: '',
+      full_body_image_url: '',
       profile_initialized: true,
       published: true,
     }, { onConflict: 'coach_key' })
@@ -81,11 +80,10 @@ export async function GET(request: NextRequest) {
 
   const testAccount = 'testAccount' in auth ? auth.testAccount : undefined
   if (testAccount) {
-    const avatarUrl = typeof testAccount.sandboxState.coachAvatarUrl === 'string' ? testAccount.sandboxState.coachAvatarUrl : ''
     return NextResponse.json({
       profile: {
         coachKey: 'isolated-test-coach', displayName: '測試教練', nickname: '', role: '週一課程測試教練',
-        bio: '此為獨立測試帳號，不會顯示在公開團隊陣容。', avatarUrl, fullBodyImageUrl: avatarUrl,
+        bio: '此為獨立測試帳號，不會顯示在公開團隊陣容。', avatarUrl: '', fullBodyImageUrl: '',
         avatarFocusX: 50, avatarFocusY: 25, fullBodyFocusX: 50, fullBodyFocusY: 20,
         specialties: ['功能測試'], style: '僅供網站功能驗證', achievements: [], certifications: [], published: false,
       },
@@ -105,45 +103,5 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   const auth = await requireCoach(request)
   if ('response' in auth) return auth.response
-
-  const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
-  const avatarUrl = cleanText(body.avatarUrl, 2000)
-  if (!avatarUrl || !isSafePublicUrl(avatarUrl)) {
-    return NextResponse.json({ error: '教練頭像網址格式無效。' }, { status: 400, headers })
-  }
-
-  const testAccount = 'testAccount' in auth ? auth.testAccount : undefined
-  if (testAccount) {
-    await updateIsolatedTestState(testAccount, (state) => ({ ...state, coachAvatarUrl: avatarUrl }))
-    return NextResponse.json({
-      profile: {
-        coachKey: 'isolated-test-coach', displayName: '測試教練', nickname: '', role: '週一課程測試教練',
-        bio: '此為獨立測試帳號，不會顯示在公開團隊陣容。', avatarUrl, fullBodyImageUrl: avatarUrl,
-        avatarFocusX: 50, avatarFocusY: 25, fullBodyFocusX: 50, fullBodyFocusY: 20,
-        specialties: ['功能測試'], style: '僅供網站功能驗證', achievements: [], certifications: [], published: false,
-      },
-      message: '測試教練頭像已更新；不會發布至公開團隊陣容。', isolatedTest: true,
-    }, { headers })
-  }
-
-  try {
-    const owned = await ensureOwnedProfile(auth.account)
-    const { error } = await supabaseAdmin!
-      .from('coach_public_profiles')
-      .update({ avatar_url: avatarUrl, profile_initialized: true })
-      .eq('coach_key', owned.coach_key)
-      .eq('owner_profile_id', auth.account.id)
-    if (error) throw new Error(error.message)
-
-    const { error: accountError } = await supabaseAdmin!
-      .from('profiles')
-      .update({ avatar_url: avatarUrl })
-      .eq('id', auth.account.id)
-    if (accountError) throw new Error(accountError.message)
-
-    const profile = await loadMergedProfile(owned.coach_key)
-    return NextResponse.json({ profile, message: '教練頭像已更新。' }, { headers })
-  } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : '儲存教練頭像失敗。' }, { status: 500, headers })
-  }
+  return NextResponse.json({ error: '教練照片由超級管理員統一維護，教練帳號不可自行上傳。' }, { status: 403, headers })
 }
