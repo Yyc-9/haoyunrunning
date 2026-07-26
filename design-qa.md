@@ -62,6 +62,33 @@ final result: passed
 
 ---
 
+# 關於我們區塊刪除範圍校正 QA
+
+## 檢查範圍
+
+- 使用者標註圖：`/var/folders/zg/66z7x42d0dgdx4zbv_kk8wfh0000gn/T/codex-clipboard-6f93262b-ee74-4e6f-8b99-3f95fb350847.png`
+- 桌面實作：`/private/tmp/about-corrected-story-desktop-2.png`
+- 手機首屏：`/private/tmp/about-corrected-mobile-top-3.png`
+- 手機品牌故事：`/private/tmp/about-corrected-mobile-story.png`
+- 合併比對：`/private/tmp/about-correction-comparison.png`
+
+## 驗收結果
+
+| 項目 | 結果 | 說明 |
+| --- | --- | --- |
+| 首屏三項理念 | 通過 | 恢復「專注速度能力與跑步經濟性、建立穩固的訓練基礎、每位跑者都值得被看見」三項內容。 |
+| 品牌故事三欄 | 通過 | 僅移除「我們想讓更多人，真正喜歡上跑步」圖片區底部的三欄，保留背景、標題與介紹。 |
+| 內容中心 | 通過 | 恢復首屏三項理念編輯欄位，移除已不在前台顯示的品牌故事三項支持重點。 |
+| 桌面版 | 通過 | 品牌故事文字垂直置中，移除三欄後沒有留下不自然空白。 |
+| 手機版 | 通過 | 首屏三項理念完整顯示，品牌故事不再出現三欄，頁面沒有橫向溢出。 |
+| 視覺一致性 | 通過 | 保留既有背景圖、遮罩、字級與頁面順序，只校正指定內容範圍。 |
+
+## Final result
+
+final result: passed
+
+---
+
 # 關於我們首屏精簡、教練頭像入口與商店主視覺 QA（2026-07-26）
 
 ## 調整目標

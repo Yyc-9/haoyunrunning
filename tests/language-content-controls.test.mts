@@ -104,7 +104,7 @@ test('學員見證成長路徑有獨立且安全的主視覺', async () => {
   assert.doesNotMatch(publicPage, /<article/)
 })
 
-test('商店使用目前核准主視覺且關於我們首屏不再顯示三項理念帶', async () => {
+test('商店使用目前核准主視覺且關於我們只移除下方品牌故事三欄', async () => {
   const { normalizePageMedia } = await import('../lib/site-content.ts')
   const media = normalizePageMedia({})
   const replacedMedia = normalizePageMedia({
@@ -115,8 +115,10 @@ test('商店使用目前核准主視覺且關於我們首屏不再顯示三項�
 
   assert.equal(media.shopHero, '/site-visuals/hero-2026/shop-hero-02.jpg')
   assert.equal(replacedMedia.shopHero, '/site-visuals/hero-2026/shop-hero-02.jpg')
-  assert.doesNotMatch(aboutPage, /about\.philosophies/)
-  assert.doesNotMatch(admin, /三項訓練理念/)
+  assert.match(aboutPage, /about\.philosophies/)
+  assert.doesNotMatch(aboutPage, /about\.beliefs/)
+  assert.match(admin, /三項訓練理念/)
+  assert.doesNotMatch(admin, /三項支持重點/)
 })
 
 test('教練端不提供自行上傳頭像入口', () => {

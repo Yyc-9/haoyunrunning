@@ -869,7 +869,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
 
         {mode === 'about' ? (
           <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
-            {panelHeader('關於我們', '管理目前前台實際顯示的首屏、服務重點與下方品牌故事。', '/about')}
+            {panelHeader('關於我們', '管理目前前台實際顯示的首屏、三項理念、服務重點與下方品牌故事。', '/about')}
             <div className="space-y-8 p-5">
               <section>
                 <h3 className="mb-4 text-lg font-black">首屏</h3>
@@ -880,6 +880,17 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                   <Field label="英文主句" wide><input value={about.heroEnglishTitle} onChange={(event) => setAbout((current) => ({ ...current, heroEnglishTitle: event.target.value }))} className="apple-input" /></Field>
                   <Field label="中文主句" wide><input value={about.heroChineseTitle} onChange={(event) => setAbout((current) => ({ ...current, heroChineseTitle: event.target.value }))} className="apple-input" /></Field>
                 </div>
+              </section>
+
+              <section className="border-t border-black/10 pt-7">
+                <h3 className="mb-3 text-lg font-black">三項訓練理念</h3>
+                {about.philosophies.map((item, index) => (
+                  <div key={index} className="grid gap-3 border-t border-black/10 py-4 md:grid-cols-2">
+                    <input value={item.title} onChange={(event) => setAbout((current) => ({ ...current, philosophies: current.philosophies.map((entry, itemIndex) => itemIndex === index ? { ...entry, title: event.target.value } : entry) }))} className="apple-input" placeholder="理念標題" />
+                    <input value={item.english} onChange={(event) => setAbout((current) => ({ ...current, philosophies: current.philosophies.map((entry, itemIndex) => itemIndex === index ? { ...entry, english: event.target.value } : entry) }))} className="apple-input" placeholder="英文短句" />
+                    <textarea rows={3} value={item.description} onChange={(event) => setAbout((current) => ({ ...current, philosophies: current.philosophies.map((entry, itemIndex) => itemIndex === index ? { ...entry, description: event.target.value } : entry) }))} className="apple-input resize-y md:col-span-2" placeholder="理念說明" />
+                  </div>
+                ))}
               </section>
 
               <section className="border-t border-black/10 pt-7">
@@ -900,10 +911,6 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                   <Field label="故事標題"><input value={about.title} onChange={(event) => setAbout((current) => ({ ...current, title: event.target.value }))} className="apple-input" /></Field>
                   <Field label="故事標題重點" wide><input value={about.titleHighlight} onChange={(event) => setAbout((current) => ({ ...current, titleHighlight: event.target.value }))} className="apple-input" /></Field>
                   <Field label="品牌介紹" wide><textarea rows={5} value={about.description} onChange={(event) => setAbout((current) => ({ ...current, description: event.target.value }))} className="apple-input resize-y" /></Field>
-                  <div className="md:col-span-2">
-                    <h4 className="mb-3 font-black">三項支持重點</h4>
-                    {about.beliefs.map((item, index) => <input key={index} value={item.title} onChange={(event) => setAbout((current) => ({ ...current, beliefs: current.beliefs.map((entry, itemIndex) => itemIndex === index ? { ...entry, title: event.target.value } : entry) }))} className="apple-input mb-3" />)}
-                  </div>
                 </div>
               </section>
             </div>
