@@ -14,7 +14,8 @@ const badgeSeries = [
     slug: 'full-sub3',
     standard: '全馬 SUB 3',
     name: '閃電征途',
-    image: '/achievements/2026/full-sub3.jpg',
+    image: '/achievements/2026/claim-sub3.jpg',
+    imageClassName: 'object-cover object-left',
     description: '閃電構成 SUB「3」，展現速度與爆發力；融入 U 型馬蹄鐵，象徵競速與好運並存。',
     story: '星芒點綴其中，代表在挑戰中持續突破閃耀。',
   },
@@ -22,7 +23,8 @@ const badgeSeries = [
     slug: 'full-sub4',
     standard: '全馬 SUB 4',
     name: '成就之星',
-    image: '/achievements/2026/full-sub4.jpg',
+    image: '/achievements/2026/claim-sub4.jpg',
+    imageClassName: 'object-cover object-left',
     description: '放射光芒呈現 SUB4，象徵達標瞬間的榮耀時刻；光芒四射的設計，展現挑戰自我的能量。',
     story: '每位跑者，都是為自己發光的一顆星。',
   },
@@ -30,7 +32,8 @@ const badgeSeries = [
     slug: 'half-sub100',
     standard: '半馬 SUB 100',
     name: '與影同行',
-    image: '/achievements/2026/half-sub100.jpg',
+    image: '/achievements/2026/claim-sub100.jpg',
+    imageClassName: 'object-cover object-left',
     description: '影子為主視覺，象徵一路上的陪伴與自我對話；SUB 字樣延伸形成「100」，代表為目標付出的努力。',
     story: '你不孤單，陪你到終點的，是一路堅持的自己。',
   },
@@ -38,7 +41,8 @@ const badgeSeries = [
     slug: 'half-sub2',
     standard: '半馬 SUB 2',
     name: '飛躍跑道',
-    image: '/achievements/2026/full-sub2.jpg',
+    image: '/achievements/2026/claim-sub2.jpg',
+    imageClassName: 'object-cover object-left',
     description: '跑道造型呈現 SUB「2」，日復一日的累積與訓練；每一圈都是汗水與堅持的軌跡。',
     story: '斜向延伸如展翅飛翔，突破極限持續向前。',
   },
@@ -87,8 +91,8 @@ export default function AchievementsPage() {
 
           <div className="relative aspect-[6/5] overflow-hidden rounded-2xl border border-white/10 bg-black">
             <Image
-              src="/achievements/2026/series-grid.jpg"
-              alt="好運榮耀徽章全系列"
+              src="/achievements/2026/collection-cards.jpg"
+              alt="好運榮耀徽章與達標紀念卡全系列"
               fill
               priority
               sizes="(max-width: 1023px) 100vw, 58vw"
@@ -102,8 +106,8 @@ export default function AchievementsPage() {
         <div className="container mx-auto grid max-w-7xl gap-7 lg:grid-cols-[minmax(360px,0.85fr)_minmax(0,1.15fr)] lg:items-center">
           <div className="relative aspect-[6/7] overflow-hidden rounded-2xl bg-white shadow-sm">
             <Image
-              src="/achievements/2026/series-overview.jpg"
-              alt="大理石背景上的好運榮耀徽章"
+              src="/achievements/2026/lifestyle-sub3.jpg"
+              alt="手持全馬 SUB 3 好運榮耀徽章"
               fill
               sizes="(max-width: 1023px) 100vw, 40vw"
               className="object-cover"
@@ -150,7 +154,13 @@ export default function AchievementsPage() {
             {badgeSeries.map((badge) => (
               <article key={badge.slug} className="w-[82vw] max-w-[21rem] shrink-0 snap-start overflow-hidden rounded-2xl border border-black/10 bg-[#12100f] text-white shadow-sm md:w-auto md:max-w-none">
                 <div className="relative aspect-[2/3]">
-                  <Image src={badge.image} alt={`${badge.standard} ${badge.name}徽章`} fill sizes="(max-width: 767px) 100vw, 25vw" className="object-cover" />
+                  <Image
+                    src={badge.image}
+                    alt={`${badge.standard} ${badge.name}徽章`}
+                    fill
+                    sizes="(max-width: 767px) 100vw, 25vw"
+                    className={badge.imageClassName}
+                  />
                 </div>
                 <div className="p-5">
                   <p className="text-xs font-black tracking-[0.14em] text-[#d6b66c]">{badge.standard}</p>
@@ -207,11 +217,11 @@ export default function AchievementsPage() {
             className="scrollbar-hidden -mx-4 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain scroll-smooth px-4 pb-3 sm:mx-0 sm:mt-8 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-5"
           >
             {[
-              ['/achievements/2026/claim-sub3.jpg', '全馬 SUB 3 達標紀念卡'],
-              ['/achievements/2026/claim-sub4.jpg', '全馬 SUB 4 達標紀念卡'],
-              ['/achievements/2026/claim-sub100.jpg', '半馬 SUB 100 達標紀念卡'],
-              ['/achievements/2026/claim-sub2.jpg', '半馬 SUB 2 達標紀念卡'],
-              ['/achievements/2026/claim-bq-pride.jpg', 'BQ Pride 達標紀念卡'],
+              ['/achievements/2026/full-sub3.jpg', '全馬 SUB 3 達標紀念卡'],
+              ['/achievements/2026/full-sub4.jpg', '全馬 SUB 4 達標紀念卡'],
+              ['/achievements/2026/half-sub100.jpg', '半馬 SUB 100 達標紀念卡'],
+              ['/achievements/2026/full-sub2.jpg', '半馬 SUB 2 達標紀念卡'],
+              ['/achievements/2026/bq-pride.jpg', 'BQ Pride 達標紀念卡'],
             ].map(([src, alt]) => (
               <div key={src} className="relative aspect-[3/4] w-[72vw] max-w-[17rem] shrink-0 snap-start overflow-hidden rounded-xl border border-white/10 bg-black sm:w-auto sm:max-w-none">
                 <Image src={src} alt={alt} fill sizes="(max-width: 639px) 72vw, 20vw" className="object-cover" />

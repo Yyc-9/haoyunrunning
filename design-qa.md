@@ -62,6 +62,41 @@ final result: passed
 
 ---
 
+# 榮耀徽章參考圖圖片替換 QA（2026-08-06）
+
+## 檢查範圍
+
+- 參考圖：`/Users/yangyichen/Library/Containers/com.tencent.xinWeChat/Data/Documents/xwechat_files/yangyichen1999_5302/temp/RWTemp/2026-08/9e20f478899dc29eb19741386f9343c8/6a53a2dfe3c70a9f93c2aa35c1693cc7.jpg`
+- 實作頁面：`/achievements`
+- 保留範圍：既有文字、資訊架構、申請流程、個人帳戶入口與手機橫向滑動互動。
+
+## 圖片對應
+
+| 區塊 | 圖片 |
+| --- | --- |
+| 首屏全系列 | `collection-cards.jpg` |
+| THE ORIGIN | `lifestyle-sub3.jpg` |
+| 四款榮耀徽章 | `claim-sub3.jpg`、`claim-sub4.jpg`、`claim-sub100.jpg`、`claim-sub2.jpg` |
+| BQ Pride | `bq-pride.jpg` |
+| MILESTONE CARDS | `full-sub3.jpg`、`full-sub4.jpg`、`half-sub100.jpg`、`full-sub2.jpg`、`bq-pride.jpg` |
+| 申請方式旁實拍 | `badge-in-hand.jpg` |
+
+## 驗收結果
+
+| 項目 | 結果 | 說明 |
+| --- | --- | --- |
+| 參考圖映射 | 通過 | 黃框標示的圖片區域均改用對應的實拍素材，沒有生成或替換品牌徽章本體。 |
+| 文字與功能 | 通過 | 只調整圖片來源與裁切方向，頁面文案、連結、滑動與申請說明未改動。 |
+| 圖片裁切 | 通過 | 四款徽章使用大理石背景素材並固定靠左裁切，紀念卡改用深色布面實拍。 |
+| 靜態版面 | 通過 | 圖片比例延續既有 `aspect-ratio` 與 `object-cover` 規則，沒有新增固定寬度或水平溢出來源。 |
+| 最終瀏覽器比對 | 受阻 | 內置瀏覽器在重新載入本機預覽時被瀏覽器安全政策拒絕；未繞過權限，因此本輪不虛報最終截圖比對。 |
+
+## Final result
+
+final result: blocked（僅最終瀏覽器截圖比對受阻；程式、素材映射與建置檢查照常完成）
+
+---
+
 # 關於我們區塊刪除範圍校正 QA
 
 ## 檢查範圍
