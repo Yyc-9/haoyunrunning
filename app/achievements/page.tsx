@@ -175,7 +175,7 @@ export default function AchievementsPage() {
           <article className="mt-5 grid overflow-hidden rounded-2xl border border-[#d8c08a] bg-[#f6f0e4] shadow-sm lg:grid-cols-[minmax(360px,0.9fr)_minmax(0,1.1fr)]">
             <div className="relative min-h-[28rem]">
               <Image
-                src="/achievements/2026/bq-pride.jpg"
+                src="/achievements/2026/bq-pride-feature.jpg"
                 alt="BQ Pride 波士頓馬拉松完賽徽章"
                 fill
                 sizes="(max-width: 1023px) 100vw, 45vw"

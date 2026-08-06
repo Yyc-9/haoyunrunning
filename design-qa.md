@@ -77,7 +77,7 @@ final result: passed
 | 首屏全系列 | `collection-cards.jpg` |
 | THE ORIGIN | `lifestyle-sub3.jpg` |
 | 四款榮耀徽章 | `claim-sub3.jpg`、`claim-sub4.jpg`、`claim-sub100.jpg`、`claim-sub2.jpg` |
-| BQ Pride | `bq-pride.jpg` |
+| BQ Pride | `bq-pride-feature.jpg` |
 | MILESTONE CARDS | `full-sub3.jpg`、`full-sub4.jpg`、`half-sub100.jpg`、`full-sub2.jpg`、`bq-pride.jpg` |
 | 申請方式旁實拍 | `badge-in-hand.jpg` |
 
