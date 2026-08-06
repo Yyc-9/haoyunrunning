@@ -32,7 +32,7 @@ const badgeSeries = [
     slug: 'half-sub100',
     standard: '半馬 SUB 100',
     name: '與影同行',
-    image: '/achievements/2026/collection-half-sub100.jpg',
+    image: '/achievements/2026/collection-half-sub2.jpg',
     imageClassName: 'object-cover object-left',
     description: '影子為主視覺，象徵一路上的陪伴與自我對話；SUB 字樣延伸形成「100」，代表為目標付出的努力。',
     story: '你不孤單，陪你到終點的，是一路堅持的自己。',
@@ -41,7 +41,7 @@ const badgeSeries = [
     slug: 'half-sub2',
     standard: '半馬 SUB 2',
     name: '飛躍跑道',
-    image: '/achievements/2026/collection-half-sub2.jpg',
+    image: '/achievements/2026/collection-half-sub100.jpg',
     imageClassName: 'object-cover object-left',
     description: '跑道造型呈現 SUB「2」，日復一日的累積與訓練；每一圈都是汗水與堅持的軌跡。',
     story: '斜向延伸如展翅飛翔，突破極限持續向前。',
@@ -179,7 +179,7 @@ export default function AchievementsPage() {
                 alt="BQ Pride 波士頓馬拉松完賽徽章"
                 fill
                 sizes="(max-width: 1023px) 100vw, 45vw"
-                className="object-cover"
+                className="-translate-x-[8%] scale-[1.12] object-cover"
               />
             </div>
             <div className="flex flex-col justify-center p-6 sm:p-8 lg:p-10">
