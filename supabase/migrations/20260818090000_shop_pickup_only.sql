@@ -1,6 +1,15 @@
-update public.shop_products
-set video = '', updated_at = now()
-where id = '3';
+-- 商城目前只提供跑班自取；課程報名仍維持獨立的銀行匯款核對流程。
+-- 保留舊付款值供歷史訂單讀取，但新訂單一律由資料庫函式寫入 pickup。
+
+alter table public.shop_orders
+  drop constraint if exists shop_orders_payment_method_check;
+
+alter table public.shop_orders
+  add constraint shop_orders_payment_method_check
+  check (payment_method in ('bank_transfer', 'manual_review', 'pickup'));
+
+alter table public.shop_orders
+  alter column payment_method set default 'pickup';
 
 create or replace function public.create_shop_order_with_stock(
   p_order_number text,
@@ -31,12 +40,35 @@ begin
   end if;
 
   insert into public.shop_orders (
-    order_number, user_id, customer_name, contact, email, fulfillment_note,
-    item_count, status, payment_method, payment_reference, inventory_reserved
+    order_number,
+    user_id,
+    customer_name,
+    contact,
+    email,
+    fulfillment_note,
+    item_count,
+    status,
+    payment_method,
+    payment_reference,
+    payment_account_id,
+    payment_account_label,
+    inventory_reserved
   ) values (
-    p_order_number, p_user_id, p_customer_name, p_contact, p_email, p_fulfillment_note,
-    0, 'pending_transfer', 'pickup', '', true
-  ) returning * into v_order;
+    p_order_number,
+    p_user_id,
+    p_customer_name,
+    p_contact,
+    p_email,
+    p_fulfillment_note,
+    0,
+    'pending_transfer',
+    'pickup',
+    '',
+    null,
+    '',
+    true
+  )
+  returning * into v_order;
 
   for v_item in select value from jsonb_array_elements(p_items) as item(value)
   loop
@@ -55,7 +87,8 @@ begin
     end if;
 
     update public.shop_products
-    set stock_quantity = stock_quantity - v_quantity, updated_at = now()
+    set stock_quantity = stock_quantity - v_quantity,
+        updated_at = now()
     where id = v_product_id
       and active = true
       and price > 0
@@ -70,10 +103,23 @@ begin
     end if;
 
     insert into public.shop_order_items (
-      order_id, product_id, name, quantity, price, image, variant_id, size
+      order_id,
+      product_id,
+      name,
+      quantity,
+      price,
+      image,
+      variant_id,
+      size
     ) values (
-      v_order.id, v_product.id, v_product.name, v_quantity, v_product.price,
-      v_product.image, coalesce(v_variant_id, ''), coalesce(v_size, '')
+      v_order.id,
+      v_product.id,
+      v_product.name,
+      v_quantity,
+      v_product.price,
+      v_product.image,
+      coalesce(v_variant_id, ''),
+      coalesce(v_size, '')
     );
 
     v_item_count := v_item_count + v_quantity;
@@ -85,7 +131,9 @@ begin
   end if;
 
   update public.shop_orders
-  set item_count = v_item_count, subtotal = v_subtotal, total_amount = v_subtotal
+  set item_count = v_item_count,
+      subtotal = v_subtotal,
+      total_amount = v_subtotal
   where id = v_order.id
   returning * into v_order;
 
@@ -96,8 +144,8 @@ begin
     'status', v_order.status,
     'subtotal', v_order.subtotal,
     'totalAmount', v_order.total_amount,
-    'paymentReference', v_order.payment_reference,
-    'paymentChannelLabel', v_order.payment_account_label
+    'paymentReference', '',
+    'paymentChannelLabel', '跑班自取'
   );
 end;
 $$;

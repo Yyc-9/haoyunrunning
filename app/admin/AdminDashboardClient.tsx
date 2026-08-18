@@ -625,7 +625,7 @@ export default function AdminDashboardClient() {
                       <div key={order.id} className="rounded-2xl bg-apple-gray-100 p-4">
                         <p className="font-bold text-apple-gray-900">{order.studentName}</p>
                         <p className="mt-1 text-sm text-apple-gray-600">
-                          {order.orderKind === 'shop' ? order.orderNumber : order.courseName || '未填寫課程'} · 後五碼 {order.transferLastFive || '-'}
+                          {order.orderKind === 'shop' ? `${order.orderNumber} · 跑班自取` : `${order.courseName || '未填寫課程'} · 後五碼 ${order.transferLastFive || '-'}`}
                         </p>
                       </div>
                     ))}
@@ -1058,7 +1058,7 @@ export default function AdminDashboardClient() {
 	              <div className="apple-card overflow-hidden">
 	                <div className="border-b border-black/10 p-5">
 	                  <h2 className="text-xl font-black text-apple-gray-900">收款帳戶池</h2>
-	                  <p className="mt-1 text-sm text-apple-gray-600">活躍帳戶會被新商城訂單隨機分配。</p>
+	                  <p className="mt-1 text-sm text-apple-gray-600">僅供課程匯款核對使用；商城訂單一律採跑班自取，不會分配匯款帳戶。</p>
 	                </div>
 	                {data.paymentAccounts.length === 0 ? (
 	                  <div className="p-10 text-center text-sm font-semibold text-apple-gray-500">

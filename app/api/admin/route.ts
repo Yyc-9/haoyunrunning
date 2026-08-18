@@ -586,7 +586,6 @@ export async function GET(request: NextRequest) {
   const coursePaymentOrders = orders.filter((order) => order.source === 'course_payment')
 
   const profilesById = new Map(profiles.map((profile) => [profile.id, profile]))
-  const paymentAccountsById = new Map(paymentAccounts.map((account) => [account.id, account]))
   const shopItemsByOrder = new Map<string, ShopOrderItemRow[]>()
   shopOrderItems.forEach((item) => {
     shopItemsByOrder.set(item.order_id, [...(shopItemsByOrder.get(item.order_id) ?? []), item])
@@ -770,7 +769,6 @@ export async function GET(request: NextRequest) {
   })
 
   const shopDashboardOrders = shopOrders.map((order) => {
-    const account = order.payment_account_id ? paymentAccountsById.get(order.payment_account_id) : null
     const orderItems = shopItemsByOrder.get(order.id) ?? []
 
     return {
@@ -789,11 +787,9 @@ export async function GET(request: NextRequest) {
       submittedAt: order.payment_submitted_at || order.created_at,
       notes: order.fulfillment_note || '',
       reviewNote: order.review_note,
-      paymentReference: order.payment_reference || order.order_number,
-      paymentChannelLabel: order.payment_account_label || account?.label || '',
-      assignedAccount: account
-        ? `${account.label}｜${account.bank_name}${account.bank_code ? `(${account.bank_code})` : ''}｜${account.account_name}｜${account.account_number}`
-        : '未分配收款帳戶',
+      paymentReference: '',
+      paymentChannelLabel: '跑班自取',
+      assignedAccount: '不適用（跑班自取）',
       inventoryReserved: order.inventory_reserved ?? true,
       items: orderItems.map((item) => {
         const option = [item.variant_id, item.size ? `尺碼 ${item.size}` : ''].filter(Boolean).join(' / ')
@@ -1576,18 +1572,16 @@ export async function PATCH(request: NextRequest) {
     if (!orderId) {
       return json({ error: '缺少訂單 ID。' }, { status: 400 })
     }
-    if (requestedStatus === 'approved') {
-      return json({ error: '「已確認入帳」只能透過銀行對帳，由財務確認後寫入。' }, { status: 409 })
-    }
-    if (requestedStatus !== 'rejected') {
-      return json({ error: `這裡只能將${orderKind === 'shop' ? '訂單' : '課程報名'}標記為「匯款資料需補充」。` }, { status: 400 })
-    }
-
-    const finalReviewNote = reviewNote || (orderKind === 'shop'
-      ? '匯款資料有異常，請補充資料或由財務重新對帳。'
-      : '匯款資料有異常，請補充資料或由財務重新核對。')
 
     if (orderKind === 'shop') {
+      if (!['approved', 'rejected'].includes(requestedStatus)) {
+        return json({ error: '商城訂單只能確認跑班自取或標記為需聯絡顧客。' }, { status: 400 })
+      }
+
+      const finalReviewNote = reviewNote || (requestedStatus === 'approved'
+        ? '已確認跑班自取，請依團隊通知取貨。'
+        : '請聯絡顧客補充或確認自取安排。')
+
       const { data: currentOrder, error: currentOrderError } = await supabaseAdmin!
         .from('shop_orders')
         .select('id, status, inventory_reserved')
@@ -1596,6 +1590,29 @@ export async function PATCH(request: NextRequest) {
 
       if (currentOrderError || !currentOrder) {
         return json({ error: currentOrderError?.message || '找不到商城訂單。' }, { status: 404 })
+      }
+
+      if (requestedStatus === 'approved') {
+        const { data: order, error } = await supabaseAdmin!
+          .from('shop_orders')
+          .update({
+            status: 'approved',
+            payment_method: 'pickup',
+            payment_reference: '',
+            payment_account_id: null,
+            payment_account_label: '',
+            reviewed_at: new Date().toISOString(),
+            review_note: finalReviewNote,
+          })
+          .eq('id', orderId)
+          .select('*')
+          .single()
+
+        if (error || !order) {
+          return json({ error: error?.message || '商城訂單更新失敗。' }, { status: 500 })
+        }
+
+        return json({ order, message: finalReviewNote })
       }
 
       const { data: orderItems, error: itemsError } = await supabaseAdmin!
@@ -1629,6 +1646,10 @@ export async function PATCH(request: NextRequest) {
         .from('shop_orders')
         .update({
           status: 'rejected',
+          payment_method: 'pickup',
+          payment_reference: '',
+          payment_account_id: null,
+          payment_account_label: '',
           reviewed_at: new Date().toISOString(),
           review_note: finalReviewNote,
           inventory_reserved: false,
@@ -1643,6 +1664,15 @@ export async function PATCH(request: NextRequest) {
 
       return json({ order, message: finalReviewNote })
     }
+
+    if (requestedStatus === 'approved') {
+      return json({ error: '「已確認入帳」只能透過銀行對帳，由財務確認後寫入。' }, { status: 409 })
+    }
+    if (requestedStatus !== 'rejected') {
+      return json({ error: '這裡只能將課程報名標記為「匯款資料需補充」。' }, { status: 400 })
+    }
+
+    const finalReviewNote = reviewNote || '匯款資料有異常，請補充資料或由財務重新核對。'
 
     const courseReviewResult = await supabaseAdmin!
       .from('signup_leads')

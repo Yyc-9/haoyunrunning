@@ -546,7 +546,10 @@ alter table public.shop_orders
 add column if not exists total_amount integer not null default 0;
 
 alter table public.shop_orders
-add column if not exists payment_method text not null default 'bank_transfer';
+add column if not exists payment_method text not null default 'pickup';
+
+alter table public.shop_orders
+alter column payment_method set default 'pickup';
 
 alter table public.shop_orders
 add column if not exists payment_reference text not null default '';
@@ -565,7 +568,7 @@ drop constraint if exists shop_orders_payment_method_check;
 
 alter table public.shop_orders
 add constraint shop_orders_payment_method_check
-check (payment_method in ('bank_transfer', 'manual_review'));
+check (payment_method in ('bank_transfer', 'manual_review', 'pickup'));
 
 alter table public.shop_order_items
 add column if not exists variant_id text not null default '';
@@ -658,7 +661,6 @@ set search_path = public
 as $$
 declare
   v_order public.shop_orders%rowtype;
-  v_account public.shop_payment_accounts%rowtype;
   v_product public.shop_products%rowtype;
   v_item jsonb;
   v_product_id text;
@@ -672,13 +674,6 @@ begin
     raise exception '購物車資料格式無效。';
   end if;
 
-  select *
-  into v_account
-  from public.shop_payment_accounts
-  where active = true
-  order by random() * greatest(weight, 1) desc
-  limit 1;
-
   insert into public.shop_orders (
     order_number,
     user_id,
@@ -690,8 +685,6 @@ begin
     status,
     payment_method,
     payment_reference,
-    payment_account_id,
-    payment_account_label,
     inventory_reserved
   ) values (
     p_order_number,
@@ -702,10 +695,8 @@ begin
     p_fulfillment_note,
     0,
     'pending_transfer',
-    'bank_transfer',
-    p_order_number,
-    v_account.id,
-    coalesce(v_account.label, ''),
+    'pickup',
+    '',
     true
   )
   returning * into v_order;
@@ -772,12 +763,6 @@ begin
       total_amount = v_subtotal
   where id = v_order.id
   returning * into v_order;
-
-  if v_account.id is not null then
-    update public.shop_payment_accounts
-    set last_assigned_at = now()
-    where id = v_account.id;
-  end if;
 
   return jsonb_build_object(
     'id', v_order.id,

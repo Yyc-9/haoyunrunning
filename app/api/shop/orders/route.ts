@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { getCartProductId } from '@/lib/shop-products'
-import { createOrderAccessToken, verifyOrderAccessToken } from '@/lib/order-access'
+import { createOrderAccessToken } from '@/lib/order-access'
 
 type OrderItemInput = {
   id?: string
@@ -20,12 +20,6 @@ type OrderBody = {
   email?: string
   fulfillmentNote?: string
   items?: OrderItemInput[]
-}
-
-type TransferBody = {
-  orderId?: string
-  accessToken?: string
-  transferLastFive?: string
 }
 
 function cleanText(value: unknown) {
@@ -77,18 +71,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '購物車沒有可提交的商品。' }, { status: 400 })
   }
 
-  const { count: activePaymentAccounts, error: paymentAccountError } = await supabaseAdmin
-    .from('shop_payment_accounts')
-    .select('id', { count: 'exact', head: true })
-    .eq('active', true)
-
-  if (paymentAccountError) {
-    return NextResponse.json({ error: '目前無法確認商店匯款帳戶，請稍後再試。' }, { status: 503 })
-  }
-  if ((activePaymentAccounts ?? 0) < 1) {
-    return NextResponse.json({ error: '目前尚未設定商店匯款帳戶，請透過官方 Instagram 聯絡好運。' }, { status: 503 })
-  }
-
   const { data, error } = await supabaseAdmin.rpc('create_shop_order_with_stock', {
     p_order_number: createOrderNumber(),
     p_user_id: user?.id ?? null,
@@ -119,102 +101,31 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '訂單已建立，但安全憑證產生失敗，請聯絡客服。' }, { status: 500 })
   }
 
-  // The RPC only returns the account label. Fetch the assigned account with the
-  // service role so the customer can complete the same bank-transfer workflow
-  // as course enrolments, without exposing any account list or service secret.
-  let paymentAccount: {
-    label: string
-    accountName: string
-    bankName: string
-    bankCode: string
-    accountNumber: string
-  } | null = null
-  let paymentAccountId = cleanText(order.paymentAccountId ?? order.payment_account_id)
-  let paymentReference = cleanText(order.paymentReference ?? order.payment_reference)
-  let paymentChannelLabel = cleanText(order.paymentChannelLabel ?? order.payment_account_label)
-  if (!paymentAccountId || !paymentReference) {
-    const { data: savedOrder } = await supabaseAdmin
-      .from('shop_orders')
-      .select('payment_reference, payment_account_id, payment_account_label')
-      .eq('id', orderId)
-      .maybeSingle()
-    paymentAccountId ||= cleanText(savedOrder?.payment_account_id)
-    paymentReference ||= cleanText(savedOrder?.payment_reference)
-    paymentChannelLabel ||= cleanText(savedOrder?.payment_account_label)
-  }
-  if (paymentAccountId) {
-    const { data: account } = await supabaseAdmin
-      .from('shop_payment_accounts')
-      .select('label, account_name, bank_name, bank_code, account_number')
-      .eq('id', paymentAccountId)
-      .maybeSingle()
-    if (account) {
-      paymentAccount = {
-        label: account.label,
-        accountName: account.account_name,
-        bankName: account.bank_name,
-        bankCode: account.bank_code,
-        accountNumber: account.account_number,
-      }
-    }
+  // Keep old database functions compatible while ensuring every new shop order
+  // is pickup-only and never carries a bank account or remittance reference.
+  const { error: pickupUpdateError } = await supabaseAdmin
+    .from('shop_orders')
+    .update({
+      payment_method: 'pickup',
+      payment_reference: '',
+      payment_account_id: null,
+      payment_account_label: '',
+    })
+    .eq('id', orderId)
+  if (pickupUpdateError) {
+    return NextResponse.json({ error: '訂單已建立，但自取方式資料寫入失敗，請聯絡好運協助處理。' }, { status: 500 })
   }
 
   return NextResponse.json({
     order: {
       ...order,
-      paymentReference,
-      paymentChannelLabel,
-      paymentAccount,
+      paymentMethod: 'pickup',
+      fulfillmentMethod: 'pickup',
       accessToken,
     },
   })
 }
 
-export async function PATCH(request: NextRequest) {
-  if (!supabaseAdmin) {
-    return NextResponse.json({ error: 'Supabase 尚未設定。' }, { status: 500 })
-  }
-
-  const body = (await request.json().catch(() => ({}))) as TransferBody
-  const orderId = cleanText(body.orderId)
-  const accessToken = cleanText(body.accessToken)
-  const transferLastFive = cleanText(body.transferLastFive)
-
-  if (!orderId) {
-    return NextResponse.json({ error: '缺少訂單 ID。' }, { status: 400 })
-  }
-
-  if (!verifyOrderAccessToken(orderId, accessToken)) {
-    return NextResponse.json({ error: '訂單安全憑證無效，請重新提交訂單。' }, { status: 403 })
-  }
-
-  if (!/^\d{5}$/.test(transferLastFive)) {
-    return NextResponse.json({ error: '銀行帳號後五碼必須是 5 位數字。' }, { status: 400 })
-  }
-
-  const { data, error } = await supabaseAdmin
-    .from('shop_orders')
-    .update({
-      transfer_last_five: transferLastFive,
-      payment_submitted_at: new Date().toISOString(),
-      status: 'pending_review',
-    })
-    .eq('id', orderId)
-    .in('status', ['pending_transfer', 'pending_review'])
-    .select('id, order_number, status, transfer_last_five, payment_submitted_at')
-    .single()
-
-  if (error || !data) {
-    return NextResponse.json({ error: error?.message || '訂單付款資料更新失敗。' }, { status: 500 })
-  }
-
-  return NextResponse.json({
-    order: {
-      id: data.id,
-      orderNumber: data.order_number,
-      status: data.status,
-      transferLastFive: data.transfer_last_five,
-      paymentSubmittedAt: data.payment_submitted_at,
-    },
-  })
+export async function PATCH() {
+  return NextResponse.json({ error: '商城目前僅提供跑班自取，未開放銀行匯款。' }, { status: 410 })
 }
