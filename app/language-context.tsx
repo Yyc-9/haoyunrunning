@@ -5,6 +5,7 @@ import { defaultLanguage, dictionary, type Dictionary, type Language } from '@/l
 import {
   createLocalizationMemory,
   localizeRememberedValue,
+  type LazyLanguageConverter,
   type LocalizationMemory,
 } from '@/lib/language-dom'
 import { toSimplifiedWebsiteText } from '@/lib/traditional-chinese'
@@ -23,6 +24,7 @@ function convertVisibleText(
   root: ParentNode,
   language: Language,
   memory: LocalizationMemory,
+  converter?: LazyLanguageConverter,
 ) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
@@ -44,6 +46,7 @@ function convertVisibleText(
       node.nodeValue ?? '',
       language,
       memory,
+      converter,
     )
     if (node.nodeValue !== nextValue) node.nodeValue = nextValue
   })
@@ -65,6 +68,7 @@ function convertVisibleText(
         value,
         language,
         memory,
+        converter,
       )
       if (value !== nextValue) element.setAttribute(attribute, nextValue)
     })
@@ -74,6 +78,7 @@ function convertVisibleText(
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>(defaultLanguage)
   const localizationMemory = useRef(createLocalizationMemory()).current
+  const converterRef = useRef<LazyLanguageConverter | undefined>(undefined)
 
   useEffect(() => {
     const storedLanguage = window.localStorage.getItem('language')
@@ -89,8 +94,20 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     document.documentElement.lang = language
+    let cancelled = false
+    converterRef.current = undefined
+    if (language !== 'zh-TW') {
+      void import('@/lib/traditional-opencc').then((module) => {
+        if (cancelled) return
+        converterRef.current = {
+          toTraditional: module.toTraditionalWithOpenCC,
+          toSimplified: module.toSimplifiedWithOpenCC,
+        }
+        convertVisibleText(document.body, language, localizationMemory, converterRef.current)
+      })
+    }
     let frame = window.requestAnimationFrame(() => {
-      convertVisibleText(document.body, language, localizationMemory)
+      convertVisibleText(document.body, language, localizationMemory, converterRef.current)
     })
 
     const observer = new MutationObserver((mutations) => {
@@ -98,9 +115,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       frame = window.requestAnimationFrame(() => {
         mutations.forEach((mutation) => {
           if (mutation.target instanceof Element) {
-            convertVisibleText(mutation.target, language, localizationMemory)
+            convertVisibleText(mutation.target, language, localizationMemory, converterRef.current)
           } else if (mutation.target.parentElement) {
-            convertVisibleText(mutation.target.parentElement, language, localizationMemory)
+            convertVisibleText(mutation.target.parentElement, language, localizationMemory, converterRef.current)
           }
         })
       })
@@ -115,6 +132,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     })
 
     return () => {
+      cancelled = true
       window.cancelAnimationFrame(frame)
       observer.disconnect()
     }

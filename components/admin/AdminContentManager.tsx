@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowDown,
   ArrowUp,
+  Award,
   BadgeInfo,
   CalendarRange,
   CheckCircle2,
@@ -35,6 +36,8 @@ import { orderedWeekdays } from '@/lib/course-sort'
 import { defaultCourseBillingConfig, type CourseBillingConfig } from '@/lib/course-pricing'
 import type {
   AboutContent,
+  AchievementsContent,
+  AnniversaryContent,
   BrandContent,
   CourseOverride,
   CoursesPageContent,
@@ -77,7 +80,7 @@ type AdminContentManagerProps = {
   runAction: (id: string, action: Record<string, unknown>) => Promise<boolean>
 }
 
-type ContentMode = 'overview' | 'hero' | 'home' | 'activities' | 'schedule' | 'team' | 'seasons' | 'brand' | 'media' | 'about' | 'testimonials' | 'courses'
+type ContentMode = 'overview' | 'hero' | 'home' | 'activities' | 'schedule' | 'team' | 'seasons' | 'brand' | 'media' | 'about' | 'testimonials' | 'achievements' | 'anniversary' | 'courses'
 
 async function uploadSiteImage(file: File, folder: 'hero' | 'brand' | 'pages' | 'coaches') {
   if (!supabase) throw new Error('圖片服務尚未設定。')
@@ -300,6 +303,8 @@ export default function AdminContentManager({ content, courses, seasons, scope =
   const [coursesPage, setCoursesPage] = useState<CoursesPageContent>(content.coursesPage)
   const [testimonials, setTestimonials] = useState<TestimonialsContent>(content.testimonials)
   const [team, setTeam] = useState<TeamContent>(content.team)
+  const [achievements, setAchievements] = useState<AchievementsContent>(content.achievements)
+  const [anniversary, setAnniversary] = useState<AnniversaryContent>(content.anniversary)
   const [coachDrafts, setCoachDrafts] = useState<Record<string, CoachPublicProfile>>(content.coachProfiles)
   const [pageMedia, setPageMedia] = useState<PageMedia>(content.pageMedia)
   const currentSeason = seasons.find((season) => season.isCurrent) ?? seasons[0] ?? null
@@ -337,6 +342,8 @@ export default function AdminContentManager({ content, courses, seasons, scope =
     setCoursesPage(content.coursesPage)
     setTestimonials(content.testimonials)
     setTeam(content.team)
+    setAchievements(content.achievements)
+    setAnniversary(content.anniversary)
     setCoachDrafts(content.coachProfiles)
     setPageMedia(content.pageMedia)
   }, [content])
@@ -406,6 +413,8 @@ export default function AdminContentManager({ content, courses, seasons, scope =
     { id: 'media' as const, label: '商店與週年', description: '主視覺與商店文案', destination: '商店與週年活動頁', icon: ImageIcon },
     { id: 'about' as const, label: '關於我們', description: '品牌故事與對象', destination: '關於我們完整頁面', icon: Sparkles },
     { id: 'testimonials' as const, label: '學員見證', description: '首屏、影片與成長路徑', destination: '學員見證完整頁面', icon: FileText },
+    { id: 'achievements' as const, label: '榮耀徽章', description: '系列文案與圖片', destination: '榮耀徽章完整頁面', icon: Award },
+    { id: 'anniversary' as const, label: '週年活動', description: '活動文案與報名提示', destination: '週年活動頁', icon: Sparkles },
     { id: 'courses' as const, label: '課程資料', description: '班級日期與內容', destination: '首頁、日程表、課程詳情與網站報名表', icon: ShoppingBag },
   ]
   const modes = allModes.filter((item) => scope === 'seasons'
@@ -418,7 +427,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
       ]
     : [
         { label: '首頁與活動', ids: ['overview', 'hero', 'home', 'activities'] as ContentMode[] },
-        { label: '公開頁面', ids: ['schedule', 'team', 'about', 'testimonials', 'media'] as ContentMode[] },
+        { label: '公開頁面', ids: ['schedule', 'team', 'about', 'testimonials', 'achievements', 'anniversary', 'media'] as ContentMode[] },
         { label: '全站設定', ids: ['brand'] as ContentMode[] },
       ]).map((group) => ({
     ...group,
@@ -970,6 +979,79 @@ export default function AdminContentManager({ content, courses, seasons, scope =
             </div>
             </div>
             <div className="border-t border-black/10 p-5">{actionBar(() => { setTestimonials(content.testimonials); setPageMedia(content.pageMedia) }, multiSaveButton('save-testimonials', [{ section: 'testimonials_content', value: testimonials }, { section: 'page_media', value: pageMedia }]))}</div>
+          </div>
+        ) : null}
+
+        {mode === 'achievements' ? (
+          <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
+            {panelHeader('榮耀徽章', '管理榮耀徽章頁面目前使用的主視覺、系列文案、紀念卡與申請說明。', '/achievements')}
+            <div className="space-y-8 p-5">
+              <section>
+                <h3 className="mb-4 text-lg font-black">首屏與起源</h3>
+                <ImageField label="榮耀徽章首屏圖片" value={achievements.heroImage} folder="pages" onChange={(heroImage) => setAchievements((current) => ({ ...current, heroImage }))} onError={setLocalError} />
+                <ImageField label="THE ORIGIN 圖片" value={achievements.originImage} folder="pages" aspectRatio={6 / 7} aspectLabel="6:7" onChange={(originImage) => setAchievements((current) => ({ ...current, originImage }))} onError={setLocalError} />
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  {([['heroLabel', '首屏小標'], ['heroTitle', '首屏標題（可用換行）'], ['heroStrapline', '首屏短句'], ['heroDescription', '首屏說明'], ['originLabel', '起源小標'], ['originTitle', '起源標題'], ['collectionLabel', '系列小標'], ['collectionTitle', '系列標題'], ['collectionDescription', '系列說明']] as const).map(([key, label]) => (
+                    <Field key={key} label={label} wide={['heroTitle', 'heroDescription', 'originTitle', 'collectionDescription'].includes(key)}>
+                      {['heroDescription', 'collectionDescription'].includes(key) ? <textarea rows={3} value={achievements[key]} onChange={(event) => setAchievements((current) => ({ ...current, [key]: event.target.value }))} className="apple-input resize-y" /> : <input value={achievements[key]} onChange={(event) => setAchievements((current) => ({ ...current, [key]: event.target.value }))} className="apple-input" />}
+                    </Field>
+                  ))}
+                  <Field label="起源段落（每行一段）" wide><textarea rows={8} value={achievements.originParagraphs.join('\n')} onChange={(event) => setAchievements((current) => ({ ...current, originParagraphs: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean).slice(0, 5) }))} className="apple-input resize-y" /></Field>
+                </div>
+              </section>
+
+              <section className="border-t border-black/10 pt-7">
+                <h3 className="mb-3 text-lg font-black">全系列五款徽章</h3>
+                <div className="space-y-4">
+                  {achievements.badges.map((badge, index) => (
+                    <div key={badge.slug} className="rounded-xl border border-black/10 bg-apple-gray-50 p-4">
+                      <ImageField label={`${index + 1}. ${badge.standard}圖片`} value={badge.image} folder="pages" aspectRatio={2 / 3} aspectLabel="2:3" onChange={(image) => setAchievements((current) => ({ ...current, badges: current.badges.map((item, itemIndex) => itemIndex === index ? { ...item, image } : item) }))} onError={setLocalError} />
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <input value={badge.standard} onChange={(event) => setAchievements((current) => ({ ...current, badges: current.badges.map((item, itemIndex) => itemIndex === index ? { ...item, standard: event.target.value } : item) }))} className="apple-input" placeholder="達標標準" />
+                        <input value={badge.name} onChange={(event) => setAchievements((current) => ({ ...current, badges: current.badges.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item) }))} className="apple-input" placeholder="徽章名稱" />
+                        <textarea rows={3} value={badge.description} onChange={(event) => setAchievements((current) => ({ ...current, badges: current.badges.map((item, itemIndex) => itemIndex === index ? { ...item, description: event.target.value } : item) }))} className="apple-input resize-y" placeholder="設計說明" />
+                        <textarea rows={3} value={badge.story} onChange={(event) => setAchievements((current) => ({ ...current, badges: current.badges.map((item, itemIndex) => itemIndex === index ? { ...item, story: event.target.value } : item) }))} className="apple-input resize-y" placeholder="象徵故事" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="border-t border-black/10 pt-7">
+                <h3 className="mb-3 text-lg font-black">BQ Pride 與紀念卡</h3>
+                <ImageField label="BQ Pride 主圖" value={achievements.bqImage} folder="pages" onChange={(bqImage) => setAchievements((current) => ({ ...current, bqImage }))} onError={setLocalError} />
+                <ImageField label="如何取得主圖" value={achievements.howToImage} folder="pages" aspectRatio={1} aspectLabel="1:1" onChange={(howToImage) => setAchievements((current) => ({ ...current, howToImage }))} onError={setLocalError} />
+                <div className="grid gap-4 md:grid-cols-2">
+                  {([['bqLabel', 'BQ 小標'], ['bqTitle', 'BQ 標題'], ['bqSubtitle', 'BQ 副標'], ['bqDescription', 'BQ 說明'], ['bqQualification', 'BQ 申請資格'], ['milestoneLabel', '紀念卡小標'], ['milestoneTitle', '紀念卡標題'], ['milestoneDescription', '紀念卡說明'], ['howToLabel', '申請方式小標'], ['howToTitle', '申請方式標題'], ['verifiedTitle', '核對標題'], ['verifiedDescription', '核對說明'], ['accountTitle', '帳戶區標題'], ['accountDescription', '帳戶區說明'], ['accountCta', '帳戶按鈕文字']] as const).map(([key, label]) => (
+                    <Field key={key} label={label} wide={['bqDescription', 'bqQualification', 'milestoneDescription', 'howToTitle', 'verifiedDescription', 'accountDescription'].includes(key)}>
+                      {['bqDescription', 'bqQualification', 'milestoneDescription', 'verifiedDescription', 'accountDescription'].includes(key) ? <textarea rows={3} value={achievements[key]} onChange={(event) => setAchievements((current) => ({ ...current, [key]: event.target.value }))} className="apple-input resize-y" /> : <input value={achievements[key]} onChange={(event) => setAchievements((current) => ({ ...current, [key]: event.target.value }))} className="apple-input" />}
+                    </Field>
+                  ))}
+                  <Field label="申請步驟（每行一項）" wide><textarea rows={6} value={achievements.howToSteps.join('\n')} onChange={(event) => setAchievements((current) => ({ ...current, howToSteps: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean).slice(0, 5) }))} className="apple-input resize-y" /></Field>
+                  <Field label="申請補充說明" wide><textarea rows={4} value={achievements.howToNote} onChange={(event) => setAchievements((current) => ({ ...current, howToNote: event.target.value }))} className="apple-input resize-y" /></Field>
+                </div>
+                <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+                  {achievements.milestones.map((item, index) => <ImageField key={index} label={`紀念卡 ${index + 1}`} value={item.image} folder="pages" aspectRatio={3 / 4} aspectLabel="3:4" onChange={(image) => setAchievements((current) => ({ ...current, milestones: current.milestones.map((entry, itemIndex) => itemIndex === index ? { ...entry, image } : entry) }))} onError={setLocalError} />)}
+                </div>
+              </section>
+            </div>
+            <div className="border-t border-black/10 p-5">{actionBar(() => setAchievements(content.achievements), saveButton('save-achievements', 'achievements_content', achievements))}</div>
+          </div>
+        ) : null}
+
+        {mode === 'anniversary' ? (
+          <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
+            {panelHeader('週年活動', '管理週年活動頁目前展示的文案與意向表單提示；活動報名資料仍由既有表單流程處理。', '/anniversary')}
+            <div className="grid gap-4 p-5 md:grid-cols-2">
+              {([['label', '活動小標'], ['title', '活動標題'], ['status', '活動狀態'], ['subtitle', '活動說明'], ['noticeTitle', '狀態小標'], ['noticeDescription', '狀態說明'], ['secondaryCta', '返回按鈕'], ['contactCta', 'Instagram 按鈕'], ['formCta', '查看課程按鈕'], ['formLabel', '表單小標'], ['formTitle', '表單標題'], ['formDescription', '表單說明'], ['companionLabel', '同行人數欄位']] as const).map(([key, label]) => (
+                <Field key={key} label={label} wide={['subtitle', 'noticeDescription', 'formDescription'].includes(key)}>
+                  {['subtitle', 'noticeDescription', 'formDescription'].includes(key) ? <textarea rows={4} value={anniversary[key]} onChange={(event) => setAnniversary((current) => ({ ...current, [key]: event.target.value }))} className="apple-input resize-y" /> : <input value={anniversary[key]} onChange={(event) => setAnniversary((current) => ({ ...current, [key]: event.target.value }))} className="apple-input" />}
+                </Field>
+              ))}
+              <Field label="亮點（每行一項）" wide><textarea rows={4} value={anniversary.highlights.join('\n')} onChange={(event) => setAnniversary((current) => ({ ...current, highlights: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean).slice(0, 6) }))} className="apple-input resize-y" /></Field>
+              <Field label="同行人數選項（每行一項）" wide><textarea rows={4} value={anniversary.companionOptions.join('\n')} onChange={(event) => setAnniversary((current) => ({ ...current, companionOptions: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean).slice(0, 8) }))} className="apple-input resize-y" /></Field>
+            </div>
+            <div className="border-t border-black/10 p-5">{actionBar(() => setAnniversary(content.anniversary), saveButton('save-anniversary', 'anniversary_content', anniversary))}</div>
           </div>
         ) : null}
 

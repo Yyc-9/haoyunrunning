@@ -158,9 +158,11 @@ export default function CoachDutyPanel() {
     const refresh = () => { if (document.visibilityState === 'visible') void load(true) }
     window.addEventListener('focus', refresh)
     document.addEventListener('visibilitychange', refresh)
+    const timer = window.setInterval(refresh, 45_000)
     return () => {
       window.removeEventListener('focus', refresh)
       document.removeEventListener('visibilitychange', refresh)
+      window.clearInterval(timer)
     }
   }, [load])
 

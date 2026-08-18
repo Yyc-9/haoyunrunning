@@ -1,5 +1,3 @@
-import { Converter } from 'opencc-js'
-
 export const simplifiedToTraditionalPhrases: ReadonlyArray<readonly [string, string]> = [
   ['喜欢', '喜歡'],
   ['挑战赛', '挑戰賽'],
@@ -62,6 +60,12 @@ export const simplifiedToTraditionalPhrases: ReadonlyArray<readonly [string, str
   ['旧生', '舊生'],
   ['网银', '網銀'],
   ['备注', '備註'],
+  ['网站内容', '網站內容'],
+  ['团队阵容', '團隊陣容'],
+  ['图片轮播', '圖片輪播'],
+  ['档案预览', '檔案預覽'],
+  ['四周年纪念', '四週年紀念'],
+  ['跑者的成长路径', '跑者的成長路徑'],
 ]
 
 const simplifiedToTraditionalCharacters: ReadonlyArray<readonly [string, string]> = [
@@ -90,18 +94,16 @@ const simplifiedToTraditionalCharacters: ReadonlyArray<readonly [string, string]
   ['们', '們'], ['压', '壓'], ['质', '質'], ['帮', '幫'], ['达', '達'], ['发', '發'],
   ['与', '與'], ['发', '發'], ['达', '達'], ['获', '獲'], ['奖', '獎'], ['项', '項'],
   ['称', '稱'], ['应', '應'], ['仅', '僅'], ['届', '屆'], ['届', '屆'], ['笔', '筆'],
+  ['网', '網'], ['内', '內'], ['阵', '陣'], ['图', '圖'], ['轮', '輪'], ['档', '檔'],
+  ['预', '預'], ['览', '覽'], ['周', '週'], ['纪', '紀'], ['径', '徑'],
 ]
 
 const conversionPairs = [...simplifiedToTraditionalPhrases, ...simplifiedToTraditionalCharacters]
   .sort((a, b) => b[0].length - a[0].length)
 
-const simplifiedToTaiwanTraditional = Converter({ from: 'cn', to: 'tw' })
-const taiwanTraditionalToSimplified = Converter({ from: 'tw', to: 'cn' })
-
 export function toTraditionalWebsiteText(value: string) {
   const curated = conversionPairs.reduce((text, [from, to]) => text.replaceAll(from, to), value)
-  return simplifiedToTaiwanTraditional(curated)
-    .replaceAll('馬拉鬆', '馬拉松')
+  return curated.replaceAll('馬拉鬆', '馬拉松')
 }
 
 const traditionalToSimplifiedPairs = [...simplifiedToTraditionalPhrases, ...simplifiedToTraditionalCharacters]
@@ -110,6 +112,5 @@ const traditionalToSimplifiedPairs = [...simplifiedToTraditionalPhrases, ...simp
 
 export function toSimplifiedWebsiteText(value: string) {
   const curated = traditionalToSimplifiedPairs.reduce((text, [from, to]) => text.replaceAll(from, to), value)
-  return taiwanTraditionalToSimplified(curated)
-    .replaceAll('马拉鬆', '马拉松')
+  return curated.replaceAll('马拉鬆', '马拉松')
 }

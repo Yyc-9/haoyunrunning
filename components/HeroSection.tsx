@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ChevronDown, ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
@@ -14,7 +15,7 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isAutoPlay, setIsAutoPlay] = useState(true)
   const { t } = useLanguage()
-  const { heroSlides: syncedImages, hasSyncedContent } = useSiteContent()
+  const { heroSlides: syncedImages, hasSyncedContent, brand, home } = useSiteContent()
   const images = hasSyncedContent ? syncedImages : initialImages
 
   useEffect(() => {
@@ -62,6 +63,15 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
           />
         ))}
         <div className="absolute inset-0 bg-black/10" />
+      </div>
+
+      <div className="absolute inset-x-0 top-1/2 z-10 -translate-y-1/2 px-6 text-white sm:px-12 lg:px-20">
+        <div className="max-w-xl rounded-3xl bg-black/25 p-6 backdrop-blur-[2px] sm:p-8">
+          <p className="text-xs font-black uppercase tracking-[0.28em] text-white/80">{brand.brandName}</p>
+          <h1 className="mt-3 text-4xl font-black leading-tight sm:text-6xl">認識跑步，跑向更穩定的自己</h1>
+          <p className="mt-4 max-w-lg text-base leading-7 text-white/85 sm:text-lg">{home.coursesDescription}</p>
+          <Link href="/courses" className="mt-6 inline-flex min-h-11 items-center rounded-full bg-white px-6 text-sm font-black text-black transition hover:bg-white/90">{home.coursesCtaLabel}</Link>
+        </div>
       </div>
 
       <div className="absolute inset-x-0 top-1/2 z-10 flex -translate-y-1/2 justify-between px-4 sm:px-8">

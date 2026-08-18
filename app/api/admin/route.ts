@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { revalidateTag } from 'next/cache'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminProfile } from '@/lib/admin-auth'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
@@ -14,6 +15,8 @@ import {
   isSafePublicUrl,
   normalizeActivities,
   normalizeAboutContent,
+  normalizeAchievementsContent,
+  normalizeAnniversaryContent,
   normalizeBrandContent,
   normalizeCourseOverrides,
   normalizeCoursesPageContent,
@@ -493,7 +496,7 @@ export async function GET(request: NextRequest) {
     supabaseAdmin!
       .from('site_content')
       .select('key, value')
-      .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'courses_page_content', 'testimonials_content', 'team_content', 'page_media']),
+      .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'courses_page_content', 'testimonials_content', 'team_content', 'achievements_content', 'anniversary_content', 'page_media']),
     supabaseAdmin!
       .from('coach_invites')
       .select('id, code, coach_key, used_by, used_at, expires_at, created_at')
@@ -1925,6 +1928,10 @@ export async function PATCH(request: NextRequest) {
       value = normalizeTestimonialsContent(body.value)
     } else if (section === 'team_content') {
       value = normalizeTeamContent(body.value)
+    } else if (section === 'achievements_content') {
+      value = normalizeAchievementsContent(body.value)
+    } else if (section === 'anniversary_content') {
+      value = normalizeAnniversaryContent(body.value)
     } else if (section === 'page_media') {
       value = normalizePageMedia(body.value)
     } else {
@@ -1941,10 +1948,13 @@ export async function PATCH(request: NextRequest) {
       return json({ error: error?.message || '網站內容儲存失敗。' }, { status: 500 })
     }
 
+    revalidateTag('site-content')
+    if (section === 'hero_slides') revalidateTag('home-hero-slides')
+
     const { data: contentRows, error: contentRowsError } = await supabaseAdmin!
       .from('site_content')
       .select('key, value')
-      .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'courses_page_content', 'testimonials_content', 'team_content', 'page_media'])
+      .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'courses_page_content', 'testimonials_content', 'team_content', 'achievements_content', 'anniversary_content', 'page_media'])
 
     if (contentRowsError) {
       return json({ error: contentRowsError.message || '內容已儲存，但重新讀取失敗。' }, { status: 500 })

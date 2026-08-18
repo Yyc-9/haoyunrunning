@@ -131,6 +131,75 @@ export type TeamContent = {
   rosterTitle: string
 }
 
+export type AchievementBadgeContent = {
+  slug: string
+  standard: string
+  name: string
+  image: string
+  imageClassName?: string
+  description: string
+  story: string
+}
+
+export type AchievementMilestoneContent = {
+  image: string
+  alt: string
+}
+
+export type AchievementsContent = {
+  heroLabel: string
+  heroTitle: string
+  heroStrapline: string
+  heroDescription: string
+  heroImage: string
+  originImage: string
+  originLabel: string
+  originTitle: string
+  originParagraphs: string[]
+  collectionLabel: string
+  collectionTitle: string
+  collectionDescription: string
+  badges: AchievementBadgeContent[]
+  bqImage: string
+  bqLabel: string
+  bqTitle: string
+  bqSubtitle: string
+  bqDescription: string
+  bqQualification: string
+  milestoneLabel: string
+  milestoneTitle: string
+  milestoneDescription: string
+  milestones: AchievementMilestoneContent[]
+  howToLabel: string
+  howToTitle: string
+  howToSteps: string[]
+  howToNote: string
+  howToImage: string
+  verifiedTitle: string
+  verifiedDescription: string
+  accountTitle: string
+  accountDescription: string
+  accountCta: string
+}
+
+export type AnniversaryContent = {
+  label: string
+  title: string
+  status: string
+  subtitle: string
+  noticeTitle: string
+  noticeDescription: string
+  highlights: string[]
+  secondaryCta: string
+  contactCta: string
+  formCta: string
+  formLabel: string
+  formTitle: string
+  formDescription: string
+  companionLabel: string
+  companionOptions: string[]
+}
+
 export type PageMedia = {
   homeCoursesHero: string
   aboutPageHero: string
@@ -160,6 +229,8 @@ export type SiteContent = {
   coursesPage: CoursesPageContent
   testimonials: TestimonialsContent
   team: TeamContent
+  achievements: AchievementsContent
+  anniversary: AnniversaryContent
   pageMedia: PageMedia
   coachProfiles: CoachPublicProfileMap
 }
@@ -322,6 +393,107 @@ export const defaultTeamContent: TeamContent = {
   rosterTitle: '一起帶領每一次訓練',
 }
 
+const defaultAchievementBadges: AchievementBadgeContent[] = [
+  {
+    slug: 'full-sub3',
+    standard: '全馬 SUB 3',
+    name: '閃電征途',
+    image: '/achievements/2026/collection-full-sub3.jpg',
+    description: '閃電構成 SUB「3」，展現速度與爆發力；融入 U 型馬蹄鐵，象徵競速與好運並存。',
+    story: '星芒點綴其中，代表在挑戰中持續突破閃耀。',
+  },
+  {
+    slug: 'full-sub4',
+    standard: '全馬 SUB 4',
+    name: '成就之星',
+    image: '/achievements/2026/collection-full-sub4.jpg',
+    description: '放射光芒呈現 SUB4，象徵達標瞬間的榮耀時刻；光芒四射的設計，展現挑戰自我的能量。',
+    story: '每位跑者，都是為自己發光的一顆星。',
+  },
+  {
+    slug: 'half-sub100',
+    standard: '半馬 SUB 100',
+    name: '與影同行',
+    image: '/achievements/2026/collection-half-sub2.jpg',
+    description: '影子為主視覺，象徵一路上的陪伴與自我對話；SUB 字樣延伸形成「100」，代表為目標付出的努力。',
+    story: '你不孤單，陪你到終點的，是一路堅持的自己。',
+  },
+  {
+    slug: 'half-sub2',
+    standard: '半馬 SUB 2',
+    name: '飛躍跑道',
+    image: '/achievements/2026/collection-half-sub100.jpg',
+    description: '跑道造型呈現 SUB「2」，日復一日的累積與訓練；每一圈都是汗水與堅持的軌跡。',
+    story: '斜向延伸如展翅飛翔，突破極限持續向前。',
+  },
+]
+
+export const defaultAchievementsContent: AchievementsContent = {
+  heroLabel: 'SUB SERIES · SINCE 2025',
+  heroTitle: '好運跑班限定\nSUB 系列榮耀徽章',
+  heroStrapline: '每一步的汗水與堅持，都值得被紀念。',
+  heroDescription: '完成賽事、達標成績，即可依申請資格取得專屬徽章，收藏每一次突破自己的榮耀時刻。',
+  heroImage: '/achievements/2026/collection-cards.jpg',
+  originImage: '/achievements/2026/lifestyle-sub3.jpg',
+  originLabel: 'THE ORIGIN',
+  originTitle: 'SUB 系列榮耀徽章的誕生。',
+  originParagraphs: [
+    '始於 2025 年，好運跑班以跑者追逐目標的歷程為靈感，打造專屬於跑班成員的 SUB 系列榮耀徽章。',
+    '從 2025 年初開始企劃設計，歷經數個月的反覆討論與製作，於 2025 年 4 月完成首批實體徽章，並於同年 6 月好運跑班週年慶首次頒發給達成目標的跑班學員，正式開啟 SUB 系列的第一個里程碑。',
+    '整體設計採用黑、金、白三色，呈現簡約且高級的視覺風格，並以好運跑班 Logo 中具有代表性的 U 字馬蹄鐵作為系列核心元素，延伸出專屬於跑班的榮耀識別。每一款徽章皆融入不同的象徵圖騰，代表各自的挑戰與目標，讓每一次突破，都化為值得珍藏的榮耀。',
+    '自推出以來，SUB 系列陪伴許多跑者完成人生第一枚 SUB2、SUB4、突破 SUB3、達成 SUB100，甚至站上 BQ 的門檻。它所象徵的不只是完賽成績，更是無數個清晨、每一場訓練，以及一次次超越自我的見證。',
+    '對好運跑班而言，SUB 系列榮耀徽章從來不只是一件紀念品，而是一份對努力的肯定。每一枚徽章，都承載著跑者一路走來的汗水、堅持與成長，也希望陪伴每一位跑者，收藏屬於自己的榮耀時刻。',
+  ],
+  collectionLabel: 'THE COLLECTION',
+  collectionTitle: '全系列五款榮耀徽章',
+  collectionDescription: '四款對應全馬與半馬達標標準，第五款 BQ Pride 獻給完成波士頓馬拉松的跑者。',
+  badges: defaultAchievementBadges,
+  bqImage: '/achievements/2026/bq-pride-feature.jpg',
+  bqLabel: 'BOSTON MARATHON SPECIAL',
+  bqTitle: 'BQ Pride',
+  bqSubtitle: '獻給真正完成波士頓馬拉松的你',
+  bqDescription: '融合 U 型馬蹄鐵，象徵幸運與實力的累積；代表突破自我、邁向波士頓的榮耀門檻。這不只是成績，而是屬於你的堅持與驕傲。',
+  bqQualification: '提供當年度波士頓馬拉松正式完賽證明，經核對後依當期公告領取。',
+  milestoneLabel: 'MILESTONE CARDS',
+  milestoneTitle: '每一次突破，都值得留下紀念。',
+  milestoneDescription: '達標紀念卡將與榮耀徽章一同記錄賽事與成績，讓每一次突破，不只停留在成績查詢頁，而是真正成為值得珍藏的回憶。',
+  milestones: [
+    { image: '/achievements/2026/full-sub3.jpg', alt: '全馬 SUB 3 達標紀念卡' },
+    { image: '/achievements/2026/full-sub4.jpg', alt: '全馬 SUB 4 達標紀念卡' },
+    { image: '/achievements/2026/half-sub100.jpg', alt: '半馬 SUB 100 達標紀念卡' },
+    { image: '/achievements/2026/full-sub2.jpg', alt: '半馬 SUB 2 達標紀念卡' },
+    { image: '/achievements/2026/bq-pride.jpg', alt: 'BQ Pride 達標紀念卡' },
+  ],
+  howToLabel: 'HOW TO EARN',
+  howToTitle: '如何取得好運榮耀徽章',
+  howToSteps: ['必須為好運跑班學員。', '參加正式賽事並達標對應成績。', '成績須於加入好運跑班期間內達成。', '向各班教練詢問及填寫申請表。', '經過審核後通知，並於課堂或指定地點領取徽章。'],
+  howToNote: '每人每年限申請一款達標徽章；如同時符合多項資格，請擇一申請，且不得重複申請。每年度申請期間與領發安排不同，請以所屬跑班 LINE 群組的當期公告為準。',
+  howToImage: '/achievements/2026/badge-in-hand.jpg',
+  verifiedTitle: '成績核對後才正式取得',
+  verifiedDescription: '申請資料會依正式賽事成績與跑班成員資格核對。徽章不是報名贈品，也不能單獨購買。',
+  accountTitle: '查看你已經取得的徽章',
+  accountDescription: '登入個人帳戶後，可查看解鎖狀態與實際取得原因。',
+  accountCta: '前往個人帳戶',
+}
+
+export const defaultAnniversaryContent: AnniversaryContent = {
+  label: '四週年活動',
+  title: '好運跑班 4 週年活動',
+  status: '活動意向登記中',
+  subtitle: '這裡先收集 4 週年活動參加意向，方便我們掌握大致人數與聯絡方式；填寫內容只作為現場準備參考，不會影響能不能參加。',
+  noticeTitle: '目前狀態',
+  noticeDescription: '此頁目前只用於活動意向收集，不接入付款功能；後續如有活動時間、地點或流程變動，我們會再聯絡。',
+  highlights: ['填寫意向即可', '方便掌握現場人數', '活動變動會再聯絡'],
+  secondaryCta: '回到首頁',
+  contactCta: 'Instagram 諮詢',
+  formCta: '查看團練',
+  formLabel: '活動表單',
+  formTitle: '留下 4 週年活動意向',
+  formDescription: '填寫意向，方便教練掌握現場人數。送出後也可以同時關注或私訊 Instagram，活動若有調整會再通知。',
+  companionLabel: '預計同行人數',
+  companionOptions: ['只有我自己', '2 人', '3 人', '4 人以上', '還不確定'],
+}
+
 const legacyAboutBeliefs = {
   label: '我們相信',
   title: '好運不是偶然，是一次次被好好安排的訓練。',
@@ -381,6 +553,8 @@ export const defaultSiteContent: SiteContent = {
   coursesPage: defaultCoursesPageContent,
   testimonials: defaultTestimonialsContent,
   team: defaultTeamContent,
+  achievements: defaultAchievementsContent,
+  anniversary: defaultAnniversaryContent,
   pageMedia: defaultPageMedia,
   coachProfiles: defaultCoachPublicProfiles,
 }
@@ -643,6 +817,96 @@ export function normalizeTeamContent(value: unknown): TeamContent {
   }
 }
 
+function normalizeImage(value: unknown, fallback: string) {
+  const url = stablePublicAsset(cleanString(value, 2000))
+  return url && isSafePublicUrl(url) ? url : fallback
+}
+
+export function normalizeAchievementsContent(value: unknown): AchievementsContent {
+  const source = value && typeof value === 'object' ? value as Partial<AchievementsContent> : {}
+  const badges = Array.isArray(source.badges) && source.badges.length === defaultAchievementBadges.length
+    ? source.badges.map((item, index) => {
+        const base = defaultAchievementBadges[index]
+        const entry = item && typeof item === 'object' ? item as Partial<AchievementBadgeContent> : {}
+        return {
+          slug: /^[a-z0-9-]{1,80}$/.test(cleanString(entry.slug, 80)) ? cleanString(entry.slug, 80) : base.slug,
+          standard: cleanOr(entry.standard, base.standard, 100),
+          name: cleanOr(entry.name, base.name, 100),
+          image: normalizeImage(entry.image, base.image),
+          description: cleanOr(entry.description, base.description, 800),
+          story: cleanOr(entry.story, base.story, 500),
+        }
+      })
+    : defaultAchievementBadges
+  const milestones = Array.isArray(source.milestones) && source.milestones.length === defaultAchievementsContent.milestones.length
+    ? source.milestones.map((item, index) => {
+        const base = defaultAchievementsContent.milestones[index]
+        const entry = item && typeof item === 'object' ? item as Partial<AchievementMilestoneContent> : {}
+        return { image: normalizeImage(entry.image, base.image), alt: cleanOr(entry.alt, base.alt, 160) }
+      })
+    : defaultAchievementsContent.milestones
+  const paragraphs = cleanStringList(source.originParagraphs, 5, 1800)
+  const steps = cleanStringList(source.howToSteps, 5, 300)
+  return {
+    heroLabel: cleanOr(source.heroLabel, defaultAchievementsContent.heroLabel, 100),
+    heroTitle: cleanOr(source.heroTitle, defaultAchievementsContent.heroTitle, 180),
+    heroStrapline: cleanOr(source.heroStrapline, defaultAchievementsContent.heroStrapline, 300),
+    heroDescription: cleanOr(source.heroDescription, defaultAchievementsContent.heroDescription, 800),
+    heroImage: normalizeImage(source.heroImage, defaultAchievementsContent.heroImage),
+    originImage: normalizeImage(source.originImage, defaultAchievementsContent.originImage),
+    originLabel: cleanOr(source.originLabel, defaultAchievementsContent.originLabel, 80),
+    originTitle: cleanOr(source.originTitle, defaultAchievementsContent.originTitle, 180),
+    originParagraphs: paragraphs.length === 5 ? paragraphs : defaultAchievementsContent.originParagraphs,
+    collectionLabel: cleanOr(source.collectionLabel, defaultAchievementsContent.collectionLabel, 80),
+    collectionTitle: cleanOr(source.collectionTitle, defaultAchievementsContent.collectionTitle, 160),
+    collectionDescription: cleanOr(source.collectionDescription, defaultAchievementsContent.collectionDescription, 500),
+    badges,
+    bqImage: normalizeImage(source.bqImage, defaultAchievementsContent.bqImage),
+    bqLabel: cleanOr(source.bqLabel, defaultAchievementsContent.bqLabel, 100),
+    bqTitle: cleanOr(source.bqTitle, defaultAchievementsContent.bqTitle, 120),
+    bqSubtitle: cleanOr(source.bqSubtitle, defaultAchievementsContent.bqSubtitle, 240),
+    bqDescription: cleanOr(source.bqDescription, defaultAchievementsContent.bqDescription, 800),
+    bqQualification: cleanOr(source.bqQualification, defaultAchievementsContent.bqQualification, 500),
+    milestoneLabel: cleanOr(source.milestoneLabel, defaultAchievementsContent.milestoneLabel, 100),
+    milestoneTitle: cleanOr(source.milestoneTitle, defaultAchievementsContent.milestoneTitle, 180),
+    milestoneDescription: cleanOr(source.milestoneDescription, defaultAchievementsContent.milestoneDescription, 800),
+    milestones,
+    howToLabel: cleanOr(source.howToLabel, defaultAchievementsContent.howToLabel, 80),
+    howToTitle: cleanOr(source.howToTitle, defaultAchievementsContent.howToTitle, 160),
+    howToSteps: steps.length === 5 ? steps : defaultAchievementsContent.howToSteps,
+    howToNote: cleanOr(source.howToNote, defaultAchievementsContent.howToNote, 1000),
+    howToImage: normalizeImage(source.howToImage, defaultAchievementsContent.howToImage),
+    verifiedTitle: cleanOr(source.verifiedTitle, defaultAchievementsContent.verifiedTitle, 160),
+    verifiedDescription: cleanOr(source.verifiedDescription, defaultAchievementsContent.verifiedDescription, 800),
+    accountTitle: cleanOr(source.accountTitle, defaultAchievementsContent.accountTitle, 160),
+    accountDescription: cleanOr(source.accountDescription, defaultAchievementsContent.accountDescription, 500),
+    accountCta: cleanOr(source.accountCta, defaultAchievementsContent.accountCta, 80),
+  }
+}
+
+export function normalizeAnniversaryContent(value: unknown): AnniversaryContent {
+  const source = value && typeof value === 'object' ? value as Partial<AnniversaryContent> : {}
+  const highlights = cleanStringList(source.highlights, 6, 120)
+  const companionOptions = cleanStringList(source.companionOptions, 8, 120)
+  return {
+    label: cleanOr(source.label, defaultAnniversaryContent.label, 100),
+    title: cleanOr(source.title, defaultAnniversaryContent.title, 180),
+    status: cleanOr(source.status, defaultAnniversaryContent.status, 120),
+    subtitle: cleanOr(source.subtitle, defaultAnniversaryContent.subtitle, 1000),
+    noticeTitle: cleanOr(source.noticeTitle, defaultAnniversaryContent.noticeTitle, 120),
+    noticeDescription: cleanOr(source.noticeDescription, defaultAnniversaryContent.noticeDescription, 800),
+    highlights: highlights.length ? highlights : defaultAnniversaryContent.highlights,
+    secondaryCta: cleanOr(source.secondaryCta, defaultAnniversaryContent.secondaryCta, 100),
+    contactCta: cleanOr(source.contactCta, defaultAnniversaryContent.contactCta, 100),
+    formCta: cleanOr(source.formCta, defaultAnniversaryContent.formCta, 100),
+    formLabel: cleanOr(source.formLabel, defaultAnniversaryContent.formLabel, 100),
+    formTitle: cleanOr(source.formTitle, defaultAnniversaryContent.formTitle, 180),
+    formDescription: cleanOr(source.formDescription, defaultAnniversaryContent.formDescription, 800),
+    companionLabel: cleanOr(source.companionLabel, defaultAnniversaryContent.companionLabel, 120),
+    companionOptions: companionOptions.length ? companionOptions : defaultAnniversaryContent.companionOptions,
+  }
+}
+
 export function normalizePageMedia(value: unknown): PageMedia {
   const source = value && typeof value === 'object' ? value as Partial<PageMedia> : {}
   const replacedShopHeroes = new Set([
@@ -692,6 +956,8 @@ export function siteContentFromRows(rows: Array<{ key: string; value: unknown }>
     coursesPage: normalizeCoursesPageContent(values.get('courses_page_content')),
     testimonials: normalizeTestimonialsContent(values.get('testimonials_content')),
     team: normalizeTeamContent(values.get('team_content')),
+    achievements: normalizeAchievementsContent(values.get('achievements_content')),
+    anniversary: normalizeAnniversaryContent(values.get('anniversary_content')),
     pageMedia: normalizePageMedia(values.get('page_media')),
     coachProfiles: defaultCoachPublicProfiles,
   }

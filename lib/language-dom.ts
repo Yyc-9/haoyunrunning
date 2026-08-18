@@ -16,10 +16,15 @@ export function createLocalizationMemory(): LocalizationMemory {
   return new WeakMap<object, Map<string, RememberedValue>>()
 }
 
-function convertWebsiteText(value: string, language: Language) {
+export type LazyLanguageConverter = {
+  toTraditional?: (value: string) => string
+  toSimplified?: (value: string) => string
+}
+
+function convertWebsiteText(value: string, language: Language, converter?: LazyLanguageConverter) {
   if (language === 'en') return toEnglishWebsiteText(value)
-  if (language === 'zh-CN') return toSimplifiedWebsiteText(value)
-  return toTraditionalWebsiteText(value)
+  if (language === 'zh-CN') return converter?.toSimplified?.(value) ?? toSimplifiedWebsiteText(value)
+  return converter?.toTraditional?.(value) ?? toTraditionalWebsiteText(value)
 }
 
 export function localizeRememberedValue(
@@ -28,6 +33,7 @@ export function localizeRememberedValue(
   currentValue: string,
   language: Language,
   memory: LocalizationMemory,
+  converter?: LazyLanguageConverter,
 ) {
   let slots = memory.get(owner)
   if (!slots) {
@@ -39,7 +45,7 @@ export function localizeRememberedValue(
   const source = previous && currentValue === previous.localized
     ? previous.source
     : currentValue
-  const localized = convertWebsiteText(source, language)
+  const localized = convertWebsiteText(source, language, converter)
 
   slots.set(slot, { source, localized })
   return localized

@@ -176,6 +176,8 @@ export default function Footer() {
                 <a
                   key={index}
                   href={social.href}
+                  aria-label="在 Instagram 關注好運跑班"
+                  title="Instagram"
                   className={`flex h-10 w-10 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 ${social.isPrimary
                       ? 'bg-gradient-to-br from-orange-400 to-pink-500 text-white'
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'

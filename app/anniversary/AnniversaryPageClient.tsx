@@ -8,7 +8,7 @@ import { useSiteContent } from '@/app/site-content-provider'
 
 export default function AnniversaryPageClient() {
   const { t } = useLanguage()
-  const { brand, pageMedia } = useSiteContent()
+  const { brand, pageMedia, anniversary } = useSiteContent()
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
@@ -16,7 +16,7 @@ export default function AnniversaryPageClient() {
         <div className="container mx-auto max-w-6xl">
           <Link href="/" className="mb-8 inline-flex items-center gap-2 text-sm font-bold text-apple-gray-700 hover:text-apple-blue">
             <ArrowLeft className="h-4 w-4" />
-            {t.anniversary.secondaryCta}
+            {anniversary.secondaryCta}
           </Link>
 
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-stretch">
@@ -30,19 +30,19 @@ export default function AnniversaryPageClient() {
               <div className="relative z-10 max-w-3xl">
                 <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-semibold uppercase tracking-wide text-white backdrop-blur">
                   <PartyPopper className="h-4 w-4" />
-                  {t.anniversary.label}
+                  {anniversary.label}
                 </p>
                 <h1 className="text-4xl font-black leading-tight md:text-6xl">
-                  {t.anniversary.title}
+                  {anniversary.title}
                 </h1>
                 <p className="mt-6 max-w-2xl text-lg leading-8 text-white/85">
-                  {t.anniversary.subtitle}
+                  {anniversary.subtitle}
                 </p>
 
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                   <Link href="/courses" className="apple-button-primary inline-flex items-center justify-center gap-2 px-6 py-3">
                     <CalendarClock className="h-5 w-5" />
-                    {t.anniversary.formCta}
+                    {anniversary.formCta}
                   </Link>
                   <a
                     href={brand.instagramUrl}
@@ -51,7 +51,7 @@ export default function AnniversaryPageClient() {
                     className="inline-flex items-center justify-center gap-2 rounded-full border border-white/35 px-6 py-3 text-sm font-bold text-white transition hover:bg-white/10"
                   >
                     <Instagram className="h-5 w-5" />
-                    {t.anniversary.contactCta}
+                    {anniversary.contactCta}
                   </a>
                 </div>
               </div>
@@ -63,18 +63,18 @@ export default function AnniversaryPageClient() {
                   <Sparkles className="h-7 w-7" />
                 </div>
                 <p className="text-sm font-semibold uppercase tracking-wide text-apple-blue">
-                  {t.anniversary.noticeTitle}
+                  {anniversary.noticeTitle}
                 </p>
                 <h2 className="mt-3 text-3xl font-black text-apple-gray-900">
-                  {t.anniversary.status}
+                  {anniversary.status}
                 </h2>
                 <p className="mt-4 leading-7 text-apple-gray-600">
-                  {t.anniversary.noticeDescription}
+                  {anniversary.noticeDescription}
                 </p>
               </div>
 
               <div className="mt-8 space-y-3">
-                {t.anniversary.highlights.map((item) => (
+                {anniversary.highlights.map((item) => (
                   <div key={item} className="flex items-center gap-3 rounded-2xl bg-apple-gray-100 px-4 py-3">
                     <span className="h-2.5 w-2.5 rounded-full bg-apple-blue" />
                     <span className="text-sm font-semibold text-apple-gray-800">{item}</span>
@@ -87,13 +87,13 @@ export default function AnniversaryPageClient() {
           <div className="mt-10 grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
             <section className="apple-card p-7">
               <p className="text-sm font-semibold uppercase tracking-wide text-apple-blue">
-                {t.anniversary.formLabel}
+                {anniversary.formLabel}
               </p>
               <h2 className="mt-3 text-3xl font-black text-apple-gray-900">
-                {t.anniversary.formTitle}
+                {anniversary.formTitle}
               </h2>
               <p className="mt-4 leading-7 text-apple-gray-600">
-                {t.anniversary.formDescription}
+                {anniversary.formDescription}
               </p>
             </section>
 
@@ -102,8 +102,8 @@ export default function AnniversaryPageClient() {
               labels={t.leadForm}
               selectField={{
                 name: 'companionCount',
-                label: t.anniversary.companionLabel,
-                options: t.anniversary.companionOptions,
+                label: anniversary.companionLabel,
+                options: anniversary.companionOptions,
               }}
             />
           </div>

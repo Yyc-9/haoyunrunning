@@ -5,7 +5,9 @@ import { getCurrentCourseSeason } from '@/lib/course-seasons-server'
 import { defaultSiteContent, siteContentFromRows } from '@/lib/site-content'
 import { supabaseAdmin } from '@/lib/supabase-server'
 
-const headers = { 'Cache-Control': 'no-store' }
+// Public content is safe to cache briefly at the edge. The client still
+// revalidates on navigation and receives an update event after an admin save.
+const headers = { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' }
 
 export async function GET() {
   if (!supabaseAdmin) {
@@ -16,7 +18,7 @@ export async function GET() {
     supabaseAdmin
       .from('site_content')
       .select('key, value')
-      .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'courses_page_content', 'testimonials_content', 'team_content', 'page_media']),
+      .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'courses_page_content', 'testimonials_content', 'team_content', 'achievements_content', 'anniversary_content', 'page_media']),
     getCurrentCourseSeason(),
     supabaseAdmin
       .from('coach_public_profiles')
