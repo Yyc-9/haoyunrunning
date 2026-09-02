@@ -454,12 +454,17 @@
   letter-spacing: -0.035em;
 }
 
-.home-hero-story-stamp span {
-  display: block;
-  margin-top: 12px;
-  font-size: 0.75rem;
-  font-weight: 750;
-  opacity: 0.72;
+.home-course-dialog::backdrop {
+  background: rgb(10 12 16 / 58%);
+  backdrop-filter: blur(7px);
+}
+
+.home-course-preview-image {
+  transition: transform 800ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.home-course-preview-hero:hover .home-course-preview-image {
+  transform: scale(1.025);
 }
 
 @media (max-width: 1199px) {
@@ -583,9 +588,14 @@
 @media (prefers-reduced-motion: reduce) {
   .home-hero-photo,
   .home-hero-trail-item,
-  .home-hero-pointer-instruction > span::after {
+  .home-hero-pointer-instruction > span::after,
+  .home-course-preview-image {
     transition: none !important;
     animation: none !important;
+  }
+
+  .home-course-preview-hero:hover .home-course-preview-image {
+    transform: none;
   }
 
   .home-hero-trail-layer,

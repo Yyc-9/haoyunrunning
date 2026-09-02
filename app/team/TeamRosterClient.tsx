@@ -1,7 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import { Award, BadgeCheck, Route, UserRound, UsersRound } from 'lucide-react'
+import Link from 'next/link'
+import { ArrowUpRight, Award, BadgeCheck, Route, UserRound, UsersRound } from 'lucide-react'
 import { useMemo } from 'react'
 import { useSiteContent } from '@/app/site-content-provider'
 import { getDefaultCourseCoachKeys } from '@/lib/coach-profiles'
@@ -17,7 +18,7 @@ export default function TeamRosterClient() {
   const { coachProfiles, courseOverrides, courses, team, pageMedia } = useSiteContent()
 
   const assignments = useMemo(() => {
-    const byCoach = new Map<string, string[]>()
+    const byCoach = new Map<string, Array<{ name: string; slug: string }>>()
     courses.forEach((course) => {
       const override = courseOverrides[course.slug]
       const coachKeys = override?.coachKeys?.length
@@ -26,7 +27,9 @@ export default function TeamRosterClient() {
 
       coachKeys.forEach((coachKey) => {
         const current = byCoach.get(coachKey) ?? []
-        byCoach.set(coachKey, [...current, compactCourseName(course.name)])
+        if (!current.some((assignment) => assignment.slug === course.slug)) {
+          byCoach.set(coachKey, [...current, { name: compactCourseName(course.name), slug: course.slug }])
+        }
       })
     })
     return byCoach
@@ -117,10 +120,16 @@ export default function TeamRosterClient() {
                         本季度負責班級
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2">
-                        {coachAssignments.map((courseName) => (
-                          <span key={courseName} className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-900">
-                            {courseName}
-                          </span>
+                        {coachAssignments.map((assignment) => (
+                          <Link
+                            key={assignment.slug}
+                            href={`/courses/${assignment.slug}`}
+                            className="group/class inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-900 ring-1 ring-emerald-900/10 transition-[transform,background-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:bg-emerald-100 hover:shadow-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/25 active:translate-y-0 active:scale-[0.98]"
+                            aria-label={`查看${assignment.name}課程`}
+                          >
+                            {assignment.name}
+                            <ArrowUpRight className="h-3 w-3 shrink-0 transition-transform duration-200 group-hover/class:translate-x-0.5 group-hover/class:-translate-y-0.5" />
+                          </Link>
                         ))}
                       </div>
                     </div>

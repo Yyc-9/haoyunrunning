@@ -26,6 +26,7 @@ const storyImages = [
 
 const TRAIL_POOL_SIZE = 8
 const TRAIL_DISTANCE = 92
+const ENTRANCE_EASE = [0.16, 1, 0.3, 1] as const
 
 export default function HeroSection({ initialImages }: HeroSectionProps) {
   const heroRef = useRef<HTMLElement>(null)
@@ -127,7 +128,14 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
     }
   }, [prefersReducedMotion, trailImages])
 
-  const entrance = prefersReducedMotion ? false : { opacity: 0, y: 22 }
+  // Keep server and client initial styles identical. Reduced-motion preferences
+  // are only available in the browser, so branching `initial` on that value
+  // causes a hydration mismatch for people who disable motion system-wide.
+  const entrance = { opacity: 0, y: 22 }
+  const entranceTransition = (duration: number, delay: number) =>
+    prefersReducedMotion
+      ? { duration: 0 }
+      : { duration, delay, ease: ENTRANCE_EASE }
 
   return (
     <section ref={heroRef} className="home-hero" aria-labelledby="home-hero-title">
@@ -153,7 +161,7 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
       <motion.figure
         initial={entrance}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.65, delay: 0.16, ease: [0.16, 1, 0.3, 1] }}
+        transition={entranceTransition(0.65, 0.16)}
         className="home-hero-photo home-hero-photo-one"
       >
         <Image
@@ -169,7 +177,7 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
       <motion.figure
         initial={entrance}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.65, delay: 0.24, ease: [0.16, 1, 0.3, 1] }}
+        transition={entranceTransition(0.65, 0.24)}
         className="home-hero-photo home-hero-photo-two"
       >
         <Image
@@ -184,7 +192,7 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
       <motion.figure
         initial={entrance}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.65, delay: 0.32, ease: [0.16, 1, 0.3, 1] }}
+        transition={entranceTransition(0.65, 0.32)}
         className="home-hero-photo home-hero-photo-three"
       >
         <Image
@@ -211,7 +219,7 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
       <motion.div
         initial={entrance}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.72, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
+        transition={entranceTransition(0.72, 0.08)}
         className="home-hero-copy"
       >
         <p className="home-hero-kicker">陪伴全球跑者的系統化訓練團隊</p>
@@ -226,9 +234,9 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
       </motion.div>
 
       <motion.aside
-        initial={prefersReducedMotion ? false : { opacity: 0, rotate: -2, y: 18 }}
+        initial={{ opacity: 0, rotate: -2, y: 18 }}
         animate={{ opacity: 1, rotate: 2, y: 0 }}
-        transition={{ duration: 0.62, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        transition={entranceTransition(0.62, 0.4)}
         className="home-hero-story-stamp"
         aria-label="好運跑班精神"
       >
@@ -238,7 +246,6 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
           <br />
           每一次訓練
         </strong>
-        <span>不自動播放，由你的移動觸發。</span>
       </motion.aside>
     </section>
   )
