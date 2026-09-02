@@ -81,17 +81,17 @@ type Props = {
 
 const courseStatusLabels = paymentOrderStatusLabels['zh-TW']
 const shopStatusLabels: Record<PaymentStatus, string> = {
-  pending_transfer: '待確認自取',
-  pending_review: '待處理',
-  approved: '已確認自取',
-  rejected: '需聯絡顧客',
+  pending_transfer: '待完成匯款',
+  pending_review: '已回報，待人工核對',
+  approved: '已確認入帳',
+  rejected: '匯款資料需補充',
 }
 
 const shopStatusDescriptions: Record<PaymentStatus, string> = {
-  pending_transfer: '訂單已建立，等待團隊確認自取安排。',
-  pending_review: '訂單需要管理員進一步處理。',
-  approved: '已確認跑班自取，請依團隊通知取貨。',
-  rejected: '請聯絡顧客補充或確認訂單安排。',
+  pending_transfer: '訂單已建立，尚未提交匯款帳號後五碼。',
+  pending_review: '已提交後五碼，等待財務核對銀行入帳。',
+  approved: '已確認入帳，可聯絡顧客安排跑班自取。',
+  rejected: '匯款資料需要補充或重新核對。',
 }
 
 const statusLegend: Array<[PaymentStatus, string]> = [
@@ -280,14 +280,14 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
     if (saved) setSelected(null)
   }
 
-  async function confirmShopPickup() {
+  async function confirmShopTransfer() {
     if (!selected || selected.orderKind !== 'shop') return
     const saved = await runAction(selected.id, {
       action: 'review_order',
       orderId: selected.id,
       orderKind: 'shop',
       status: 'approved',
-      reviewNote: reviewNote || '已確認跑班自取，請依團隊通知取貨。',
+      reviewNote: reviewNote || '已確認商城匯款入帳，請聯絡顧客安排跑班自取。',
     })
     if (saved) setSelected(null)
   }
@@ -348,6 +348,7 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
           ['訂單編號', selected.orderNumber],
           ['商品', selected.items.join('、')],
           ['金額', selected.amountText],
+          ['匯款後五碼', selected.transferLastFive ? `•••${selected.transferLastFive}` : '-'],
           ['取貨方式', '跑班自取'],
           ['狀態', shopStatusLabels[selected.status]],
           ['提交時間', formatDate(selected.submittedAt)],
@@ -454,7 +455,7 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
         <div className="flex flex-col gap-3 border-b border-black/10 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-base font-black text-apple-gray-950">名單與審核</h3>
-            <p className="mt-1 text-xs font-semibold text-apple-gray-500">{listKind === 'course' ? '在同一份緊湊名單中查看資料、核對匯款與處理異常。' : '在同一份緊湊名單中查看商城訂單與跑班自取安排。'}</p>
+            <p className="mt-1 text-xs font-semibold text-apple-gray-500">{listKind === 'course' ? '在同一份緊湊名單中查看資料、核對匯款與處理異常。' : '在同一份緊湊名單中核對商城匯款並安排跑班自取。'}</p>
           </div>
           <div className="grid grid-cols-2 rounded-lg bg-apple-gray-100 p-1">
             <button type="button" onClick={() => setListKind('course')} className={`inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-bold ${listKind === 'course' ? 'bg-white text-black shadow-sm' : 'text-apple-gray-500'}`}><CalendarRange className="h-4 w-4" />課程報名</button>
@@ -471,8 +472,8 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[920px] text-left text-sm">
-            <thead className="bg-apple-gray-100 text-xs text-apple-gray-600"><tr>{[listKind === 'course' ? '學員' : '顧客', listKind === 'course' ? '班級' : '訂單 / 商品', listKind === 'course' ? '身分' : '類型', '金額', listKind === 'course' ? '後五碼' : '取貨方式', '狀態', '提交時間', ''].map((label) => <th key={label || 'action'} className="px-3 py-2.5 font-bold">{label}</th>)}</tr></thead>
-            <tbody className="divide-y divide-black/5">{visible.map((order) => <tr key={order.id} className="hover:bg-apple-gray-50"><td className="px-3 py-2.5"><p className="font-bold">{order.studentName}</p><p className="max-w-52 truncate text-xs text-apple-gray-500">{order.email}</p></td><td className="max-w-64 px-3 py-2.5 font-semibold text-apple-gray-700">{order.orderKind === 'shop' ? <><p className="truncate">{order.orderNumber}</p><p className="mt-1 truncate text-xs font-medium text-apple-gray-500">{order.items.join('、') || '未載入商品'}</p></> : <p className="truncate">{order.courseName}</p>}</td><td className="px-3 py-2.5">{order.orderKind === 'shop' ? '商城' : studentType(order) === 'new' ? '新生' : studentType(order) === 'returning' ? '舊生' : '-'}</td><td className="px-3 py-2.5 font-semibold">{order.amountText}</td><td className="px-3 py-2.5 font-mono">{order.orderKind === 'shop' ? '跑班自取' : order.transferLastFive || '-'}</td><td className="px-3 py-2.5"><span className={`rounded-full px-2 py-1 text-xs font-bold ${statusTone[order.status]}`}>{statusLabel(order)}</span>{order.openAttendanceAnomalyCount > 0 ? <span className="mt-1 block w-fit rounded-full bg-amber-100 px-2 py-1 text-[11px] font-black text-amber-800">計費異常 {order.openAttendanceAnomalyCount}</span> : null}</td><td className="whitespace-nowrap px-3 py-2.5 text-xs text-apple-gray-500">{formatDate(order.submittedAt)}</td><td className="px-3 py-2.5 text-right"><button type="button" onClick={() => setSelected(order)} className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-black hover:text-white" aria-label={`查看 ${order.studentName} 的${order.orderKind === 'shop' ? '訂單' : '報名資料'}`}><ChevronRight className="h-4 w-4" /></button></td></tr>)}</tbody>
+            <thead className="bg-apple-gray-100 text-xs text-apple-gray-600"><tr>{[listKind === 'course' ? '學員' : '顧客', listKind === 'course' ? '班級' : '訂單 / 商品', listKind === 'course' ? '身分' : '類型', '金額', listKind === 'course' ? '後五碼' : '後五碼 / 取貨', '狀態', '提交時間', ''].map((label) => <th key={label || 'action'} className="px-3 py-2.5 font-bold">{label}</th>)}</tr></thead>
+            <tbody className="divide-y divide-black/5">{visible.map((order) => <tr key={order.id} className="hover:bg-apple-gray-50"><td className="px-3 py-2.5"><p className="font-bold">{order.studentName}</p><p className="max-w-52 truncate text-xs text-apple-gray-500">{order.email}</p></td><td className="max-w-64 px-3 py-2.5 font-semibold text-apple-gray-700">{order.orderKind === 'shop' ? <><p className="truncate">{order.orderNumber}</p><p className="mt-1 truncate text-xs font-medium text-apple-gray-500">{order.items.join('、') || '未載入商品'}</p></> : <p className="truncate">{order.courseName}</p>}</td><td className="px-3 py-2.5">{order.orderKind === 'shop' ? '商城' : studentType(order) === 'new' ? '新生' : studentType(order) === 'returning' ? '舊生' : '-'}</td><td className="px-3 py-2.5 font-semibold">{order.amountText}</td><td className="px-3 py-2.5 font-mono">{order.orderKind === 'shop' ? `${order.transferLastFive ? `•••${order.transferLastFive}` : '-'} / 自取` : order.transferLastFive || '-'}</td><td className="px-3 py-2.5"><span className={`rounded-full px-2 py-1 text-xs font-bold ${statusTone[order.status]}`}>{statusLabel(order)}</span>{order.openAttendanceAnomalyCount > 0 ? <span className="mt-1 block w-fit rounded-full bg-amber-100 px-2 py-1 text-[11px] font-black text-amber-800">計費異常 {order.openAttendanceAnomalyCount}</span> : null}</td><td className="whitespace-nowrap px-3 py-2.5 text-xs text-apple-gray-500">{formatDate(order.submittedAt)}</td><td className="px-3 py-2.5 text-right"><button type="button" onClick={() => setSelected(order)} className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-black hover:text-white" aria-label={`查看 ${order.studentName} 的${order.orderKind === 'shop' ? '訂單' : '報名資料'}`}><ChevronRight className="h-4 w-4" /></button></td></tr>)}</tbody>
           </table>
         </div>
         {!filtered.length ? <p className="p-10 text-center text-sm font-semibold text-apple-gray-500">沒有符合條件的{listKind === 'course' ? '學員' : '商城訂單'}。</p> : null}
@@ -509,12 +510,12 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
                   </div>
                 </section>
               ) : null}
-              <label className="mt-5 block"><span className="mb-2 block text-xs font-bold text-apple-gray-500">管理備註</span><textarea value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} className="apple-input min-h-24 resize-y" placeholder={selected.orderKind === 'shop' ? '記錄自取時間、地點或聯絡結果' : '記錄核對結果或需要補充的資料'} /></label>
+              <label className="mt-5 block"><span className="mb-2 block text-xs font-bold text-apple-gray-500">管理備註</span><textarea value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} className="apple-input min-h-24 resize-y" placeholder={selected.orderKind === 'shop' ? '記錄匯款核對、自取時間或聯絡結果' : '記錄核對結果或需要補充的資料'} /></label>
             </div>
             <div className="grid gap-2 border-t bg-white p-4 sm:grid-cols-2">
-              <p className={`rounded-lg px-3 py-2 text-xs font-bold leading-5 sm:col-span-2 ${selected.orderKind === 'shop' ? 'bg-apple-gray-100 text-apple-gray-700' : 'bg-blue-50 text-blue-800'}`}>{selected.orderKind === 'shop' ? '商城僅提供跑班自取，不使用線上付款或銀行匯款。' : '「已確認入帳」只能由銀行對帳完成；這裡保留異常處理與刪除，避免繞過財務確認。'}</p>
-              {selected.orderKind === 'shop' ? <button type="button" disabled={updatingId === selected.id || selected.status === 'rejected' || selected.status === 'approved'} onClick={confirmShopPickup} className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-40"><Package className="h-4 w-4" />確認跑班自取</button> : null}
-              <button type="button" disabled={updatingId === selected.id || selected.status === 'rejected' || selected.status === 'approved'} onClick={flagOrderForReview} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40"><RotateCcw className="h-4 w-4" />{selected.orderKind === 'shop' ? '標記需聯絡顧客' : '標記匯款資料需補充'}</button>
+              <p className={`rounded-lg px-3 py-2 text-xs font-bold leading-5 sm:col-span-2 ${selected.orderKind === 'shop' ? 'bg-apple-gray-100 text-apple-gray-700' : 'bg-blue-50 text-blue-800'}`}>{selected.orderKind === 'shop' ? '商城使用銀行匯款付款，入帳後再安排跑班自取；可在銀行對帳頁核對，也可於此人工確認。' : '「已確認入帳」只能由銀行對帳完成；這裡保留異常處理與刪除，避免繞過財務確認。'}</p>
+              {selected.orderKind === 'shop' ? <button type="button" disabled={updatingId === selected.id || selected.status === 'rejected' || selected.status === 'approved'} onClick={confirmShopTransfer} className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-40"><Package className="h-4 w-4" />確認匯款並安排自取</button> : null}
+              <button type="button" disabled={updatingId === selected.id || selected.status === 'rejected' || selected.status === 'approved'} onClick={flagOrderForReview} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40"><RotateCcw className="h-4 w-4" />標記匯款資料需補充</button>
               <button type="button" disabled={updatingId === `delete-${selected.id}` || selected.status === 'approved'} onClick={deleteOrder} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40">{updatingId === `delete-${selected.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}刪除記錄</button>
             </div>
           </aside>

@@ -405,20 +405,6 @@ function firstByKey<T extends Record<string, unknown>>(rows: T[], key: keyof T) 
   return map
 }
 
-async function getProductStock(productId: string) {
-  const { data, error } = await supabaseAdmin!
-    .from('shop_products')
-    .select('stock_quantity')
-    .eq('id', productId)
-    .single()
-
-  if (error || !data) {
-    throw new Error(error?.message || `找不到商品 ${productId}。`)
-  }
-
-  return Number(data.stock_quantity ?? 0)
-}
-
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request)
   if (auth.error) return auth.error
@@ -1575,12 +1561,12 @@ export async function PATCH(request: NextRequest) {
 
     if (orderKind === 'shop') {
       if (!['approved', 'rejected'].includes(requestedStatus)) {
-        return json({ error: '商城訂單只能確認跑班自取或標記為需聯絡顧客。' }, { status: 400 })
+        return json({ error: '商城訂單只能確認匯款入帳或標記為匯款資料需補充。' }, { status: 400 })
       }
 
       const finalReviewNote = reviewNote || (requestedStatus === 'approved'
-        ? '已確認跑班自取，請依團隊通知取貨。'
-        : '請聯絡顧客補充或確認自取安排。')
+        ? '已確認商城匯款入帳，請聯絡顧客安排跑班自取。'
+        : '請聯絡顧客補充或重新確認匯款資料。')
 
       const { data: currentOrder, error: currentOrderError } = await supabaseAdmin!
         .from('shop_orders')
@@ -1597,10 +1583,7 @@ export async function PATCH(request: NextRequest) {
           .from('shop_orders')
           .update({
             status: 'approved',
-            payment_method: 'pickup',
-            payment_reference: '',
-            payment_account_id: null,
-            payment_account_label: '',
+            payment_method: 'bank_transfer',
             reviewed_at: new Date().toISOString(),
             review_note: finalReviewNote,
           })
@@ -1615,44 +1598,13 @@ export async function PATCH(request: NextRequest) {
         return json({ order, message: finalReviewNote })
       }
 
-      const { data: orderItems, error: itemsError } = await supabaseAdmin!
-        .from('shop_order_items')
-        .select('product_id, quantity')
-        .eq('order_id', orderId)
-
-      if (itemsError) {
-        return json({ error: itemsError.message }, { status: 500 })
-      }
-
-      if (currentOrder.inventory_reserved) {
-        try {
-          for (const item of orderItems ?? []) {
-            const currentStock = await getProductStock(item.product_id)
-            const { error: stockError } = await supabaseAdmin!
-              .from('shop_products')
-              .update({ stock_quantity: currentStock + item.quantity })
-              .eq('id', item.product_id)
-
-            if (stockError) {
-              return json({ error: stockError.message }, { status: 500 })
-            }
-          }
-        } catch (stockReadError) {
-          return json({ error: stockReadError instanceof Error ? stockReadError.message : '庫存讀取失敗。' }, { status: 500 })
-        }
-      }
-
       const { data: order, error } = await supabaseAdmin!
         .from('shop_orders')
         .update({
           status: 'rejected',
-          payment_method: 'pickup',
-          payment_reference: '',
-          payment_account_id: null,
-          payment_account_label: '',
+          payment_method: 'bank_transfer',
           reviewed_at: new Date().toISOString(),
           review_note: finalReviewNote,
-          inventory_reserved: false,
         })
         .eq('id', orderId)
         .select('*')

@@ -8,6 +8,7 @@ import { useSiteContent } from '@/app/site-content-provider'
 import ProtectedCoursePaymentInfo from '@/components/ProtectedCoursePaymentInfo'
 import { COURSE_CAPACITY, type CourseAvailability, type LegacyStudentStatus, type MyCourseEnrollment } from '@/lib/course-registration'
 import type { CoursePricingOptions } from '@/lib/course-pricing'
+import { formatCourseWeekday } from '@/lib/course-weekday'
 import { paymentOrderStatusDescriptions, paymentOrderStatusLabels } from '@/lib/payment'
 import { supabase } from '@/lib/supabase'
 import DirectCourseRegistrationForm from './DirectCourseRegistrationForm'
@@ -145,8 +146,8 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
           <Link href={`/courses/${course.slug}`} className="text-sm font-bold text-apple-blue">返回課程詳情</Link>
           <div className="mt-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
-              <p className="text-sm font-bold leading-6 text-apple-gray-500">{course.weekday} · {course.classTime} · {course.location}{course.meetingPoint ? ` · ${course.meetingPoint}` : ''} · {course.period}</p>
-              <h1 className="mt-2 text-2xl font-black text-apple-gray-950 sm:text-4xl">{course.name}報名</h1>
+              <p className="text-sm font-bold leading-6 text-apple-gray-500">{formatCourseWeekday(course.weekday)} · {course.classTime} · {course.location}{course.meetingPoint ? ` · ${course.meetingPoint}` : ''} · {course.period}</p>
+              <h1 className="mt-2 text-2xl font-black text-apple-gray-950 sm:text-4xl">{formatCourseWeekday(course.name)}報名</h1>
               <div className="mt-3 grid max-w-2xl gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
                 <p className="font-semibold leading-6 text-apple-gray-600"><span className="text-apple-gray-400">費用：</span>系統依學員身分與本期計費起始課次自動核算</p>
                 <p className="font-semibold leading-6 text-apple-gray-600"><span className="text-apple-gray-400">訓練重點：</span>{course.focus}</p>
@@ -240,7 +241,7 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
                   <p className="mt-1 text-xs font-semibold leading-5 opacity-80">{paymentOrderStatusDescriptions[enrollment.status]}</p>
                 </div>
                 <dl className="mt-4 space-y-3 text-sm">
-                  <div><dt className="text-apple-gray-500">報名課程</dt><dd className="mt-1 font-bold text-apple-gray-900">{enrollment.courseName}</dd></div>
+                  <div><dt className="text-apple-gray-500">報名課程</dt><dd className="mt-1 font-bold text-apple-gray-900">{formatCourseWeekday(enrollment.courseName)}</dd></div>
                   <div><dt className="text-apple-gray-500">應付金額</dt><dd className="mt-1 font-bold text-apple-gray-900">{enrollment.amountText || '依表單說明'}</dd></div>
                   {enrollment.billingStartSessionDate ? <div><dt className="text-apple-gray-500">本期計費起始</dt><dd className="mt-1 font-bold text-apple-gray-900">{formatEnrollmentDate(enrollment.billingStartSessionDate)}</dd></div> : null}
                   {enrollment.priorAttendanceClaimed ? <div><dt className="text-apple-gray-500">最近一堂到課申報</dt><dd className="mt-1 font-bold text-apple-gray-900">{enrollment.attendanceVerificationStatus === 'verified' ? '已確認到課' : enrollment.attendanceVerificationStatus === 'rejected' ? '未通過核對' : '待管理員核對'}</dd></div> : null}

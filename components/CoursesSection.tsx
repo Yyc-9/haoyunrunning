@@ -9,6 +9,7 @@ import CoursesTable from '@/components/CoursesTable'
 import FAQItem from '@/components/FAQItem'
 import { useLanguage } from '@/app/language-context'
 import { useSiteContent } from '@/app/site-content-provider'
+import { formatCourseWeekday } from '@/lib/course-weekday'
 import type { ManagedCourse } from '@/lib/managed-courses'
 import { toSimplifiedWebsiteText, toTraditionalWebsiteText } from '@/lib/traditional-chinese'
 
@@ -32,6 +33,7 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
     return text
   }
 
+  const courseText = (text: string) => formatCourseWeekday(localeText(text))
   useEffect(() => {
     const dialog = dialogRef.current
     if (selectedCourse && dialog && !dialog.open) dialog.showModal()
@@ -93,7 +95,7 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
                   transition={entranceTransition(index * 0.06)}
                   onClick={() => setSelectedCourse(course)}
                   className="group relative flex min-h-[290px] w-full flex-col justify-between overflow-hidden rounded-3xl border border-black/10 bg-white p-6 text-left shadow-sm transition-[border-color,box-shadow] duration-300 hover:border-apple-blue/35 hover:shadow-xl hover:shadow-black/10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-apple-blue/25"
-                  aria-label={`快速預覽${localeText(course.name)}`}
+                  aria-label={`快速預覽${courseText(course.name)}`}
                 >
                   <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-apple-blue transition-transform duration-300 group-hover:scale-x-100 group-focus-visible:scale-x-100" />
                   <div>
@@ -102,7 +104,7 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
                       {localeText(course.city || course.location)}
                     </div>
                     <h3 className="text-xl font-black leading-7 text-apple-gray-900">
-                      {localeText(course.name)}
+                      {courseText(course.name)}
                     </h3>
                     <p className="mt-3 min-h-12 text-sm leading-6 text-apple-gray-600">
                       {localeText(course.targetAudience)}
@@ -110,7 +112,7 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
                   </div>
                   <div className="mt-5 flex items-center justify-between gap-3 border-t border-black/10 pt-4">
                     <span className="inline-flex items-center gap-2 rounded-full bg-apple-gray-100 px-4 py-2 text-sm font-bold text-apple-gray-600">
-                      {localeText(course.weekday)} · {localeText(course.classTime)}
+                      {courseText(course.weekday)} · {localeText(course.classTime)}
                     </span>
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-apple-blue/10 text-apple-blue transition-[transform,background-color,color] duration-200 group-hover:-rotate-6 group-hover:bg-apple-blue group-hover:text-white group-focus-visible:-rotate-6 group-focus-visible:bg-apple-blue group-focus-visible:text-white">
                       <ChevronRight className="h-5 w-5" />
@@ -149,7 +151,7 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
                       {localeText(selectedCourse.city || selectedCourse.location)} 快速預覽
                     </p>
                     <h2 id="home-course-preview-title" className="mt-2 text-2xl font-black leading-tight text-apple-gray-950 sm:text-3xl">
-                      {localeText(selectedCourse.name)}
+                      {courseText(selectedCourse.name)}
                     </h2>
                   </div>
                   <button
@@ -171,7 +173,7 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
                   </p>
                   <p className="flex items-start gap-2">
                     <Clock className="mt-0.5 h-4 w-4 shrink-0 text-apple-blue" />
-                    {localeText(selectedCourse.weekday)} · {localeText(selectedCourse.classTime)}
+                    {courseText(selectedCourse.weekday)} · {localeText(selectedCourse.classTime)}
                   </p>
                 </div>
                 <p className="mt-5 border-l-2 border-apple-blue pl-4 text-sm font-semibold leading-7 text-apple-gray-700">

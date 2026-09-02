@@ -9,7 +9,6 @@ import {
   CalendarRange,
   CheckCircle2,
   Copy,
-  CreditCard,
   FileSpreadsheet,
   LayoutDashboard,
   Loader2,
@@ -1024,7 +1023,7 @@ export default function AdminDashboardClient() {
 	            <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
 	              <div className="apple-card p-5">
 	                <h2 className="text-xl font-black text-apple-gray-900">新增收款帳戶</h2>
-	                <p className="mt-1 text-sm leading-6 text-apple-gray-600">這些資料只在管理員後台顯示，不會把戶名、帳號或分配結果提供給買家。</p>
+	                <p className="mt-1 text-sm leading-6 text-apple-gray-600">帳戶池供管理員整理銀行對帳通道；商城買家會在結帳頁看到目前的好運官方匯款資料，不會看到內部帳戶分配結果。</p>
 	                <div className="mt-5 grid gap-3">
 	                  {[
 	                    ['label', '通道名稱，例如 A 帳戶'],
@@ -1050,7 +1049,7 @@ export default function AdminDashboardClient() {
 	                  disabled={updatingId === 'create-payment-account'}
 	                  className="apple-button-primary mt-4 w-full gap-2 disabled:cursor-not-allowed disabled:opacity-50"
 	                >
-	                  <CreditCard className="h-4 w-4" />
+	                  <Landmark className="h-4 w-4" />
 	                  新增帳戶
 	                </button>
 	              </div>
@@ -1058,7 +1057,7 @@ export default function AdminDashboardClient() {
 	              <div className="apple-card overflow-hidden">
 	                <div className="border-b border-black/10 p-5">
 	                  <h2 className="text-xl font-black text-apple-gray-900">收款帳戶池</h2>
-	                  <p className="mt-1 text-sm text-apple-gray-600">僅供課程匯款核對使用；商城訂單一律採跑班自取，不會分配匯款帳戶。</p>
+	                  <p className="mt-1 text-sm text-apple-gray-600">供課程與商城匯款對帳使用；商城付款完成後仍採跑班自取。</p>
 	                </div>
 	                {data.paymentAccounts.length === 0 ? (
 	                  <div className="p-10 text-center text-sm font-semibold text-apple-gray-500">

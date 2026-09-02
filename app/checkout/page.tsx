@@ -4,6 +4,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import {
   CheckCircle2,
+  Landmark,
+  LockKeyhole,
   MessageCircle,
   Send,
   Store,
@@ -27,6 +29,7 @@ export default function CheckoutPage() {
   const { brand } = useSiteContent()
   const [form, setForm] = useState({ customerName: '', contact: '', email: '' })
   const [customerNote, setCustomerNote] = useState('')
+  const [transferLastFive, setTransferLastFive] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [order, setOrder] = useState<CreatedOrder | null>(null)
@@ -48,6 +51,10 @@ export default function CheckoutPage() {
       setError('請填寫姓名和聯絡方式。')
       return
     }
+    if (!/^\d{5}$/.test(transferLastFive)) {
+      setError('請完成匯款，並填寫轉出帳號後五碼。')
+      return
+    }
 
     setIsSubmitting(true)
 
@@ -66,7 +73,7 @@ export default function CheckoutPage() {
           'Content-Type': 'application/json',
           ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
-        body: JSON.stringify({ ...form, fulfillmentNote, items }),
+        body: JSON.stringify({ ...form, fulfillmentNote, transferLastFive, items }),
       })
       const payload = (await response.json().catch(() => ({}))) as { order?: CreatedOrder; error?: string }
 
@@ -78,6 +85,7 @@ export default function CheckoutPage() {
       clear()
       setForm({ customerName: '', contact: '', email: '' })
       setCustomerNote('')
+      setTransferLastFive('')
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : '訂單提交失敗。')
     } finally {
@@ -93,7 +101,7 @@ export default function CheckoutPage() {
             <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">商店結帳</p>
             <h1 className="mb-4 text-4xl font-black text-apple-gray-900 md:text-5xl">確認訂單</h1>
             <p className="text-lg leading-8 text-apple-gray-600">
-              填寫聯絡資料，確認商品與數量後提交跑班自取訂單。訂單成立後，團隊會透過你填寫的聯絡方式確認取貨時間與地點。
+	              填寫聯絡資料、依下方好運匯款帳戶完成轉帳，再提交訂單。款項核對完成後，團隊會聯絡你確認跑班自取時間與地點。
             </p>
           </div>
 
@@ -118,9 +126,28 @@ export default function CheckoutPage() {
                   <input type="email" className="apple-input" value={form.email} onChange={(event) => updateField('email', event.target.value)} autoComplete="email" placeholder="用於接收訂單通知（選填）" />
                 </label>
 
-                <div className="rounded-lg border border-black/10 bg-apple-gray-50 p-4 text-sm leading-6 text-apple-gray-600 sm:col-span-2">
-                  目前商城僅提供跑班自取，網站不處理線上付款或銀行匯款；團隊會透過你填寫的聯絡方式確認自取時間與地點。
-                </div>
+                <section aria-labelledby="shop-bank-transfer-title" className="rounded-2xl border border-amber-200 bg-[#f5f1eb] p-4 sm:col-span-2 sm:p-5">
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black text-white"><Landmark className="h-5 w-5" /></span>
+                    <div>
+                      <h3 id="shop-bank-transfer-title" className="font-black text-apple-gray-950">好運銀行匯款帳戶</h3>
+                      <p className="mt-1 text-sm leading-6 text-apple-gray-600">請依右側訂單小計完成匯款，並確認銀行機構、代碼與帳號後再轉帳。</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 overflow-hidden rounded-xl border border-black/10 bg-white p-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/api/shop/payment-info" alt="好運跑班銀行匯款帳戶" className="h-auto w-full rounded-lg" />
+                  </div>
+                  <div className="mt-3 flex items-start gap-2 rounded-lg bg-white/75 px-3 py-2.5 text-xs font-semibold leading-5 text-apple-gray-600">
+                    <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0" />
+                    網站只記錄轉出帳號後五碼，不會要求網銀密碼或完整付款帳號；匯款備註請保持空白。
+                  </div>
+                  <label className="mt-4 block">
+                    <span className="mb-2 block text-sm font-black text-apple-gray-800">轉出帳號後五碼</span>
+                    <input inputMode="numeric" maxLength={5} value={transferLastFive} onChange={(event) => { setTransferLastFive(event.target.value.replace(/\D/g, '').slice(0, 5)); setError('') }} className="apple-input min-h-12 bg-white text-lg tracking-[0.25em]" placeholder="12345" />
+                    <span className="mt-2 block text-xs leading-5 text-apple-gray-500">財務會依後五碼與訂單金額核對入帳。</span>
+                  </label>
+                </section>
 
                 <label className="block sm:col-span-2">
                   <span className="mb-2 block text-sm font-bold text-apple-gray-700">訂單備註</span>
@@ -154,16 +181,16 @@ export default function CheckoutPage() {
 
               <div className="mb-5 flex items-start gap-3 rounded-lg border border-black/10 bg-apple-gray-50 p-4 text-sm leading-6 text-apple-gray-700">
                 <Store className="mt-0.5 h-5 w-5 shrink-0" />
-                <span>目前商城僅提供跑班自取，網站不處理線上付款或銀行匯款；團隊會另行通知取貨安排。</span>
+	                <span>付款方式為銀行匯款，商品維持跑班自取；完成入帳核對後，團隊會另行通知取貨安排。</span>
               </div>
 
               {order ? (
                 <div className="mb-4 flex items-start gap-3 rounded-lg bg-emerald-50 p-4 text-emerald-800">
                   <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
                   <div>
-                    <p className="font-bold">跑班自取訂單已建立</p>
+	                    <p className="font-bold">匯款資料與跑班自取訂單已送出</p>
                     <p className="mt-1 text-sm">訂單編號：{order.orderNumber}</p>
-                    <p className="mt-2 text-sm leading-6">團隊會透過你填寫的聯絡方式確認自取時間與地點。</p>
+	                    <p className="mt-2 text-sm leading-6">財務核對入帳後，團隊會透過你填寫的聯絡方式確認自取時間與地點。</p>
                     <a href={brand.instagramUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold underline underline-offset-4"><MessageCircle className="h-4 w-4" />需要協助請聯絡官方 Instagram</a>
                   </div>
                 </div>
@@ -171,9 +198,9 @@ export default function CheckoutPage() {
 
               {error ? <div className="mb-4 rounded-lg bg-red-50 p-4 text-sm font-semibold leading-6 text-red-700">{error}</div> : null}
 
-              <button type="button" onClick={submitOrder} disabled={isSubmitting || items.length === 0} className="apple-button-primary mb-3 w-full gap-2 disabled:cursor-not-allowed disabled:opacity-60">
+              <button type="button" onClick={submitOrder} disabled={isSubmitting || items.length === 0 || transferLastFive.length !== 5} className="apple-button-primary mb-3 w-full gap-2 disabled:cursor-not-allowed disabled:opacity-60">
                 <Send className="h-4 w-4" />
-                {isSubmitting ? '正在建立自取訂單...' : '提交跑班自取訂單'}
+	                {isSubmitting ? '正在提交匯款訂單...' : '提交匯款與自取訂單'}
               </button>
               <Link href="/shop" className="apple-button-outline w-full gap-2">返回商店</Link>
             </aside>

@@ -19,6 +19,7 @@ type OrderBody = {
   contact?: string
   email?: string
   fulfillmentNote?: string
+  transferLastFive?: string
   items?: OrderItemInput[]
 }
 
@@ -54,6 +55,7 @@ export async function POST(request: NextRequest) {
   const contact = cleanText(body.contact)
   const email = cleanText(body.email)
   const fulfillmentNote = cleanText(body.fulfillmentNote)
+  const transferLastFive = cleanText(body.transferLastFive).replace(/\D/g, '').slice(-5)
   const items = (body.items ?? [])
     .map((item) => ({
       productId: cleanText(item.productId) || getCartProductId(cleanText(item.id)),
@@ -69,6 +71,10 @@ export async function POST(request: NextRequest) {
 
   if (items.length === 0) {
     return NextResponse.json({ error: '購物車沒有可提交的商品。' }, { status: 400 })
+  }
+
+  if (!/^\d{5}$/.test(transferLastFive)) {
+    return NextResponse.json({ error: '請填寫正確的匯款帳號後五碼。' }, { status: 400 })
   }
 
   const { data, error } = await supabaseAdmin.rpc('create_shop_order_with_stock', {
@@ -101,25 +107,36 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '訂單已建立，但安全憑證產生失敗，請聯絡客服。' }, { status: 500 })
   }
 
-  // Keep old database functions compatible while ensuring every new shop order
-  // is pickup-only and never carries a bank account or remittance reference.
+  const paymentSubmittedAt = new Date().toISOString()
+  const paymentReference = cleanText(order.orderNumber)
+
+  // Keep the inventory-aware database function compatible, then attach the
+  // transfer proof collected at checkout. Fulfillment remains running-class pickup.
   const { error: pickupUpdateError } = await supabaseAdmin
     .from('shop_orders')
     .update({
-      payment_method: 'pickup',
-      payment_reference: '',
+      status: 'pending_review',
+      transfer_last_five: transferLastFive,
+      payment_submitted_at: paymentSubmittedAt,
+      payment_method: 'bank_transfer',
+      payment_reference: paymentReference,
       payment_account_id: null,
-      payment_account_label: '',
+      payment_account_label: '好運跑班官方匯款帳戶',
     })
     .eq('id', orderId)
   if (pickupUpdateError) {
-    return NextResponse.json({ error: '訂單已建立，但自取方式資料寫入失敗，請聯絡好運協助處理。' }, { status: 500 })
+    return NextResponse.json({ error: '訂單已建立，但匯款資料寫入失敗，請聯絡好運協助處理。' }, { status: 500 })
   }
 
   return NextResponse.json({
     order: {
       ...order,
-      paymentMethod: 'pickup',
+      status: 'pending_review',
+      transferLastFive,
+      paymentSubmittedAt,
+      paymentMethod: 'bank_transfer',
+      paymentReference,
+      paymentChannelLabel: '好運跑班官方匯款帳戶',
       fulfillmentMethod: 'pickup',
       accessToken,
     },
@@ -127,5 +144,5 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH() {
-  return NextResponse.json({ error: '商城目前僅提供跑班自取，未開放銀行匯款。' }, { status: 410 })
+  return NextResponse.json({ error: '商城匯款資料請在結帳時一併提交。' }, { status: 410 })
 }

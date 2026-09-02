@@ -17,6 +17,7 @@ import { useLanguage } from '@/app/language-context'
 import type { ManagedCourse } from '@/lib/managed-courses'
 import { useSiteContent } from '@/app/site-content-provider'
 
+import { formatCourseWeekday } from '@/lib/course-weekday'
 type CourseDetail = ManagedCourse
 
 type CourseDetailClientProps = {
@@ -68,6 +69,7 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
   course = managedCourse
 
   const text = (value: string) => localizeText(value, language)
+  const courseText = (value: string) => formatCourseWeekday(text(value))
   const instagramUrl = brand.instagramUrl || course.instagramUrl || 'https://www.instagram.com/nurture.running.team/'
   const courseCoaches = course.coaches ?? (course.coach ? [course.coach] : [])
   const seasonFocus = course.benefits.slice(0, 3)
@@ -82,7 +84,7 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
             {t.courseDetail.backToCourses}
           </Link>
           <p className="truncate text-sm font-black text-apple-gray-900 md:max-w-2xl">
-            {text(course.title)}
+            {courseText(course.title)}
           </p>
         </div>
       </div>
@@ -92,7 +94,7 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
           <div className="rounded-[1.5rem] border border-black/5 bg-apple-gray-50 p-5 shadow-sm md:p-7">
               <p className="text-xs font-bold uppercase tracking-wide text-apple-blue">{course.campaignLabel || t.courseDetail.heroLabel}</p>
               <h1 className="mt-2 max-w-4xl text-3xl font-black leading-[1.08] text-apple-gray-900 md:text-4xl">
-                {text(course.title)}
+                {courseText(course.title)}
               </h1>
               <p className="mt-3 max-w-2xl text-base leading-7 text-apple-gray-600">
                 {text(course.slogan)}
@@ -159,7 +161,7 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
                       </div>
                       <h3 className="mt-4 text-lg font-black text-apple-gray-950">{text(coach.name)}</h3>
                       <p className="mt-2 text-xs font-bold text-apple-gray-400">負責班級</p>
-                      <p className="mt-1 text-sm font-semibold leading-6 text-apple-gray-700">{text(compactCourseName(course.name))}</p>
+                      <p className="mt-1 text-sm font-semibold leading-6 text-apple-gray-700">{courseText(compactCourseName(course.name))}</p>
                       <p className="mt-3 text-xs font-black text-apple-blue">查看團隊資料</p>
                     </Link>
                   )
@@ -211,7 +213,7 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
 
                   <div className="mt-4 grid grid-cols-1 gap-2 min-[420px]:grid-cols-3">
                     {[
-                      [CalendarDays, t.courseDetail.courseWeekday, '星期', course.weekday],
+                      [CalendarDays, t.courseDetail.courseWeekday, '星期', formatCourseWeekday(course.weekday)],
                       [Clock, t.courseDetail.classTime, '時間', course.time],
                       [Route, t.courseDetail.coursePeriod, '週期', course.period],
                     ].map(([Icon, label, shortLabel, value]) => {

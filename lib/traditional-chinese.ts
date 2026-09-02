@@ -103,7 +103,9 @@ const conversionPairs = [...simplifiedToTraditionalPhrases, ...simplifiedToTradi
 
 export function toTraditionalWebsiteText(value: string) {
   const curated = conversionPairs.reduce((text, [from, to]) => text.replaceAll(from, to), value)
-  return curated.replaceAll('馬拉鬆', '馬拉松')
+  return curated
+    .replaceAll('馬拉鬆', '馬拉松')
+    .replaceAll('週賢峰', '周賢峰')
 }
 
 const traditionalToSimplifiedPairs = [...simplifiedToTraditionalPhrases, ...simplifiedToTraditionalCharacters]
@@ -112,5 +114,7 @@ const traditionalToSimplifiedPairs = [...simplifiedToTraditionalPhrases, ...simp
 
 export function toSimplifiedWebsiteText(value: string) {
   const curated = traditionalToSimplifiedPairs.reduce((text, [from, to]) => text.replaceAll(from, to), value)
-  return curated.replaceAll('马拉鬆', '马拉松')
+  return curated
+    .replaceAll('马拉鬆', '马拉松')
+    .replaceAll('週贤峰', '周贤峰')
 }

@@ -6,6 +6,7 @@ import { ArrowUpRight, Award, BadgeCheck, Route, UserRound, UsersRound } from 'l
 import { useMemo } from 'react'
 import { useSiteContent } from '@/app/site-content-provider'
 import { getDefaultCourseCoachKeys } from '@/lib/coach-profiles'
+import { formatCourseWeekday } from '@/lib/course-weekday'
 
 function compactCourseName(name: string) {
   return name
@@ -28,7 +29,7 @@ export default function TeamRosterClient() {
       coachKeys.forEach((coachKey) => {
         const current = byCoach.get(coachKey) ?? []
         if (!current.some((assignment) => assignment.slug === course.slug)) {
-          byCoach.set(coachKey, [...current, { name: compactCourseName(course.name), slug: course.slug }])
+          byCoach.set(coachKey, [...current, { name: formatCourseWeekday(compactCourseName(course.name)), slug: course.slug }])
         }
       })
     })

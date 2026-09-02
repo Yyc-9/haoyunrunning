@@ -53,10 +53,14 @@ function cleanList(value: unknown) {
   return value.map((item) => String(item ?? '').trim()).filter(Boolean).slice(0, 20)
 }
 
+function normalizeCoachDisplayName(value: unknown) {
+  return String(value ?? '').trim().replaceAll('週賢峰', '周賢峰')
+}
+
 function defaultProfile(coachKey: string, coach: Coach): CoachPublicProfile {
   return {
     coachKey,
-    displayName: coach.name,
+    displayName: normalizeCoachDisplayName(coach.name),
     nickname: coach.nickname ?? '',
     role: coach.role,
     bio: coach.bio,
@@ -87,7 +91,7 @@ export function coachPublicProfilesFromRows(rows: CoachPublicProfileRow[] | null
     const initialized = row.profile_initialized === true
     const fallback = result[row.coach_key] ?? {
       coachKey: row.coach_key,
-      displayName: String(row.display_name ?? '').trim(),
+      displayName: normalizeCoachDisplayName(row.display_name),
       nickname: '',
       role: '',
       bio: '',
@@ -107,7 +111,7 @@ export function coachPublicProfilesFromRows(rows: CoachPublicProfileRow[] | null
 
     result[row.coach_key] = {
       coachKey: row.coach_key,
-      displayName: initialized ? String(row.display_name ?? '').trim() || fallback.displayName : fallback.displayName,
+      displayName: initialized ? normalizeCoachDisplayName(row.display_name) || fallback.displayName : fallback.displayName,
       nickname: initialized ? String(row.nickname ?? '').trim() : fallback.nickname,
       role: initialized ? String(row.role_title ?? '').trim() : fallback.role,
       bio: initialized ? String(row.bio ?? '').trim() : fallback.bio,

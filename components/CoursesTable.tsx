@@ -6,6 +6,7 @@ import { ArrowUpRight, Clock3, MapPin } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
 import { useSiteContent } from '@/app/site-content-provider'
 import { compareCourseLocations, compareCourses, orderedWeekdays } from '@/lib/course-sort'
+import { formatCourseWeekday } from '@/lib/course-weekday'
 
 const weekdays = orderedWeekdays
 
@@ -21,7 +22,7 @@ function getCourseShortName(name: string) {
   return name
     .replace(/^2026\s*/, '')
     .replace(/^好運跑步訓練營\s*X\s*/, '')
-    .replace(/^週[一二三四五六日]/, '')
+    .replace(/^(?:週|周|星期)[一二三四五六日天]/, '')
     .trim()
 }
 
@@ -46,6 +47,7 @@ export default function CoursesTable() {
   const [cityFilter, setCityFilter] = useState('all')
 
   const localeText = (text: string) => language === 'zh-CN' ? text.replaceAll('週', '周') : text.replaceAll('周', '週')
+  const weekdayText = (text: string) => formatCourseWeekday(localeText(text), language)
   const cities = useMemo(() => [...new Set(courses.map((course) => course.location))].sort(compareCourseLocations), [courses])
   const filteredCourses = useMemo(() => courses.filter((course) => {
     if (levelFilter !== 'all' && getCourseLevel(course.name) !== levelFilter) return false
@@ -97,7 +99,7 @@ export default function CoursesTable() {
 
           return (
             <section key={weekday} className="overflow-hidden rounded-lg border border-black/10 bg-white shadow-sm">
-              <h3 className="bg-black px-4 py-3 text-sm font-black text-white">{localeText(weekday)}</h3>
+              <h3 className="bg-black px-4 py-3 text-sm font-black text-white">{weekdayText(weekday)}</h3>
               <div className="space-y-2 p-3">
                 {weekdayCourses.map((course) => {
                   return (
@@ -129,7 +131,7 @@ export default function CoursesTable() {
       <div className="hidden overflow-x-auto rounded-lg border border-black/10 bg-white shadow-sm md:block">
         <div className="min-w-[940px]">
           <div className="grid grid-cols-7 border-b border-black/10 bg-black text-white">
-            {weekdays.map((weekday) => <div key={weekday} className="flex min-h-16 items-center justify-center border-r border-white/15 px-3 text-sm font-black last:border-r-0">{localeText(weekday)}</div>)}
+            {weekdays.map((weekday) => <div key={weekday} className="flex min-h-16 items-center justify-center border-r border-white/15 px-3 text-sm font-black last:border-r-0">{weekdayText(weekday)}</div>)}
           </div>
 
           <div className="grid grid-cols-7">
