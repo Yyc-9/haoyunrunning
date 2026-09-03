@@ -16,10 +16,11 @@ import {
   WalletCards,
 } from 'lucide-react'
 import type { Course } from '@/lib/goodluck-data'
+import { displayCourseLocation, displayCourseTime } from '@/lib/course-sort'
 import type { LegacyStudentStatus, MyCourseEnrollment } from '@/lib/course-registration'
 import type { CoursePricingOptions, CourseRegistrationQuote } from '@/lib/course-pricing'
-import ProtectedCoursePaymentInfo from '@/components/ProtectedCoursePaymentInfo'
 import { formatCourseWeekday } from '@/lib/course-weekday'
+import ProtectedCoursePaymentInfo from '@/components/ProtectedCoursePaymentInfo'
 import {
   coursePolicyRules,
   invoiceDeliveryOptions,
@@ -317,9 +318,9 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
               <h3 className="mt-2 text-xl font-black leading-7 text-apple-gray-950">{formatCourseWeekday(course.name)}</h3>
               <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                 <div><dt className="text-apple-gray-500">日期</dt><dd className="mt-1 font-bold">{course.period}</dd></div>
-                <div><dt className="text-apple-gray-500">地點</dt><dd className="mt-1 font-bold">{course.location}{course.meetingPoint ? ` · ${course.meetingPoint}` : ''}</dd></div>
+                <div><dt className="text-apple-gray-500">地點</dt><dd className="mt-1 font-bold">{displayCourseLocation(course.location)}{course.meetingPoint ? ` · ${course.meetingPoint}` : ''}</dd></div>
                 <div><dt className="text-apple-gray-500">上課日</dt><dd className="mt-1 font-bold">{formatCourseWeekday(course.weekday)}</dd></div>
-                <div><dt className="text-apple-gray-500">上課時間</dt><dd className="mt-1 font-bold">{course.classTime}</dd></div>
+                <div><dt className="text-apple-gray-500">上課時間</dt><dd className="mt-1 font-bold">{displayCourseTime(course.classTime ?? course.time ?? '')}</dd></div>
                 <div><dt className="text-apple-gray-500">訓練重點</dt><dd className="mt-1 font-bold">{course.focus}</dd></div>
                 <div><dt className="text-apple-gray-500">費用說明</dt><dd className="mt-1 font-bold">系統依學員身分與本期計費起始課次自動核算</dd></div>
               </dl>
@@ -524,7 +525,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
 
             <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
               <input type="checkbox" checked={form.finalConsent} onChange={(event) => update('finalConsent', event.target.checked)} className="mt-1 h-5 w-5 shrink-0 accent-emerald-700" />
-              <span className="text-sm font-black leading-6 text-emerald-900">我願意參與 {course.period} 好運訓練營 X {formatCourseWeekday(course.weekday)}{course.location}課程，並確認以上資料正確。</span>
+              <span className="text-sm font-black leading-6 text-emerald-900">我願意參與 {course.period} 好運訓練營 X {formatCourseWeekday(course.weekday)}{displayCourseLocation(course.location)}課程，並確認以上資料正確。</span>
             </label>
           </div>
         ) : null}

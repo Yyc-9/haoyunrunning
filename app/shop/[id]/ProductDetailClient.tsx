@@ -129,7 +129,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
   }
 
   return (
-    <main className="min-h-screen bg-white pt-20 sm:pt-24">
+    <main className="kinetic-page min-h-screen bg-white pt-20 sm:pt-24">
       <div className="container mx-auto px-4 py-5 sm:py-7">
         <nav aria-label="麵包屑" className="flex items-center gap-2 overflow-hidden text-xs font-semibold text-apple-gray-500">
           <Link href="/shop" className="shrink-0 hover:text-black">好運商店</Link>
@@ -139,7 +139,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
 
         <div className="mt-5 grid gap-8 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)] lg:gap-12">
           <section aria-label="商品圖片">
-            <div className="relative aspect-square overflow-hidden rounded-md border border-black/10 bg-apple-gray-50">
+            <div className="kinetic-media relative aspect-square overflow-hidden rounded-md border border-black/10 bg-apple-gray-50">
               {activeMedia?.type === 'video' ? (
                 <video src={activeMedia.url} poster={product.image || undefined} controls muted playsInline preload="metadata" className="h-full w-full object-contain" />
               ) : activeMedia?.url ? (

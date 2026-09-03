@@ -26,6 +26,16 @@ export function normalizeCourseLocation(value: string) {
   return location
 }
 
+export function displayCourseLocation(value: string) {
+  const location = normalizeCourseLocation(value)
+  return location === '台北' ? '台北市' : location
+}
+
+export function displayCourseTime(value: string) {
+  const time = value.match(/(?:[01]\d|2[0-3]):[0-5]\d/)?.[0]
+  return time || value.replace(/\s*[（(][^）)]*(?:小時|小时)[）)]\s*/g, '').trim()
+}
+
 export function compareCourseLocations(first: string, second: string) {
   first = normalizeCourseLocation(first)
   second = normalizeCourseLocation(second)

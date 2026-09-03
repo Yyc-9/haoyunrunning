@@ -603,3 +603,482 @@
     display: none;
   }
 }
+
+/* Desktop kinetic system. Homepage and mobile intentionally keep their own visual language. */
+@keyframes kinetic-copy-arrive {
+  0% {
+    opacity: 0;
+    transform: translate3d(-2rem, 2.5rem, 0) skewX(-3deg);
+    filter: blur(12px);
+  }
+  65% {
+    opacity: 1;
+    transform: translate3d(0.35rem, -0.25rem, 0) skewX(0deg);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    filter: blur(0);
+  }
+}
+
+@keyframes kinetic-stripe-sweep {
+  0% {
+    opacity: 0;
+    transform: translate3d(-180%, 0, 0) skewX(-18deg);
+  }
+  16% {
+    opacity: 0.9;
+  }
+  72% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(850%, 0, 0) skewX(-18deg);
+  }
+}
+
+@keyframes kinetic-surface-drift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes kinetic-scroll-reveal {
+  0% {
+    opacity: 0.12;
+    transform: translate3d(0, 4rem, 0) scale(0.96);
+    filter: blur(14px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes kinetic-ring-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(25 211 225 / 0%); }
+  50% { box-shadow: 0 0 0 0.45rem rgb(25 211 225 / 10%); }
+}
+
+@media (min-width: 1024px) {
+  .kinetic-page {
+    --kinetic-accent: #19d3e1;
+    --kinetic-accent-soft: rgb(25 211 225 / 18%);
+    --kinetic-flare: #ffc52f;
+    --kinetic-ink: #071820;
+    position: relative;
+    isolation: isolate;
+    background-color: #f2f6f7;
+    background-image:
+      radial-gradient(circle at 12% 18%, rgb(25 211 225 / 12%), transparent 26rem),
+      radial-gradient(circle at 88% 38%, rgb(255 197 47 / 11%), transparent 30rem),
+      linear-gradient(180deg, #f7fafb 0%, #eef3f5 46%, #f8fafb 100%);
+  }
+
+  .kinetic-page-gold {
+    --kinetic-accent: #e5b344;
+    --kinetic-accent-soft: rgb(229 179 68 / 20%);
+    --kinetic-flare: #fff0b4;
+    --kinetic-ink: #17120d;
+  }
+
+  body:has(.kinetic-page) .site-navigation > div > div {
+    border-color: rgb(7 24 32 / 12%);
+    box-shadow: 0 18px 55px rgb(3 18 26 / 16%), inset 0 -2px 0 var(--kinetic-accent, #19d3e1);
+  }
+
+  body:has(.kinetic-page) .site-nav-item {
+    isolation: isolate;
+  }
+
+  body:has(.kinetic-page) .site-nav-link {
+    letter-spacing: 0.015em;
+  }
+
+  body:has(.kinetic-page) .site-nav-link > span:last-child {
+    height: 0.2rem;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--kinetic-accent, #19d3e1), var(--kinetic-flare, #ffc52f));
+    box-shadow: 0 0 0.9rem var(--kinetic-accent-soft, rgb(25 211 225 / 18%));
+  }
+
+  .kinetic-page .kinetic-hero {
+    position: relative;
+    isolation: isolate;
+    box-shadow: inset 0 -0.3rem 0 var(--kinetic-accent);
+  }
+
+  .kinetic-page .kinetic-hero::after {
+    content: '';
+    position: absolute;
+    z-index: 2;
+    inset: -25% auto -25% -18%;
+    width: 13%;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 62%), var(--kinetic-accent-soft), transparent);
+    mix-blend-mode: screen;
+    animation: kinetic-stripe-sweep 1.55s 0.28s cubic-bezier(0.18, 0.9, 0.22, 1) both;
+  }
+
+  .kinetic-page .kinetic-hero > img {
+    transform: scale(1.015);
+    filter: saturate(1.04) contrast(1.03);
+    transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1), filter 1.2s ease;
+  }
+
+  .kinetic-page .kinetic-hero:hover > img {
+    transform: scale(1.065);
+    filter: saturate(1.14) contrast(1.06);
+  }
+
+  .kinetic-page .kinetic-hero > .container,
+  .kinetic-page .kinetic-hero > div.container {
+    animation: kinetic-copy-arrive 0.95s 0.08s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .kinetic-page .kinetic-hero h1 {
+    text-wrap: balance;
+    text-shadow: 0 0.15rem 0.15rem rgb(0 0 0 / 18%), 0 1.1rem 3.5rem rgb(0 0 0 / 38%);
+  }
+
+  .kinetic-page .kinetic-card,
+  .kinetic-page .apple-card {
+    position: relative;
+    isolation: isolate;
+    border-color: rgb(7 24 32 / 13%);
+    box-shadow: 0 0.15rem 0.35rem rgb(3 18 26 / 5%), 0 1.25rem 3.8rem rgb(3 18 26 / 8%);
+    transition:
+      transform 420ms cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 320ms ease,
+      box-shadow 420ms cubic-bezier(0.16, 1, 0.3, 1),
+      filter 320ms ease;
+    will-change: transform;
+  }
+
+  .kinetic-page .kinetic-card::before,
+  .kinetic-page .apple-card::before {
+    content: '';
+    position: absolute;
+    z-index: 8;
+    top: 0;
+    left: -60%;
+    width: 42%;
+    height: 0.28rem;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(90deg, transparent, var(--kinetic-accent), var(--kinetic-flare), transparent);
+    transform: skewX(-22deg);
+    transition: left 720ms cubic-bezier(0.16, 1, 0.3, 1), opacity 180ms ease;
+  }
+
+  .kinetic-page .kinetic-card:hover,
+  .kinetic-page .apple-card:hover {
+    z-index: 6;
+    border-color: color-mix(in srgb, var(--kinetic-accent) 52%, transparent);
+    box-shadow: 0 0.4rem 1rem rgb(3 18 26 / 10%), 0 2.2rem 5.2rem rgb(3 18 26 / 21%), 0 0 0 0.14rem var(--kinetic-accent-soft);
+    transform: translate3d(0, -0.75rem, 0) scale(1.018);
+    filter: saturate(1.06);
+  }
+
+  .kinetic-page .kinetic-card:hover::before,
+  .kinetic-page .apple-card:hover::before {
+    left: 122%;
+    opacity: 1;
+  }
+
+  .kinetic-page .kinetic-image {
+    transition: transform 620ms cubic-bezier(0.16, 1, 0.3, 1), filter 420ms ease;
+    transform-origin: 50% 48%;
+  }
+
+  .kinetic-page .kinetic-card:hover .kinetic-image {
+    transform: scale(1.055) rotate(-0.65deg);
+    filter: saturate(1.1) contrast(1.04);
+  }
+
+  .kinetic-page .kinetic-media {
+    position: relative;
+    border-color: rgb(7 24 32 / 14%);
+    box-shadow: 0 1.4rem 4.5rem rgb(3 18 26 / 14%);
+    transition: transform 520ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 520ms ease;
+  }
+
+  .kinetic-page .kinetic-media:hover {
+    transform: translate3d(0, -0.65rem, 0) scale(1.012);
+    box-shadow: 0 2.7rem 6.5rem rgb(3 18 26 / 25%), 0 0 0 0.16rem var(--kinetic-accent-soft);
+  }
+
+  .kinetic-page .apple-button-primary,
+  .kinetic-page .apple-button-secondary,
+  .kinetic-page .apple-button-outline {
+    position: relative;
+    isolation: isolate;
+    min-height: 2.75rem;
+    overflow: hidden;
+    border-radius: 999px;
+    box-shadow: none;
+    backdrop-filter: none;
+    transition:
+      transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+      background-color 180ms ease,
+      border-color 180ms ease,
+      color 180ms ease,
+      box-shadow 320ms ease;
+  }
+
+  .kinetic-page .apple-button-primary {
+    background: linear-gradient(110deg, var(--kinetic-ink), #0d495b 52%, var(--kinetic-ink));
+    background-size: 220% 100%;
+  }
+
+  .kinetic-page .apple-button-primary::after,
+  .kinetic-page .apple-button-secondary::after,
+  .kinetic-page .apple-button-outline::after {
+    content: '';
+    position: absolute;
+    inset: -80% auto -80% -38%;
+    width: 24%;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 75%), transparent);
+    transform: skewX(-18deg);
+    transition: left 620ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .kinetic-page .apple-button-primary:hover,
+  .kinetic-page .apple-button-secondary:hover,
+  .kinetic-page .apple-button-outline:hover {
+    transform: translate3d(0, -0.25rem, 0) scale(1.045);
+    box-shadow: 0 1rem 2.4rem rgb(3 18 26 / 22%), 0 0 0 0.18rem var(--kinetic-accent-soft);
+  }
+
+  .kinetic-page .apple-button-primary:hover {
+    background-position: 100% 50%;
+  }
+
+  .kinetic-page .apple-button-primary:hover::after,
+  .kinetic-page .apple-button-secondary:hover::after,
+  .kinetic-page .apple-button-outline:hover::after {
+    left: 126%;
+  }
+
+  body:not(:has(.home-hero)) .apple-input {
+    min-height: 2.75rem;
+    border-color: #cfd7dc;
+    border-radius: 0.625rem;
+    background: #fff;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  body:not(:has(.home-hero)) .apple-input:focus {
+    border-color: #0b7285;
+    box-shadow: 0 0 0 3px rgb(11 114 133 / 14%);
+  }
+
+  .kinetic-page .apple-chip {
+    border-radius: 999px;
+    box-shadow: none;
+    backdrop-filter: none;
+    transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 240ms ease;
+  }
+
+  .kinetic-page .apple-chip:hover {
+    transform: translate3d(0, -0.2rem, 0) scale(1.035);
+    box-shadow: 0 0.7rem 1.8rem rgb(3 18 26 / 14%);
+  }
+
+  .kinetic-page .course-filter-deck {
+    border-color: rgb(7 24 32 / 12%);
+    background:
+      linear-gradient(#fff, #fff) padding-box,
+      linear-gradient(110deg, var(--kinetic-accent), transparent 34%, var(--kinetic-flare)) border-box;
+    box-shadow: 0 1.5rem 4rem rgb(3 18 26 / 10%);
+  }
+
+  .kinetic-page .course-filter-pill {
+    transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 260ms ease, background-color 180ms ease, color 180ms ease;
+  }
+
+  .kinetic-page .course-filter-pill:hover {
+    transform: translate3d(0, -0.25rem, 0) scale(1.075);
+    box-shadow: 0 0.8rem 1.8rem rgb(3 18 26 / 16%), 0 0 0 0.14rem var(--kinetic-accent-soft);
+  }
+
+  .kinetic-page .course-filter-pill[aria-pressed='true'] {
+    animation: kinetic-ring-pulse 2.8s ease-in-out infinite;
+  }
+
+  .kinetic-page .course-schedule-board {
+    overflow: visible;
+    border-color: rgb(7 24 32 / 12%);
+    box-shadow: 0 2rem 5.5rem rgb(3 18 26 / 14%);
+  }
+
+  .kinetic-page .course-schedule-head {
+    background: linear-gradient(110deg, #061820 0%, #0d5666 42%, #102d38 68%, #061820 100%);
+    background-size: 260% 100%;
+    animation: kinetic-surface-drift 9s ease-in-out infinite;
+    box-shadow: inset 0 -0.22rem 0 var(--kinetic-accent);
+  }
+
+  .kinetic-page .course-event-card {
+    position: relative;
+    isolation: isolate;
+    box-shadow: 0 0.5rem 1.4rem rgb(3 18 26 / 7%);
+    transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 320ms ease, border-color 180ms ease, filter 180ms ease;
+  }
+
+  .kinetic-page .course-event-card::after {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0.26rem;
+    border-radius: inherit;
+    background: linear-gradient(180deg, var(--kinetic-accent), var(--kinetic-flare));
+    transform: scaleY(0.3);
+    transform-origin: 50% 50%;
+    opacity: 0;
+    transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1), opacity 180ms ease;
+  }
+
+  .kinetic-page .course-event-card:hover {
+    z-index: 10;
+    transform: translate3d(0, -0.6rem, 0) rotate(-1.2deg) scale(1.055);
+    box-shadow: 0 1.5rem 3.2rem rgb(3 18 26 / 25%), 0 0 0 0.14rem var(--kinetic-accent-soft);
+    filter: saturate(1.08);
+  }
+
+  .kinetic-page .course-event-card:nth-child(even):hover {
+    transform: translate3d(0, -0.6rem, 0) rotate(1.2deg) scale(1.055);
+  }
+
+  .kinetic-page .course-event-card:hover::after {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+
+  .kinetic-page a:focus-visible,
+  .kinetic-page button:focus-visible,
+  .kinetic-page input:focus-visible,
+  .kinetic-page select:focus-visible,
+  .kinetic-page textarea:focus-visible,
+  .kinetic-page summary:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--kinetic-accent) 52%, transparent);
+    outline-offset: 4px;
+  }
+
+  @supports (animation-timeline: view()) {
+    .kinetic-page .kinetic-reveal {
+      animation: kinetic-scroll-reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 4% cover 28%;
+    }
+  }
+
+  .admin-shell {
+    background: #f5f7f8;
+  }
+
+  .admin-dashboard-grid {
+    display: grid;
+    grid-template-columns: 228px minmax(0, 1fr);
+    column-gap: 1.75rem;
+    align-items: start;
+  }
+
+  .admin-dashboard-header {
+    grid-column: 1 / -1;
+  }
+
+  .admin-dashboard-header h1 {
+    font-size: 2.5rem;
+    letter-spacing: -0.035em;
+  }
+
+  .admin-dashboard-header > div > p:last-child {
+    max-width: 66rem;
+  }
+
+  .admin-dashboard-sidebar {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: start;
+  }
+
+  .admin-dashboard-grid > :not(.admin-dashboard-header):not(.admin-dashboard-sidebar) {
+    grid-column: 2;
+    min-width: 0;
+  }
+
+  .admin-shell table thead {
+    background: #edf1f3;
+    color: #42545e;
+  }
+
+  .admin-shell table tbody tr {
+    transition: background-color 140ms ease;
+  }
+
+  .admin-shell table tbody tr:hover {
+    background: #f7fafb;
+  }
+
+  .admin-shell .apple-card {
+    border-color: rgb(13 42 56 / 12%);
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 1px 2px rgb(10 31 42 / 5%), 0 8px 24px rgb(10 31 42 / 5%);
+    backdrop-filter: none;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+  }
+}
+
+@media (min-width: 1024px) and (prefers-reduced-motion: reduce) {
+  .kinetic-page .kinetic-hero::after {
+    display: none;
+  }
+
+  .kinetic-page .kinetic-hero > img,
+  .kinetic-page .kinetic-hero > .container,
+  .kinetic-page .kinetic-card,
+  .kinetic-page .kinetic-card::before,
+  .kinetic-page .kinetic-image,
+  .kinetic-page .kinetic-media,
+  .kinetic-page .apple-card,
+  .kinetic-page .apple-card::before,
+  .kinetic-page .apple-button-primary,
+  .kinetic-page .apple-button-primary::after,
+  .kinetic-page .apple-button-secondary,
+  .kinetic-page .apple-button-secondary::after,
+  .kinetic-page .apple-button-outline,
+  .kinetic-page .apple-button-outline::after,
+  .kinetic-page .apple-chip,
+  .kinetic-page .course-filter-pill,
+  .kinetic-page .course-schedule-head,
+  .kinetic-page .course-event-card,
+  .kinetic-page .kinetic-reveal,
+  .admin-shell table tbody tr {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .kinetic-page .kinetic-hero:hover > img,
+  .kinetic-page .kinetic-card:hover,
+  .kinetic-page .kinetic-card:hover .kinetic-image,
+  .kinetic-page .kinetic-media:hover,
+  .kinetic-page .apple-card:hover,
+  .kinetic-page .apple-button-primary:hover,
+  .kinetic-page .apple-button-secondary:hover,
+  .kinetic-page .apple-button-outline:hover,
+  .kinetic-page .apple-chip:hover,
+  .kinetic-page .course-filter-pill:hover,
+  .kinetic-page .course-event-card:hover,
+  .kinetic-page .course-event-card:nth-child(even):hover {
+    transform: none !important;
+    filter: none !important;
+  }
+}

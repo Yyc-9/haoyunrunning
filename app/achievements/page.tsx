@@ -63,8 +63,8 @@ export default function AchievementsPage() {
   const badges = achievements.badges.length ? achievements.badges : badgeSeries
   const steps = achievements.howToSteps.length ? achievements.howToSteps : applicationSteps
   return (
-    <main translate="no" className="min-h-screen bg-[#f5f3ef] pt-20 sm:pt-24">
-      <section className="overflow-hidden bg-[#0f0d0c] px-4 py-12 text-white sm:px-6 sm:py-16 lg:px-8 lg:py-20">
+    <main translate="no" className="kinetic-page kinetic-page-gold min-h-screen bg-[#f5f3ef] pt-20 sm:pt-24">
+      <section className="kinetic-hero overflow-hidden bg-[#0f0d0c] px-4 py-12 text-white sm:px-6 sm:py-16 lg:px-8 lg:py-20">
         <div className="container mx-auto grid max-w-7xl gap-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(520px,1.15fr)] lg:items-center">
           <div>
             <p className="text-sm font-black uppercase tracking-[0.18em] text-[#d6b66c]">{achievements.heroLabel}</p>
@@ -100,7 +100,7 @@ export default function AchievementsPage() {
         </div>
       </section>
 
-      <section className="px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+      <section className="kinetic-reveal px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
         <div className="container mx-auto grid max-w-7xl gap-7 lg:grid-cols-[minmax(360px,0.85fr)_minmax(0,1.15fr)] lg:items-center">
           <div className="relative aspect-[6/7] overflow-hidden rounded-2xl bg-white shadow-sm">
             <Image
@@ -146,7 +146,7 @@ export default function AchievementsPage() {
             className="scrollbar-hidden -mx-4 mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain scroll-smooth px-4 pb-3 md:mx-0 md:mt-9 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pb-0 xl:grid-cols-4"
           >
             {badges.map((badge) => (
-              <article key={badge.slug} className="w-[82vw] max-w-[21rem] shrink-0 snap-start overflow-hidden rounded-2xl border border-black/10 bg-[#12100f] text-white shadow-sm md:w-auto md:max-w-none">
+              <article key={badge.slug} className="kinetic-card w-[82vw] max-w-[21rem] shrink-0 snap-start overflow-hidden rounded-2xl border border-black/10 bg-[#12100f] text-white shadow-sm md:w-auto md:max-w-none">
                 <div className="relative aspect-[2/3]">
                   <Image
                     src={badge.image}
@@ -166,7 +166,7 @@ export default function AchievementsPage() {
             ))}
           </div>
 
-          <article className="mt-5 grid overflow-hidden rounded-2xl border border-[#d8c08a] bg-[#f6f0e4] shadow-sm lg:grid-cols-[minmax(360px,0.9fr)_minmax(0,1.1fr)]">
+          <article className="kinetic-card mt-5 grid overflow-hidden rounded-2xl border border-[#d8c08a] bg-[#f6f0e4] shadow-sm lg:grid-cols-[minmax(360px,0.9fr)_minmax(0,1.1fr)]">
             <div className="relative min-h-[28rem]">
               <Image
                 src={achievements.bqImage}
@@ -195,7 +195,7 @@ export default function AchievementsPage() {
         </div>
       </section>
 
-      <section className="border-b border-black/10 bg-[#171412] px-4 py-12 text-white sm:px-6 sm:py-16 lg:px-8">
+      <section className="kinetic-reveal border-b border-black/10 bg-[#171412] px-4 py-12 text-white sm:px-6 sm:py-16 lg:px-8">
         <div className="container mx-auto max-w-7xl">
           <div className="max-w-3xl">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[#d6b66c]">{achievements.milestoneLabel}</p>
@@ -221,7 +221,7 @@ export default function AchievementsPage() {
 
       <section id="how-to-apply" className="scroll-mt-28 px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
         <div className="container mx-auto grid max-w-7xl gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.78fr)]">
-          <div className="rounded-2xl bg-black p-6 text-white sm:p-8 lg:p-10">
+          <div className="kinetic-card rounded-2xl bg-black p-6 text-white sm:p-8 lg:p-10">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-black">
               <Medal className="h-5 w-5" />
             </div>
@@ -239,7 +239,7 @@ export default function AchievementsPage() {
           </div>
 
           <div className="space-y-5">
-            <div className="relative aspect-square overflow-hidden rounded-2xl bg-white shadow-sm">
+            <div className="kinetic-media relative aspect-square overflow-hidden rounded-2xl bg-white shadow-sm">
               <Image src={achievements.howToImage} alt="跑者手持好運榮耀徽章" fill sizes="(max-width: 1023px) 100vw, 36vw" className="object-cover" />
             </div>
             <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
@@ -256,7 +256,7 @@ export default function AchievementsPage() {
       </section>
 
       <section className="border-t border-black/10 bg-white px-4 py-10 sm:px-6 lg:px-8">
-        <div className="container mx-auto flex max-w-7xl flex-col gap-5 rounded-2xl border border-black/10 bg-apple-gray-50 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+        <div className="kinetic-card container mx-auto flex max-w-7xl flex-col gap-5 rounded-2xl border border-black/10 bg-apple-gray-50 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
           <div className="flex items-start gap-4">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black text-white">
               <Award className="h-5 w-5" />

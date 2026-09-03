@@ -16,6 +16,7 @@ import {
 } from '@/lib/course-attendance'
 import AcceptanceTestCheckin from '@/components/AcceptanceTestCheckin'
 import { supabase } from '@/lib/supabase'
+import { displayCourseTime } from '@/lib/course-sort'
 
 type AttendancePayload = {
   season?: { id: string; name: string; code: string; endsOn: string }
@@ -144,7 +145,7 @@ export default function StudentAttendancePanel() {
         ) return []
         return [{
           value: `${course.courseSeasonCourseId}|${sessionDate}`,
-          label: `${course.courseName}｜${formatAttendanceDate(sessionDate)}｜${course.classTime}`,
+          label: `${course.courseName}｜${formatAttendanceDate(sessionDate)}｜${displayCourseTime(course.classTime)}`,
           startsAt: courseSessionStart(sessionDate, course.classTime).getTime(),
         }]
       })
@@ -233,7 +234,7 @@ export default function StudentAttendancePanel() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
                       <div className="min-w-0">
-                        <p className="font-black text-apple-gray-950">{formatAttendanceDate(row.sessionDate)} · {row.course.classTime}</p>
+                        <p className="font-black text-apple-gray-950">{formatAttendanceDate(row.sessionDate)} · {displayCourseTime(row.course.classTime)}</p>
                         <p className="mt-1 text-xs font-semibold text-apple-gray-500">所屬班級：{row.course.courseName}</p>
                       </div>
                       <span className={`w-fit rounded-full px-3 py-1 text-xs font-black ${statusTone}`}>{status}</span>

@@ -39,8 +39,8 @@ export default function TeamRosterClient() {
   const coaches = Object.values(coachProfiles).filter((coach) => coach.published)
 
   return (
-    <main className="min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
-      <section className="relative isolate flex min-h-[390px] overflow-hidden border-b border-black/10 text-white sm:min-h-[480px]">
+    <main className="kinetic-page min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
+      <section className="kinetic-hero relative isolate flex min-h-[390px] overflow-hidden border-b border-black/10 text-white sm:min-h-[480px]">
         <Image
           src={pageMedia.teamHero}
           alt="好運跑班教練團隊背影合照"
@@ -82,9 +82,9 @@ export default function TeamRosterClient() {
                 <article
                   id={`coach-${coach.coachKey}`}
                   key={coach.coachKey}
-                  className="scroll-mt-32 overflow-hidden rounded-lg border border-black/10 bg-white shadow-sm transition target:border-black target:shadow-lg"
+                  className="kinetic-card scroll-mt-32 overflow-hidden rounded-lg border border-black/10 bg-white shadow-sm transition target:border-black target:shadow-lg"
                 >
-                  <div className="relative aspect-[3/2] w-full overflow-hidden border-b border-black/10 bg-apple-gray-100">
+                  <div className="kinetic-image relative aspect-[3/2] w-full overflow-hidden border-b border-black/10 bg-apple-gray-100">
                       {imageUrl ? (
                         <Image
                           src={imageUrl}

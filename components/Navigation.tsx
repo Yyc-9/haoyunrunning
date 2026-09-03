@@ -249,7 +249,7 @@ export default function Navigation() {
         animate={{ y: 0 }}
         transition={{ duration: 0.3 }}
         className={clsx(
-          'fixed left-0 right-0 top-0 z-50 transition-all duration-300',
+          'site-navigation fixed left-0 right-0 top-0 z-50 transition-all duration-300',
           isScrolled
             ? 'border-b border-apple-gray-200 bg-white/92 py-2 shadow-sm backdrop-blur-glass sm:py-3'
             : 'py-3 sm:py-4'
@@ -287,7 +287,7 @@ export default function Navigation() {
                     key={item.key}
                     whileHover={{ scale: 1.05, y: -2 }}
                     whileTap={{ scale: 0.95 }}
-                    className="relative"
+                    className="site-nav-item relative"
                   >
                     {isExternal || isHashLink ? (
                       <a
@@ -301,7 +301,7 @@ export default function Navigation() {
                             }
                           }
                         }}
-                      className="group whitespace-nowrap text-xs font-semibold text-apple-gray-950 transition-all duration-300 hover:text-apple-blue 2xl:text-sm"
+                      className="site-nav-link group whitespace-nowrap text-xs font-semibold text-apple-gray-950 transition-all duration-300 hover:text-apple-blue 2xl:text-sm"
                       >
                         {item.name}
                         {item.key === 'shop' && (
@@ -312,7 +312,7 @@ export default function Navigation() {
                     ) : (
                       <Link
                         href={item.href}
-                        className="group whitespace-nowrap text-xs font-semibold text-apple-gray-950 transition-all duration-300 hover:text-apple-blue 2xl:text-sm"
+                        className="site-nav-link group whitespace-nowrap text-xs font-semibold text-apple-gray-950 transition-all duration-300 hover:text-apple-blue 2xl:text-sm"
                       >
                         {item.name}
                         {item.key === 'shop' && (

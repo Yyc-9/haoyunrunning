@@ -11,7 +11,7 @@ export default function AnniversaryPageClient() {
   const { brand, pageMedia, anniversary } = useSiteContent()
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+    <main className="kinetic-page min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
       <section className="px-4 py-12 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-6xl">
           <Link href="/" className="mb-8 inline-flex items-center gap-2 text-sm font-bold text-apple-gray-700 hover:text-apple-blue">
@@ -20,7 +20,7 @@ export default function AnniversaryPageClient() {
           </Link>
 
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-stretch">
-            <section className="relative overflow-hidden rounded-[2rem] bg-apple-gray-900 p-8 text-white shadow-xl md:p-12">
+            <section className="kinetic-card kinetic-hero relative overflow-hidden rounded-[2rem] bg-apple-gray-900 p-8 text-white shadow-xl md:p-12">
               <div
                 className="absolute inset-0 bg-cover bg-center opacity-35"
                 style={{ backgroundImage: `url("${pageMedia.anniversaryHero}")` }}

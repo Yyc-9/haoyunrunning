@@ -10,6 +10,7 @@ import FAQItem from '@/components/FAQItem'
 import { useLanguage } from '@/app/language-context'
 import { useSiteContent } from '@/app/site-content-provider'
 import { formatCourseWeekday } from '@/lib/course-weekday'
+import { displayCourseLocation, displayCourseTime } from '@/lib/course-sort'
 import type { ManagedCourse } from '@/lib/managed-courses'
 import { toSimplifiedWebsiteText, toTraditionalWebsiteText } from '@/lib/traditional-chinese'
 
@@ -32,8 +33,8 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
     if (language === 'zh-TW') return toTraditionalWebsiteText(text)
     return text
   }
-
   const courseText = (text: string) => formatCourseWeekday(localeText(text))
+
   useEffect(() => {
     const dialog = dialogRef.current
     if (selectedCourse && dialog && !dialog.open) dialog.showModal()
@@ -101,7 +102,7 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
                   <div>
                     <div className="mb-4 flex items-center gap-2 text-sm font-bold text-apple-gray-600">
                       <MapPin className="h-4 w-4 text-apple-blue" />
-                      {localeText(course.city || course.location)}
+                      {localeText(displayCourseLocation(course.city || course.location))}
                     </div>
                     <h3 className="text-xl font-black leading-7 text-apple-gray-900">
                       {courseText(course.name)}
@@ -112,7 +113,7 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
                   </div>
                   <div className="mt-5 flex items-center justify-between gap-3 border-t border-black/10 pt-4">
                     <span className="inline-flex items-center gap-2 rounded-full bg-apple-gray-100 px-4 py-2 text-sm font-bold text-apple-gray-600">
-                      {courseText(course.weekday)} · {localeText(course.classTime)}
+                      {courseText(course.weekday)} · {localeText(displayCourseTime(course.classTime))}
                     </span>
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-apple-blue/10 text-apple-blue transition-[transform,background-color,color] duration-200 group-hover:-rotate-6 group-hover:bg-apple-blue group-hover:text-white group-focus-visible:-rotate-6 group-focus-visible:bg-apple-blue group-focus-visible:text-white">
                       <ChevronRight className="h-5 w-5" />
@@ -148,7 +149,7 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
                 <div className="flex items-start justify-between gap-6">
                   <div>
                     <p className="text-sm font-black text-apple-blue">
-                      {localeText(selectedCourse.city || selectedCourse.location)} 快速預覽
+                      {localeText(displayCourseLocation(selectedCourse.city || selectedCourse.location))} 快速預覽
                     </p>
                     <h2 id="home-course-preview-title" className="mt-2 text-2xl font-black leading-tight text-apple-gray-950 sm:text-3xl">
                       {courseText(selectedCourse.name)}
@@ -169,11 +170,11 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
                 <div className="mt-6 grid gap-3 rounded-2xl bg-apple-gray-100 p-4 text-sm font-bold text-apple-gray-700 sm:grid-cols-2">
                   <p className="flex items-start gap-2">
                     <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-apple-blue" />
-                    {localeText(selectedCourse.city || selectedCourse.location)}
+                    {localeText(displayCourseLocation(selectedCourse.city || selectedCourse.location))}
                   </p>
                   <p className="flex items-start gap-2">
                     <Clock className="mt-0.5 h-4 w-4 shrink-0 text-apple-blue" />
-                    {courseText(selectedCourse.weekday)} · {localeText(selectedCourse.classTime)}
+                    {courseText(selectedCourse.weekday)} · {localeText(displayCourseTime(selectedCourse.classTime))}
                   </p>
                 </div>
                 <p className="mt-5 border-l-2 border-apple-blue pl-4 text-sm font-semibold leading-7 text-apple-gray-700">
@@ -193,7 +194,7 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
         </>
       ) : (
         <>
-          <div className="relative isolate flex min-h-[520px] overflow-hidden text-white sm:min-h-[620px]">
+          <div className="kinetic-hero relative isolate flex min-h-[520px] overflow-hidden text-white sm:min-h-[620px]">
             <Image
               src={pageMedia.coursesHero}
               alt="好運跑班本期課程預覽"
@@ -214,13 +215,13 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
             </div>
           </div>
 
-          <section className="border-b border-black/10 bg-white px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+          <section className="kinetic-reveal border-b border-black/10 bg-white px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
             <div className="container mx-auto max-w-7xl">
               <p className="text-sm font-black uppercase tracking-wide text-apple-blue">{coursesPage.guideLabel}</p>
               <h2 className="mt-3 text-3xl font-black text-apple-gray-950 sm:text-4xl">{coursesPage.guideTitle}</h2>
               <div className="mt-8 grid gap-7 md:grid-cols-2 xl:grid-cols-4">
                 {coursesPage.guideSteps.map((step, index) => (
-                  <article key={step.title} className="flex gap-4">
+                  <article key={step.title} className="kinetic-card flex gap-4 rounded-2xl border border-black/5 bg-white p-5">
                     <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-apple-blue text-lg font-black text-white">
                       {index + 1}
                     </span>
@@ -252,7 +253,7 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
               {coursesPage.highlights.map((item, index) => {
                 const Icon = [Clock, Target, Users][index] ?? Clock
                 return (
-                  <div key={item.title} className="rounded-2xl border border-black/10 bg-white p-5">
+                  <div key={item.title} className="kinetic-card rounded-2xl border border-black/10 bg-white p-5">
                     <Icon className="mb-4 h-5 w-5 text-apple-gray-700" />
                     <h3 className="font-bold text-apple-gray-900">{item.title}</h3>
                     <p className="mt-2 text-sm leading-6 text-apple-gray-600">{item.description}</p>

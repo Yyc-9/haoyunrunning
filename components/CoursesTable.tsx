@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { ArrowUpRight, Clock3, MapPin } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
 import { useSiteContent } from '@/app/site-content-provider'
-import { compareCourseLocations, compareCourses, orderedWeekdays } from '@/lib/course-sort'
+import { compareCourseLocations, compareCourses, displayCourseLocation, displayCourseTime, orderedWeekdays } from '@/lib/course-sort'
 import { formatCourseWeekday } from '@/lib/course-weekday'
 
 const weekdays = orderedWeekdays
@@ -31,7 +31,7 @@ function getCourseTone(level: Exclude<LevelFilter, 'all'>) {
     return 'border-sky-200 bg-sky-50 text-sky-950 hover:border-sky-300'
   }
   if (level === 'elite') {
-    return 'border-slate-300 bg-slate-100 text-slate-950 hover:border-slate-400'
+    return 'border-amber-300 bg-amber-50 text-amber-950 hover:border-amber-400 hover:bg-amber-100'
   }
   return 'border-emerald-200 bg-emerald-50 text-emerald-950 hover:border-emerald-300'
 }
@@ -64,7 +64,7 @@ export default function CoursesTable() {
 
   return (
     <div className="space-y-7">
-      <div className="grid gap-5 border-b border-black/10 pb-6 md:grid-cols-2">
+      <div className="course-filter-deck kinetic-reveal grid gap-5 border-b border-black/10 pb-6 md:grid-cols-2 lg:rounded-2xl lg:border lg:bg-white lg:p-5 lg:shadow-sm">
         <div>
           <h3 className="mb-3 text-sm font-bold text-apple-gray-600">程度</h3>
           <div className="flex flex-wrap gap-2">
@@ -73,7 +73,8 @@ export default function CoursesTable() {
                 key={filter.value}
                 type="button"
                 onClick={() => setLevelFilter(filter.value)}
-                className={`min-h-10 rounded-full px-4 text-sm font-bold transition ${levelFilter === filter.value ? 'bg-black text-white' : 'bg-apple-gray-100 text-apple-gray-700 hover:bg-apple-gray-200'}`}
+                aria-pressed={levelFilter === filter.value}
+                className={`course-filter-pill min-h-10 rounded-full px-4 text-sm font-bold transition ${levelFilter === filter.value ? 'bg-black text-white lg:bg-[#0b2d3c]' : 'bg-apple-gray-100 text-apple-gray-700 hover:bg-apple-gray-200 lg:bg-white lg:ring-1 lg:ring-black/10 lg:hover:bg-[#eef3f5]'}`}
               >
                 {filter.label}
               </button>
@@ -84,9 +85,9 @@ export default function CoursesTable() {
         <div>
           <h3 className="mb-3 text-sm font-bold text-apple-gray-600">城市</h3>
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => setCityFilter('all')} className={`min-h-10 rounded-full px-4 text-sm font-bold transition ${cityFilter === 'all' ? 'bg-black text-white' : 'bg-apple-gray-100 text-apple-gray-700 hover:bg-apple-gray-200'}`}>全部城市</button>
+            <button type="button" onClick={() => setCityFilter('all')} aria-pressed={cityFilter === 'all'} className={`course-filter-pill min-h-10 rounded-full px-4 text-sm font-bold transition ${cityFilter === 'all' ? 'bg-black text-white lg:bg-[#0b2d3c]' : 'bg-apple-gray-100 text-apple-gray-700 hover:bg-apple-gray-200 lg:bg-white lg:ring-1 lg:ring-black/10 lg:hover:bg-[#eef3f5]'}`}>全部城市</button>
             {cities.map((city) => (
-              <button key={city} type="button" onClick={() => setCityFilter(city)} className={`min-h-10 rounded-full px-4 text-sm font-bold transition ${cityFilter === city ? 'bg-black text-white' : 'bg-apple-gray-100 text-apple-gray-700 hover:bg-apple-gray-200'}`}>{localeText(city)}</button>
+              <button key={city} type="button" onClick={() => setCityFilter(city)} aria-pressed={cityFilter === city} className={`course-filter-pill min-h-10 rounded-full px-4 text-sm font-bold transition ${cityFilter === city ? 'bg-black text-white lg:bg-[#0b2d3c]' : 'bg-apple-gray-100 text-apple-gray-700 hover:bg-apple-gray-200 lg:bg-white lg:ring-1 lg:ring-black/10 lg:hover:bg-[#eef3f5]'}`}>{localeText(displayCourseLocation(city))}</button>
             ))}
           </div>
         </div>
@@ -109,14 +110,14 @@ export default function CoursesTable() {
                           <p className="text-base font-black leading-6">{localeText(getCourseShortName(course.name))}</p>
                           <p className="mt-2 flex items-center gap-1.5 text-xs font-black opacity-75">
                             <Clock3 className="h-3.5 w-3.5 shrink-0" />
-                            {localeText(course.classTime)}
+                            {localeText(displayCourseTime(course.classTime))}
                           </p>
                         </div>
                         <ArrowUpRight className="h-4 w-4 shrink-0 opacity-50" />
                       </div>
                       <p className="mt-2 flex items-start gap-1.5 text-xs font-bold leading-5 opacity-70">
                         <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                        <span>{localeText(course.location)} · {localeText(course.meetingPoint)}</span>
+                        <span>{localeText(displayCourseLocation(course.location))} · {localeText(course.meetingPoint)}</span>
                       </p>
                       <p className="mt-2 text-[11px] font-semibold opacity-60">{localeText(course.period)}</p>
                     </Link>
@@ -128,9 +129,9 @@ export default function CoursesTable() {
         })}
       </div>
 
-      <div className="hidden overflow-x-auto rounded-lg border border-black/10 bg-white shadow-sm md:block">
+      <div className="course-schedule-board kinetic-reveal hidden overflow-x-auto rounded-lg border border-black/10 bg-white shadow-sm md:block lg:rounded-2xl">
         <div className="min-w-[940px]">
-          <div className="grid grid-cols-7 border-b border-black/10 bg-black text-white">
+          <div className="course-schedule-head grid grid-cols-7 border-b border-black/10 bg-black text-white lg:bg-[#0b2d3c]">
             {weekdays.map((weekday) => <div key={weekday} className="flex min-h-16 items-center justify-center border-r border-white/15 px-3 text-sm font-black last:border-r-0">{weekdayText(weekday)}</div>)}
           </div>
 
@@ -141,10 +142,9 @@ export default function CoursesTable() {
                 <div key={weekday} className="min-h-40 border-r border-black/10 bg-white p-2 last:border-r-0">
                   <div className="space-y-2">
                     {weekdayCourses.map((course) => {
-                      const duration = course.classTime.match(/（(.+?)）/)?.[1] ?? ''
                       const time = getCourseTime(course.classTime)
                       return (
-                        <Link key={course.slug} href={`/courses/${course.slug}`} className={`group block rounded-lg border p-3 transition hover:-translate-y-0.5 hover:shadow-md ${getCourseTone(getCourseLevel(course.name))}`}>
+                        <Link key={course.slug} href={`/courses/${course.slug}`} className={`course-event-card group block rounded-lg border p-3 transition hover:-translate-y-0.5 hover:shadow-md ${getCourseTone(getCourseLevel(course.name))}`}>
                           <div className="flex items-start justify-between gap-2">
                             <p className="text-sm font-black leading-5">{localeText(getCourseShortName(course.name))}</p>
                             <ArrowUpRight className="h-4 w-4 shrink-0 opacity-45 transition group-hover:opacity-100" />
@@ -157,9 +157,8 @@ export default function CoursesTable() {
                           ) : null}
                           <p className="mt-2 flex items-start gap-1 text-xs font-bold leading-4 opacity-70">
                             <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                            <span>{localeText(course.location)} · {localeText(course.meetingPoint)}</span>
+                            <span>{localeText(displayCourseLocation(course.location))} · {localeText(course.meetingPoint)}</span>
                           </p>
-                          {duration ? <p className="mt-1 text-[11px] font-bold opacity-65">{duration}</p> : null}
                           <p className="mt-2 text-[11px] font-semibold opacity-60">{localeText(course.period)}</p>
                         </Link>
                       )

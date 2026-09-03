@@ -9,8 +9,8 @@ export default function TestimonialsPage() {
   const { pageMedia, testimonials } = useSiteContent()
   const youtubeEmbedUrl = getYouTubeEmbedUrl(testimonials.videoUrl)
   return (
-    <main className="bg-white pt-24">
-      <section className="relative min-h-[34rem] overflow-hidden bg-black sm:min-h-[40rem]">
+    <main className="kinetic-page bg-white pt-24">
+      <section className="kinetic-hero relative min-h-[34rem] overflow-hidden bg-black sm:min-h-[40rem]">
         <Image
           src={pageMedia.testimonialsHero}
           alt="好運跑班學員與教練團體合照"
@@ -32,7 +32,7 @@ export default function TestimonialsPage() {
       </section>
 
       {testimonials.videoEnabled && testimonials.videoUrl ? (
-        <section className="border-b border-black/10 bg-white px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+        <section className="kinetic-reveal border-b border-black/10 bg-white px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
           <div className="container mx-auto max-w-5xl">
             <div className="mb-5 flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black text-white">
@@ -46,7 +46,7 @@ export default function TestimonialsPage() {
             <p className="mb-5 max-w-3xl text-sm leading-7 text-apple-gray-600 sm:text-base">
               {testimonials.videoDescription}
             </p>
-            <div className="overflow-hidden rounded-lg border border-black/10 bg-black shadow-sm">
+            <div className="kinetic-media overflow-hidden rounded-lg border border-black/10 bg-black shadow-sm">
               {youtubeEmbedUrl ? (
                 <iframe
                   src={youtubeEmbedUrl}
@@ -71,7 +71,7 @@ export default function TestimonialsPage() {
         </section>
       ) : null}
 
-      <section className="relative isolate flex min-h-[680px] overflow-hidden border-b border-black/10 bg-black text-white">
+      <section className="kinetic-hero kinetic-reveal relative isolate flex min-h-[680px] overflow-hidden border-b border-black/10 bg-black text-white">
           <Image
             src={pageMedia.testimonialPathHero}
             alt="好運跑班學員一起訓練與成長"
@@ -94,7 +94,7 @@ export default function TestimonialsPage() {
                 {testimonials.themes.map((item, index) => (
                   <div
                     key={item.title}
-                    className="border-b border-white/20 py-5 last:border-b-0 md:border-b-0 md:border-l md:px-7 md:first:border-l-0 md:first:pl-0"
+                    className="kinetic-card border-b border-white/20 py-5 last:border-b-0 md:border-b-0 md:border-l md:px-7 md:first:border-l-0 md:first:pl-0"
                   >
                     <p className="text-xs font-black tracking-[0.18em] text-amber-300">
                       {String(index + 1).padStart(2, '0')}

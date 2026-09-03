@@ -539,10 +539,10 @@ export default function AdminDashboardClient() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+    <main className="admin-shell min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
       <section className="px-4 py-10 sm:px-6 lg:px-8">
-        <div className="container mx-auto max-w-7xl">
-          <div className="mb-8">
+        <div className="admin-dashboard-grid container mx-auto max-w-[1600px]">
+          <div className="admin-dashboard-header mb-8 lg:mb-7">
             <div>
               <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
                 超級管理員
@@ -557,8 +557,8 @@ export default function AdminDashboardClient() {
             </div>
           </div>
 
-          <nav aria-label="管理員後台導航" className="mb-8 overflow-x-auto">
-            <div className="flex min-w-max gap-2 rounded-3xl bg-white/85 p-2 shadow-sm ring-1 ring-black/10 backdrop-blur">
+          <nav aria-label="管理員後台導航" className="admin-dashboard-sidebar mb-8 overflow-x-auto lg:sticky lg:top-24 lg:mb-0 lg:overflow-visible">
+            <div className="flex min-w-max gap-2 rounded-3xl bg-white/85 p-2 shadow-sm ring-1 ring-black/10 backdrop-blur lg:min-w-0 lg:flex-col lg:gap-1 lg:rounded-2xl lg:bg-[#edf1f3] lg:shadow-none lg:backdrop-blur-none">
               {tabs.map((tab) => {
                 const Icon = tab.icon
                 const active = activeTab === tab.id
@@ -568,8 +568,9 @@ export default function AdminDashboardClient() {
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
-                    className={`inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold transition ${
-                      active ? 'bg-black text-white' : 'text-apple-gray-600 hover:bg-apple-gray-100 hover:text-apple-gray-900'
+                    aria-current={active ? 'page' : undefined}
+                    className={`inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold transition lg:min-h-11 lg:w-full lg:justify-start lg:rounded-xl ${
+                      active ? 'bg-black text-white lg:bg-[#0b2d3c]' : 'text-apple-gray-600 hover:bg-apple-gray-100 hover:text-apple-gray-900 lg:hover:bg-white'
                     }`}
                   >
                     <Icon className="h-4 w-4" />

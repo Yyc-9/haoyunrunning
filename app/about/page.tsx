@@ -10,8 +10,8 @@ export default function AboutPage() {
   const { about, pageMedia } = useSiteContent()
 
   return (
-    <main className="min-h-screen bg-white pt-20 sm:pt-24">
-      <section className="relative isolate flex min-h-[680px] overflow-hidden text-white sm:min-h-[700px]">
+    <main className="kinetic-page min-h-screen bg-white pt-20 sm:pt-24">
+      <section className="kinetic-hero relative isolate flex min-h-[680px] overflow-hidden text-white sm:min-h-[700px]">
         <Image
           src={pageMedia.aboutPageHero}
           alt="陽光下的田徑跑道"
@@ -54,7 +54,7 @@ export default function AboutPage() {
           {about.facts.map((item, index) => {
             const Icon = factIcons[index] ?? MapPin
             return (
-              <article key={item.title} className="rounded-3xl border border-black/10 bg-white p-6 sm:p-7">
+              <article key={item.title} className="kinetic-card rounded-3xl border border-black/10 bg-white p-6 sm:p-7">
                 <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-black/10 text-apple-blue">
                   <Icon className="h-5 w-5" />
                 </span>
@@ -66,7 +66,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="relative isolate flex min-h-[660px] overflow-hidden text-white sm:min-h-[720px]">
+      <section className="kinetic-hero kinetic-reveal relative isolate flex min-h-[660px] overflow-hidden text-white sm:min-h-[720px]">
         <Image
           src={pageMedia.aboutStoryHero}
           alt="好運跑班跑者與團隊"

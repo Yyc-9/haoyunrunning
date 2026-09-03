@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import type { CSSProperties } from 'react'
 import {
   ArrowLeft,
   CalendarDays,
@@ -16,8 +17,9 @@ import {
 import { useLanguage } from '@/app/language-context'
 import type { ManagedCourse } from '@/lib/managed-courses'
 import { useSiteContent } from '@/app/site-content-provider'
-
+import { displayCourseLocation, displayCourseTime } from '@/lib/course-sort'
 import { formatCourseWeekday } from '@/lib/course-weekday'
+
 type CourseDetail = ManagedCourse
 
 type CourseDetailClientProps = {
@@ -36,6 +38,49 @@ function compactCourseName(name: string) {
     .trim()
 }
 
+type CoachAvatarFrame = { x: number; y: number; zoom: number }
+
+const courseAvatarFrames: Record<string, CoachAvatarFrame> = {
+  bianbian: { x: 50, y: 34, zoom: 2.35 },
+  chenShengQi: { x: 50, y: 42, zoom: 2.15 },
+  laiXinHong: { x: 50, y: 48, zoom: 2.15 },
+  liuChengEn: { x: 50, y: 36, zoom: 2.7 },
+  luoMinYao: { x: 50, y: 50, zoom: 1 },
+  luoPeiCi: { x: 50, y: 28, zoom: 2.15 },
+  wuPeiCi: { x: 50, y: 48, zoom: 1.8 },
+  wuWeiQiao: { x: 50, y: 47, zoom: 2.1 },
+  xiaoHe: { x: 50, y: 50, zoom: 2.3 },
+  yangShengHao: { x: 50, y: 39, zoom: 2.7 },
+  yongXin: { x: 50, y: 42, zoom: 2.75 },
+  zhengYiQun: { x: 50, y: 20, zoom: 2 },
+  zhongLiChen: { x: 50, y: 45, zoom: 2.15 },
+  zhouXianFeng: { x: 50, y: 47, zoom: 2.05 },
+}
+
+function getCourseAvatarFrameStyle(coachKey: string | undefined): CSSProperties {
+  const frame = coachKey ? courseAvatarFrames[coachKey] : undefined
+  if (!frame) {
+    return { inset: 0 }
+  }
+
+  return {
+    width: `${frame.zoom * 100}%`,
+    height: `${frame.zoom * 100}%`,
+    left: `${50 - frame.zoom * frame.x}%`,
+    top: `${50 - frame.zoom * frame.y}%`,
+  }
+}
+
+function getCourseAvatarObjectPosition(
+  coachKey: string | undefined,
+  focusX: number,
+  focusY: number
+) {
+  return coachKey && courseAvatarFrames[coachKey]
+    ? '50% 50%'
+    : `${focusX}% ${focusY}%`
+}
+
 export default function CourseDetailClient({ course }: CourseDetailClientProps) {
   const { language, t } = useLanguage()
   const { courses, brand, coachProfiles, isLoading } = useSiteContent()
@@ -44,7 +89,7 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
 
   if (!managedCourse) {
     return (
-      <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+      <main className="kinetic-page min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
         <section className="container mx-auto max-w-3xl px-4 py-20 text-center sm:px-6 lg:px-8">
           <div className="apple-card p-8 md:p-12">
             <p className="text-sm font-semibold uppercase tracking-wide text-apple-blue">
@@ -76,7 +121,7 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
   const seasonGoal = course.slogan
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-20 sm:pt-24">
+    <main className="kinetic-page min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-20 sm:pt-24">
       <div className="sticky top-[52px] z-40 border-b border-black/10 bg-white shadow-sm sm:top-16">
         <div className="container mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4 sm:px-6 lg:px-8 md:flex-row md:items-center md:justify-between">
           <Link href="/courses" className="inline-flex items-center gap-2 text-sm font-bold text-apple-gray-700 transition-colors hover:text-apple-blue">
@@ -91,7 +136,7 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
 
       <section className="overflow-hidden border-b border-black/5 bg-white px-4 py-6 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-7xl">
-          <div className="rounded-[1.5rem] border border-black/5 bg-apple-gray-50 p-5 shadow-sm md:p-7">
+          <div className="kinetic-card rounded-[1.5rem] border border-black/5 bg-apple-gray-50 p-5 shadow-sm md:p-7">
               <p className="text-xs font-bold uppercase tracking-wide text-apple-blue">{course.campaignLabel || t.courseDetail.heroLabel}</p>
               <h1 className="mt-2 max-w-4xl text-3xl font-black leading-[1.08] text-apple-gray-900 md:text-4xl">
                 {courseText(course.title)}
@@ -140,19 +185,30 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
                     <Link
                       key={coach.name}
                       href={href}
-                      className="group rounded-lg border border-black/10 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-black/25 hover:shadow-md sm:p-5"
+                      className="kinetic-card group rounded-lg border border-black/10 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-black/25 hover:shadow-md sm:p-5"
                     >
                       <div className="flex items-start justify-between gap-4">
-                        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full bg-apple-gray-100 ring-1 ring-black/10">
+                        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full bg-apple-gray-100 ring-1 ring-black/10 lg:h-16 lg:w-16">
                           {imageUrl ? (
-                            <Image
-                              src={imageUrl}
-                              alt={`${coach.name}教練照片`}
-                              fill
-                              sizes="56px"
-                              className="object-cover"
-                              style={{ objectPosition: `${profile?.avatarFocusX ?? coach.avatarFocusX ?? 50}% ${profile?.avatarFocusY ?? coach.avatarFocusY ?? 18}%` }}
-                            />
+                            <div
+                              className="absolute"
+                              style={getCourseAvatarFrameStyle(profile?.coachKey)}
+                            >
+                              <Image
+                                src={imageUrl}
+                                alt={`${coach.name}教練照片`}
+                                fill
+                                sizes="(min-width: 1024px) 64px, 56px"
+                                className="object-cover"
+                                style={{
+                                  objectPosition: getCourseAvatarObjectPosition(
+                                    profile?.coachKey,
+                                    profile?.avatarFocusX ?? coach.avatarFocusX ?? 50,
+                                    profile?.avatarFocusY ?? coach.avatarFocusY ?? 18
+                                  ),
+                                }}
+                              />
+                            </div>
                           ) : (
                             <UsersRound className="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 text-apple-gray-400" />
                           )}
@@ -169,7 +225,7 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
               </div>
             </section>
 
-            <section className="overflow-hidden rounded-[1.5rem] border border-black/10 bg-white shadow-sm">
+            <section className="kinetic-card kinetic-reveal overflow-hidden rounded-[1.5rem] border border-black/10 bg-white shadow-sm">
               <div className="border-b border-black/10 px-5 py-6 sm:px-7 sm:py-8">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-apple-blue">TRAINING BLUEPRINT</p>
                 <h2 className="mt-3 text-2xl font-black leading-tight text-apple-gray-950 sm:text-3xl">本季訓練藍圖</h2>
@@ -188,14 +244,14 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
               </div>
             </section>
 
-            <section className="relative overflow-hidden rounded-[1.5rem] bg-[#111] p-5 text-white shadow-xl shadow-black/10 sm:p-7 lg:p-8">
+            <section className="kinetic-card kinetic-reveal relative overflow-hidden rounded-[1.5rem] bg-[#111] p-5 text-white shadow-xl shadow-black/10 sm:p-7 lg:p-8">
               <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,.09)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.09)_1px,transparent_1px)] [background-size:28px_28px]" />
               <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] lg:items-end">
                 <div>
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-xs font-bold uppercase text-white/45">{t.courseDetail.courseLocation}</p>
-                      <h2 className="mt-2 text-3xl font-black leading-none text-white">{text(course.city)}</h2>
+                      <h2 className="mt-2 text-3xl font-black leading-none text-white">{text(displayCourseLocation(course.city || course.location))}</h2>
                       <p className="mt-3 flex items-start gap-2 text-sm leading-6 text-white/70">
                         <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-apple-blue" />
                         {text(course.meetingPoint)}
@@ -214,7 +270,7 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
                   <div className="mt-4 grid grid-cols-1 gap-2 min-[420px]:grid-cols-3">
                     {[
                       [CalendarDays, t.courseDetail.courseWeekday, '星期', formatCourseWeekday(course.weekday)],
-                      [Clock, t.courseDetail.classTime, '時間', course.time],
+                      [Clock, t.courseDetail.classTime, '時間', displayCourseTime(course.time || course.classTime)],
                       [Route, t.courseDetail.coursePeriod, '週期', course.period],
                     ].map(([Icon, label, shortLabel, value]) => {
                       const CardIcon = Icon as typeof CalendarDays

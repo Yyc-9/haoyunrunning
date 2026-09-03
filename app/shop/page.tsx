@@ -59,8 +59,8 @@ export default function ShopPage() {
   }, [category, products, query, sort])
 
   return (
-    <main className="min-h-screen bg-white pt-20 sm:pt-24">
-      <section className="relative isolate min-h-[390px] overflow-hidden border-b border-black/10 sm:min-h-[395px]">
+    <main className="kinetic-page min-h-screen bg-white pt-20 sm:pt-24">
+      <section className="kinetic-hero relative isolate min-h-[390px] overflow-hidden border-b border-black/10 sm:min-h-[395px]">
         <Image
           src={pageMedia.shopHero}
           alt="好運跑班服飾與跑步裝備"
@@ -81,7 +81,7 @@ export default function ShopPage() {
       </section>
 
       <section className="container mx-auto px-4 py-8 sm:py-10">
-        <div className="grid gap-3 border-b border-black/10 pb-6 md:grid-cols-[minmax(260px,1fr)_auto_auto] md:items-center">
+        <div className="kinetic-reveal grid gap-3 border-b border-black/10 pb-6 md:grid-cols-[minmax(260px,1fr)_auto_auto] md:items-center">
           <label className="relative block max-w-xl">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-apple-gray-400" />
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜尋商品" className="apple-input pl-10" />
@@ -118,9 +118,9 @@ export default function ShopPage() {
         ) : visibleProducts.length > 0 ? (
           <div className="grid grid-cols-2 gap-x-3 gap-y-8 pt-7 md:grid-cols-3 md:gap-x-5 lg:grid-cols-4">
             {visibleProducts.map((product) => (
-              <article key={product.id} className="group min-w-0">
+              <article key={product.id} className="kinetic-card group min-w-0">
                 <Link href={`/shop/${encodeURIComponent(product.id)}`} className="block">
-                  <div className="relative aspect-square overflow-hidden rounded-md border border-black/10 bg-apple-gray-50">
+                  <div className="kinetic-image relative aspect-square overflow-hidden rounded-md border border-black/10 bg-apple-gray-50">
                     {product.image ? (
                       <Image src={product.image} alt={product.name} fill sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw" className="object-contain p-3 transition duration-300 group-hover:scale-[1.025]" />
                     ) : (

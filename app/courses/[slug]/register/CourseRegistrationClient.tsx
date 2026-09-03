@@ -9,6 +9,7 @@ import ProtectedCoursePaymentInfo from '@/components/ProtectedCoursePaymentInfo'
 import { COURSE_CAPACITY, type CourseAvailability, type LegacyStudentStatus, type MyCourseEnrollment } from '@/lib/course-registration'
 import type { CoursePricingOptions } from '@/lib/course-pricing'
 import { formatCourseWeekday } from '@/lib/course-weekday'
+import { displayCourseLocation, displayCourseTime } from '@/lib/course-sort'
 import { paymentOrderStatusDescriptions, paymentOrderStatusLabels } from '@/lib/payment'
 import { supabase } from '@/lib/supabase'
 import DirectCourseRegistrationForm from './DirectCourseRegistrationForm'
@@ -146,7 +147,7 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
           <Link href={`/courses/${course.slug}`} className="text-sm font-bold text-apple-blue">返回課程詳情</Link>
           <div className="mt-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
-              <p className="text-sm font-bold leading-6 text-apple-gray-500">{formatCourseWeekday(course.weekday)} · {course.classTime} · {course.location}{course.meetingPoint ? ` · ${course.meetingPoint}` : ''} · {course.period}</p>
+              <p className="text-sm font-bold leading-6 text-apple-gray-500">{formatCourseWeekday(course.weekday)} · {displayCourseTime(course.classTime)} · {displayCourseLocation(course.location)}{course.meetingPoint ? ` · ${course.meetingPoint}` : ''} · {course.period}</p>
               <h1 className="mt-2 text-2xl font-black text-apple-gray-950 sm:text-4xl">{formatCourseWeekday(course.name)}報名</h1>
               <div className="mt-3 grid max-w-2xl gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
                 <p className="font-semibold leading-6 text-apple-gray-600"><span className="text-apple-gray-400">費用：</span>系統依學員身分與本期計費起始課次自動核算</p>
