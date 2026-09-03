@@ -520,6 +520,44 @@ export default function AdminDashboardClient() {
     }
   }
 
+  function renderStudentBindingControls(student: AdminStudent, compact = false) {
+    return (
+      <div className={compact ? 'grid gap-2' : 'flex min-w-[280px] gap-2'}>
+        <select
+          value={selectedCoachByStudent[student.id] ?? ''}
+          onChange={(event) => setSelectedCoachByStudent((current) => ({ ...current, [student.id]: event.target.value }))}
+          aria-label={`選擇要綁定給 ${student.name} 的教練`}
+          className={`apple-input text-xs ${compact ? 'min-h-11 w-full' : 'min-w-0 flex-1 py-2'}`}
+        >
+          <option value="">選擇教練</option>
+          {data?.coachOptions.map((coach) => (
+            <option key={coach.id} value={coach.id}>{coach.name || coach.email}</option>
+          ))}
+        </select>
+        <div className={`grid gap-2 ${student.bindings[0] ? 'grid-cols-2' : 'grid-cols-1'} ${compact ? '' : 'shrink-0'}`}>
+          <button
+            type="button"
+            disabled={!selectedCoachByStudent[student.id] || updatingId === `bind-${student.id}`}
+            onClick={() => runAction(`bind-${student.id}`, { action: 'bind_student', studentId: student.id, coachId: selectedCoachByStudent[student.id] })}
+            className="min-h-11 rounded-full bg-black px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            綁定
+          </button>
+          {student.bindings[0] ? (
+            <button
+              type="button"
+              disabled={updatingId === `unbind-${student.bindings[0].id}`}
+              onClick={() => runAction(`unbind-${student.bindings[0].id}`, { action: 'unbind_student', bindingId: student.bindings[0].id })}
+              className="min-h-11 rounded-full border border-red-200 px-3 py-2 text-xs font-bold text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              解綁
+            </button>
+          ) : null}
+        </div>
+      </div>
+    )
+  }
+
   if (isLoading) {
     return (
       <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
@@ -701,65 +739,95 @@ export default function AdminDashboardClient() {
                   </div>
                 </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[1180px] text-left text-sm">
+              <div className="divide-y divide-black/10 md:hidden">
+                {filteredStudents.map((student) => (
+                  <article key={student.id} className="space-y-5 p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <h3 className="font-black text-apple-gray-900">{student.name}</h3>
+                        <p className="mt-1 break-all text-sm leading-6 text-apple-gray-600">{student.email || '未提供信箱'}</p>
+                      </div>
+                      <span className={`inline-flex shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold ${student.planEnabled ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                        {student.planEnabled ? '課表已開通' : '課表未開通'}
+                      </span>
+                    </div>
+
+                    <dl className="grid gap-4 text-sm sm:grid-cols-2">
+                      <div>
+                        <dt className="text-xs font-bold text-apple-gray-500">綁定教練</dt>
+                        <dd className="mt-1 leading-6 text-apple-gray-800">{student.boundCoachNames || '尚未綁定'}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-bold text-apple-gray-500">報名課程</dt>
+                        <dd className="mt-1 leading-6 text-apple-gray-800">{student.program || student.paymentCourse || '尚無課程'}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-bold text-apple-gray-500">匯款狀態</dt>
+                        <dd className="mt-2">
+                          <span className="inline-flex whitespace-nowrap rounded-full bg-apple-gray-100 px-3 py-1 text-xs font-bold text-apple-gray-700">
+                            {statusLabels[student.paymentStatus as PaymentOrderStatus] || student.paymentStatus}
+                          </span>
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-bold text-apple-gray-500">最近回饋</dt>
+                        <dd className="mt-1 tabular-nums text-apple-gray-700">{formatDate(student.lastFeedbackAt)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-bold text-apple-gray-500">建立時間</dt>
+                        <dd className="mt-1 tabular-nums text-apple-gray-700">{formatDate(student.createdAt)}</dd>
+                      </div>
+                    </dl>
+
+                    <div>
+                      <p className="mb-2 text-xs font-bold text-apple-gray-500">綁定操作</p>
+                      {renderStudentBindingControls(student, true)}
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full min-w-[1560px] table-fixed text-left text-sm">
+                  <colgroup>
+                    <col className="w-[120px]" />
+                    <col className="w-[210px]" />
+                    <col className="w-[160px]" />
+                    <col className="w-[210px]" />
+                    <col className="w-[170px]" />
+                    <col className="w-[120px]" />
+                    <col className="w-[130px]" />
+                    <col className="w-[140px]" />
+                    <col className="w-[300px]" />
+                  </colgroup>
                   <thead className="bg-apple-gray-100 text-apple-gray-600">
                     <tr>
                       {['姓名', '信箱', '綁定教練', '報名課程', '匯款狀態', '課表', '最近回饋', '建立時間', '綁定操作'].map((header) => (
-                        <th key={header} className="px-4 py-3 font-bold">{header}</th>
+                        <th key={header} className="whitespace-nowrap px-4 py-3 font-bold">{header}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/10">
                     {filteredStudents.map((student) => (
                       <tr key={student.id}>
-                        <td className="px-4 py-4 font-bold text-apple-gray-900">{student.name}</td>
-                        <td className="px-4 py-4 text-apple-gray-600">{student.email || '-'}</td>
-                        <td className="px-4 py-4 text-apple-gray-700">{student.boundCoachNames || '尚未綁定'}</td>
-                        <td className="px-4 py-4 text-apple-gray-600">{student.program || student.paymentCourse || '-'}</td>
+                        <td className="whitespace-nowrap px-4 py-4 font-bold text-apple-gray-900">{student.name}</td>
+                        <td className="truncate px-4 py-4 text-apple-gray-600" title={student.email || undefined}>{student.email || '-'}</td>
+                        <td className="px-4 py-4 leading-6 text-apple-gray-700">{student.boundCoachNames || '尚未綁定'}</td>
+                        <td className="px-4 py-4 leading-6 text-apple-gray-600">{student.program || student.paymentCourse || '-'}</td>
                         <td className="px-4 py-4">
-                          <span className="rounded-full bg-apple-gray-100 px-3 py-1 text-xs font-bold text-apple-gray-700">
+                          <span className="inline-flex whitespace-nowrap rounded-full bg-apple-gray-100 px-3 py-1 text-xs font-bold text-apple-gray-700">
                             {statusLabels[student.paymentStatus as PaymentOrderStatus] || student.paymentStatus}
                           </span>
                         </td>
                         <td className="px-4 py-4">
-                          <span className={`rounded-full px-3 py-1 text-xs font-bold ${student.planEnabled ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                          <span className={`inline-flex whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold ${student.planEnabled ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
                             {student.planEnabled ? '已開通' : '未開通'}
                           </span>
                         </td>
-                        <td className="px-4 py-4 text-apple-gray-600">{formatDate(student.lastFeedbackAt)}</td>
-                        <td className="px-4 py-4 text-apple-gray-600">{formatDate(student.createdAt)}</td>
+                        <td className="whitespace-nowrap px-4 py-4 tabular-nums text-apple-gray-600">{formatDate(student.lastFeedbackAt)}</td>
+                        <td className="whitespace-nowrap px-4 py-4 tabular-nums text-apple-gray-600">{formatDate(student.createdAt)}</td>
                         <td className="px-4 py-4">
-                          <div className="flex min-w-[260px] gap-2">
-                            <select
-                              value={selectedCoachByStudent[student.id] ?? ''}
-                              onChange={(event) => setSelectedCoachByStudent((current) => ({ ...current, [student.id]: event.target.value }))}
-                              className="apple-input py-2 text-xs"
-                            >
-                              <option value="">選擇教練</option>
-                              {data.coachOptions.map((coach) => (
-                                <option key={coach.id} value={coach.id}>{coach.name || coach.email}</option>
-                              ))}
-                            </select>
-                            <button
-                              type="button"
-                              disabled={!selectedCoachByStudent[student.id] || updatingId === `bind-${student.id}`}
-                              onClick={() => runAction(`bind-${student.id}`, { action: 'bind_student', studentId: student.id, coachId: selectedCoachByStudent[student.id] })}
-                              className="rounded-full bg-black px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
-                            >
-                              綁定
-                            </button>
-                            {student.bindings[0] ? (
-                              <button
-                                type="button"
-                                disabled={updatingId === `unbind-${student.bindings[0].id}`}
-                                onClick={() => runAction(`unbind-${student.bindings[0].id}`, { action: 'unbind_student', bindingId: student.bindings[0].id })}
-                                className="rounded-full border border-red-200 px-3 py-2 text-xs font-bold text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
-                              >
-                                解綁
-                              </button>
-                            ) : null}
-                          </div>
+                          {renderStudentBindingControls(student)}
                         </td>
                       </tr>
                     ))}
