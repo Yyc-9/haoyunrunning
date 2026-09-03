@@ -36,7 +36,7 @@ type AdminTab = 'overview' | 'students' | 'coaches' | 'seasons' | 'products' | '
 
 type AdminDashboardPayload = {
   admin: { id: string; email: string; name: string; role: string }
- overview: {
+  overview: {
     studentCount: number
     coachCount: number
     pendingOrderCount: number
@@ -199,15 +199,15 @@ type PaymentAccount = {
 
 const statusLabels = paymentOrderStatusLabels['zh-TW']
 
-const tabs: Array<{ id: AdminTab; label: string; icon: typeof LayoutDashboard }> = [
-  { id: 'overview', label: '總覽', icon: LayoutDashboard },
-  { id: 'students', label: '學員管理', icon: UsersRound },
-  { id: 'coaches', label: '教練管理', icon: UserCog },
-  { id: 'seasons', label: '季度管理', icon: CalendarRange },
-  { id: 'products', label: '商城商品', icon: Boxes },
-  { id: 'content', label: '內容中心', icon: PanelsTopLeft },
-  { id: 'reconciliation', label: '銀行對帳', icon: FileSpreadsheet },
-  { id: 'paymentAccounts', label: '收款帳戶', icon: Landmark },
+const tabs: Array<{ id: AdminTab; label: string; description: string; icon: typeof LayoutDashboard }> = [
+  { id: 'overview', label: '總覽', description: '掌握待處理事項、報名與營運概況。', icon: LayoutDashboard },
+  { id: 'students', label: '學員管理', description: '查找學員、課程、匯款與課表權限。', icon: UsersRound },
+  { id: 'coaches', label: '教練管理', description: '管理教練身份、到課、請假與代班。', icon: UserCog },
+  { id: 'seasons', label: '季度管理', description: '管理招生季度、課程資料與學員名單。', icon: CalendarRange },
+  { id: 'products', label: '商城商品', description: '維護商品內容、庫存與上下架狀態。', icon: Boxes },
+  { id: 'content', label: '內容中心', description: '更新網站圖片、文字與公開頁面內容。', icon: PanelsTopLeft },
+  { id: 'reconciliation', label: '銀行對帳', description: '匯入銀行資料並完成人工入帳核對。', icon: FileSpreadsheet },
+  { id: 'paymentAccounts', label: '收款帳戶', description: '維護課程匯款所使用的官方帳戶。', icon: Landmark },
 ]
 
 function formatDate(value: string | null | undefined) {
@@ -435,6 +435,16 @@ export default function AdminDashboardClient() {
     [data?.coachPublicProfiles]
   )
   const verifiedCoachProfileCount = verificationCoachProfiles.filter((profile) => Boolean(profile.ownerProfileId)).length
+  const activeTabDefinition = tabs.find((tab) => tab.id === activeTab) ?? tabs[0]
+  const ActiveTabIcon = activeTabDefinition.icon
+  const overviewMetrics = data ? [
+    { label: '已回報，待人工核對', value: data.overview.pendingOrderCount, tone: 'attention', featured: true },
+    { label: '已確認入帳', value: data.overview.approvedOrderCount, tone: 'success', featured: true },
+    { label: '商城商品', value: data.overview.productCount, tone: 'neutral', featured: false },
+    { label: '低庫存商品', value: data.overview.lowStockCount, tone: 'warning', featured: false },
+    { label: '收款帳戶', value: data.overview.paymentAccountCount, tone: 'neutral', featured: false },
+    { label: '學員總數', value: data.overview.studentCount, tone: 'neutral', featured: false },
+  ] : []
   async function runAction(id: string, action: Record<string, unknown>) {
     setUpdatingId(id)
     setError('')
@@ -543,76 +553,105 @@ export default function AdminDashboardClient() {
       <section className="px-4 py-10 sm:px-6 lg:px-8">
         <div className="admin-dashboard-grid container mx-auto max-w-[1600px]">
           <div className="admin-dashboard-header mb-8 lg:mb-7">
-            <div>
-              <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
-                超級管理員
-              </p>
+            <div className="admin-dashboard-heading">
               <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">管理員後台</h1>
-              <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
-                集中管理網站內容、商城商品、課程、活動、訂單與收款資料。
+              <p className="mt-3 max-w-3xl text-base leading-7 text-apple-gray-600">
+                集中管理學員、教練、季度、網站內容與課程匯款資料。
               </p>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-apple-gray-500">
-                匯款核對已整合至季度學員名單；收款帳戶與分配結果只會顯示在超級管理員後台。
-              </p>
+            </div>
+            <div key={activeTab} className="admin-dashboard-context hidden lg:flex" aria-live="polite">
+              <span className="admin-dashboard-context-icon" aria-hidden="true"><ActiveTabIcon className="h-5 w-5" /></span>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-[#64808b]">目前工作區</p>
+                <p className="mt-0.5 font-black text-[#092d3a]">{activeTabDefinition.label}</p>
+                <p className="mt-1 text-xs leading-5 text-[#526a74]">{activeTabDefinition.description}</p>
+              </div>
             </div>
           </div>
 
           <nav aria-label="管理員後台導航" className="admin-dashboard-sidebar mb-8 overflow-x-auto lg:sticky lg:top-24 lg:mb-0 lg:overflow-visible">
-            <div className="flex min-w-max gap-2 rounded-3xl bg-white/85 p-2 shadow-sm ring-1 ring-black/10 backdrop-blur lg:min-w-0 lg:flex-col lg:gap-1 lg:rounded-2xl lg:bg-[#edf1f3] lg:shadow-none lg:backdrop-blur-none">
-              {tabs.map((tab) => {
-                const Icon = tab.icon
-                const active = activeTab === tab.id
+            <div className="admin-sidebar-panel min-w-max rounded-3xl bg-white/85 p-2 shadow-sm ring-1 ring-black/10 backdrop-blur lg:min-w-0 lg:rounded-2xl lg:shadow-none lg:backdrop-blur-none">
+              <div className="admin-sidebar-identity hidden lg:block">
+                <div className="flex items-center gap-2 text-xs font-bold text-white/70">
+                  <span className="admin-live-dot" aria-hidden="true" />
+                  正式資料已連線
+                </div>
+                <p className="mt-3 text-lg font-black text-white">營運工作台</p>
+                <p className="mt-1 truncate text-xs text-white/55">{data?.admin.name || data?.admin.email}</p>
+              </div>
+              <div className="admin-sidebar-tabs flex min-w-max gap-2 lg:min-w-0 lg:flex-col lg:gap-1">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon
+                  const active = activeTab === tab.id
+                  const count = tab.id === 'overview'
+                    ? data?.overview.pendingOrderCount ?? 0
+                    : tab.id === 'coaches'
+                      ? data?.overview.openAttendanceAnomalyCount ?? 0
+                      : 0
 
-                return (
-	                      <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id)}
-                    aria-current={active ? 'page' : undefined}
-                    className={`inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold transition lg:min-h-11 lg:w-full lg:justify-start lg:rounded-xl ${
-                      active ? 'bg-black text-white lg:bg-[#0b2d3c]' : 'text-apple-gray-600 hover:bg-apple-gray-100 hover:text-apple-gray-900 lg:hover:bg-white'
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {tab.label}
-                  </button>
-                )
-              })}
+                  return (
+                    <button
+                      key={tab.id}
+                      id={`admin-tab-${tab.id}`}
+                      type="button"
+                      onClick={() => setActiveTab(tab.id)}
+                      aria-current={active ? 'page' : undefined}
+                      aria-controls={`admin-panel-${tab.id}`}
+                      data-active={active ? 'true' : 'false'}
+                      className={`admin-sidebar-tab inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold transition lg:min-h-12 lg:w-full lg:justify-start lg:rounded-xl ${
+                        active ? 'bg-black text-white' : 'text-apple-gray-600 hover:bg-apple-gray-100 hover:text-apple-gray-900'
+                      }`}
+                    >
+                      <span className="admin-sidebar-icon" aria-hidden="true"><Icon className="h-4 w-4" /></span>
+                      <span className="whitespace-nowrap">{tab.label}</span>
+                      {count > 0 ? <span className="admin-sidebar-count">{count}</span> : null}
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="admin-sidebar-footer hidden lg:block">
+                <p className="text-xs font-bold text-white/55">超級管理員</p>
+                <p className="mt-1 truncate text-xs text-white/80">{data?.admin.email}</p>
+              </div>
             </div>
           </nav>
 
           {message ? (
-            <div role="status" className="fixed right-4 top-24 z-[70] flex max-w-sm items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 shadow-lg sm:right-6">
+            <div role="status" className="admin-toast fixed right-4 top-24 z-[70] flex max-w-sm items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 shadow-lg sm:right-6">
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
               {message}
             </div>
           ) : null}
           {error ? (
-            <div role="alert" className="fixed right-4 top-24 z-[70] flex max-w-sm items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 shadow-lg sm:right-6">
+            <div role="alert" className="admin-toast fixed right-4 top-24 z-[70] flex max-w-sm items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 shadow-lg sm:right-6">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
               {error}
             </div>
           ) : null}
 
-          {activeTab === 'overview' && data ? (
+          <div
+            key={activeTab}
+            id={`admin-panel-${activeTab}`}
+            role="region"
+            aria-labelledby={`admin-tab-${activeTab}`}
+            className="admin-dashboard-workspace"
+          >
+            {activeTab === 'overview' && data ? (
             <section className="space-y-8">
-              <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
-                {[
-                  ['已回報，待人工核對', data.overview.pendingOrderCount],
-                  ['已確認入帳', data.overview.approvedOrderCount],
-                  ['商城商品', data.overview.productCount],
-                  ['低庫存商品', data.overview.lowStockCount],
-                  ['收款帳戶', data.overview.paymentAccountCount],
-                  ['學員總數', data.overview.studentCount],
-                ].map(([label, value]) => (
-                  <div key={label} className="apple-card p-5">
-                    <p className="text-sm text-apple-gray-500">{label}</p>
-                    <p className="mt-2 text-3xl font-black text-apple-gray-900">{value}</p>
+              <div className="admin-overview-metrics grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {overviewMetrics.map((metric) => (
+                  <div
+                    key={metric.label}
+                    data-tone={metric.tone}
+                    className={`admin-metric-card apple-card p-5 ${metric.featured ? 'xl:col-span-2' : ''}`}
+                  >
+                    <p className="text-sm font-semibold text-apple-gray-500">{metric.label}</p>
+                    <p className="mt-3 text-3xl font-black tabular-nums text-apple-gray-900">{metric.value}</p>
                   </div>
                 ))}
               </div>
 
-              <div className="apple-card p-6">
+              <div className="admin-operational-card apple-card p-6">
                 <div className="mb-5 flex items-center gap-3">
                   <ShieldCheck className="h-5 w-5 text-emerald-600" />
                   <h2 className="text-xl font-black text-apple-gray-900">已回報，待人工核對</h2>
@@ -1020,7 +1059,7 @@ export default function AdminDashboardClient() {
 	            <AdminBankReconciliation paymentAccounts={data.paymentAccounts} />
 	          ) : null}
 
-	          {activeTab === 'paymentAccounts' && data ? (
+          {activeTab === 'paymentAccounts' && data ? (
 	            <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
 	              <div className="apple-card p-5">
 	                <h2 className="text-xl font-black text-apple-gray-900">新增收款帳戶</h2>
@@ -1099,6 +1138,7 @@ export default function AdminDashboardClient() {
 	              </div>
 	            </section>
 	          ) : null}
+          </div>
 
         </div>
       </section>
