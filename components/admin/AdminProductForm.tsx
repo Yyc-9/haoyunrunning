@@ -145,7 +145,7 @@ export default function AdminProductForm({ product, categories = [], runAction, 
       </div>
     </header>
 
-    <div className="product-editor-scroll">
+    <div className="product-editor-scroll" role="region" aria-label="商品編輯內容" tabIndex={0}>
       {error ? <p ref={errorRef} tabIndex={-1} role="alert" className="product-notice is-error">{error}</p> : null}
       {message ? <p role="status" className="product-notice is-success"><CheckCircle2 className="h-4 w-4 shrink-0" />{message}</p> : null}
       <fieldset disabled={busy} className="product-editor-fields">

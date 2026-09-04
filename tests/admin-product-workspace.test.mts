@@ -79,3 +79,17 @@ test('商品工作區有未儲存與重複送出保護，新增與編輯共用�
   assert.match(workspace, /AdminProductCreator/)
   assert.match(workspace, /AdminProductEditor/)
 })
+
+test('商品清單與表單的高度受限且支援鍵盤捲動，避免媒體區被裁掉', () => {
+  const css = readFileSync(new URL('../components/admin/product-workspace.css', import.meta.url), 'utf8')
+  const form = readFileSync(new URL('../components/admin/AdminProductForm.tsx', import.meta.url), 'utf8')
+  const workspace = readFileSync(new URL('../components/admin/AdminProductWorkspace.tsx', import.meta.url), 'utf8')
+  for (const selector of ['product-catalog', 'product-catalog-list', 'product-workspace-editor', 'product-editor', 'product-editor-scroll']) {
+    const rule = css.match(new RegExp(`\\.${selector} \\{([^}]+)\\}`))?.[1] ?? ''
+    assert.match(rule, /min-height: 0/, `${selector} 必須允許縮至容器高度`)
+  }
+  assert.match(css, /\.product-workspace-body \{[^}]+grid-template-rows: minmax\(0, 1fr\)/)
+  assert.doesNotMatch(css, /min-height: 540px|overscroll-behavior: contain/)
+  assert.match(form, /className="product-editor-scroll" role="region" aria-label="商品編輯內容" tabIndex=\{0\}/)
+  assert.match(workspace, /className="product-catalog-list" role="region" aria-label="可捲動商品清單" tabIndex=\{0\}/)
+})
