@@ -5,10 +5,11 @@ export const dynamic = 'force-dynamic'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowRight, Package, Search } from 'lucide-react'
+import { ArrowRight, ChevronDown, Package, Search } from 'lucide-react'
 import ShopCartDrawer from '@/components/ShopCartDrawer'
 import type { ShopProduct } from '@/lib/shop-products'
 import { useSiteContent } from '@/app/site-content-provider'
+import './shop-catalog.css'
 
 type SortOption = 'featured' | 'price-low' | 'price-high'
 
@@ -59,7 +60,7 @@ export default function ShopPage() {
   }, [category, products, query, sort])
 
   return (
-    <main className="kinetic-page min-h-screen bg-white pt-20 sm:pt-24">
+    <main className="shop-page kinetic-page min-h-screen bg-white pt-20 sm:pt-24">
       <section className="kinetic-hero relative isolate min-h-[390px] overflow-hidden border-b border-black/10 sm:min-h-[395px]">
         <Image
           src={pageMedia.shopHero}
@@ -80,30 +81,34 @@ export default function ShopPage() {
         </div>
       </section>
 
-      <section className="container mx-auto px-4 py-8 sm:py-10">
-        <div className="kinetic-reveal grid gap-3 border-b border-black/10 pb-6 md:grid-cols-[minmax(260px,1fr)_auto_auto] md:items-center">
-          <label className="relative block max-w-xl">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-apple-gray-400" />
+      <section className="shop-catalog container mx-auto px-4 py-8 sm:py-10" aria-label="商品列表">
+        <div className="shop-toolbar kinetic-reveal grid gap-3 border-b border-black/10 pb-6 md:grid-cols-[minmax(260px,1fr)_auto_auto] md:items-center">
+          <label className="shop-search relative block max-w-xl">
+            <span className="sr-only">搜尋商品</span>
+            <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-apple-gray-400" />
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜尋商品" className="apple-input pl-10" />
           </label>
-          <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0">
-            <button type="button" onClick={() => setCategory('')} className={`whitespace-nowrap rounded-md border px-3 py-2 text-sm font-bold transition ${!category ? 'border-black bg-black text-white' : 'border-black/10 bg-white text-apple-gray-700 hover:border-black/30'}`}>全部</button>
+          <div className="shop-categories flex gap-2 overflow-x-auto pb-1 md:pb-0" role="group" aria-label="商品分類">
+            <button type="button" aria-pressed={!category} onClick={() => setCategory('')} className={`whitespace-nowrap rounded-md border px-3 py-2 text-sm font-bold transition ${!category ? 'border-black bg-black text-white' : 'border-black/10 bg-white text-apple-gray-700 hover:border-black/30'}`}>全部</button>
             {categories.map((item) => (
-              <button key={item} type="button" onClick={() => setCategory(item)} className={`whitespace-nowrap rounded-md border px-3 py-2 text-sm font-bold transition ${category === item ? 'border-black bg-black text-white' : 'border-black/10 bg-white text-apple-gray-700 hover:border-black/30'}`}>{item}</button>
+              <button key={item} type="button" aria-pressed={category === item} onClick={() => setCategory(item)} className={`whitespace-nowrap rounded-md border px-3 py-2 text-sm font-bold transition ${category === item ? 'border-black bg-black text-white' : 'border-black/10 bg-white text-apple-gray-700 hover:border-black/30'}`}>{item}</button>
             ))}
           </div>
-          <select value={sort} onChange={(event) => setSort(event.target.value as SortOption)} aria-label="商品排序" className="apple-input py-2 text-sm md:w-40">
-            <option value="featured">推薦排序</option>
-            <option value="price-low">價格低到高</option>
-            <option value="price-high">價格高到低</option>
-          </select>
+          <div className="shop-sort relative contents md:w-40 lg:block">
+            <select value={sort} onChange={(event) => setSort(event.target.value as SortOption)} aria-label="商品排序" className="apple-input py-2 text-sm md:w-40">
+              <option value="featured">推薦排序</option>
+              <option value="price-low">價格低到高</option>
+              <option value="price-high">價格高到低</option>
+            </select>
+            <ChevronDown aria-hidden="true" className="shop-sort-icon pointer-events-none absolute right-3 top-1/2 hidden h-4 w-4 -translate-y-1/2" />
+          </div>
         </div>
 
         {isLoading ? (
-          <div aria-label="商品資料載入中" className="grid grid-cols-2 gap-x-3 gap-y-8 pt-7 md:grid-cols-3 md:gap-x-5 lg:grid-cols-4">
+          <div aria-label="商品資料載入中" className="shop-product-grid grid grid-cols-2 gap-x-3 gap-y-8 pt-7 md:grid-cols-3 md:gap-x-5 lg:grid-cols-4">
             {Array.from({ length: 4 }, (_, index) => (
               <div key={index} className="animate-pulse">
-                <div className="aspect-square rounded-md bg-apple-gray-100" />
+                <div className="shop-product-placeholder aspect-square rounded-md bg-apple-gray-100" />
                 <div className="mt-3 h-3 w-20 rounded bg-apple-gray-100" />
                 <div className="mt-3 h-5 w-4/5 rounded bg-apple-gray-100" />
                 <div className="mt-3 h-5 w-24 rounded bg-apple-gray-100" />
@@ -116,24 +121,24 @@ export default function ShopPage() {
             <p className="mt-4 font-black text-apple-gray-900">{loadError}</p>
           </div>
         ) : visibleProducts.length > 0 ? (
-          <div className="grid grid-cols-2 gap-x-3 gap-y-8 pt-7 md:grid-cols-3 md:gap-x-5 lg:grid-cols-4">
+          <div className="shop-product-grid grid grid-cols-2 gap-x-3 gap-y-8 pt-7 md:grid-cols-3 md:gap-x-5 lg:grid-cols-4">
             {visibleProducts.map((product) => (
-              <article key={product.id} className="kinetic-card group min-w-0">
-                <Link href={`/shop/${encodeURIComponent(product.id)}`} className="block">
-                  <div className="kinetic-image relative aspect-square overflow-hidden rounded-md border border-black/10 bg-apple-gray-50">
+              <article key={product.id} className="shop-product-card kinetic-card group min-w-0">
+                <Link href={`/shop/${encodeURIComponent(product.id)}`} className="shop-product-link block">
+                  <div className="shop-product-image kinetic-image relative aspect-square overflow-hidden rounded-md border border-black/10 bg-apple-gray-50">
                     {product.image ? (
-                      <Image src={product.image} alt={product.name} fill sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw" className="object-contain p-3 transition duration-300 group-hover:scale-[1.025]" />
+                      <Image src={product.image} alt={product.name} fill quality={90} sizes="(min-width: 1024px) 50vw, (min-width: 768px) 33vw, 50vw" className="object-contain p-3 transition duration-300 group-hover:scale-[1.025]" />
                     ) : (
                       <div className="flex h-full items-center justify-center"><Package className="h-10 w-10 text-apple-gray-300" /></div>
                     )}
                     {product.stockQuantity <= 0 ? <span className="absolute left-2 top-2 rounded bg-black px-2 py-1 text-xs font-bold text-white">售完</span> : null}
                   </div>
-                  <div className="pt-3">
-                    <p className="text-xs text-apple-gray-500">{product.category}</p>
+                  <div className="shop-product-info pt-3">
+                    <p className="shop-product-category text-xs text-apple-gray-500">{product.category}</p>
                     <h2 className="mt-1 line-clamp-2 min-h-12 text-sm font-black leading-6 text-apple-gray-950 sm:text-base">{product.name}</h2>
-                    <div className="mt-2 flex items-center justify-between gap-2">
+                    <div className="shop-product-price mt-2 flex items-center justify-between gap-2">
                       <span className="text-base font-black text-apple-gray-950">{formatPrice(product)}</span>
-                      <ArrowRight className="h-4 w-4 shrink-0 text-apple-gray-400 transition group-hover:translate-x-1 group-hover:text-black" />
+                      <ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0 text-apple-gray-400 transition group-hover:translate-x-1 group-hover:text-black" />
                     </div>
                   </div>
                 </Link>

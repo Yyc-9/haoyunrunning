@@ -1,0 +1,175 @@
+/* The catalogue refinement is desktop-only; existing mobile styles stay intact. */
+@media (min-width: 1024px) {
+  /* Let the existing fixed cart drawer sit above the shared navigation. */
+  .shop-page.kinetic-page {
+    isolation: auto;
+  }
+
+  .shop-page .shop-catalog {
+    padding-top: 40px;
+    padding-bottom: 64px;
+  }
+
+  .shop-page .shop-toolbar {
+    grid-template-columns: minmax(220px, 1fr) minmax(0, auto) 160px;
+    gap: 24px;
+    align-items: start;
+    padding-bottom: 24px;
+  }
+
+  .shop-page .shop-search {
+    max-width: 384px;
+  }
+
+  .shop-page .shop-search .apple-input,
+  .shop-page .shop-sort .apple-input {
+    height: 44px;
+    border-radius: 8px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    line-height: 22px;
+    color: #24353d;
+    font-size: 14px;
+  }
+
+  .shop-page .shop-search .apple-input {
+    padding-left: 44px;
+  }
+
+  .shop-page .shop-search .apple-input::placeholder {
+    color: #647079;
+  }
+
+  .shop-page .shop-search > svg {
+    left: 16px;
+    color: #647079;
+  }
+
+  .shop-page .shop-categories {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    overflow: visible;
+    gap: 8px;
+  }
+
+  .shop-page .shop-categories button {
+    min-height: 44px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    line-height: 22px;
+  }
+
+  .shop-page .shop-sort .apple-input {
+    appearance: none;
+    padding-left: 16px;
+    padding-right: 36px;
+  }
+
+  .shop-page .shop-sort-icon {
+    display: block;
+    color: #52616b;
+  }
+
+  .shop-page .shop-product-grid {
+    gap: 32px 24px;
+    padding-top: 28px;
+  }
+
+  .shop-page .shop-product-card.kinetic-card {
+    overflow: hidden;
+    border: 1px solid #dae1e4;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: none;
+    will-change: auto;
+    transition: border-color 220ms ease, transform 220ms ease;
+  }
+
+  .shop-page .shop-product-card.kinetic-card::before {
+    display: none;
+  }
+
+  .shop-page .shop-product-card.kinetic-card:hover {
+    border-color: #82979f;
+    box-shadow: none;
+    transform: translateY(-4px);
+    filter: none;
+  }
+
+  .shop-page .shop-product-link {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+  }
+
+  .shop-page .shop-product-link:focus-visible {
+    outline: 3px solid #087f8c;
+    outline-offset: -3px;
+  }
+
+  .shop-page .shop-product-card .shop-product-image,
+  .shop-page .shop-product-placeholder {
+    aspect-ratio: 4 / 5;
+    border: 0;
+    border-radius: 0;
+    background: #edf0ef;
+  }
+
+  .shop-page .shop-product-card.kinetic-card:hover .shop-product-image {
+    transform: none;
+    filter: none;
+  }
+
+  .shop-page .shop-product-image > img {
+    object-fit: cover;
+    object-position: center;
+    padding: 0;
+  }
+
+  .shop-page .shop-product-info {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  .shop-page .shop-product-category {
+    color: #647079;
+    line-height: 20px;
+  }
+
+  .shop-page .shop-product-info h2 {
+    min-height: 48px;
+    margin-top: 4px;
+    font-size: 17px;
+    line-height: 24px;
+    font-weight: 700;
+  }
+
+  .shop-page .shop-product-price {
+    margin-top: auto;
+    padding-top: 16px;
+  }
+
+  .shop-page .shop-product-price > span {
+    font-size: 18px;
+    line-height: 24px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .shop-page .shop-product-price > svg {
+    color: #52616b;
+  }
+}
+
+@media (min-width: 1024px) and (prefers-reduced-motion: reduce) {
+  .shop-page .shop-product-card.kinetic-card,
+  .shop-page .shop-product-image > img {
+    transition: none;
+  }
+
+  .shop-page .shop-product-card.kinetic-card:hover,
+  .shop-page .shop-product-card:hover .shop-product-image > img {
+    transform: none;
+  }
+}
