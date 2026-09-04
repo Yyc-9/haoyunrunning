@@ -65,6 +65,23 @@ test('英文切回繁體或簡體時會從原始中文重新轉換', async () =>
   )
 })
 
+test('城市篩選簡稱可從英文切回繁體及簡體', async () => {
+  const { createLocalizationMemory, localizeRememberedValue } = await import('../lib/language-dom.ts')
+  const traditional = ['北市', '新北', '竹縣', '竹市', '苗栗']
+  const english = ['Taipei', 'New Taipei', 'Hsinchu County', 'Hsinchu City', 'Miaoli']
+  const simplified = ['北市', '新北', '竹县', '竹市', '苗栗']
+
+  for (let index = 0; index < traditional.length; index++) {
+    const memory = createLocalizationMemory()
+    const textNode = {}
+    const translated = localizeRememberedValue(textNode, 'text', traditional[index], 'en', memory)
+    assert.equal(translated, english[index])
+    assert.equal(localizeRememberedValue(textNode, 'text', translated, 'zh-TW', memory), traditional[index])
+    const translatedAgain = localizeRememberedValue(textNode, 'text', traditional[index], 'en', memory)
+    assert.equal(localizeRememberedValue(textNode, 'text', translatedAgain, 'zh-CN', memory), simplified[index])
+  }
+})
+
 test('訓練日程內容資料會補齊常見問題與頁尾重點', async () => {
   const { normalizeCoursesPageContent, siteContentFromRows } = await import('../lib/site-content.ts')
   const normalized = normalizeCoursesPageContent({ heroTitle: '自訂訓練日程' })

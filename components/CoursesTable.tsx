@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { ArrowUpRight, Clock3, MapPin } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
 import { useSiteContent } from '@/app/site-content-provider'
-import { compareCourses, displayCourseLocation, displayCourseTime, getCourseCityOptions, normalizeCourseLocation, orderedWeekdays } from '@/lib/course-sort'
+import { compareCourses, displayCourseCityFilter, displayCourseLocation, displayCourseTime, getCourseCityOptions, normalizeCourseLocation, orderedWeekdays } from '@/lib/course-sort'
 import { formatCourseWeekday } from '@/lib/course-weekday'
 
 const weekdays = orderedWeekdays
@@ -87,7 +87,7 @@ export default function CoursesTable() {
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setCityFilter('all')} aria-pressed={cityFilter === 'all'} className={`course-filter-pill min-h-10 rounded-full px-4 text-sm font-bold transition ${cityFilter === 'all' ? 'bg-black text-white lg:bg-[#0b2d3c]' : 'bg-apple-gray-100 text-apple-gray-700 hover:bg-apple-gray-200 lg:bg-white lg:ring-1 lg:ring-black/10 lg:hover:bg-[#eef3f5]'}`}>全部城市</button>
             {cities.map((city) => (
-              <button key={city} type="button" onClick={() => setCityFilter(city)} aria-pressed={cityFilter === city} className={`course-filter-pill min-h-10 rounded-full px-4 text-sm font-bold transition ${cityFilter === city ? 'bg-black text-white lg:bg-[#0b2d3c]' : 'bg-apple-gray-100 text-apple-gray-700 hover:bg-apple-gray-200 lg:bg-white lg:ring-1 lg:ring-black/10 lg:hover:bg-[#eef3f5]'}`}>{localeText(displayCourseLocation(city))}</button>
+              <button key={city} type="button" onClick={() => setCityFilter(city)} aria-pressed={cityFilter === city} className={`course-filter-pill min-h-10 rounded-full px-4 text-sm font-bold transition ${cityFilter === city ? 'bg-black text-white lg:bg-[#0b2d3c]' : 'bg-apple-gray-100 text-apple-gray-700 hover:bg-apple-gray-200 lg:bg-white lg:ring-1 lg:ring-black/10 lg:hover:bg-[#eef3f5]'}`}>{localeText(displayCourseCityFilter(city))}</button>
             ))}
           </div>
         </div>

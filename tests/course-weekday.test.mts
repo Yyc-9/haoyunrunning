@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { compareCourseLocations, displayCourseLocation, displayCourseTime, getCourseCityOptions, sortCourses } from '../lib/course-sort.ts'
+import { compareCourseLocations, displayCourseCityFilter, displayCourseLocation, displayCourseTime, getCourseCityOptions, normalizeCourseLocation, sortCourses } from '../lib/course-sort.ts'
 import { formatCourseWeekday } from '../lib/course-weekday.ts'
 
 test('課程星期顯示使用完整名稱，但不改動英文', () => {
@@ -27,6 +27,21 @@ test('課程城市從北到南排列，別名去重且不會漏掉新北', () =>
   assert.ok(compareCourseLocations('新竹縣竹北市', '新竹市') < 0)
   assert.deepEqual(getCourseCityOptions(['高雄', '台中', '彰化', '苗栗', '台南']), ['苗栗', '台中', '彰化', '台南', '高雄'])
   assert.equal(getCourseCityOptions(['未知城市', '新北'])[1], '未知城市')
+})
+
+test('城市篩選使用指定簡稱，保留完整地址、由北到南順序及篩選值', () => {
+  const source = ['苗栗', '新竹市', '新北市', '新竹縣', '台北市']
+  const cities = getCourseCityOptions(source)
+  assert.deepEqual(cities.map(displayCourseCityFilter), ['北市', '新北', '竹縣', '竹市', '苗栗'])
+  assert.deepEqual(cities.map(displayCourseLocation), ['台北市', '新北市', '新竹縣', '新竹市', '苗栗'])
+  assert.deepEqual(cities.map((city) => source.filter((value) => normalizeCourseLocation(value) === city)), [
+    ['台北市'], ['新北市'], ['新竹縣'], ['新竹市'], ['苗栗'],
+  ])
+  assert.equal(displayCourseCityFilter('臺北市'), '北市')
+  assert.equal(displayCourseCityFilter('新北'), '新北')
+  assert.equal(displayCourseCityFilter('新竹县'), '竹縣')
+  assert.equal(displayCourseCityFilter('苗栗縣'), '苗栗')
+  assert.equal(displayCourseCityFilter('桃園市'), '桃園市')
 })
 
 test('課表仍按星期排列，同一天先從北到南，同城市再按時間排列', () => {

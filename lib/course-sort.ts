@@ -50,6 +50,16 @@ export function displayCourseLocation(value: string) {
   return location === '台北' ? '台北市' : location
 }
 
+export function displayCourseCityFilter(value: string) {
+  const location = normalizeCourseLocation(value)
+  if (location === '台北') return '北市'
+  if (location === '新北市') return '新北'
+  if (location === '新竹縣' || location === '新竹县') return '竹縣'
+  if (location === '新竹市') return '竹市'
+  if (location === '苗栗縣' || location === '苗栗县') return '苗栗'
+  return displayCourseLocation(value)
+}
+
 export function displayCourseTime(value: string) {
   const time = value.match(/(?:[01]\d|2[0-3]):[0-5]\d/)?.[0]
   return time || value.replace(/\s*[（(][^）)]*(?:小時|小时)[）)]\s*/g, '').trim()

@@ -142,8 +142,19 @@ const englishPairs = [...managedContentPairs, ...dictionaryPairs]
   .filter(([traditional, english]) => traditional && english)
   .sort((a, b) => b[0].length - a[0].length)
 
+// Match compact city labels exactly so longer names and addresses stay intact.
+const cityFilterTranslations = new Map([
+  ['北市', 'Taipei'],
+  ['新北', 'New Taipei'],
+  ['竹縣', 'Hsinchu County'],
+  ['竹市', 'Hsinchu City'],
+  ['苗栗', 'Miaoli'],
+])
+
 export function toEnglishWebsiteText(value: string) {
   if (/^(?:https?:\/\/|\/[^/]|mailto:|tel:)/u.test(value)) return value
+  const cityFilterTranslation = cityFilterTranslations.get(value)
+  if (cityFilterTranslation) return cityFilterTranslation
   return englishPairs.reduce((text, [traditional, english]) => text.replaceAll(traditional, english), value)
 }
 

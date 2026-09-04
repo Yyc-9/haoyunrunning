@@ -95,7 +95,7 @@ const simplifiedToTraditionalCharacters: ReadonlyArray<readonly [string, string]
   ['与', '與'], ['发', '發'], ['达', '達'], ['获', '獲'], ['奖', '獎'], ['项', '項'],
   ['称', '稱'], ['应', '應'], ['仅', '僅'], ['届', '屆'], ['届', '屆'], ['笔', '筆'],
   ['网', '網'], ['内', '內'], ['阵', '陣'], ['图', '圖'], ['轮', '輪'], ['档', '檔'],
-  ['预', '預'], ['览', '覽'], ['周', '週'], ['纪', '紀'], ['径', '徑'],
+  ['预', '預'], ['览', '覽'], ['周', '週'], ['纪', '紀'], ['径', '徑'], ['县', '縣'],
 ]
 
 const conversionPairs = [...simplifiedToTraditionalPhrases, ...simplifiedToTraditionalCharacters]
