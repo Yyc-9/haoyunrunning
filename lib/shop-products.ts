@@ -34,6 +34,33 @@ export type ShopProduct = {
   active: boolean
 }
 
+type ProductIntroSource = Pick<
+  ShopProduct,
+  'description' | 'summary' | 'highlights' | 'specifications' | 'usageNotes'
+>
+
+export function getProductIntro(product: ProductIntroSource) {
+  const base = (product.description || product.summary).trim()
+  const sections: string[] = base ? [base] : []
+
+  const appendUnseen = (title: string, lines: string[]) => {
+    const unseenLines = lines
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter((line) => !base.includes(line))
+    if (unseenLines.length) sections.push(`${title}\n${unseenLines.join('\n')}`)
+  }
+
+  appendUnseen('商品特色', product.highlights)
+  appendUnseen(
+    '商品資訊',
+    product.specifications.map((item) => `${item.label}：${item.value}`),
+  )
+  appendUnseen('保養提醒', product.usageNotes)
+
+  return sections.join('\n\n')
+}
+
 export type ShopProductRow = {
   id: string
   name: string

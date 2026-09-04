@@ -25,8 +25,8 @@ import type { CourseBillingConfig } from '@/lib/course-pricing'
 import type { CourseOverride, SiteContent } from '@/lib/site-content'
 import AdminContentManager from '@/components/admin/AdminContentManager'
 import AdminEnrollmentAnalytics from '@/components/admin/AdminEnrollmentAnalytics'
-import AdminProductCreator from '@/components/admin/AdminProductCreator'
-import AdminProductEditor, { type AdminEditableProduct } from '@/components/admin/AdminProductEditor'
+import AdminProductWorkspace from '@/components/admin/AdminProductWorkspace'
+import type { AdminEditableProduct, ProductEditState } from '@/lib/admin-products'
 import AdminBankReconciliation from '@/components/admin/AdminBankReconciliation'
 import AdminCoachDuty from '@/components/admin/AdminCoachDuty'
 import { paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
@@ -311,6 +311,7 @@ export default function AdminDashboardClient() {
   const [selectedCoachByStudent, setSelectedCoachByStudent] = useState<Record<string, string>>({})
   const [studentQuery, setStudentQuery] = useState('')
   const [coachQuery, setCoachQuery] = useState('')
+  const [productEditState, setProductEditState] = useState<ProductEditState>({ dirty: false, busy: false })
   const [selectedCoachInviteKey, setSelectedCoachInviteKey] = useState('')
   const [selectedCoachInviteEmail, setSelectedCoachInviteEmail] = useState('')
   const [studentPlanFilter, setStudentPlanFilter] = useState<'all' | 'enabled' | 'missing'>('all')
@@ -587,7 +588,7 @@ export default function AdminDashboardClient() {
   }
 
   return (
-    <main className="admin-shell min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+    <main className={`admin-shell min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24 ${activeTab === 'products' ? 'admin-products-mode' : ''}`}>
       <section className="px-4 py-10 sm:px-6 lg:px-8">
         <div className="admin-dashboard-grid container mx-auto max-w-[1600px]">
           <div className="admin-dashboard-header mb-8 lg:mb-7">
@@ -632,7 +633,13 @@ export default function AdminDashboardClient() {
                       key={tab.id}
                       id={`admin-tab-${tab.id}`}
                       type="button"
-                      onClick={() => setActiveTab(tab.id)}
+                      onClick={() => {
+                        if (tab.id === activeTab) return
+                        if (activeTab === 'products' && productEditState.busy) return
+                        if (activeTab === 'products' && productEditState.dirty && !window.confirm('商品有未儲存的變更。確定放棄並切換工作區？')) return
+                        setProductEditState({ dirty: false, busy: false })
+                        setActiveTab(tab.id)
+                      }}
                       aria-current={active ? 'page' : undefined}
                       aria-controls={`admin-panel-${tab.id}`}
                       data-active={active ? 'true' : 'false'}
@@ -1078,26 +1085,8 @@ export default function AdminDashboardClient() {
           ) : null}
 
           {activeTab === 'products' && data ? (
-	            <section className="space-y-3">
-	              <div className="flex flex-col gap-3 px-1 sm:flex-row sm:items-end sm:justify-between">
-	                <div>
-	                  <h2 className="text-xl font-black text-apple-gray-900">商城商品管理</h2>
-	                  <p className="mt-1 text-sm text-apple-gray-600">商品以精簡清單顯示，需要修改時再展開完整內容。</p>
-	                </div>
-	                <div className="flex flex-wrap gap-2 text-xs font-bold">
-	                  <span className="rounded-full bg-white px-3 py-1.5 text-apple-gray-600 ring-1 ring-black/10">共 {data.products.length} 件</span>
-	                  <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-700">上架 {data.products.filter((product) => product.active).length}</span>
-	                  <span className="rounded-full bg-amber-50 px-3 py-1.5 text-amber-700">低庫存 {data.products.filter((product) => product.stockQuantity <= 5).length}</span>
-	                </div>
-	              </div>
-	              <AdminProductCreator runAction={runAction} />
-	              {data.products.length === 0 ? (
-	                <div className="apple-card p-10 text-center text-sm font-semibold text-apple-gray-500">目前沒有商品，請使用上方表單建立第一件商品。</div>
-	              ) : data.products.map((product) => (
-	                <AdminProductEditor key={product.id} product={product} runAction={runAction} />
-	              ))}
-	            </section>
-	          ) : null}
+            <AdminProductWorkspace products={data.products} runAction={runAction} onStateChange={setProductEditState} />
+          ) : null}
 
               {activeTab === 'content' && data ? (
                 <AdminContentManager content={data.siteContent} courses={data.courses} seasons={data.courseSeasons} scope="content" runAction={runAction} />

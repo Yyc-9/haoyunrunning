@@ -365,3 +365,69 @@ final result: passed
 ## Final result
 
 final result: passed
+
+---
+
+# 商城商品工作區：第一張設計驗收
+
+Selected source visual truth: `/Users/yangyichen/.codex/generated_images/019f75f7-dfd2-7e23-a798-be167a8a51ac/exec-6265ace0-6900-485b-a78f-60cd55df7478.png`
+
+Implementation: `http://localhost:3001/admin`, development-only in-memory preview of the production components. No live admin writes or deployments.
+
+Artifact directory: `/Users/yangyichen/.codex/visualizations/2026/07/18/019f75f7-dfd2-7e23-a798-be167a8a51ac/shop-admin-option1/`
+
+## Comparison state and normalization
+
+- Source: 1487 × 1058 pixels. Final implementation: 1487 × 1058 CSS/pixel viewport, deviceScaleFactor 1.
+- State: desktop, Traditional Chinese, first product selected, unsaved summary change, gallery and advanced settings collapsed.
+- Full-view comparison: `comparison-full.png`, source on the left, implementation on the right, natural pixel density without stretching.
+- Focused field comparison: `comparison-fields.png`, content and property columns, both opened together at 1:1 density.
+- Final captures match the source pixel dimensions without resizing either image.
+- Intentional product constraint: keep existing site navigation, real admin section names and identity. Do not implement the generated mock's invented order, discount or inventory navigation. This adds the existing site header above the work area; compare the product workspace regions separately.
+
+## Comparison history
+
+### Pass 1
+
+- [P2] Product fields and media metadata are smaller than the selected visual. Input text is 14px versus approximately 16px in the source, creating noticeably longer line lengths. Product title hierarchy is also too weak.
+  - Evidence: `desktop-final-pass1.png`, `comparison-fields-pass1.png` before the typography refinement.
+  - Fix: inputs to 16px, field labels to 14px, title to 24px, product-list titles to 15px, media labels to 14px and statuses to 12px.
+- Core composition matches: product list on the left, persistent editor actions above, introduction in the center, price/stock/sizes/media in the right rail, optional advanced details below.
+
+### Pass 2
+
+- Reopened `comparison-full.png` and `comparison-fields.png` after the typography changes. The 16px inputs now match the source's reading scale and paragraph wrapping; labels, titles and compact media metadata remain distinct and legible. The previous typography P2 is resolved.
+- [P1, resolved] During this turn a parallel change to the shared crop component introduced a `next/image` runtime error: `fill` conflicts with the crop geometry's `style.width`. The second upload test exposed it; no product was submitted.
+  - Minimal fix: retain the other task's geometry, portal and focus trap; use explicit image width/height and absolute positioning, and capture the trigger ref before effect cleanup.
+  - Post-fix evidence: full local file selection, crop, create and delete flow passed again in `interaction-results.json`; added regression coverage prevents the fill/width conflict.
+- Extra screenshots: `viewport-1366.png`, `viewport-1024.png`, `viewport-390.png`. No page-level horizontal overflow; save remains in the editor header while the long editor body scrolls.
+- No remaining P0/P1/P2 findings in the scoped product workspace.
+
+## Interaction evidence
+
+`interaction-results.json` records browser verification of initial selection; search and empty state; status/low-stock filtering; cancelled and confirmed unsaved-change switching; standard/custom sizes and saved state; inventory validation; compact gallery removal; actual local image file selection and crop; creation and two-stage deletion; no horizontal overflow at 1366/1024/390px; reduced motion. Zero browser runtime/React console errors and zero admin API writes. The pre-existing CSP report-only `upgrade-insecure-requests` diagnostic is excluded from application error counts.
+
+## Required fidelity surfaces
+
+- Typography: initial P2 corrected and checked against the source in the final focused comparison; existing system/PingFang Chinese font stack retained.
+- Spacing/layout: consistent list/editor/property hierarchy, fixed top save actions, restrained borders; intentional existing-header difference noted above.
+- Colors/tokens: existing deep teal ink, teal selection, pale neutral surfaces, semantic green saved state and amber unsaved state.
+- Image quality/assets: no persistent media preview by user request. Existing logo retained; Lucide icons already used in the repository match the source's outlined icon treatment. Actual crop dialog remains available only while uploading.
+- Copy/content: Traditional Chinese passed; one public description and selectable sizes retained. Legacy highlights/specifications/care notes are merged into description before old fields are cleared. Mock inventory and products are labeled as examples.
+
+## Verification and scope
+
+- `npm run check` passed: Traditional Chinese, 59 tests in the current shared workspace, ESLint, TypeScript and 86-page production build.
+- Existing design QA history was preserved. Course-page and content-center edits from another task are outside this report.
+- Production authentication/storage writes are deliberately not exercised by the local preview.
+- No commit, push, or deployment was performed during the local design review.
+
+final result: passed
+
+## Release candidate verification — 2026-09-04
+
+- User approved publishing the selected first design. This release stages only the 13 product-workspace, public-description, test and QA files.
+- The local `ProductWorkspacePreview.tsx`, its development page switch, and the user asset folder are excluded from the release.
+- The separately authorized course/avatar changes were already committed and pushed as `1ce8233`; the product release is based on that current main revision.
+- Exported the staged index to an isolated temporary directory without creating a Git worktree. The exact release candidate passed `npm run check`: Traditional Chinese, 59 tests, ESLint, TypeScript and 85-page production build. No development-only preview route is included.
+- Shared crop compatibility is covered by the course release's tests; product release tests cover draft preservation, existing API payloads, sizes, validation, filtering and unsaved-change guards without depending on local fixtures.

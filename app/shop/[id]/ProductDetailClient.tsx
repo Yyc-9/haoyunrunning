@@ -4,12 +4,12 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, Check, ChevronRight, ExternalLink, Film, Loader2, Minus, Package, Plus, ShoppingBag } from 'lucide-react'
+import { ArrowLeft, ChevronRight, Film, Loader2, Minus, Package, Plus, ShoppingBag } from 'lucide-react'
 import { useCart } from '@/app/cart-provider'
 import { useSiteContent } from '@/app/site-content-provider'
 import { useToast } from '@/app/toast-provider'
 import ShopCartDrawer from '@/components/ShopCartDrawer'
-import type { ProductVariant, ShopProduct } from '@/lib/shop-products'
+import { getProductIntro, type ProductVariant, type ShopProduct } from '@/lib/shop-products'
 
 type ProductDetailClientProps = {
   productId: string
@@ -178,7 +178,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
 
             {product.sizes?.length ? (
               <fieldset className="mt-6">
-                <legend className="text-sm font-black text-apple-gray-900">尺寸或規格</legend>
+                <legend className="text-sm font-black text-apple-gray-900">商品尺碼</legend>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {product.sizes.map((size) => (
                     <button key={size} type="button" onClick={() => setSelectedSize(size)} className={`min-w-12 rounded-md border px-3 py-2.5 text-sm font-bold transition ${selectedSize === size ? 'border-black bg-black text-white' : 'border-black/15 bg-white text-apple-gray-700 hover:border-black/40'}`}>{size}</button>
@@ -212,41 +212,10 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
           </section>
         </div>
 
-        <div className="mt-12 border-t border-black/10 lg:mt-16">
-          <section className="grid gap-6 border-b border-black/10 py-9 md:grid-cols-[220px_minmax(0,1fr)]">
-            <h2 className="text-xl font-black text-apple-gray-950">商品介紹</h2>
-            <p className="whitespace-pre-line text-base leading-8 text-apple-gray-700">{product.description || product.summary}</p>
-          </section>
-
-          {product.highlights.length > 0 ? (
-            <section className="grid gap-6 border-b border-black/10 py-9 md:grid-cols-[220px_minmax(0,1fr)]">
-              <h2 className="text-xl font-black text-apple-gray-950">商品重點</h2>
-              <ul className="grid gap-3 sm:grid-cols-2">
-                {product.highlights.map((highlight) => <li key={highlight} className="flex gap-3 text-sm leading-6 text-apple-gray-700"><Check className="mt-0.5 h-5 w-5 shrink-0 text-black" />{highlight}</li>)}
-              </ul>
-            </section>
-          ) : null}
-
-          {product.specifications.length > 0 ? (
-            <section className="grid gap-6 border-b border-black/10 py-9 md:grid-cols-[220px_minmax(0,1fr)]">
-              <h2 className="text-xl font-black text-apple-gray-950">商品規格</h2>
-              <dl className="border-t border-black/10">
-                {product.specifications.map((item) => <div key={`${item.label}-${item.value}`} className="grid grid-cols-[110px_minmax(0,1fr)] gap-4 border-b border-black/10 py-3 text-sm sm:grid-cols-[160px_minmax(0,1fr)]"><dt className="font-bold text-apple-gray-500">{item.label}</dt><dd className="text-apple-gray-900">{item.value}</dd></div>)}
-              </dl>
-            </section>
-          ) : null}
-
-          {product.usageNotes.length > 0 ? (
-            <section className="grid gap-6 border-b border-black/10 py-9 md:grid-cols-[220px_minmax(0,1fr)]">
-              <h2 className="text-xl font-black text-apple-gray-950">使用與保養</h2>
-              <ul className="list-disc space-y-2 pl-5 text-sm leading-7 text-apple-gray-700">{product.usageNotes.map((note) => <li key={note}>{note}</li>)}</ul>
-            </section>
-          ) : null}
-
-          {product.externalUrl ? (
-            <div className="py-8"><a href={product.externalUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-black text-apple-gray-800 underline underline-offset-4">查看品牌官方商品資料<ExternalLink className="h-4 w-4" /></a></div>
-          ) : null}
-        </div>
+        <section className="mt-12 grid gap-6 border-y border-black/10 py-9 md:grid-cols-[220px_minmax(0,1fr)] lg:mt-16">
+          <h2 className="text-xl font-black text-apple-gray-950">商品簡介</h2>
+          <p className="whitespace-pre-line text-base leading-8 text-apple-gray-700">{getProductIntro(product)}</p>
+        </section>
       </div>
 
       <ShopCartDrawer products={products} open={isCartOpen} onOpenChange={setIsCartOpen} />

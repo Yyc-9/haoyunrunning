@@ -133,3 +133,34 @@ test('教練端不提供自行上傳頭像入口', () => {
   assert.doesNotMatch(uploadRoute, /canUploadCoachMedia/)
   assert.match(uploadRoute, /只有超級管理員可以上傳網站媒體/)
 })
+
+test('商城商品頁只保留單一商品簡介與可選尺碼', async () => {
+  const { getProductIntro } = await import('../lib/shop-products.ts')
+  const detailPage = readFileSync(new URL('../app/shop/[id]/ProductDetailClient.tsx', import.meta.url), 'utf8')
+  const creator = readFileSync(new URL('../components/admin/AdminProductCreator.tsx', import.meta.url), 'utf8')
+  const editor = readFileSync(new URL('../components/admin/AdminProductEditor.tsx', import.meta.url), 'utf8')
+  const form = readFileSync(new URL('../components/admin/AdminProductForm.tsx', import.meta.url), 'utf8')
+
+  const intro = getProductIntro({
+    summary: '摘要',
+    description: '原有介紹',
+    highlights: ['適合日常訓練'],
+    specifications: [{ label: '材質', value: '聚酯纖維' }],
+    usageNotes: ['請依洗標清洗'],
+  })
+
+  assert.match(intro, /原有介紹/)
+  assert.match(intro, /適合日常訓練/)
+  assert.match(intro, /材質：聚酯纖維/)
+  assert.match(intro, /請依洗標清洗/)
+  assert.match(detailPage, />商品簡介</)
+  assert.match(detailPage, />商品尺碼</)
+  assert.doesNotMatch(detailPage, />商品重點</)
+  assert.doesNotMatch(detailPage, />商品規格</)
+  assert.doesNotMatch(detailPage, />使用與保養</)
+  assert.doesNotMatch(creator, /<Image\b|<video\b/)
+  assert.doesNotMatch(editor, /<Image\b|<video\b/)
+  assert.doesNotMatch(form, /<Image\b|<video\b/)
+  assert.match(form, /後台不顯示預覽/)
+  assert.match(form, /只顯示保存結果/)
+})
