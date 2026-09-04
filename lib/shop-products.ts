@@ -39,7 +39,7 @@ type ProductIntroSource = Pick<
   'description' | 'summary' | 'highlights' | 'specifications' | 'usageNotes'
 >
 
-export function getProductIntro(product: ProductIntroSource) {
+export function getProductIntro(product: ProductIntroSource, { includeSpecifications = true } = {}) {
   const base = (product.description || product.summary).trim()
   const sections: string[] = base ? [base] : []
 
@@ -52,10 +52,9 @@ export function getProductIntro(product: ProductIntroSource) {
   }
 
   appendUnseen('商品特色', product.highlights)
-  appendUnseen(
-    '商品資訊',
-    product.specifications.map((item) => `${item.label}：${item.value}`),
-  )
+  if (includeSpecifications) {
+    appendUnseen('商品資訊', product.specifications.map((item) => `${item.label}：${item.value}`))
+  }
   appendUnseen('保養提醒', product.usageNotes)
 
   return sections.join('\n\n')

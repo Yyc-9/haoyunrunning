@@ -37,6 +37,7 @@ export default function AdminProductForm({ product, categories = [], runAction, 
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const categoryId = useId()
+  const specificationsHintId = useId()
   const errorRef = useRef<HTMLParagraphElement>(null)
   const dirty = JSON.stringify(draft) !== JSON.stringify(savedDraft)
   const busy = saving || deleting || Boolean(uploadingKey)
@@ -123,7 +124,7 @@ export default function AdminProductForm({ product, categories = [], runAction, 
   }
 
   const sizes = [...new Set([...commonSizes, ...draft.sizes])]
-  const hasLegacy = Boolean(product && (product.highlights.length || product.specifications.length || product.usageNotes.length))
+  const hasLegacy = Boolean(product && (product.highlights.length || product.usageNotes.length))
 
   return <form onSubmit={save} className="product-editor" aria-label={isNew ? '新增商品' : '編輯商品'}>
     <header className="product-editor-header">
@@ -154,8 +155,8 @@ export default function AdminProductForm({ product, categories = [], runAction, 
             <label className="product-field"><span>商品名稱 <b>*</b></span><input className="apple-input" value={draft.name} maxLength={180} onChange={(event) => change('name', event.target.value)} placeholder="輸入商品名稱" /></label>
             <label className="product-field"><span>商品分類 <b>*</b></span><input className="apple-input" list={categoryId} value={draft.category} maxLength={100} onChange={(event) => change('category', event.target.value)} /><datalist id={categoryId}>{[...new Set([...categories, '跑者服飾', '跑者配件', '運動補給'])].map((category) => <option key={category} value={category} />)}</datalist></label>
             <label className="product-field"><span>商品摘要</span><input className="apple-input" value={draft.summary} maxLength={500} onChange={(event) => change('summary', event.target.value)} placeholder="用一句話說明商品特色" /></label>
-            <label className="product-field product-intro-field"><span>商品簡介</span><textarea className="apple-input" value={draft.description} maxLength={Math.max(5000, savedDraft.description.length)} rows={9} onChange={(event) => change('description', event.target.value)} placeholder="商品特色、材質規格與保養方式，都寫在這裡。" /><span className="product-field-help"><span>商店只顯示這份完整簡介。</span><span>{draft.description.length.toLocaleString()} / 5,000</span></span></label>
-            {hasLegacy ? <p className="product-legacy-note">舊版重點、規格與保養內容已合併於簡介，不會遺失。</p> : null}
+            <label className="product-field product-intro-field"><span>商品簡介</span><textarea className="apple-input" value={draft.description} maxLength={Math.max(5000, savedDraft.description.length)} rows={9} onChange={(event) => change('description', event.target.value)} placeholder="介紹商品特色、使用情境與保養方式。" /><span className="product-field-help"><span>規格請在尺碼下方另外填寫。</span><span>{draft.description.length.toLocaleString()} / 5,000</span></span></label>
+            {hasLegacy ? <p className="product-legacy-note">舊版重點與保養內容已合併於簡介；原有規格保留於獨立欄位。</p> : null}
           </div>
 
           <aside className="product-property-fields" aria-label="售價庫存與媒體">
@@ -164,6 +165,21 @@ export default function AdminProductForm({ product, categories = [], runAction, 
             <fieldset className="product-size-field"><legend>可選商品尺碼</legend><div className="product-size-options">{sizes.map((size) => <button type="button" key={size} aria-pressed={draft.sizes.includes(size)} onClick={() => change('sizes', draft.sizes.includes(size) ? draft.sizes.filter((value) => value !== size) : [...draft.sizes, size])}>{size}{draft.sizes.includes(size) ? <Check className="product-size-check" aria-hidden="true" /> : null}</button>)}</div>
               {customSizeOpen ? <div className="product-custom-size"><input className="apple-input" aria-label="自訂尺碼" value={customSize} onChange={(event) => setCustomSize(event.target.value)} placeholder="如：F、均碼" onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addCustomSizes() } }} /><button type="button" className="product-text-action" onClick={addCustomSizes}>加入</button><button type="button" aria-label="取消自訂尺碼" onClick={() => setCustomSizeOpen(false)}><X className="h-4 w-4" /></button></div> : <button type="button" className="product-text-action product-custom-size-trigger" onClick={() => setCustomSizeOpen(true)}><Plus className="h-3.5 w-3.5" />自訂尺碼</button>}
               <p className="product-field-hint">不分尺碼的商品可全部不選。</p>
+            </fieldset>
+
+            <fieldset className="product-specifications-field" aria-describedby={specificationsHintId}>
+              <legend>商品規格</legend>
+              <p id={specificationsHintId} className="product-field-hint">例如材質、容量、包裝或尺寸說明；尺碼選項仍在上方設定。</p>
+              {draft.specifications.length ? <div className="product-specification-list">
+                {draft.specifications.map((specification, index) => (
+                  <div key={index} className="product-specification-row">
+                    <label className="product-field"><span>名稱</span><input className="apple-input" aria-label={`規格 ${index + 1} 名稱`} value={specification.label} maxLength={80} placeholder="如：材質" onChange={(event) => change('specifications', draft.specifications.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item))} /></label>
+                    <label className="product-field"><span>內容</span><textarea className="apple-input" aria-label={`規格 ${index + 1} 內容`} value={specification.value} maxLength={300} rows={2} placeholder="填寫規格內容" onChange={(event) => change('specifications', draft.specifications.map((item, itemIndex) => itemIndex === index ? { ...item, value: event.target.value } : item))} /></label>
+                    <button type="button" className="product-specification-remove product-icon-action is-danger" aria-label={`移除規格 ${index + 1}`} onClick={() => change('specifications', draft.specifications.filter((_, itemIndex) => itemIndex !== index))}><Trash2 className="h-4 w-4" /></button>
+                  </div>
+                ))}
+              </div> : <p className="product-field-hint">未填寫時，商店不顯示規格區。</p>}
+              <button type="button" className="product-text-action product-add-specification" disabled={draft.specifications.length >= 30} onClick={() => change('specifications', [...draft.specifications, { label: '', value: '' }])}><Plus className="h-4 w-4" />新增規格</button>
             </fieldset>
 
             <section className="product-media-section" aria-label="媒體檔案">

@@ -22,14 +22,17 @@ test('商品草稿保留舊內容，並複製尺碼和媒體清單避免直接�
   const draft = productDraft(product)
   assert.equal(draft.price, '1280')
   assert.match(draft.description, /快乾/)
-  assert.match(draft.description, /材質：聚酯纖維/)
+  assert.doesNotMatch(draft.description, /材質：聚酯纖維/)
+  assert.deepEqual(draft.specifications, product.specifications)
   assert.match(draft.description, /低溫清洗/)
   draft.sizes.push('L')
   draft.gallery.push('/new.webp')
   draft.variants[0].detailImages.push('/new-detail.webp')
+  draft.specifications[0].value = '測試內容'
   assert.equal(product.sizes.length, 2)
   assert.equal(product.gallery.length, 1)
   assert.equal(product.variants[0].detailImages.length, 1)
+  assert.equal(product.specifications[0].value, '聚酯纖維')
 })
 
 test('更新商品沿用 API 合約與分幣單位，不再送出重複的介紹欄位', () => {
@@ -39,7 +42,7 @@ test('更新商品沿用 API 合約與分幣單位，不再送出重複的介紹
   assert.equal(payload.price, 128000)
   assert.equal(payload.sizes, 'S、M')
   assert.equal(payload.highlights, '')
-  assert.deepEqual(payload.specifications, [])
+  assert.deepEqual(payload.specifications, product.specifications)
   assert.equal(payload.usageNotes, '')
   assert.match(payload.description, /低溫清洗/)
   assert.equal(productActionPayload(productDraft(product)).action, 'create_product')
@@ -47,6 +50,28 @@ test('更新商品沿用 API 合約與分幣單位，不再送出重複的介紹
 
 test('尺碼支援自訂、常見分隔符號與去重', () => {
   assert.deepEqual(parseProductSizes('S、M，L, XL\n均碼、S'), ['S', 'M', 'L', 'XL', '均碼'])
+})
+
+test('規格獨立新增、修改與清空，不會合併到簡介或在再次儲存時遺失', () => {
+  const draft = productDraft(product)
+  draft.specifications = [{ label: ' 材質 ', value: ' 純棉 ' }, { label: '容量', value: '50 mL' }, { label: '', value: '' }]
+  const payload = productActionPayload(draft, product.id)
+  assert.deepEqual(payload.specifications, [{ label: '材質', value: '純棉' }, { label: '容量', value: '50 mL' }])
+  assert.doesNotMatch(payload.description, /純棉|50 mL/)
+  const savedProduct = { ...product, description: payload.description, highlights: [], usageNotes: [], specifications: payload.specifications }
+  assert.deepEqual(productActionPayload(productDraft(savedProduct), product.id).specifications, payload.specifications)
+  assert.deepEqual(productActionPayload({ ...draft, specifications: [] }, product.id).specifications, [])
+  assert.deepEqual(productDraft().specifications, [])
+})
+
+test('規格缺一半或超出欄位限制會阻止儲存，全空白列會忽略', () => {
+  const draft = productDraft(product)
+  assert.match(productDraftError({ ...draft, specifications: [{ label: '材質', value: '' }] }), /名稱與內容/)
+  assert.match(productDraftError({ ...draft, specifications: [{ label: '', value: '純棉' }] }), /名稱與內容/)
+  assert.match(productDraftError({ ...draft, specifications: [{ label: '字'.repeat(81), value: '純棉' }] }), /80 字/)
+  assert.match(productDraftError({ ...draft, specifications: [{ label: '材質', value: '字'.repeat(301) }] }), /300 字/)
+  assert.match(productDraftError({ ...draft, specifications: Array.from({ length: 31 }, () => ({ label: '材質', value: '純棉' })) }), /30 項/)
+  assert.equal(productDraftError({ ...draft, specifications: [{ label: ' ', value: ' ' }] }), '')
 })
 
 test('儲存前阻止缺漏資料、無效數值與過長簡介', () => {

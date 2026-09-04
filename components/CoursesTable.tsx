@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { ArrowUpRight, Clock3, MapPin } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
 import { useSiteContent } from '@/app/site-content-provider'
-import { compareCourseLocations, compareCourses, displayCourseLocation, displayCourseTime, orderedWeekdays } from '@/lib/course-sort'
+import { compareCourses, displayCourseLocation, displayCourseTime, getCourseCityOptions, normalizeCourseLocation, orderedWeekdays } from '@/lib/course-sort'
 import { formatCourseWeekday } from '@/lib/course-weekday'
 
 const weekdays = orderedWeekdays
@@ -48,10 +48,10 @@ export default function CoursesTable() {
 
   const localeText = (text: string) => language === 'zh-CN' ? text.replaceAll('週', '周') : text.replaceAll('周', '週')
   const weekdayText = (text: string) => formatCourseWeekday(localeText(text), language)
-  const cities = useMemo(() => [...new Set(courses.map((course) => course.location))].sort(compareCourseLocations), [courses])
+  const cities = useMemo(() => getCourseCityOptions(courses.map((course) => course.location)), [courses])
   const filteredCourses = useMemo(() => courses.filter((course) => {
     if (levelFilter !== 'all' && getCourseLevel(course.name) !== levelFilter) return false
-    if (cityFilter !== 'all' && course.location !== cityFilter) return false
+    if (cityFilter !== 'all' && normalizeCourseLocation(course.location) !== cityFilter) return false
     return true
   }).sort(compareCourses), [cityFilter, courses, levelFilter])
 

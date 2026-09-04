@@ -187,6 +187,20 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
               </fieldset>
             ) : null}
 
+            {product.specifications.length ? (
+              <section className="mt-6" aria-labelledby="product-specifications-title">
+                <h2 id="product-specifications-title" className="text-sm font-black text-apple-gray-900">商品規格</h2>
+                <dl className="mt-3 divide-y divide-black/10 border-y border-black/10 text-sm">
+                  {product.specifications.map((specification, index) => (
+                    <div key={`${specification.label}-${index}`} className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 py-3">
+                      <dt className="break-words font-semibold text-apple-gray-600">{specification.label}</dt>
+                      <dd className="whitespace-pre-line break-words leading-6 text-apple-gray-900">{specification.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            ) : null}
+
             <div className="mt-6 flex items-end justify-between gap-4 border-t border-black/10 pt-6">
               <div>
                 <p className="text-sm font-black text-apple-gray-900">數量</p>
@@ -214,7 +228,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
 
         <section className="mt-12 grid gap-6 border-y border-black/10 py-9 md:grid-cols-[220px_minmax(0,1fr)] lg:mt-16">
           <h2 className="text-xl font-black text-apple-gray-950">商品簡介</h2>
-          <p className="whitespace-pre-line text-base leading-8 text-apple-gray-700">{getProductIntro(product)}</p>
+          <p className="whitespace-pre-line text-base leading-8 text-apple-gray-700">{getProductIntro(product, { includeSpecifications: false })}</p>
         </section>
       </div>
 

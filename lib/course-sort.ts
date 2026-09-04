@@ -10,9 +10,20 @@ export const orderedWeekdays = ['週一', '週二', '週三', '週四', '週五'
 
 const locationOrder = [
   ['台北', '臺北'],
+  ['新北'],
+  ['桃園'],
+  ['竹北', '新竹縣'],
   ['新竹市', '新竹'],
-  ['竹北'],
   ['竹南'],
+  ['苗栗'],
+  ['台中', '臺中'],
+  ['彰化'],
+  ['南投'],
+  ['雲林'],
+  ['嘉義'],
+  ['台南', '臺南'],
+  ['高雄'],
+  ['屏東'],
 ] as const
 
 export function normalizeWeekday(value: string) {
@@ -20,10 +31,18 @@ export function normalizeWeekday(value: string) {
 }
 
 export function normalizeCourseLocation(value: string) {
-  const location = value.trim()
-  if (location === '臺北' || location === '台北市' || location === '臺北市') return '台北'
+  const location = value.trim().replaceAll('臺', '台')
+  if (location === '台北市') return '台北'
+  if (location === '新北') return '新北市'
+  if (location === '桃園') return '桃園市'
   if (location === '新竹') return '新竹市'
+  if (location === '竹北市') return '竹北'
+  if (location === '竹南鎮') return '竹南'
   return location
+}
+
+export function getCourseCityOptions(locations: readonly string[]) {
+  return [...new Set(locations.map(normalizeCourseLocation).filter(Boolean))].sort(compareCourseLocations)
 }
 
 export function displayCourseLocation(value: string) {
@@ -61,8 +80,8 @@ export function compareCourses(first: SortableCourse, second: SortableCourse) {
     - (secondWeekday === -1 ? orderedWeekdays.length : secondWeekday)
 
   return weekdayDifference
-    || courseMinutes(first) - courseMinutes(second)
     || compareCourseLocations(first.location, second.location)
+    || courseMinutes(first) - courseMinutes(second)
     || first.name.localeCompare(second.name, 'zh-Hant')
 }
 

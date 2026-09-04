@@ -134,7 +134,7 @@ test('教練端不提供自行上傳頭像入口', () => {
   assert.match(uploadRoute, /只有超級管理員可以上傳網站媒體/)
 })
 
-test('商城商品頁只保留單一商品簡介與可選尺碼', async () => {
+test('商城商品頁保留單一簡介，尺碼下方顯示獨立規格', async () => {
   const { getProductIntro } = await import('../lib/shop-products.ts')
   const detailPage = readFileSync(new URL('../app/shop/[id]/ProductDetailClient.tsx', import.meta.url), 'utf8')
   const creator = readFileSync(new URL('../components/admin/AdminProductCreator.tsx', import.meta.url), 'utf8')
@@ -156,7 +156,11 @@ test('商城商品頁只保留單一商品簡介與可選尺碼', async () => {
   assert.match(detailPage, />商品簡介</)
   assert.match(detailPage, />商品尺碼</)
   assert.doesNotMatch(detailPage, />商品重點</)
-  assert.doesNotMatch(detailPage, />商品規格</)
+  assert.match(detailPage, />商品規格</)
+  assert.ok(detailPage.indexOf('>商品尺碼<') < detailPage.indexOf('>商品規格<'))
+  assert.match(detailPage, /getProductIntro\(product, \{ includeSpecifications: false \}\)/)
+  assert.match(form, /<legend>商品規格<\/legend>/)
+  assert.ok(form.indexOf('可選商品尺碼') < form.indexOf('<legend>商品規格'))
   assert.doesNotMatch(detailPage, />使用與保養</)
   assert.doesNotMatch(creator, /<Image\b|<video\b/)
   assert.doesNotMatch(editor, /<Image\b|<video\b/)
