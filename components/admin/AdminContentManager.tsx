@@ -51,6 +51,7 @@ import type {
 import type { CoachPublicProfile } from '@/lib/coach-profiles'
 import { getYouTubeEmbedUrl } from '@/lib/youtube'
 import CroppableImageInput from '@/components/admin/CroppableImageInput'
+import CourseCoachAvatar from '@/components/CourseCoachAvatar'
 
 type CourseSummary = {
   slug: string
@@ -148,6 +149,10 @@ function ImageField({
   aspectRatio = 16 / 9,
   aspectLabel = '16:9',
   outputWidth = 2000,
+  preview,
+  previewShape = 'rectangle',
+  description,
+  buttonLabel = '更換圖片',
   onChange,
   onError,
 }: {
@@ -158,6 +163,10 @@ function ImageField({
   aspectRatio?: number
   aspectLabel?: string
   outputWidth?: number
+  preview?: React.ReactNode
+  previewShape?: 'rectangle' | 'circle'
+  description?: string
+  buttonLabel?: string
   onChange: (url: string) => void
   onError: (message: string) => void
 }) {
@@ -170,6 +179,7 @@ function ImageField({
       onChange(await uploadSiteImage(file, folder))
     } catch (error) {
       onError(error instanceof Error ? error.message : '圖片上傳失敗。')
+      throw error
     } finally {
       setUploading(false)
     }
@@ -177,11 +187,12 @@ function ImageField({
   return (
     <div className="border-b border-black/10 py-5 first:pt-0 last:border-0 last:pb-0">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-        <div className="relative h-28 w-full shrink-0 overflow-hidden rounded-lg bg-apple-gray-100 sm:w-44">
+        {preview ? <div className="flex shrink-0 flex-col items-center gap-2 sm:w-44">{preview}<span className="text-xs text-apple-gray-500">課程顯示預覽</span></div> : <div className="relative h-28 w-full shrink-0 overflow-hidden rounded-lg bg-apple-gray-100 sm:w-44">
           {value ? <Image src={value} alt={`${label}預覽`} fill sizes="176px" className="object-cover" style={objectPosition ? { objectPosition } : undefined} /> : <ImageIcon className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 text-apple-gray-400" />}
-        </div>
+        </div>}
         <div className="min-w-0 flex-1">
           <p className="font-bold text-apple-gray-900">{label}</p>
+          {description ? <p className="mt-2 max-w-xl text-sm leading-6 text-apple-gray-600">{description}</p> : null}
           <p className="mt-1 truncate text-xs text-apple-gray-500">{value || '尚未設定圖片'}</p>
           <CroppableImageInput
             className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-black/10 bg-white px-4 py-2 text-sm font-bold hover:bg-apple-gray-100"
@@ -189,10 +200,13 @@ function ImageField({
             aspectRatio={aspectRatio}
             aspectLabel={aspectLabel}
             outputWidth={outputWidth}
+            previewShape={previewShape}
+            minOutputWidth={previewShape === 'circle' ? 600 : 0}
+            cropHint={previewShape === 'circle' ? '將臉部置於圓框中央，保留頭頂與下巴，避免裁入手臂。' : undefined}
             onCroppedFile={upload}
           >
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
-            更換圖片
+            {buttonLabel}
           </CroppableImageInput>
         </div>
       </div>
@@ -407,7 +421,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
     { id: 'home' as const, label: '首頁文案', description: '近期報名與課程預覽', destination: '首頁近期報名、課程預覽', icon: Home },
     { id: 'activities' as const, label: '活動入口', description: '報名與活動連結', destination: '首頁近期報名入口', icon: Megaphone },
     { id: 'schedule' as const, label: '訓練日程頁', description: '首屏、加入流程與常見問題', destination: '完整訓練日程頁', icon: CalendarRange },
-    { id: 'team' as const, label: '團隊陣容', description: '頁面介紹與教練資料', destination: '團隊陣容完整頁面', icon: UsersRound },
+    { id: 'team' as const, label: '團隊與教練照片', description: '課程頭像、團隊照與介紹', destination: '課程詳情與團隊陣容頁面', icon: UsersRound },
     { id: 'seasons' as const, label: '季度設定', description: '切換、複製與歷史資料', destination: '課程、日程表、報名與歷史報表', icon: CalendarRange },
     { id: 'brand' as const, label: '品牌與聯絡', description: '頁尾 Logo、社群與聯絡', destination: '頁尾與聯絡入口', icon: BadgeInfo },
     { id: 'media' as const, label: '商店與週年', description: '主視覺與商店文案', destination: '商店與週年活動頁', icon: ImageIcon },
@@ -773,6 +787,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
 
         {mode === 'team' ? (
           <div className="space-y-5">
+            <a href="#admin-coach-photos" className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-apple-blue underline underline-offset-4">編輯課程教練頭像與裁切<ArrowDown aria-hidden="true" className="h-4 w-4" /></a>
             <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
               {panelHeader('團隊陣容頁面介紹', '管理首屏介紹與教練名單上方標題。', '/team')}
               <div className="p-5">
@@ -788,8 +803,8 @@ export default function AdminContentManager({ content, courses, seasons, scope =
               <div className="border-t border-black/10 p-5">{actionBar(() => { setTeam(content.team); setPageMedia(content.pageMedia) }, multiSaveButton('save-team', [{ section: 'team_content', value: team }, { section: 'page_media', value: pageMedia }]))}</div>
             </div>
 
-            <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
-              {panelHeader('教練與助教公開資料', '可分別維護課程詳情 1:1 近景頭像、團隊頁 3:2 上半身照片、介紹與公開狀態；課程歸屬仍在季度管理設定。', '/team')}
+            <div id="admin-coach-photos" className="scroll-mt-28 overflow-hidden rounded-lg border border-black/10 bg-white">
+              {panelHeader('教練照片與公開資料', '課程頭像與團隊照片分開維護。更換後請按「儲存並發布教練資料」，同一位教練的所有課程會同步更新；課程歸屬仍在季度管理設定。', '/team')}
               <div className="divide-y divide-black/10">
                 {Object.values(coachDrafts)
                   .sort((left, right) => Number(right.published) - Number(left.published) || left.displayName.localeCompare(right.displayName, 'zh-Hant'))
@@ -810,10 +825,14 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                           aspectRatio={1}
                           aspectLabel="1:1"
                           outputWidth={1200}
+                          previewShape="circle"
+                          buttonLabel="上傳高清頭像並裁切"
+                          description="建議使用 1200 × 1200 px 以上的清晰原圖。支援 JPG、PNG、WebP；可調整縮放與位置，裁切後不再二次放大。"
+                          preview={<CourseCoachAvatar src={profile.avatarUrl} name={profile.displayName} focusX={profile.avatarFocusX} focusY={profile.avatarFocusY} />}
                           objectPosition={`${profile.avatarFocusX}% ${profile.avatarFocusY}%`}
                           onChange={(avatarUrl) => setCoachDrafts((current) => ({
                             ...current,
-                            [profile.coachKey]: { ...current[profile.coachKey], avatarUrl },
+                            [profile.coachKey]: { ...current[profile.coachKey], avatarUrl, avatarFocusX: 50, avatarFocusY: 50 },
                           }))}
                           onError={setLocalError}
                         />

@@ -1,8 +1,7 @@
 'use client'
 
-import Image from 'next/image'
+import CourseCoachAvatar from '@/components/CourseCoachAvatar'
 import Link from 'next/link'
-import type { CSSProperties } from 'react'
 import {
   ArrowLeft,
   CalendarDays,
@@ -10,9 +9,7 @@ import {
   Clock,
   Instagram,
   MapPin,
-  Navigation,
   Route,
-  UsersRound,
 } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
 import type { ManagedCourse } from '@/lib/managed-courses'
@@ -36,49 +33,6 @@ function compactCourseName(name: string) {
     .replace(/^2026\s*/, '')
     .replace(/^好運跑步訓練營\s*X\s*/, '')
     .trim()
-}
-
-type CoachAvatarFrame = { x: number; y: number; zoom: number }
-
-const courseAvatarFrames: Record<string, CoachAvatarFrame> = {
-  bianbian: { x: 50, y: 34, zoom: 2.35 },
-  chenShengQi: { x: 50, y: 42, zoom: 2.15 },
-  laiXinHong: { x: 50, y: 48, zoom: 2.15 },
-  liuChengEn: { x: 50, y: 36, zoom: 2.7 },
-  luoMinYao: { x: 50, y: 50, zoom: 1 },
-  luoPeiCi: { x: 50, y: 28, zoom: 2.15 },
-  wuPeiCi: { x: 50, y: 48, zoom: 1.8 },
-  wuWeiQiao: { x: 50, y: 47, zoom: 2.1 },
-  xiaoHe: { x: 50, y: 50, zoom: 2.3 },
-  yangShengHao: { x: 50, y: 39, zoom: 2.7 },
-  yongXin: { x: 50, y: 42, zoom: 2.75 },
-  zhengYiQun: { x: 50, y: 20, zoom: 2 },
-  zhongLiChen: { x: 50, y: 45, zoom: 2.15 },
-  zhouXianFeng: { x: 50, y: 47, zoom: 2.05 },
-}
-
-function getCourseAvatarFrameStyle(coachKey: string | undefined): CSSProperties {
-  const frame = coachKey ? courseAvatarFrames[coachKey] : undefined
-  if (!frame) {
-    return { inset: 0 }
-  }
-
-  return {
-    width: `${frame.zoom * 100}%`,
-    height: `${frame.zoom * 100}%`,
-    left: `${50 - frame.zoom * frame.x}%`,
-    top: `${50 - frame.zoom * frame.y}%`,
-  }
-}
-
-function getCourseAvatarObjectPosition(
-  coachKey: string | undefined,
-  focusX: number,
-  focusY: number
-) {
-  return coachKey && courseAvatarFrames[coachKey]
-    ? '50% 50%'
-    : `${focusX}% ${focusY}%`
 }
 
 export default function CourseDetailClient({ course }: CourseDetailClientProps) {
@@ -134,7 +88,7 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
         </div>
       </div>
 
-      <section className="overflow-hidden border-b border-black/5 bg-white px-4 py-6 sm:px-6 lg:px-8">
+      <section data-course-section="running-camp" className="overflow-hidden border-b border-black/5 bg-white px-4 py-6 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-7xl">
           <div className="kinetic-card rounded-[1.5rem] border border-black/5 bg-apple-gray-50 p-5 shadow-sm md:p-7">
               <p className="text-xs font-bold uppercase tracking-wide text-apple-blue">{course.campaignLabel || t.courseDetail.heroLabel}</p>
@@ -168,7 +122,51 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
       <div className="px-4 py-10 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-7xl">
           <div className="space-y-10">
-            <section>
+            <section data-course-section="location" aria-labelledby="course-location-title" className="kinetic-card overflow-hidden rounded-[1.5rem] bg-[#111] p-5 text-white shadow-xl shadow-black/10 sm:p-7 lg:p-8">
+              <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] lg:items-end">
+                <div>
+                  <h2 id="course-location-title" className="text-lg font-bold text-white">{t.courseDetail.courseLocation}</h2>
+                  <p className="mt-3 text-3xl font-black leading-tight text-white">{text(displayCourseLocation(course.city || course.location))}</p>
+                  <p className="mt-3 flex items-start gap-2 text-base leading-7 text-white/80">
+                    <MapPin aria-hidden="true" className="mt-1 h-5 w-5 shrink-0" />
+                    {text(course.meetingPoint)}
+                  </p>
+                  <p className="mt-4 text-sm leading-6 text-white/80">{text(course.focus)}</p>
+
+                  <dl className="mt-6 grid grid-cols-2 gap-4 border-t border-white/20 pt-5 min-[420px]:grid-cols-3">
+                    {[
+                      [CalendarDays, t.courseDetail.courseWeekday, formatCourseWeekday(course.weekday)],
+                      [Clock, t.courseDetail.classTime, displayCourseTime(course.time || course.classTime)],
+                      [Route, t.courseDetail.coursePeriod, course.period],
+                    ].map(([Icon, label, value]) => {
+                      const DetailIcon = Icon as typeof CalendarDays
+                      return (
+                        <div key={`${label}-${value}`} className="min-w-0 last:col-span-2 min-[420px]:last:col-span-1">
+                          <dt className="flex items-center gap-2 text-xs font-semibold text-white/70">
+                            <DetailIcon aria-hidden="true" className="h-4 w-4 shrink-0" />
+                            {label as string}
+                          </dt>
+                          <dd className="mt-2 break-words text-sm font-bold leading-6 text-white">{text(value as string)}</dd>
+                        </div>
+                      )
+                    })}
+                  </dl>
+                  {course.enrollmentNote ? (
+                    <p className="mt-5 text-sm font-bold leading-6 text-amber-100">開班提醒：{text(course.enrollmentNote)}</p>
+                  ) : null}
+                </div>
+                <div className="flex flex-col gap-3">
+                  <Link href={`/courses/${course.slug}/register`} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-black transition-colors hover:bg-apple-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
+                    立即報名<ChevronRight aria-hidden="true" className="h-5 w-5" />
+                  </Link>
+                  <a href={instagramUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-white/30 px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
+                    <Instagram aria-hidden="true" className="h-5 w-5" />{t.courseDetail.contactInstagram}
+                  </a>
+                </div>
+              </div>
+            </section>
+
+            <section data-course-section="coaches">
               <h2 className="mb-6 text-2xl font-black text-apple-gray-900">{t.courseDetail.coachIntroduction}</h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {courseCoaches.map((coach) => {
@@ -185,47 +183,23 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
                     <Link
                       key={coach.name}
                       href={href}
-                      className="kinetic-card group rounded-lg border border-black/10 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-black/25 hover:shadow-md sm:p-5"
+                      className="kinetic-card group rounded-lg border border-black/10 bg-white p-5 shadow-sm transition hover:border-black/25 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-apple-blue sm:p-6"
                     >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full bg-apple-gray-100 ring-1 ring-black/10 lg:h-16 lg:w-16">
-                          {imageUrl ? (
-                            <div
-                              className="absolute"
-                              style={getCourseAvatarFrameStyle(profile?.coachKey)}
-                            >
-                              <Image
-                                src={imageUrl}
-                                alt={`${coach.name}教練照片`}
-                                fill
-                                sizes="(min-width: 1024px) 64px, 56px"
-                                className="object-cover"
-                                style={{
-                                  objectPosition: getCourseAvatarObjectPosition(
-                                    profile?.coachKey,
-                                    profile?.avatarFocusX ?? coach.avatarFocusX ?? 50,
-                                    profile?.avatarFocusY ?? coach.avatarFocusY ?? 18
-                                  ),
-                                }}
-                              />
-                            </div>
-                          ) : (
-                            <UsersRound className="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 text-apple-gray-400" />
-                          )}
+                      <div className="flex items-center gap-5">
+                        <CourseCoachAvatar src={imageUrl} name={coach.name} focusX={profile?.avatarFocusX ?? coach.avatarFocusX} focusY={profile?.avatarFocusY ?? coach.avatarFocusY} />
+                        <div className="min-w-0">
+                          <h3 className="text-lg font-black leading-7 text-apple-gray-950">{text(coach.name)}</h3>
+                          <p className="mt-2 text-sm leading-6 text-apple-gray-600">{courseText(compactCourseName(course.name))}</p>
+                          <p className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-apple-blue">查看團隊資料<ChevronRight aria-hidden="true" className="h-4 w-4 transition-transform group-hover:translate-x-0.5" /></p>
                         </div>
-                        <ChevronRight className="h-5 w-5 shrink-0 text-apple-gray-300 transition group-hover:translate-x-0.5 group-hover:text-black" />
                       </div>
-                      <h3 className="mt-4 text-lg font-black text-apple-gray-950">{text(coach.name)}</h3>
-                      <p className="mt-2 text-xs font-bold text-apple-gray-400">負責班級</p>
-                      <p className="mt-1 text-sm font-semibold leading-6 text-apple-gray-700">{courseText(compactCourseName(course.name))}</p>
-                      <p className="mt-3 text-xs font-black text-apple-blue">查看團隊資料</p>
                     </Link>
                   )
                 })}
               </div>
             </section>
 
-            <section className="kinetic-card kinetic-reveal overflow-hidden rounded-[1.5rem] border border-black/10 bg-white shadow-sm">
+            <section data-course-section="blueprint" className="kinetic-card kinetic-reveal overflow-hidden rounded-[1.5rem] border border-black/10 bg-white shadow-sm">
               <div className="border-b border-black/10 px-5 py-6 sm:px-7 sm:py-8">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-apple-blue">TRAINING BLUEPRINT</p>
                 <h2 className="mt-3 text-2xl font-black leading-tight text-apple-gray-950 sm:text-3xl">本季訓練藍圖</h2>
@@ -244,74 +218,6 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
               </div>
             </section>
 
-            <section className="kinetic-card kinetic-reveal relative overflow-hidden rounded-[1.5rem] bg-[#111] p-5 text-white shadow-xl shadow-black/10 sm:p-7 lg:p-8">
-              <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,.09)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.09)_1px,transparent_1px)] [background-size:28px_28px]" />
-              <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] lg:items-end">
-                <div>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-xs font-bold uppercase text-white/45">{t.courseDetail.courseLocation}</p>
-                      <h2 className="mt-2 text-3xl font-black leading-none text-white">{text(displayCourseLocation(course.city || course.location))}</h2>
-                      <p className="mt-3 flex items-start gap-2 text-sm leading-6 text-white/70">
-                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-apple-blue" />
-                        {text(course.meetingPoint)}
-                      </p>
-                    </div>
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-apple-gray-950">
-                      <Navigation className="h-5 w-5" />
-                    </span>
-                  </div>
-
-                  <div className="mt-5 flex items-start gap-2 rounded-xl border border-white/10 bg-black/30 p-4 text-sm font-bold leading-6 text-white">
-                    <Route className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-                    {text(course.focus)}
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-1 gap-2 min-[420px]:grid-cols-3">
-                    {[
-                      [CalendarDays, t.courseDetail.courseWeekday, '星期', formatCourseWeekday(course.weekday)],
-                      [Clock, t.courseDetail.classTime, '時間', displayCourseTime(course.time || course.classTime)],
-                      [Route, t.courseDetail.coursePeriod, '週期', course.period],
-                    ].map(([Icon, label, shortLabel, value]) => {
-                      const CardIcon = Icon as typeof CalendarDays
-                      return (
-                        <div key={`${label}-${value}`} className="min-w-0 rounded-xl border border-white/10 bg-white/10 p-3">
-                          <div className="flex items-center gap-1.5 text-xs font-bold text-white/45">
-                            <CardIcon className="h-3.5 w-3.5 shrink-0" />
-                            <span>{shortLabel as string}</span>
-                          </div>
-                          <p className="mt-2 break-words text-xs font-black leading-5 text-white">{text(value as string)}</p>
-                        </div>
-                      )
-                    })}
-                  </div>
-                  {course.enrollmentNote ? (
-                    <p className="mt-4 rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-3 text-sm font-black text-amber-100">
-                      開班提醒：{text(course.enrollmentNote)}
-                    </p>
-                  ) : null}
-                </div>
-
-                <div className="flex flex-col gap-3">
-                  <Link
-                    href={`/courses/${course.slug}/register`}
-                    className="apple-button-primary inline-flex min-h-12 w-full items-center justify-center gap-2 px-5 py-3"
-                  >
-                    立即報名
-                    <ChevronRight className="h-5 w-5" />
-                  </Link>
-                  <a
-                    href={instagramUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/15"
-                  >
-                    <Instagram className="h-5 w-5" />
-                    {t.courseDetail.contactInstagram}
-                  </a>
-                </div>
-              </div>
-            </section>
           </div>
         </div>
       </div>
