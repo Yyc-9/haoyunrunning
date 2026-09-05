@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   CheckCircle2,
@@ -13,6 +13,8 @@ import {
 import { useCart } from '@/app/cart-provider'
 import { useSiteContent } from '@/app/site-content-provider'
 import { supabase } from '@/lib/supabase'
+import { formatSelectedSpecifications, specificationSelectionError } from '@/lib/product-specifications'
+import type { ShopProduct } from '@/lib/shop-products'
 
 type CreatedOrder = {
   id: string
@@ -25,7 +27,7 @@ type CreatedOrder = {
 }
 
 export default function CheckoutPage() {
-  const { items, itemCount, total, clear } = useCart()
+  const { items, itemCount, total, clear, removeItem } = useCart()
   const { brand } = useSiteContent()
   const [form, setForm] = useState({ customerName: '', contact: '', email: '' })
   const [customerNote, setCustomerNote] = useState('')
@@ -33,6 +35,25 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [order, setOrder] = useState<CreatedOrder | null>(null)
+  const [catalog, setCatalog] = useState<ShopProduct[] | null>(null)
+  const [catalogError, setCatalogError] = useState('')
+
+  useEffect(() => {
+    const controller = new AbortController()
+    fetch('/api/shop/products', { cache: 'no-store', signal: controller.signal })
+      .then(async (response) => {
+        const payload = await response.json()
+        if (!response.ok || !Array.isArray(payload.products)) throw new Error('商品資料暫時無法確認，請重新整理頁面後再結帳。')
+        setCatalog(payload.products)
+      })
+      .catch((error) => { if (!controller.signal.aborted) setCatalogError(error instanceof Error ? error.message : '商品資料載入失敗。') })
+    return () => controller.abort()
+  }, [])
+
+  const optionIssues = catalog ? items.filter((item) => {
+    const product = catalog.find((product) => product.id === item.productId)
+    return !product || specificationSelectionError(product, item.selectedSpecifications)
+  }) : []
 
   const updateField = (field: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [field]: value }))
@@ -45,6 +66,10 @@ export default function CheckoutPage() {
 
     if (items.length === 0) {
       setError('購物車沒有商品。')
+      return
+    }
+    if (!catalog || catalogError || optionIssues.length) {
+      setError(catalogError || (!catalog ? '正在確認商品規格，請稍候。' : '請先回商品頁重新選擇規格，再提交訂單。'))
       return
     }
     if (!form.customerName.trim() || !form.contact.trim()) {
@@ -105,6 +130,11 @@ export default function CheckoutPage() {
             </p>
           </div>
 
+          {catalogError || optionIssues.length ? <div role="alert" className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-800">
+            <p>{catalogError || '以下商品規格已更新或尚未選齊，請先重新選擇，再匯款結帳。'}</p>
+            {optionIssues.map((item) => <Link key={item.id} href={`/shop/${encodeURIComponent(item.productId)}`} onClick={() => removeItem(item.id)} className="mt-1 block font-bold underline underline-offset-2">重新選擇 {item.name}</Link>)}
+          </div> : null}
+
           <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
             <section className="apple-card p-6 md:p-8">
               <div className="mb-6 flex items-center gap-3">
@@ -164,6 +194,7 @@ export default function CheckoutPage() {
                     <div key={item.id} className="flex items-start justify-between gap-4 border-b border-black/10 pb-4">
                       <div className="min-w-0">
                         <h3 className="font-semibold leading-6 text-apple-gray-900">{item.name}</h3>
+                        {item.selectedSpecifications?.length ? <p className="mt-1 break-words text-sm leading-6 text-apple-gray-600">{formatSelectedSpecifications(item.selectedSpecifications)}</p> : null}
                         <p className="mt-1 text-sm text-apple-gray-500">{item.size ? `尺寸 ${item.size} · ` : ''}數量 {item.quantity}</p>
                       </div>
                       <span className="shrink-0 text-sm font-semibold text-apple-gray-700">NT$${((item.price * item.quantity) / 100).toFixed(0)}</span>
@@ -198,7 +229,7 @@ export default function CheckoutPage() {
 
               {error ? <div className="mb-4 rounded-lg bg-red-50 p-4 text-sm font-semibold leading-6 text-red-700">{error}</div> : null}
 
-              <button type="button" onClick={submitOrder} disabled={isSubmitting || items.length === 0 || transferLastFive.length !== 5} className="apple-button-primary mb-3 w-full gap-2 disabled:cursor-not-allowed disabled:opacity-60">
+              <button type="button" onClick={submitOrder} disabled={isSubmitting || items.length === 0 || transferLastFive.length !== 5 || !catalog || Boolean(catalogError) || optionIssues.length > 0} className="apple-button-primary mb-3 w-full gap-2 disabled:cursor-not-allowed disabled:opacity-60">
                 <Send className="h-4 w-4" />
 	                {isSubmitting ? '正在提交匯款訂單...' : '提交匯款與自取訂單'}
               </button>

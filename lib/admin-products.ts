@@ -1,4 +1,5 @@
 import { getProductIntro } from '@/lib/shop-products'
+import { parseSpecificationOptions } from '@/lib/product-specifications'
 
 export type AdminEditableProduct = {
   id: string
@@ -69,6 +70,7 @@ export function productDraftError(draft: ProductDraft) {
     const value = item.value.trim()
     if (Boolean(label) !== Boolean(value)) return `請填寫第 ${index + 1} 項規格的名稱與內容，或刪除這一項。`
     if (label.length > 80 || value.length > 300) return '規格名稱最多 80 字，內容最多 300 字。'
+    if (label && !parseSpecificationOptions(value).length) return `請填寫第 ${index + 1} 項規格的可選項目。`
   }
   return ''
 }

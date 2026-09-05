@@ -9,7 +9,8 @@ import { useCart } from '@/app/cart-provider'
 import { useSiteContent } from '@/app/site-content-provider'
 import { useToast } from '@/app/toast-provider'
 import ShopCartDrawer from '@/components/ShopCartDrawer'
-import { getProductIntro, type ProductVariant, type ShopProduct } from '@/lib/shop-products'
+import { getProductIntro, type ProductSpecification, type ProductVariant, type ShopProduct } from '@/lib/shop-products'
+import { getSpecificationGroups, productCartItemId, specificationSelectionError } from '@/lib/product-specifications'
 
 type ProductDetailClientProps = {
   productId: string
@@ -35,6 +36,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
   const [isLoading, setIsLoading] = useState(true)
   const [selectedVariantId, setSelectedVariantId] = useState('')
   const [selectedSize, setSelectedSize] = useState('')
+  const [selectedSpecifications, setSelectedSpecifications] = useState<ProductSpecification[]>([])
   const [quantity, setQuantity] = useState(1)
   const [activeMediaIndex, setActiveMediaIndex] = useState(0)
   const [isCartOpen, setIsCartOpen] = useState(false)
@@ -57,6 +59,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
   useEffect(() => {
     setSelectedVariantId(product?.variants?.[0]?.id ?? '')
     setSelectedSize(product?.sizes?.[0] ?? '')
+    setSelectedSpecifications(product ? getSpecificationGroups(product).map(({ label, options }) => ({ label, value: options[0] })) : [])
     setQuantity(1)
     setActiveMediaIndex(0)
   }, [product])
@@ -97,6 +100,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
   const isSoldOut = remainingStock <= 0
   const isPurchasable = product.price > 0 && !isSoldOut
   const activeMedia = media[activeMediaIndex]
+  const specificationGroups = getSpecificationGroups(product)
 
   function selectVariant(variant: ProductVariant) {
     setSelectedVariantId(variant.id)
@@ -105,6 +109,11 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
 
   function addSelectedProduct(openCart: boolean) {
     if (!isPurchasable) return false
+    const selectionError = specificationSelectionError(product!, selectedSpecifications)
+    if (selectionError) {
+      showToast(selectionError, 'error')
+      return false
+    }
     const safeQuantity = Math.min(quantity, remainingStock)
     if (safeQuantity < 1) {
       showToast(`${product!.name} 庫存不足`, 'error')
@@ -114,10 +123,11 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
     const optionName = selectedVariant?.name || ''
     const displayName = optionName ? `${product!.name} - ${optionName}` : product!.name
     const cartItem = {
-      id: [product!.id, selectedVariant?.id, selectedSize].filter(Boolean).join(':'),
+      id: productCartItemId(product!.id, selectedVariant?.id, selectedSize, selectedSpecifications),
       productId: product!.id,
       variantId: selectedVariant?.id,
       size: selectedSize || undefined,
+      selectedSpecifications,
       name: displayName,
       price: product!.price,
       image: selectedVariant?.image || product!.image,
@@ -170,7 +180,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
                 <legend className="text-sm font-black text-apple-gray-900">款式</legend>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {product.variants.map((variant) => (
-                    <button key={variant.id} type="button" onClick={() => selectVariant(variant)} className={`rounded-md border px-4 py-2.5 text-sm font-bold transition ${selectedVariant?.id === variant.id ? 'border-black bg-black text-white' : 'border-black/15 bg-white text-apple-gray-700 hover:border-black/40'}`}>{variant.name}</button>
+                    <button key={variant.id} type="button" aria-pressed={selectedVariant?.id === variant.id} onClick={() => selectVariant(variant)} className={`rounded-md border px-4 py-2.5 text-sm font-bold transition ${selectedVariant?.id === variant.id ? 'border-black bg-black text-white' : 'border-black/15 bg-white text-apple-gray-700 hover:border-black/40'}`}>{variant.name}</button>
                   ))}
                 </div>
               </fieldset>
@@ -181,23 +191,28 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
                 <legend className="text-sm font-black text-apple-gray-900">商品尺碼</legend>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {product.sizes.map((size) => (
-                    <button key={size} type="button" onClick={() => setSelectedSize(size)} className={`min-w-12 rounded-md border px-3 py-2.5 text-sm font-bold transition ${selectedSize === size ? 'border-black bg-black text-white' : 'border-black/15 bg-white text-apple-gray-700 hover:border-black/40'}`}>{size}</button>
+                    <button key={size} type="button" aria-pressed={selectedSize === size} onClick={() => setSelectedSize(size)} className={`min-w-12 rounded-md border px-3 py-2.5 text-sm font-bold transition ${selectedSize === size ? 'border-black bg-black text-white' : 'border-black/15 bg-white text-apple-gray-700 hover:border-black/40'}`}>{size}</button>
                   ))}
                 </div>
               </fieldset>
             ) : null}
 
-            {product.specifications.length ? (
+            {specificationGroups.length ? (
               <section className="mt-6" aria-labelledby="product-specifications-title">
                 <h2 id="product-specifications-title" className="text-sm font-black text-apple-gray-900">商品規格</h2>
-                <dl className="mt-3 divide-y divide-black/10 border-y border-black/10 text-sm">
-                  {product.specifications.map((specification, index) => (
-                    <div key={`${specification.label}-${index}`} className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 py-3">
-                      <dt className="break-words font-semibold text-apple-gray-600">{specification.label}</dt>
-                      <dd className="whitespace-pre-line break-words leading-6 text-apple-gray-900">{specification.value}</dd>
-                    </div>
+                <div className="mt-3 space-y-4">
+                  {specificationGroups.map((group) => (
+                    <fieldset key={group.label} className="min-w-0">
+                      <legend className="break-words text-sm font-semibold text-apple-gray-600">{group.label}</legend>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {group.options.map((option) => {
+                          const selected = selectedSpecifications.some((item) => item.label === group.label && item.value === option)
+                          return <button key={option} type="button" aria-pressed={selected} onClick={() => setSelectedSpecifications((current) => [...current.filter((item) => item.label !== group.label), { label: group.label, value: option }])} className={`min-h-11 max-w-full break-words rounded-md border px-4 py-2.5 text-left text-sm font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${selected ? 'border-black bg-black text-white' : 'border-black/15 bg-white text-apple-gray-700 hover:border-black/40'}`}>{option}</button>
+                        })}
+                      </div>
+                    </fieldset>
                   ))}
-                </dl>
+                </div>
               </section>
             ) : null}
 

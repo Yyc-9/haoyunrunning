@@ -169,12 +169,12 @@ export default function AdminProductForm({ product, categories = [], runAction, 
 
             <fieldset className="product-specifications-field" aria-describedby={specificationsHintId}>
               <legend>商品規格</legend>
-              <p id={specificationsHintId} className="product-field-hint">例如材質、容量、包裝或尺寸說明；尺碼選項仍在上方設定。</p>
+              <p id={specificationsHintId} className="product-field-hint">每組規格選一項，以逗號、頓號或換行分隔。所有規格共用上方售價與總庫存；說明文字請放商品簡介。</p>
               {draft.specifications.length ? <div className="product-specification-list">
                 {draft.specifications.map((specification, index) => (
                   <div key={index} className="product-specification-row">
-                    <label className="product-field"><span>名稱</span><input className="apple-input" aria-label={`規格 ${index + 1} 名稱`} value={specification.label} maxLength={80} placeholder="如：材質" onChange={(event) => change('specifications', draft.specifications.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item))} /></label>
-                    <label className="product-field"><span>內容</span><textarea className="apple-input" aria-label={`規格 ${index + 1} 內容`} value={specification.value} maxLength={300} rows={2} placeholder="填寫規格內容" onChange={(event) => change('specifications', draft.specifications.map((item, itemIndex) => itemIndex === index ? { ...item, value: event.target.value } : item))} /></label>
+                    <label className="product-field"><span>名稱</span><input className="apple-input" aria-label={`規格 ${index + 1} 名稱`} value={specification.label} maxLength={80} placeholder="如：顏色、包裝" onChange={(event) => change('specifications', draft.specifications.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item))} /></label>
+                    <label className="product-field"><span>可選項目</span><textarea className="apple-input" aria-label={`規格 ${index + 1} 可選項目`} value={specification.value} maxLength={300} rows={2} placeholder="如：黑色、白色，或每行一個選項" onChange={(event) => change('specifications', draft.specifications.map((item, itemIndex) => itemIndex === index ? { ...item, value: event.target.value } : item))} /></label>
                     <button type="button" className="product-specification-remove product-icon-action is-danger" aria-label={`移除規格 ${index + 1}`} onClick={() => change('specifications', draft.specifications.filter((_, itemIndex) => itemIndex !== index))}><Trash2 className="h-4 w-4" /></button>
                   </div>
                 ))}

@@ -2,11 +2,14 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowRight, Minus, Package, Plus, ShoppingCart, Trash2, X } from 'lucide-react'
 import { useCart, type CartItem } from '@/app/cart-provider'
 import { useToast } from '@/app/toast-provider'
 import type { ShopProduct } from '@/lib/shop-products'
+import { formatSelectedSpecifications, specificationSelectionError } from '@/lib/product-specifications'
 
 type ShopCartDrawerProps = {
   products: ShopProduct[]
@@ -21,6 +24,8 @@ function formatCartAmount(value: number) {
 export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCartDrawerProps) {
   const { items, itemCount, total, updateQuantity, removeItem, clear, isEmpty } = useCart()
   const { showToast } = useToast()
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null)
+  useEffect(() => { setPortalRoot(document.body) }, [])
 
   const getProduct = (item: CartItem) => products.find((product) => product.id === item.productId)
 
@@ -65,10 +70,10 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
         <span className="hidden sm:inline">購物車</span>
       </button>
 
-      <AnimatePresence>
+      {portalRoot ? createPortal(<AnimatePresence>
         {open ? (
           <motion.div
-            className="fixed inset-0 z-50"
+            className="fixed inset-0 z-[60]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -106,6 +111,7 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
                   <div className="space-y-4">
                     {items.map((item) => {
                       const product = getProduct(item)
+                      const specificationError = product ? specificationSelectionError(product, item.selectedSpecifications) : ''
                       const currentImage = product?.variants?.find((variant) => variant.id === item.variantId)?.image || product?.image || item.image
                       const remaining = product
                         ? Math.max(0, product.stockQuantity - items
@@ -127,6 +133,8 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
                             </div>
                             <div className="min-w-0 flex-1">
                               <h3 className="line-clamp-2 text-sm font-black leading-5 text-apple-gray-950">{item.name}</h3>
+                              {item.selectedSpecifications?.length ? <p className="mt-1 break-words text-xs leading-5 text-apple-gray-600">{formatSelectedSpecifications(item.selectedSpecifications)}</p> : null}
+                              {specificationError ? <p className="mt-2 text-xs leading-5 text-red-700">規格需重新確認。<Link href={`/shop/${encodeURIComponent(item.productId)}`} onClick={() => { removeItem(item.id); onOpenChange(false) }} className="font-bold underline underline-offset-2">重新選擇</Link></p> : null}
                               <p className="mt-1 text-sm font-semibold text-apple-gray-600">
                                 {formatCartAmount(item.price * item.quantity)}
                               </p>
@@ -174,7 +182,7 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
                   <div className="flex min-h-[18rem] flex-col items-center justify-center rounded-3xl border border-dashed border-black/15 bg-apple-gray-50 p-8 text-center">
                     <ShoppingCart className="mb-4 h-12 w-12 text-apple-gray-300" />
                     <p className="text-lg font-black text-apple-gray-900">購物車是空的</p>
-                    <p className="mt-2 text-sm leading-6 text-apple-gray-500">加入商品後，這裡會顯示品項、尺寸、數量與小計。</p>
+                    <p className="mt-2 text-sm leading-6 text-apple-gray-500">加入商品後，這裡會顯示品項、尺碼、規格、數量與小計。</p>
                   </div>
                 )}
               </div>
@@ -223,7 +231,7 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
             </motion.aside>
           </motion.div>
         ) : null}
-      </AnimatePresence>
+      </AnimatePresence>, portalRoot) : null}
     </>
   )
 }

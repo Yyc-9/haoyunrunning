@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminProfile } from '@/lib/admin-auth'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { shopProductFromRow, type ShopProductRow } from '@/lib/shop-products'
+import { formatSelectedSpecifications } from '@/lib/product-specifications'
 import { allCourses } from '@/lib/goodluck-data'
 import { coachPublicProfilesFromRows, getDefaultCourseCoachKeys, type CoachPublicProfile, type CoachPublicProfileRow } from '@/lib/coach-profiles'
 import { applyCourseSeasonToContent, nextCourseSeasonIdentity, type CourseSeasonStatus } from '@/lib/course-seasons'
@@ -202,6 +203,7 @@ type ShopOrderItemRow = {
   price: number
   variant_id: string | null
   size: string | null
+  selected_specifications?: unknown
 }
 
 type PaymentAccountRow = {
@@ -473,7 +475,7 @@ export async function GET(request: NextRequest) {
       .limit(500),
     supabaseAdmin!
       .from('shop_order_items')
-      .select('order_id, product_id, name, quantity, price, variant_id, size')
+      .select('order_id, product_id, name, quantity, price, variant_id, size, selected_specifications')
       .limit(2000),
     supabaseAdmin!
       .from('shop_payment_accounts')
@@ -778,7 +780,7 @@ export async function GET(request: NextRequest) {
       assignedAccount: '不適用（跑班自取）',
       inventoryReserved: order.inventory_reserved ?? true,
       items: orderItems.map((item) => {
-        const option = [item.variant_id, item.size ? `尺碼 ${item.size}` : ''].filter(Boolean).join(' / ')
+        const option = [item.variant_id, item.size ? `尺碼 ${item.size}` : '', formatSelectedSpecifications(item.selected_specifications)].filter(Boolean).join(' / ')
         return `${item.name}${option ? ` - ${option}` : ''} x ${item.quantity}`
       }),
       registrationDetails: [] as Array<{ label: string; value: string }>,

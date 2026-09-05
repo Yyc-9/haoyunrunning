@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { getCartProductId } from '@/lib/shop-products'
 import { createOrderAccessToken } from '@/lib/order-access'
+import { readSelectedSpecifications } from '@/lib/product-specifications'
 
 type OrderItemInput = {
   id?: string
   productId?: string
   variantId?: string
   size?: string
+  selectedSpecifications?: unknown
   name?: string
   price?: number
   quantity?: number
@@ -50,20 +52,30 @@ export async function POST(request: NextRequest) {
   }
 
   const user = await getAuthedUser(request.headers.get('authorization')).catch(() => null)
-  const body = (await request.json().catch(() => ({}))) as OrderBody
+  const parsedBody = await request.json().catch(() => null)
+  const body = (parsedBody && typeof parsedBody === 'object' ? parsedBody : {}) as OrderBody
   const customerName = cleanText(body.customerName)
   const contact = cleanText(body.contact)
   const email = cleanText(body.email)
   const fulfillmentNote = cleanText(body.fulfillmentNote)
   const transferLastFive = cleanText(body.transferLastFive).replace(/\D/g, '').slice(-5)
-  const items = (body.items ?? [])
+  if (!Array.isArray(body.items) || body.items.length > 100 || body.items.some((item) => !item || typeof item !== 'object')) {
+    return NextResponse.json({ error: '購物車資料格式無效。' }, { status: 400 })
+  }
+  if (body.items.some((item) => readSelectedSpecifications(item.selectedSpecifications) === null)) {
+    return NextResponse.json({ error: '商品規格格式無效，請回商品頁重新選擇。' }, { status: 400 })
+  }
+  const items = body.items
     .map((item) => ({
       productId: cleanText(item.productId) || getCartProductId(cleanText(item.id)),
       variantId: cleanText(item.variantId),
       size: cleanText(item.size),
+      selectedSpecifications: readSelectedSpecifications(item.selectedSpecifications)!,
       quantity: Number.isInteger(item.quantity) && item.quantity! > 0 ? item.quantity! : 0,
     }))
-    .filter((item) => item.productId && item.quantity > 0)
+  if (items.some((item) => !item.productId || item.quantity <= 0)) {
+    return NextResponse.json({ error: '購物車包含無效商品，請重新確認。' }, { status: 400 })
+  }
 
   if (!customerName || !contact) {
     return NextResponse.json({ error: '請填寫姓名和聯絡方式。' }, { status: 400 })
@@ -77,7 +89,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '請填寫正確的匯款帳號後五碼。' }, { status: 400 })
   }
 
-  const { data, error } = await supabaseAdmin.rpc('create_shop_order_with_stock', {
+  // A versioned RPC fails closed if the specification migration has not been applied.
+  const { data, error } = await supabaseAdmin.rpc('create_shop_order_with_specs', {
     p_order_number: createOrderNumber(),
     p_user_id: user?.id ?? null,
     p_customer_name: customerName,
@@ -90,13 +103,13 @@ export async function POST(request: NextRequest) {
   if (error || !data) {
     if (isSetupError(error)) {
       return NextResponse.json(
-        { error: '商城資料庫尚未完成升級，請先執行 supabase/shop-orders.sql。' },
+        { error: '商城規格功能尚未完成資料庫升級，請聯絡好運協助，暫勿重複匯款。' },
         { status: 500 }
       )
     }
 
     const message = error?.message || '訂單提交失敗。'
-    return NextResponse.json({ error: message }, { status: /庫存不足/.test(message) ? 409 : 500 })
+    return NextResponse.json({ error: message }, { status: error?.code === '22023' ? 400 : /庫存不足/.test(message) ? 409 : 500 })
   }
 
   const order = data as Record<string, unknown>

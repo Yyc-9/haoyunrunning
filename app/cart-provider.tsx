@@ -1,12 +1,15 @@
 'use client'
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import type { ProductSpecification } from '@/lib/shop-products'
+import { readSelectedSpecifications } from '@/lib/product-specifications'
 
 export interface CartItem {
   id: string
   productId: string
   variantId?: string
   size?: string
+  selectedSpecifications?: ProductSpecification[]
   name: string
   price: number
   quantity: number
@@ -51,6 +54,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               ...item,
               productId: item.productId || item.id.split('-')[0] || item.id,
               name: cleanLegacyCartName(item.name, item.size),
+              selectedSpecifications: readSelectedSpecifications(item.selectedSpecifications) ?? [],
             }))
         )
       }
