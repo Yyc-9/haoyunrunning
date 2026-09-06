@@ -2201,7 +2201,8 @@
 }
 
 
-.team-coach-card-open-overlay {
+.team-coach-card-open-overlay,
+.team-coach-controls {
   display: none;
 }
 
@@ -2263,19 +2264,65 @@
 }
 
 @media (max-width: 767px) {
+  .team-coach-index {
+    overflow: visible;
+  }
+
+  .team-coach-index-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .team-coach-index-button {
+    min-width: 0;
+    min-height: 44px;
+    overflow: hidden;
+    border: 1px solid rgb(0 0 0 / 12%);
+    border-radius: 9px;
+    background: #fff;
+    padding: 8px 6px;
+    color: #374151;
+    font-size: 0.78rem;
+    font-weight: 900;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    touch-action: manipulation;
+    transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
+  }
+
+  .team-coach-index-button[aria-pressed='true'] {
+    border-color: #111827;
+    background: #111827;
+    color: #fff;
+    box-shadow: none;
+  }
+
+  .team-coach-index-button:focus-visible,
+  .team-coach-control-button:focus-visible,
+  .team-coach-card-open-overlay:focus-visible {
+    outline: 3px solid rgb(20 100 196 / 38%);
+    outline-offset: 2px;
+  }
+
   .team-coach-row {
-    margin-inline: -16px;
-    padding-inline: 16px;
+    width: 100%;
+    margin-inline: 0;
+    padding-inline: 0;
     overscroll-behavior-x: contain;
   }
 
   .team-coach-card {
-    width: 85%;
-    max-width: 360px;
+    width: 100%;
+    max-width: none;
+    flex: 0 0 100%;
   }
 
-  .team-coach-card > div:last-of-type {
-    padding-bottom: 4.5rem;
+  .team-coach-card-body {
+    display: flex;
+    min-height: 164px;
+    flex-direction: column;
   }
 
   .team-coach-card-desktop-detail {
@@ -2283,56 +2330,97 @@
   }
 
   .team-coach-card-open-overlay {
-    position: absolute;
-    inset: 0;
-    z-index: 3;
-    display: block;
+    position: static;
+    display: flex;
     width: 100%;
+    margin-top: auto;
     border: 0;
-    border-radius: inherit;
+    border-top: 1px solid rgb(0 0 0 / 10%);
+    border-radius: 0;
     background: transparent;
+    padding: 14px 0 0;
     color: #111827;
     cursor: pointer;
     text-align: left;
+    touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
 
   .team-coach-card-open-overlay > span {
-    position: absolute;
-    right: 18px;
-    bottom: 16px;
-    display: inline-flex;
-    min-height: 40px;
+    display: flex;
+    min-height: 44px;
+    width: 100%;
     align-items: center;
+    justify-content: space-between;
     gap: 6px;
-    border-radius: 999px;
+    border-radius: 9px;
     background: #111827;
     padding: 0 14px;
     color: #fff;
     font-size: 0.78rem;
     font-weight: 900;
     box-shadow: 0 8px 20px rgb(0 0 0 / 16%);
-  }
-
-  .team-coach-card-open-overlay:focus-visible {
-    outline: 3px solid rgb(20 100 196 / 38%);
-    outline-offset: -3px;
+    transition: transform 120ms ease;
   }
 
   .team-coach-card-open-overlay:active > span {
-    transform: scale(0.97);
+    transform: scale(0.98);
   }
 
-  .team-coach-index {
-    scrollbar-width: none;
+  .team-coach-controls {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
   }
 
-  .team-coach-index::-webkit-scrollbar {
-    display: none;
+  .team-coach-control-button {
+    display: inline-flex;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgb(0 0 0 / 15%);
+    border-radius: 9px;
+    background: #fff;
+    color: #111827;
+    touch-action: manipulation;
+    transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease, opacity 140ms ease;
   }
 
+  .team-coach-control-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.35;
+  }
+
+  .team-coach-control-status {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    color: #4b5563;
+    font-size: 0.76rem;
+    font-weight: 900;
+    line-height: 1.35;
+    text-align: center;
+  }
+
+  .team-coach-control-status span:last-child {
+    color: #111827;
+    font-size: 0.7rem;
+  }
 }
 
+@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+  .team-coach-index-button,
+  .team-coach-control-button,
+  .team-coach-card-open-overlay > span {
+    transition: none;
+  }
+}
 
 @media (max-width: 767px) {
   .course-detail-native-topbar {

@@ -2,8 +2,9 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowUpRight, Award, BadgeCheck, Route, UserRound, UsersRound } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowUpRight, Award, BadgeCheck, ChevronLeft, ChevronRight, ListFilter, Route, UserRound, UsersRound, X } from 'lucide-react'
+import { useReducedMotion } from 'framer-motion'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSiteContent } from '@/app/site-content-provider'
 import { getDefaultCourseCoachKeys } from '@/lib/coach-profiles'
 import { formatCourseWeekday } from '@/lib/course-weekday'
@@ -13,6 +14,14 @@ function compactCourseName(name: string) {
     .replace(/^2026\s*/, '')
     .replace(/^好運跑步訓練營\s*X\s*/, '')
     .trim()
+}
+
+function getCoachShortName(name: string) {
+  const shortName = name
+    .replace(/^\s*總教練\s*/, '')
+    .replace(/\s*(?:總教練|主教練|教練|助教)\s*$/, '')
+    .trim()
+  return shortName || name
 }
 
 export default function TeamRosterClient() {
@@ -36,11 +45,92 @@ export default function TeamRosterClient() {
     return byCoach
   }, [courseOverrides, courses])
 
-  const coaches = Object.values(coachProfiles).filter((coach) => coach.published)
+  const coaches = useMemo(() => Object.values(coachProfiles).filter((coach) => coach.published), [coachProfiles])
+  const coachKeySignature = coaches.map((coach) => coach.coachKey).join('|')
+  const [activeCoachKey, setActiveCoachKey] = useState<string | null>(null)
   const [selectedCoachKey, setSelectedCoachKey] = useState<string | null>(null)
   const selectedCoach = coaches.find((coach) => coach.coachKey === selectedCoachKey) ?? null
+  const coachRowRef = useRef<HTMLDivElement>(null)
+  const coachCardRefs = useRef<Record<string, HTMLElement | null>>({})
+  const scrollFrameRef = useRef<number | null>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
+  const prefersReducedMotion = useReducedMotion()
+  const activeCoachIndex = Math.max(0, coaches.findIndex((coach) => coach.coachKey === activeCoachKey))
+
+  const scrollToCoach = useCallback((coachKey: string, behavior: ScrollBehavior = prefersReducedMotion ? 'auto' : 'smooth') => {
+    const row = coachRowRef.current
+    const card = coachCardRefs.current[coachKey]
+    if (row && card) {
+      const rowBox = row.getBoundingClientRect()
+      const cardBox = card.getBoundingClientRect()
+      row.scrollTo({ left: row.scrollLeft + cardBox.left - rowBox.left, behavior })
+    }
+    setActiveCoachKey(coachKey)
+  }, [prefersReducedMotion])
+
+  const syncActiveCoach = useCallback(() => {
+    const row = coachRowRef.current
+    if (!row || coaches.length === 0) return
+    const rowStart = row.getBoundingClientRect().left + (Number.parseFloat(window.getComputedStyle(row).paddingLeft) || 0)
+    let closestKey: string | null = null
+    let closestDistance = Number.POSITIVE_INFINITY
+
+    coaches.forEach((coach) => {
+      const card = coachCardRefs.current[coach.coachKey]
+      if (!card) return
+      const distance = Math.abs(card.getBoundingClientRect().left - rowStart)
+      if (distance < closestDistance) {
+        closestDistance = distance
+        closestKey = coach.coachKey
+      }
+    })
+
+    if (closestKey) setActiveCoachKey(closestKey)
+  }, [coaches])
+
+  useEffect(() => {
+    if (!coaches.length) {
+      setActiveCoachKey(null)
+      return
+    }
+    if (!activeCoachKey || !coaches.some((coach) => coach.coachKey === activeCoachKey)) {
+      setActiveCoachKey(coaches[0].coachKey)
+    }
+  }, [activeCoachKey, coaches])
+
+  useEffect(() => {
+    const row = coachRowRef.current
+    if (!row) return
+
+    const handleScroll = () => {
+      if (scrollFrameRef.current !== null) return
+      scrollFrameRef.current = window.requestAnimationFrame(() => {
+        scrollFrameRef.current = null
+        syncActiveCoach()
+      })
+    }
+
+    syncActiveCoach()
+    row.addEventListener('scroll', handleScroll, { passive: true })
+    return () => {
+      row.removeEventListener('scroll', handleScroll)
+      if (scrollFrameRef.current !== null) window.cancelAnimationFrame(scrollFrameRef.current)
+      scrollFrameRef.current = null
+    }
+  }, [coachKeySignature, syncActiveCoach])
+
+  useEffect(() => {
+    if (!coaches.length || !window.location.hash.startsWith('#coach-')) return
+    let hashCoachKey = window.location.hash.slice('#coach-'.length)
+    try {
+      hashCoachKey = decodeURIComponent(hashCoachKey)
+    } catch {
+      return
+    }
+    if (!coaches.some((coach) => coach.coachKey === hashCoachKey)) return
+    window.requestAnimationFrame(() => scrollToCoach(hashCoachKey, 'auto'))
+  }, [coachKeySignature, coaches, scrollToCoach])
 
   useEffect(() => {
     if (!selectedCoach) return
@@ -115,28 +205,49 @@ export default function TeamRosterClient() {
             </span>
           </div>
 
-          <div className="team-coach-index mb-4 flex gap-2 overflow-x-auto pb-1 md:hidden" aria-label="教練索引">
-            {coaches.map((coach, index) => (
-              <button
-                key={coach.coachKey}
-                type="button"
-                onClick={() => document.getElementById('coach-' + coach.coachKey)?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })}
-                className="min-h-11 shrink-0 rounded-full border border-black/10 bg-white px-4 text-sm font-black text-apple-gray-700"
-              >
-                {index + 1}. {coach.displayName}
-              </button>
-            ))}
+          <div className="team-coach-index mb-5 md:hidden" aria-label="直接選擇教練">
+            <div className="flex items-center justify-between gap-3">
+              <p className="team-coach-index-title flex items-center gap-2 text-sm font-black text-apple-gray-900">
+                <ListFilter aria-hidden="true" className="h-4 w-4 text-apple-blue" />
+                直接選擇教練
+              </p>
+              <p className="team-coach-index-count shrink-0 text-xs font-black text-apple-gray-500">
+                第 {coaches.length ? activeCoachIndex + 1 : 0} / {coaches.length} 位
+              </p>
+            </div>
+            <div className="team-coach-index-grid mt-3" role="group" aria-label="教練姓名">
+              {coaches.map((coach) => (
+                <button
+                  key={coach.coachKey}
+                  type="button"
+                  aria-pressed={activeCoachKey === coach.coachKey}
+                  aria-label={'選擇' + coach.displayName}
+                  onClick={() => scrollToCoach(coach.coachKey, 'auto')}
+                  className="team-coach-index-button"
+                >
+                  {getCoachShortName(coach.displayName)}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="team-coach-row touch-scroll-row gap-4 md:grid md:grid-cols-2 md:gap-5 xl:grid-cols-3">
+          <div ref={coachRowRef} className="team-coach-row touch-scroll-row gap-4 md:grid md:grid-cols-2 md:gap-5 xl:grid-cols-3">
             {coaches.map((coach) => {
               const coachAssignments = assignments.get(coach.coachKey) ?? []
               const imageUrl = coach.fullBodyImageUrl || coach.avatarUrl
 
               return (
                 <article
-                  id={`coach-${coach.coachKey}`}
+                  id={'coach-' + coach.coachKey}
                   key={coach.coachKey}
+                  ref={(element) => {
+                    coachCardRefs.current[coach.coachKey] = element
+                  }}
+                  onClick={(event) => {
+                    if (!window.matchMedia('(max-width: 767px)').matches) return
+                    if ((event.target as HTMLElement).closest('a, button, details, summary')) return
+                    setSelectedCoachKey(coach.coachKey)
+                  }}
                   className="team-coach-card kinetic-card relative scroll-mt-32 w-full shrink-0 overflow-hidden rounded-lg border border-black/10 bg-white shadow-sm transition target:border-black target:shadow-lg md:w-auto"
                 >
                   <div className="kinetic-image relative aspect-[3/2] w-full overflow-hidden border-b border-black/10 bg-apple-gray-100">
@@ -153,7 +264,7 @@ export default function TeamRosterClient() {
                         <UserRound className="absolute left-1/2 top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 text-apple-gray-300" />
                       )}
                   </div>
-                  <div className="p-5 sm:p-6">
+                  <div className="team-coach-card-body p-5 sm:p-6">
                     <div className="min-w-0">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -229,6 +340,31 @@ export default function TeamRosterClient() {
               )
             })}
           </div>
+
+          <div className="team-coach-controls md:hidden" aria-label="教練卡片控制">
+            <button
+              type="button"
+              onClick={() => activeCoachIndex > 0 && scrollToCoach(coaches[activeCoachIndex - 1].coachKey)}
+              disabled={activeCoachIndex <= 0}
+              className="team-coach-control-button"
+              aria-label="上一位教練"
+            >
+              <ChevronLeft aria-hidden="true" className="h-5 w-5" />
+            </button>
+            <p className="team-coach-control-status" aria-live="polite">
+              <span>左右滑動</span>
+              <span>第 {coaches.length ? activeCoachIndex + 1 : 0} / {coaches.length} 位</span>
+            </p>
+            <button
+              type="button"
+              onClick={() => activeCoachIndex < coaches.length - 1 && scrollToCoach(coaches[activeCoachIndex + 1].coachKey)}
+              disabled={!coaches.length || activeCoachIndex >= coaches.length - 1}
+              className="team-coach-control-button"
+              aria-label="下一位教練"
+            >
+              <ChevronRight aria-hidden="true" className="h-5 w-5" />
+            </button>
+          </div>
         </div>
       </section>
 
@@ -247,7 +383,7 @@ export default function TeamRosterClient() {
                 <h2 id="team-coach-sheet-title" className="truncate text-xl font-black text-apple-gray-950">{selectedCoach.displayName}</h2>
                 <p className="mt-1 text-sm font-bold text-apple-blue">{selectedCoach.role}</p>
               </div>
-              <button ref={closeButtonRef} type="button" onClick={() => setSelectedCoachKey(null)} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/10 text-xl text-apple-gray-600" aria-label="關閉教練介紹">×</button>
+              <button ref={closeButtonRef} type="button" onClick={() => setSelectedCoachKey(null)} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/10 text-apple-gray-600" aria-label="關閉教練介紹"><X aria-hidden="true" className="h-5 w-5" /></button>
             </div>
             <div className="team-coach-sheet-content">
               <h3 className="text-lg font-black text-apple-gray-950">教練介紹</h3>
