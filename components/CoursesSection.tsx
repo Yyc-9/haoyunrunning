@@ -215,7 +215,11 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
             </div>
           </div>
 
-          <section className="kinetic-reveal border-b border-black/10 bg-white px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+          <div className="container mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+            <CoursesTable />
+          </div>
+
+          <section className="kinetic-reveal border-y border-black/10 bg-white px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
             <div className="container mx-auto max-w-7xl">
               <p className="text-sm font-black uppercase tracking-wide text-apple-blue">{coursesPage.guideLabel}</p>
               <h2 className="mt-3 text-3xl font-black text-apple-gray-950 sm:text-4xl">{coursesPage.guideTitle}</h2>
@@ -236,10 +240,8 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
           </section>
 
           <div className="container mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
-            <CoursesTable />
-
             {coursesPage.faqs.length ? (
-              <section className="mt-10">
+              <section>
                 <h3 className="mb-5 text-2xl font-black text-apple-gray-950 sm:text-3xl">{coursesPage.faqTitle}</h3>
                 <div className="rounded-lg border border-black/10 bg-white p-5 sm:p-7">
                   {coursesPage.faqs.map((item) => (

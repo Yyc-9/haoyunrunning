@@ -103,6 +103,15 @@ test('訓練日程內容資料會補齊常見問題與頁尾重點', async () =>
   assert.match(publicPage, /coursesPage\.highlights/)
 })
 
+test('完整課表會顯示在加入課程流程之前', () => {
+  const publicPage = readFileSync(new URL('../components/CoursesSection.tsx', import.meta.url), 'utf8')
+  const scheduleIndex = publicPage.indexOf('<CoursesTable />')
+  const guideIndex = publicPage.indexOf('coursesPage.guideSteps.map')
+
+  assert.ok(scheduleIndex >= 0)
+  assert.ok(guideIndex > scheduleIndex)
+})
+
 test('學員見證成長路徑有獨立且安全的主視覺', async () => {
   const { normalizePageMedia } = await import('../lib/site-content.ts')
   const fallback = normalizePageMedia({})
