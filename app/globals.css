@@ -167,9 +167,10 @@
   overflow: hidden;
   color: #173d3b;
   background:
-    radial-gradient(circle at var(--hero-x) var(--hero-y), rgb(220 238 215 / 32%), transparent 18%),
-    linear-gradient(28deg, rgb(248 246 237 / 76%) 0%, rgb(248 246 237 / 12%) 45%, transparent 70%),
-    url('/site-visuals/home-hero-motion-left-v3.webp') center / cover no-repeat,
+    radial-gradient(circle at var(--hero-x) var(--hero-y), rgb(220 238 215 / 32%), transparent 18%) center / auto no-repeat,
+    linear-gradient(28deg, rgb(248 246 237 / 76%) 0%, rgb(248 246 237 / 12%) 45%, transparent 70%) center / auto no-repeat,
+    linear-gradient(to bottom, rgb(248 246 237 / 90%), transparent 150px) center / auto no-repeat,
+    url('/site-visuals/home-hero-push-off.webp') center / cover no-repeat,
     #eeeae0;
 }
 
@@ -498,7 +499,7 @@
     background:
       radial-gradient(circle at 86% 28%, rgb(220 238 215 / 28%), transparent 26%),
       linear-gradient(to top, rgb(248 246 237 / 86%), rgb(248 246 237 / 10%) 55%, transparent 75%),
-      url('/site-visuals/home-hero-motion-left-v3.webp') 64% center / cover no-repeat,
+      url('/site-visuals/home-hero-push-off.webp') 64% center / cover no-repeat,
       #eeeae0;
   }
 
