@@ -137,7 +137,7 @@ export default function TeamRosterClient() {
                 <article
                   id={`coach-${coach.coachKey}`}
                   key={coach.coachKey}
-                  className="team-coach-card kinetic-card scroll-mt-32 w-full shrink-0 overflow-hidden rounded-lg border border-black/10 bg-white shadow-sm transition target:border-black target:shadow-lg md:w-auto"
+                  className="team-coach-card kinetic-card relative scroll-mt-32 w-full shrink-0 overflow-hidden rounded-lg border border-black/10 bg-white shadow-sm transition target:border-black target:shadow-lg md:w-auto"
                 >
                   <div className="kinetic-image relative aspect-[3/2] w-full overflow-hidden border-b border-black/10 bg-apple-gray-100">
                       {imageUrl ? (
@@ -167,10 +167,10 @@ export default function TeamRosterClient() {
                       <p className="mt-3 text-sm font-black leading-6 text-apple-gray-700">{coach.role}</p>
                     </div>
 
-                  <p className="mt-5 text-sm leading-7 text-apple-gray-600">{coach.bio}</p>
+                  <p className="team-coach-card-desktop-detail mt-5 text-sm leading-7 text-apple-gray-600">{coach.bio}</p>
 
                   {coachAssignments.length ? (
-                    <div className="mt-5 border-t border-black/10 pt-4">
+                    <div className="team-coach-card-desktop-detail mt-5 border-t border-black/10 pt-4">
                       <p className="flex items-center gap-2 text-xs font-black text-apple-gray-400">
                         <Route className="h-3.5 w-3.5" />
                         本季度負責班級
@@ -192,7 +192,7 @@ export default function TeamRosterClient() {
                   ) : null}
 
                   {coach.specialties.length ? (
-                    <div className="mt-5">
+                    <div className="team-coach-card-desktop-detail mt-5">
                       <p className="flex items-center gap-2 text-xs font-black text-apple-gray-400">
                         <BadgeCheck className="h-3.5 w-3.5" />
                         擅長方向
@@ -202,7 +202,7 @@ export default function TeamRosterClient() {
                   ) : null}
 
                   {(coach.achievements.length || coach.certifications.length) ? (
-                    <details className="mt-5 border-t border-black/10 pt-4">
+                    <details className="team-coach-card-desktop-detail mt-5 border-t border-black/10 pt-4">
                       <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-black text-apple-gray-800">
                         <Award className="h-4 w-4 text-apple-blue" />
                         經歷與證照
@@ -217,10 +217,12 @@ export default function TeamRosterClient() {
                   <button
                     type="button"
                     onClick={() => setSelectedCoachKey(coach.coachKey)}
-                    className="team-coach-detail-trigger mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-apple-blue px-4 py-3 text-sm font-black text-white transition hover:bg-apple-blue/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-apple-blue"
+                    className="team-coach-card-open-overlay"
+                    aria-haspopup="dialog"
+                    aria-controls="team-coach-sheet"
+                    aria-label={'查看' + coach.displayName + '的完整介紹'}
                   >
-                    完整介紹
-                    <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+                    <span>查看完整介紹<ArrowUpRight aria-hidden="true" className="h-4 w-4" /></span>
                   </button>
                   </div>
                 </article>
@@ -233,7 +235,7 @@ export default function TeamRosterClient() {
       {selectedCoach ? (
         <div className="team-coach-sheet-layer" role="presentation">
           <button type="button" className="team-coach-sheet-backdrop" aria-label="關閉教練介紹" onClick={() => setSelectedCoachKey(null)} />
-          <section className="team-coach-sheet" role="dialog" aria-modal="true" aria-labelledby="team-coach-sheet-title">
+          <section id="team-coach-sheet" className="team-coach-sheet" role="dialog" aria-modal="true" aria-labelledby="team-coach-sheet-title">
             <div className="team-coach-sheet-handle" aria-hidden="true" />
             <div className="team-coach-sheet-header">
               <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full border border-black/10 bg-apple-gray-100">
@@ -250,6 +252,12 @@ export default function TeamRosterClient() {
             <div className="team-coach-sheet-content">
               <h3 className="text-lg font-black text-apple-gray-950">教練介紹</h3>
               <p className="mt-3 whitespace-pre-line text-sm leading-7 text-apple-gray-700">{selectedCoach.bio}</p>
+              {assignments.get(selectedCoach.coachKey)?.length ? (
+                <div className="mt-7">
+                  <h3 className="text-lg font-black text-apple-gray-950">本季度負責班級</h3>
+                  <div className="mt-3 space-y-2">{assignments.get(selectedCoach.coachKey)?.map((assignment) => <Link key={assignment.slug} href={'/courses/' + assignment.slug} onClick={() => setSelectedCoachKey(null)} className="flex min-h-11 items-center justify-between rounded-lg border border-black/10 px-4 text-sm font-bold text-apple-blue">{assignment.name}<ArrowUpRight className="h-4 w-4" /></Link>)}</div>
+                </div>
+              ) : null}
               {selectedCoach.specialties.length ? (
                 <div className="mt-7">
                   <h3 className="text-lg font-black text-apple-gray-950">擅長方向</h3>
@@ -263,12 +271,6 @@ export default function TeamRosterClient() {
                     {selectedCoach.achievements.map((item) => <p key={item}>{item}</p>)}
                     {selectedCoach.certifications.map((item) => <p key={item}>{item}</p>)}
                   </div>
-                </div>
-              ) : null}
-              {assignments.get(selectedCoach.coachKey)?.length ? (
-                <div className="mt-7">
-                  <h3 className="text-lg font-black text-apple-gray-950">本季度負責班級</h3>
-                  <div className="mt-3 space-y-2">{assignments.get(selectedCoach.coachKey)?.map((assignment) => <Link key={assignment.slug} href={'/courses/' + assignment.slug} onClick={() => setSelectedCoachKey(null)} className="flex min-h-11 items-center justify-between rounded-lg border border-black/10 px-4 text-sm font-bold text-apple-blue">{assignment.name}<ArrowUpRight className="h-4 w-4" /></Link>)}</div>
                 </div>
               ) : null}
             </div>

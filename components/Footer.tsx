@@ -60,12 +60,12 @@ export default function Footer() {
   ]
 
   return (
-    <footer className="mt-auto border-t border-white/10 bg-black text-white">
-      <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-6 lg:gap-10">
+    <footer className="site-footer mt-auto border-t border-white/10 bg-black text-white">
+      <div className="site-footer-inner container mx-auto px-4 py-12 sm:px-6 lg:px-8">
+        <div className="site-footer-grid grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-6 lg:gap-10">
           {/* Brand Column */}
-          <div className="lg:col-span-2">
-            <div className="mb-6 flex items-center space-x-3">
+          <div className="site-footer-brand lg:col-span-2">
+            <div className="site-footer-brand-lockup mb-6 flex items-center space-x-3">
               <div className="relative h-12 w-12 overflow-hidden rounded-full border border-white/15 bg-white shadow-sm">
                 <Image
                   src={brand.logoUrl}
@@ -86,19 +86,19 @@ export default function Footer() {
               </div>
             </div>
 
-            <p className="mb-6 max-w-md text-white/65">
+            <p className="site-footer-description mb-6 max-w-md text-white/65">
               {brand.footerDescription}
             </p>
 
             {/* Contact Info */}
-            <div className="space-y-3">
+            <div className="site-footer-contact space-y-3">
               {contactInfo.map((item, index) => {
                 const Icon = item.icon
 
                 return (
                   <div
                     key={index}
-                    className="flex items-center space-x-3"
+                    className={`site-footer-contact-item flex items-center space-x-3 ${index === 2 ? 'site-footer-contact-wide' : ''}`}
                   >
                     <Icon className="h-4 w-4 text-white/40" />
                     <span className="text-sm text-white/60">
@@ -112,12 +112,12 @@ export default function Footer() {
 
           {/* Links Columns */}
           {footerLinks.map((column) => (
-            <div key={column.title}>
-              <h3 className="mb-4 font-semibold text-white">
+            <div key={column.title} className="site-footer-link-column">
+              <h3 className="site-footer-link-title mb-4 font-semibold text-white">
                 {column.title}
               </h3>
 
-              <ul className="space-y-2">
+              <ul className="site-footer-link-list space-y-2">
                 {column.links.map((link) => (
                   <li key={link.name}>
                     {link.href.startsWith('http') ? (
@@ -125,14 +125,14 @@ export default function Footer() {
                         href={link.href}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-sm text-white/60 transition-colors duration-200 hover:text-white"
+                        className="site-footer-link text-sm text-white/60 transition-colors duration-200 hover:text-white"
                       >
                         {link.name}
                       </a>
                     ) : (
                       <Link
                         href={link.href}
-                        className="text-sm text-white/60 transition-colors duration-200 hover:text-white"
+                        className="site-footer-link text-sm text-white/60 transition-colors duration-200 hover:text-white"
                       >
                         {link.name}
                       </Link>
@@ -145,26 +145,26 @@ export default function Footer() {
         </div>
 
         {/* Divider */}
-        <div className="my-8 border-t border-white/15" />
+        <div className="site-footer-divider my-8 border-t border-white/15" />
 
         {/* Bottom Section */}
-        <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-          <p className="mb-4 text-sm text-white/45 md:mb-0">
+        <div className="site-footer-bottom flex flex-col items-center justify-between gap-4 md:flex-row">
+          <p className="site-footer-copyright mb-4 text-sm text-white/45 md:mb-0">
             © {currentYear} {brand.brandName}. {t.footer.copyright}
           </p>
 
           {/* Social Media */}
-          <div className="flex items-center space-x-4">
+          <div className="site-footer-actions flex items-center space-x-4">
             <Link
               href="/courses"
-              className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-white hover:text-black"
+              className="site-footer-action inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-white hover:text-black"
             >
               <TicketCheck className="h-4 w-4" />
               查看課程
             </Link>
             <Link
               href="/shop"
-              className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-white hover:text-black"
+              className="site-footer-action inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-white hover:text-black"
             >
               <ShoppingBag className="h-4 w-4" />
               前往商店

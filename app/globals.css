@@ -1494,6 +1494,137 @@
     padding-bottom: var(--mobile-bottom-height);
   }
 
+  .site-footer-inner {
+    padding: 26px 16px 18px;
+  }
+
+  .site-footer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px 16px;
+  }
+
+  .site-footer-brand {
+    grid-column: 1 / -1;
+  }
+
+  .site-footer-brand-lockup {
+    margin-bottom: 12px;
+  }
+
+  .site-footer-brand-lockup > div:first-child {
+    width: 40px;
+    height: 40px;
+  }
+
+  .site-footer-brand-lockup h2 {
+    font-size: 1.15rem;
+  }
+
+  .site-footer-brand-lockup p {
+    font-size: 0.72rem;
+  }
+
+  .site-footer-description {
+    display: -webkit-box;
+    margin-bottom: 12px;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    font-size: 0.75rem;
+    line-height: 1.55;
+  }
+
+  .site-footer-contact {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px 12px;
+  }
+
+  .site-footer-contact-item {
+    min-width: 0;
+    gap: 6px;
+  }
+
+  .site-footer-contact-item:not(:first-child) {
+    margin-top: 0 !important;
+  }
+
+  .site-footer-contact-item svg {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+  }
+
+  .site-footer-contact-item span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 0.69rem;
+    line-height: 1.4;
+  }
+
+  .site-footer-contact-wide {
+    grid-column: 1 / -1;
+  }
+
+  .site-footer-link-column {
+    min-width: 0;
+  }
+
+  .site-footer-link-title {
+    margin-bottom: 7px;
+    font-size: 0.8rem;
+  }
+
+  .site-footer-link-list > li + li {
+    margin-top: 3px;
+  }
+
+  .site-footer-link {
+    display: flex;
+    min-height: 30px;
+    align-items: center;
+    font-size: 0.73rem;
+    line-height: 1.35;
+  }
+
+  .site-footer-divider {
+    margin-block: 18px 13px;
+  }
+
+  .site-footer-bottom {
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .site-footer-copyright {
+    margin-bottom: 0;
+    text-align: center;
+    font-size: 0.68rem;
+  }
+
+  .site-footer-actions {
+    display: grid;
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px;
+    gap: 8px;
+  }
+
+  .site-footer-actions > :not([hidden]) ~ :not([hidden]) {
+    margin-left: 0;
+  }
+
+  .site-footer-action {
+    min-height: 44px;
+    justify-content: center;
+    padding: 7px 10px;
+    font-size: 0.73rem;
+  }
+
+  .site-footer-actions > a:last-child {
+    width: 44px;
+    height: 44px;
+  }
+
   .site-navigation {
     height: calc(60px + var(--mobile-safe-top));
     padding: var(--mobile-safe-top) 0 0 !important;
@@ -2070,6 +2201,10 @@
 }
 
 
+.team-coach-card-open-overlay {
+  display: none;
+}
+
 .team-coach-sheet-layer,
 .mobile-sheet-open .team-coach-sheet-layer {
   position: fixed;
@@ -2139,6 +2274,55 @@
     max-width: 360px;
   }
 
+  .team-coach-card > div:last-of-type {
+    padding-bottom: 4.5rem;
+  }
+
+  .team-coach-card-desktop-detail {
+    display: none !important;
+  }
+
+  .team-coach-card-open-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: block;
+    width: 100%;
+    border: 0;
+    border-radius: inherit;
+    background: transparent;
+    color: #111827;
+    cursor: pointer;
+    text-align: left;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .team-coach-card-open-overlay > span {
+    position: absolute;
+    right: 18px;
+    bottom: 16px;
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    background: #111827;
+    padding: 0 14px;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 900;
+    box-shadow: 0 8px 20px rgb(0 0 0 / 16%);
+  }
+
+  .team-coach-card-open-overlay:focus-visible {
+    outline: 3px solid rgb(20 100 196 / 38%);
+    outline-offset: -3px;
+  }
+
+  .team-coach-card-open-overlay:active > span {
+    transform: scale(0.97);
+  }
+
   .team-coach-index {
     scrollbar-width: none;
   }
@@ -2147,15 +2331,6 @@
     display: none;
   }
 
-  .team-coach-detail-trigger {
-    display: inline-flex;
-  }
-}
-
-@media (min-width: 768px) {
-  .team-coach-detail-trigger {
-    display: none;
-  }
 }
 
 
