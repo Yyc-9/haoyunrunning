@@ -1,6 +1,7 @@
 'use client'
 
 import CourseCoachAvatar from '@/components/CourseCoachAvatar'
+import MobileContextHeader from '@/components/MobileContextHeader'
 import Link from 'next/link'
 import {
   ArrowLeft,
@@ -43,7 +44,8 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
 
   if (!managedCourse) {
     return (
-      <main className="kinetic-page min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+      <main className="mobile-focused-main kinetic-page min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+        <MobileContextHeader backHref="/courses" backLabel="課程" title={t.courseDetail.courseNotFoundTitle} />
         <section className="container mx-auto max-w-3xl px-4 py-20 text-center sm:px-6 lg:px-8">
           <div className="apple-card p-8 md:p-12">
             <p className="text-sm font-semibold uppercase tracking-wide text-apple-blue">
@@ -75,8 +77,9 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
   const seasonGoal = course.slogan
 
   return (
-    <main className="kinetic-page min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-20 sm:pt-24">
-      <div className="sticky top-[52px] z-40 border-b border-black/10 bg-white shadow-sm sm:top-16">
+    <main className="mobile-focused-main kinetic-page min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-20 sm:pt-24">
+      <MobileContextHeader backHref="/courses" backLabel="課程" title={courseText(course.title)} />
+      <div className="course-detail-native-topbar sticky top-[52px] z-40 border-b border-black/10 bg-white shadow-sm sm:top-16">
         <div className="container mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4 sm:px-6 lg:px-8 md:flex-row md:items-center md:justify-between">
           <Link href="/courses" className="inline-flex items-center gap-2 text-sm font-bold text-apple-gray-700 transition-colors hover:text-apple-blue">
             <ArrowLeft className="h-4 w-4" />
@@ -220,6 +223,11 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
 
           </div>
         </div>
+      </div>
+
+      <div className="mobile-fixed-action-bar mobile-course-detail-actions" aria-label="課程操作">
+        <a href={instagramUrl} target="_blank" rel="noreferrer" className="apple-button-outline gap-2"><Instagram aria-hidden="true" className="h-4 w-4" />IG 諮詢</a>
+        <Link href={'/courses/' + course.slug + '/register'} className="apple-button-primary gap-2">立即報名<ChevronRight aria-hidden="true" className="h-5 w-5" /></Link>
       </div>
     </main>
   )

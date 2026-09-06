@@ -29,12 +29,13 @@ import AdminProductWorkspace from '@/components/admin/AdminProductWorkspace'
 import type { AdminEditableProduct, ProductEditState } from '@/lib/admin-products'
 import AdminBankReconciliation from '@/components/admin/AdminBankReconciliation'
 import AdminCoachDuty from '@/components/admin/AdminCoachDuty'
+import AdminMobileDashboard from '@/components/admin/AdminMobileDashboard'
 import { paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
 import { announceSiteContentUpdated } from '@/lib/site-content-sync'
 
 type AdminTab = 'overview' | 'students' | 'coaches' | 'seasons' | 'products' | 'content' | 'reconciliation' | 'paymentAccounts'
 
-type AdminDashboardPayload = {
+export type AdminDashboardPayload = {
   admin: { id: string; email: string; name: string; role: string }
   overview: {
     studentCount: number
@@ -120,7 +121,7 @@ type AdminCourseSummary = {
   coachKeys: string[]
 }
 
-type AdminStudent = {
+export type AdminStudent = {
   id: string
   name: string
   email: string
@@ -134,7 +135,7 @@ type AdminStudent = {
   boundCoachNames: string
 }
 
-type AdminCoach = {
+export type AdminCoach = {
   id: string
   name: string
   email: string
@@ -147,7 +148,7 @@ type AdminCoach = {
   createdAt: string
 }
 
-type AdminOrder = {
+export type AdminOrder = {
   id: string
   orderKind: 'course' | 'shop'
   orderNumber: string
@@ -182,9 +183,9 @@ type AdminOrder = {
   openAttendanceAnomalyCount: number
 }
 
-type AdminProduct = AdminEditableProduct
+export type AdminProduct = AdminEditableProduct
 
-type PaymentAccount = {
+export type PaymentAccount = {
   id: string
   label: string
   account_name: string
@@ -561,7 +562,7 @@ export default function AdminDashboardClient() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+      <main className="admin-shell min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
         <div className="container mx-auto max-w-7xl px-4 py-16 text-center sm:px-6 lg:px-8">
           <Loader2 className="mx-auto h-8 w-8 animate-spin text-apple-gray-500" />
           <p className="mt-4 font-semibold text-apple-gray-600">正在讀取管理員後台...</p>
@@ -572,7 +573,7 @@ export default function AdminDashboardClient() {
 
   if (error && !data) {
     return (
-      <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+      <main className="admin-shell min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
         <section className="container mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 lg:px-8">
           <div className="apple-card p-8">
             <AlertTriangle className="mx-auto h-10 w-10 text-amber-500" />
@@ -589,7 +590,8 @@ export default function AdminDashboardClient() {
 
   return (
     <main className={`admin-shell min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24 ${activeTab === 'products' ? 'admin-products-mode' : ''}`}>
-      <section className="px-4 py-10 sm:px-6 lg:px-8">
+      {data ? <AdminMobileDashboard data={data} runAction={runAction} updatingId={updatingId} actionMessage={message} actionError={error} /> : null}
+      <section className="admin-desktop-shell px-4 py-10 sm:px-6 lg:px-8">
         <div className="admin-dashboard-grid container mx-auto max-w-[1600px]">
           <div className="admin-dashboard-header mb-8 lg:mb-7">
             <div className="admin-dashboard-heading">

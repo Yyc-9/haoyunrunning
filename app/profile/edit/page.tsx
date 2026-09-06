@@ -11,6 +11,7 @@ import {
   pbCategoryOptions, raceRegionOptions, runningExperienceOptions, type AccountProfile,
 } from '@/lib/runner-profile'
 import { supabase } from '@/lib/supabase'
+import MobileContextHeader from '@/components/MobileContextHeader'
 
 type AccountPayload = { profile?: AccountProfile; error?: string }
 
@@ -137,12 +138,13 @@ export default function EditProfilePage() {
     }
   }
 
-  if (isLoading || isAccountLoading) return <main className="flex min-h-screen items-center justify-center bg-apple-gray-50 pt-24"><Loader2 className="h-9 w-9 animate-spin text-black" /></main>
+  if (isLoading || isAccountLoading) return <main className="mobile-focused-main flex min-h-screen items-center justify-center bg-apple-gray-50 pt-24"><MobileContextHeader backHref="/profile" backLabel="我的" title="修改跑者資料" /><Loader2 className="h-9 w-9 animate-spin text-black" /></main>
 
-  if (!isLoggedIn) return <main className="min-h-screen bg-apple-gray-50 px-4 pt-32 text-center"><h1 className="text-2xl font-black">請先登入</h1><Link href="/?auth=login" className="apple-button-primary mt-6">登入帳戶</Link></main>
+  if (!isLoggedIn) return <main className="mobile-focused-main min-h-screen bg-apple-gray-50 px-4 pt-32 text-center"><MobileContextHeader backHref="/profile" backLabel="我的" title="修改跑者資料" /><h1 className="text-2xl font-black">請先登入</h1><Link href="/?auth=login" className="apple-button-primary mt-6">登入帳戶</Link></main>
 
   return (
-    <main className="min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
+    <main className="mobile-focused-main min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
+      <MobileContextHeader backHref="/profile" backLabel="我的" title="修改跑者資料" />
       <div className="container mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-12">
         <Link href="/profile" className="inline-flex items-center gap-2 text-sm font-black text-apple-gray-600"><ArrowLeft className="h-4 w-4" />返回跑者名片</Link>
         <header className="mt-5 border-b border-black/10 pb-5 sm:pb-8"><p className="text-xs font-bold text-apple-blue sm:text-sm">EDIT RUNNER PROFILE</p><h1 className="mt-2 text-3xl font-black text-black sm:text-5xl">修改跑者資料</h1><p className="mt-3 text-sm leading-6 text-apple-gray-600 sm:text-base">完成後會返回跑者名片展示頁。</p></header>
@@ -173,7 +175,7 @@ export default function EditProfilePage() {
             <label className="md:col-span-2"><FieldLabel>跑者自我介紹</FieldLabel><textarea maxLength={600} value={profile.bio} onChange={(event) => updateField('bio', event.target.value)} className="apple-input min-h-28 resize-y" placeholder="分享你的跑步故事" /><span className="mt-2 block text-right text-xs text-apple-gray-400">{profile.bio.length} / 600</span></label>
           </div>
 
-          <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <div className="profile-edit-actions mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <Link href="/profile" className="apple-button-secondary min-h-12 px-5">取消</Link>
             <button type="button" disabled={isSaving} onClick={saveProfile} className="apple-button-primary min-h-12 gap-2 px-6 disabled:opacity-50">{isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{isSaving ? '正在儲存' : '儲存並展示'}</button>
           </div>

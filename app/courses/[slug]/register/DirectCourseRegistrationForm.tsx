@@ -530,7 +530,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
           </div>
         ) : null}
 
-        <div className="mt-8 flex gap-3 border-t border-black/10 pt-5">
+        <div className="mobile-registration-actions mobile-fixed-action-bar mt-8 flex gap-3 border-t border-black/10 pt-5">
           {step > 0 ? <button type="button" onClick={previousStep} className="apple-button-outline min-h-12 flex-1 gap-2"><ArrowLeft className="h-4 w-4" />上一步</button> : null}
           {step < steps.length - 1 ? (
             <button type="button" disabled={isQuoting} onClick={nextStep} className="apple-button-primary min-h-12 flex-1 gap-2 disabled:cursor-not-allowed disabled:opacity-50">下一步<ArrowRight className="h-4 w-4" /></button>

@@ -186,6 +186,7 @@ export default function AdminBankReconciliation({ paymentAccounts }: { paymentAc
   const [busy, setBusy] = useState('')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [batchConfirmOpen, setBatchConfirmOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const financeTokenRef = useRef('')
 
@@ -249,6 +250,10 @@ export default function AdminBankReconciliation({ paymentAccounts }: { paymentAc
   useEffect(() => {
     loadAccessStatus()
   }, [loadAccessStatus])
+
+  useEffect(() => {
+    setBatchConfirmOpen(false)
+  }, [data?.selectedBatchId])
 
   const loadData = useCallback(async (batchId = '', tokenOverride?: string) => {
     const query = batchId ? `?batchId=${encodeURIComponent(batchId)}` : ''
@@ -395,8 +400,10 @@ export default function AdminBankReconciliation({ paymentAccounts }: { paymentAc
       })
       setMessage(typeof payload.message === 'string' ? payload.message : '對帳操作已完成。')
       await loadData(data?.selectedBatchId ?? '')
+      return true
     } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : '對帳操作失敗。')
+      return false
     } finally {
       setBusy('')
     }
@@ -753,7 +760,10 @@ export default function AdminBankReconciliation({ paymentAccounts }: { paymentAc
                 <div className="relative">
                   <select
                     value={data.selectedBatchId}
-                    onChange={(event) => loadData(event.target.value)}
+                    onChange={(event) => {
+                      setBatchConfirmOpen(false)
+                      void loadData(event.target.value)
+                    }}
                     className="apple-input w-full appearance-none pr-10"
                   >
                     {data.batches.map((batch) => (
@@ -784,13 +794,23 @@ export default function AdminBankReconciliation({ paymentAccounts }: { paymentAc
 
               <button
                 type="button"
-                onClick={() => runAction('confirm-batch', { action: 'confirm_batch', batchId: data.selectedBatchId })}
+                onClick={() => setBatchConfirmOpen(true)}
                 disabled={busy === 'confirm-batch' || ((statusCounts.get('matched') ?? 0) + (statusCounts.get('already_confirmed') ?? 0) === 0)}
                 className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {busy === 'confirm-batch' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                確認全部唯一相符款項
+                第一步：確認全部唯一相符款項
               </button>
+              {batchConfirmOpen ? (
+                <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                  <p className="text-sm font-black text-amber-900">請再次確認批次入帳</p>
+                  <p className="mt-1 text-xs leading-5 text-amber-800">系統會將本批次所有唯一相符款項標記為已入帳，並依現有規則更新訂單與課表權限。</p>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button type="button" className="min-h-11 rounded-xl border border-black/10 bg-white px-3 py-2.5 text-xs font-bold" onClick={() => setBatchConfirmOpen(false)}>再檢查</button>
+                    <button type="button" className="min-h-11 rounded-xl bg-emerald-700 px-3 py-2.5 text-xs font-bold text-white disabled:opacity-40" disabled={busy === 'confirm-batch'} onClick={async () => { const saved = await runAction('confirm-batch', { action: 'confirm_batch', batchId: data.selectedBatchId }); if (saved) setBatchConfirmOpen(false) }}>第二步：確認入帳</button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           )}
         </div>
@@ -883,18 +903,32 @@ function TransactionRow({
   transaction: BankTransaction
   candidates: Candidate[]
   busy: string
-  onAction: (id: string, body: Record<string, unknown>) => Promise<void>
+  onAction: (id: string, body: Record<string, unknown>) => Promise<boolean>
   desktop?: boolean
 }) {
   const selected = candidates.find((candidate) => candidate.selected)
   const canConfirm = ['matched', 'already_confirmed', 'manual_match'].includes(transaction.match_status) && Boolean(selected)
   const complete = ['confirmed', 'ignored', 'duplicate'].includes(transaction.match_status)
   const status = statusMeta[transaction.match_status]
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const rowBusy = busy.endsWith(transaction.id)
+
+  useEffect(() => {
+    setConfirmOpen(false)
+  }, [selected?.id, transaction.id, transaction.match_status])
+
+  async function confirmTransaction() {
+    const saved = await onAction('confirm-' + transaction.id, {
+      action: 'confirm',
+      transactionId: transaction.id,
+    })
+    if (saved) setConfirmOpen(false)
+  }
 
   const candidatePicker = candidates.length > 0 ? (
     <select
       value={selected?.id ?? ''}
-      disabled={complete || busy === transaction.id}
+      disabled={complete || rowBusy}
       onChange={(event) => {
         if (event.target.value) {
           onAction(`select-${transaction.id}`, {
@@ -920,25 +954,22 @@ function TransactionRow({
     <div className="flex flex-wrap gap-2">
       <button
         type="button"
-        disabled={!canConfirm || busy === `confirm-${transaction.id}`}
-        onClick={() => onAction(`confirm-${transaction.id}`, {
-          action: 'confirm',
-          transactionId: transaction.id,
-        })}
-        className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-black px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-35"
+        disabled={!canConfirm || rowBusy}
+        onClick={() => setConfirmOpen(true)}
+        className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-black px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-35"
       >
         {busy === `confirm-${transaction.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
         確認入帳
       </button>
       <button
         type="button"
-        disabled={busy === `ignore-${transaction.id}`}
+        disabled={rowBusy}
         onClick={() => onAction(`ignore-${transaction.id}`, {
           action: 'ignore',
           transactionId: transaction.id,
           reason: '財務人工判定不需列入本次收款對帳。',
         })}
-        className="rounded-xl border border-black/10 px-3 py-2 text-xs font-bold text-apple-gray-600 disabled:opacity-40"
+        className="min-h-11 rounded-xl border border-black/10 px-3 py-2 text-xs font-bold text-apple-gray-600 disabled:opacity-40"
       >
         略過
       </button>
@@ -949,6 +980,23 @@ function TransactionRow({
       {status.label}
     </span>
   )
+
+  const confirmation = confirmOpen && !complete ? (
+    <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+      <p className="text-sm font-black text-amber-900">請再次確認入帳</p>
+      <div className="mt-2 grid gap-1 text-xs leading-5 text-amber-900">
+        <p>學員／買家：{selected?.customer_name || transaction.source_name || '未提供'}</p>
+        <p>課程／商品訂單：{selected?.order_label || selected?.order_number || '尚未選擇對應訂單'}</p>
+        <p>回報金額：{selected ? formatMoney(selected.expected_amount) : '未提供'} · 銀行實際入帳：{formatMoney(transaction.amount)}</p>
+        <p>轉出後五碼：{transaction.source_last_five || '未提供'} · 入帳時間：{transaction.transaction_date ? formatDate(transaction.transaction_date) : transaction.transaction_time || '未提供'}</p>
+      </div>
+      <p className="mt-2 rounded-xl bg-white/70 p-2 text-xs leading-5 text-amber-800">{transaction.match_reason || '請確認金額、後五碼與訂單資料一致。'}</p>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button type="button" className="min-h-11 rounded-xl border border-black/10 bg-white px-3 py-2.5 text-xs font-bold" onClick={() => setConfirmOpen(false)}>再檢查</button>
+        <button type="button" className="min-h-11 rounded-xl bg-emerald-700 px-3 py-2.5 text-xs font-bold text-white disabled:opacity-40" disabled={rowBusy} onClick={() => void confirmTransaction()}>第二步：確認入帳</button>
+      </div>
+    </div>
+  ) : null
 
   if (desktop) {
     return (
@@ -970,7 +1018,7 @@ function TransactionRow({
           <p className="mt-2 text-xs leading-5 text-apple-gray-500">{transaction.match_reason}</p>
         </td>
         <td className="px-4 py-4 align-top">{candidatePicker}</td>
-        <td className="px-4 py-4 align-top">{actions}</td>
+        <td className="px-4 py-4 align-top">{actions}{confirmation}</td>
       </tr>
     )
   }
@@ -996,7 +1044,7 @@ function TransactionRow({
       </div>
       <p className="mt-3 text-xs leading-5 text-apple-gray-500">{transaction.match_reason}</p>
       <div className="mt-3">{candidatePicker}</div>
-      <div className="mt-3">{actions}</div>
+      <div className="mt-3">{actions}{confirmation}</div>
     </article>
   )
 }

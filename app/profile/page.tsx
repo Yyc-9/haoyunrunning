@@ -160,7 +160,7 @@ export default function ProfilePage() {
         {error ? <p role="alert" className="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p> : null}
         {verificationMessage ? <p role="status" className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-800">{verificationMessage}</p> : null}
 
-        <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-lg bg-black text-white shadow-xl">
+        <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mobile-profile-card relative overflow-hidden rounded-lg bg-black text-white shadow-xl">
           <div className="absolute inset-y-0 left-0 w-2 bg-emerald-400" />
           <div className="grid gap-4 p-4 pl-6 sm:gap-6 sm:p-8 sm:pl-10 lg:grid-cols-[1fr_320px] lg:items-stretch">
             <div className="min-w-0">
@@ -193,7 +193,7 @@ export default function ProfilePage() {
                   {race ? <a href={race.officialUrl} target="_blank" rel="noreferrer" className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-black text-white sm:mt-2 sm:gap-1.5 sm:text-xs">官方資訊<ExternalLink className="h-3 w-3 sm:h-3.5 sm:w-3.5" /></a> : null}
                 </div>
 
-                <div className="min-w-0 rounded-md border border-white/10 bg-white/10 p-2.5 sm:p-4">
+                <div className="mobile-profile-contact min-w-0 rounded-md border border-white/10 bg-white/10 p-2.5 sm:p-4">
                   <p className="text-[9px] font-black text-emerald-300 sm:text-xs">CONTACT</p>
                   <h2 className="mt-0.5 text-xs font-black text-white sm:mt-1 sm:text-base">聯絡資料</h2>
                   <div className="mt-1.5 space-y-0.5 text-[10px] leading-4 text-white/65 sm:mt-2 sm:space-y-1 sm:text-sm sm:leading-5">
@@ -268,7 +268,7 @@ export default function ProfilePage() {
           </div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-apple-gray-200"><div className="h-full rounded-full bg-black" style={{ width: `${completion}%` }} /></div>
 
-          <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-3 sm:gap-4">
+          <div className="mobile-profile-badges mt-5 grid grid-cols-2 gap-3 lg:grid-cols-3 sm:gap-4">
             {achievements.map((badge) => {
               const Icon = achievementIcons[badge.icon as keyof typeof achievementIcons] ?? Award
               return (

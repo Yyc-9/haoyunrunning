@@ -95,7 +95,7 @@ export default function LeadCollectionForm({ source, labels, selectField }: Lead
   }
 
   return (
-    <form onSubmit={handleSubmit} className="apple-card space-y-5 p-6 md:p-8">
+    <form onSubmit={handleSubmit} className="mobile-lead-form apple-card space-y-5 p-6 md:p-8">
       <section className="space-y-4">
         <h2 className="text-lg font-black text-apple-gray-900">{labels.contactSection}</h2>
         <div className="grid gap-5 md:grid-cols-2">

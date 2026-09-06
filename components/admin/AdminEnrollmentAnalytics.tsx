@@ -470,11 +470,33 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
           {listKind === 'course' ? <select value={attendanceFilter} onChange={(event) => setAttendanceFilter(event.target.value as typeof attendanceFilter)} className="apple-input"><option value="all">全部點名核對</option><option value="open">計費異常待處理</option></select> : null}
           <button type="button" onClick={exportRoster} disabled={!filtered.length} className="apple-button-outline gap-2 px-4 py-2.5 text-sm disabled:opacity-40"><Download className="h-4 w-4" />匯出</button>
         </div>
-        <div className="overflow-x-auto">
+        <div className="admin-enrollment-desktop-table overflow-x-auto">
           <table className="w-full min-w-[920px] text-left text-sm">
             <thead className="bg-apple-gray-100 text-xs text-apple-gray-600"><tr>{[listKind === 'course' ? '學員' : '顧客', listKind === 'course' ? '班級' : '訂單 / 商品', listKind === 'course' ? '身分' : '類型', '金額', listKind === 'course' ? '後五碼' : '後五碼 / 取貨', '狀態', '提交時間', ''].map((label) => <th key={label || 'action'} className="px-3 py-2.5 font-bold">{label}</th>)}</tr></thead>
             <tbody className="divide-y divide-black/5">{visible.map((order) => <tr key={order.id} className="hover:bg-apple-gray-50"><td className="px-3 py-2.5"><p className="font-bold">{order.studentName}</p><p className="max-w-52 truncate text-xs text-apple-gray-500">{order.email}</p></td><td className="max-w-64 px-3 py-2.5 font-semibold text-apple-gray-700">{order.orderKind === 'shop' ? <><p className="truncate">{order.orderNumber}</p><p className="mt-1 truncate text-xs font-medium text-apple-gray-500">{order.items.join('、') || '未載入商品'}</p></> : <p className="truncate">{order.courseName}</p>}</td><td className="px-3 py-2.5">{order.orderKind === 'shop' ? '商城' : studentType(order) === 'new' ? '新生' : studentType(order) === 'returning' ? '舊生' : '-'}</td><td className="px-3 py-2.5 font-semibold">{order.amountText}</td><td className="px-3 py-2.5 font-mono">{order.orderKind === 'shop' ? `${order.transferLastFive ? `•••${order.transferLastFive}` : '-'} / 自取` : order.transferLastFive || '-'}</td><td className="px-3 py-2.5"><span className={`rounded-full px-2 py-1 text-xs font-bold ${statusTone[order.status]}`}>{statusLabel(order)}</span>{order.openAttendanceAnomalyCount > 0 ? <span className="mt-1 block w-fit rounded-full bg-amber-100 px-2 py-1 text-[11px] font-black text-amber-800">計費異常 {order.openAttendanceAnomalyCount}</span> : null}</td><td className="whitespace-nowrap px-3 py-2.5 text-xs text-apple-gray-500">{formatDate(order.submittedAt)}</td><td className="px-3 py-2.5 text-right"><button type="button" onClick={() => setSelected(order)} className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-black hover:text-white" aria-label={`查看 ${order.studentName} 的${order.orderKind === 'shop' ? '訂單' : '報名資料'}`}><ChevronRight className="h-4 w-4" /></button></td></tr>)}</tbody>
           </table>
+        </div>
+        <div className="admin-enrollment-mobile-list">
+          {visible.map((order) => (
+            <article key={order.id} className="admin-enrollment-mobile-card">
+              <div className="admin-enrollment-mobile-card-head">
+                <div className="min-w-0">
+                  <p className="admin-enrollment-mobile-kicker">{order.orderKind === 'shop' ? '商城訂單' : '課程報名'} · {order.orderNumber}</p>
+                  <h4>{order.studentName}</h4>
+                  <p>{order.email || '未提供信箱'}</p>
+                </div>
+                <span className={'admin-enrollment-mobile-status ' + statusTone[order.status]}>{statusLabel(order)}</span>
+              </div>
+              <dl className="admin-enrollment-mobile-facts">
+                <div><dt>{order.orderKind === 'shop' ? '商品' : '班級'}</dt><dd>{order.orderKind === 'shop' ? order.items.join('、') || '未載入商品' : order.courseName || '未指定班級'}</dd></div>
+                <div><dt>金額</dt><dd>{order.amountText || '-'}</dd></div>
+                <div><dt>{order.orderKind === 'shop' ? '匯款／取貨' : '匯款後五碼'}</dt><dd>{order.orderKind === 'shop' ? (order.transferLastFive ? '•••' + order.transferLastFive : '-') + '／跑班自取' : order.transferLastFive || '-'}</dd></div>
+                <div><dt>提交時間</dt><dd>{formatDate(order.submittedAt)}</dd></div>
+              </dl>
+              {order.orderKind === 'course' && order.openAttendanceAnomalyCount > 0 ? <p className="admin-enrollment-mobile-alert">計費異常 {order.openAttendanceAnomalyCount} 筆待處理</p> : null}
+              <button type="button" className="admin-enrollment-mobile-detail-button" onClick={() => setSelected(order)} aria-label={'查看 ' + order.studentName + ' 的' + (order.orderKind === 'shop' ? '訂單' : '報名資料')}><span>查看詳情</span><ChevronRight className="h-4 w-4" aria-hidden="true" /></button>
+            </article>
+          ))}
         </div>
         {!filtered.length ? <p className="p-10 text-center text-sm font-semibold text-apple-gray-500">沒有符合條件的{listKind === 'course' ? '學員' : '商城訂單'}。</p> : null}
         <div className="flex flex-col gap-3 border-t border-black/10 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"><p className="font-semibold text-apple-gray-500">共 {filtered.length} 筆，第 {page} / {pageCount} 頁</p><div className="flex gap-2"><button type="button" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))} className="inline-flex h-9 items-center gap-1 rounded-full border px-3 font-bold disabled:opacity-30"><ChevronLeft className="h-4 w-4" />上一頁</button><button type="button" disabled={page >= pageCount} onClick={() => setPage((current) => Math.min(pageCount, current + 1))} className="inline-flex h-9 items-center gap-1 rounded-full border px-3 font-bold disabled:opacity-30">下一頁<ChevronRight className="h-4 w-4" /></button></div></div>

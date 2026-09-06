@@ -3,12 +3,13 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, ChevronRight, Film, Loader2, Minus, Package, Plus, ShoppingBag } from 'lucide-react'
 import { useCart } from '@/app/cart-provider'
 import { useSiteContent } from '@/app/site-content-provider'
 import { useToast } from '@/app/toast-provider'
 import ShopCartDrawer from '@/components/ShopCartDrawer'
+import MobileContextHeader from '@/components/MobileContextHeader'
 import { getProductIntro, type ProductSpecification, type ProductVariant, type ShopProduct } from '@/lib/shop-products'
 import { getSpecificationGroups, productCartItemId, specificationSelectionError } from '@/lib/product-specifications'
 
@@ -40,6 +41,8 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
   const [quantity, setQuantity] = useState(1)
   const [activeMediaIndex, setActiveMediaIndex] = useState(0)
   const [isCartOpen, setIsCartOpen] = useState(false)
+  const cartItemCount = items.reduce((sum, item) => sum + item.quantity, 0)
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
     let isActive = true
@@ -82,12 +85,13 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
   }, [activeMediaIndex, media.length])
 
   if (isLoading) {
-    return <main className="flex min-h-[60vh] items-center justify-center pt-20 sm:pt-24"><Loader2 className="h-7 w-7 animate-spin text-apple-gray-500" aria-label="載入商品" /></main>
+    return <main className="mobile-focused-main flex min-h-[60vh] items-center justify-center pt-20 sm:pt-24"><MobileContextHeader backHref="/shop" backLabel="商店" title="商品詳情" /><Loader2 className="h-7 w-7 animate-spin text-apple-gray-500" aria-label="載入商品" /></main>
   }
 
   if (!product) {
     return (
-      <main className="container mx-auto flex min-h-[60vh] flex-col items-center justify-center px-4 pt-20 text-center sm:pt-24">
+      <main className="mobile-focused-main container mx-auto flex min-h-[60vh] flex-col items-center justify-center px-4 pt-20 text-center sm:pt-24">
+        <MobileContextHeader backHref="/shop" backLabel="商店" title="商品詳情" />
         <Package className="h-12 w-12 text-apple-gray-300" />
         <h1 className="mt-4 text-2xl font-black text-apple-gray-950">找不到這件商品</h1>
         <Link href="/shop" className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-apple-gray-700 underline underline-offset-4"><ArrowLeft className="h-4 w-4" />返回好運商店</Link>
@@ -139,17 +143,34 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
   }
 
   return (
-    <main className="kinetic-page min-h-screen bg-white pt-20 sm:pt-24">
+    <main className="mobile-focused-main kinetic-page min-h-screen bg-white pt-20 sm:pt-24">
+      <MobileContextHeader backHref="/shop" backLabel="商店" title={product.name} right={<button type="button" onClick={() => setIsCartOpen(true)} className="mobile-context-cart" aria-label="開啟購物車"><span className="mobile-context-cart-icon"><ShoppingBag aria-hidden="true" />{cartItemCount > 0 ? <span className="mobile-context-cart-badge">{cartItemCount}</span> : null}</span></button>} />
       <div className="container mx-auto px-4 py-5 sm:py-7">
-        <nav aria-label="麵包屑" className="flex items-center gap-2 overflow-hidden text-xs font-semibold text-apple-gray-500">
+        <nav aria-label="麵包屑" className="product-detail-breadcrumb flex items-center gap-2 overflow-hidden text-xs font-semibold text-apple-gray-500">
           <Link href="/shop" className="shrink-0 hover:text-black">好運商店</Link>
           <ChevronRight className="h-3.5 w-3.5 shrink-0" />
           <span className="truncate text-apple-gray-800">{product.name}</span>
         </nav>
 
         <div className="mt-5 grid gap-8 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)] lg:gap-12">
-          <section aria-label="商品圖片">
-            <div className="kinetic-media relative aspect-square overflow-hidden rounded-md border border-black/10 bg-apple-gray-50">
+          <section aria-label="商品圖片" className="product-detail-gallery">
+            <div
+              className="product-detail-gallery-media kinetic-media relative aspect-square overflow-hidden rounded-md border border-black/10 bg-apple-gray-50"
+              onTouchStart={(event) => {
+                const touch = event.changedTouches[0]
+                touchStartRef.current = touch ? { x: touch.clientX, y: touch.clientY } : null
+              }}
+              onTouchEnd={(event) => {
+                const start = touchStartRef.current
+                const touch = event.changedTouches[0]
+                touchStartRef.current = null
+                if (!start || !touch || media.length < 2) return
+                const deltaX = touch.clientX - start.x
+                const deltaY = touch.clientY - start.y
+                if (Math.abs(deltaX) < 44 || Math.abs(deltaX) <= Math.abs(deltaY) + 8) return
+                setActiveMediaIndex((current) => deltaX < 0 ? (current + 1) % media.length : (current - 1 + media.length) % media.length)
+              }}
+            >
               {activeMedia?.type === 'video' ? (
                 <video src={activeMedia.url} poster={product.image || undefined} controls muted playsInline preload="metadata" className="h-full w-full object-contain" />
               ) : activeMedia?.url ? (
@@ -157,9 +178,10 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
               ) : (
                 <div className="flex h-full items-center justify-center"><Package className="h-14 w-14 text-apple-gray-300" /></div>
               )}
+              {media.length > 1 ? <span className="product-detail-media-counter" aria-live="polite">{activeMediaIndex + 1} / {media.length}</span> : null}
             </div>
             {media.length > 1 ? (
-              <div className="mt-3 grid grid-cols-5 gap-2 sm:grid-cols-7">
+              <div className="product-detail-thumbs mt-3 grid grid-cols-5 gap-2 sm:grid-cols-7">
                 {media.map((item, index) => (
                   <button key={`${item.type}-${item.url}`} type="button" onClick={() => setActiveMediaIndex(index)} aria-label={`查看${item.label}`} className={`relative aspect-square overflow-hidden rounded-md border bg-apple-gray-50 transition ${activeMediaIndex === index ? 'border-black ring-1 ring-black' : 'border-black/10 hover:border-black/35'}`}>
                     {item.type === 'video' ? <span className="flex h-full items-center justify-center bg-black text-white"><Film className="h-5 w-5" /></span> : <Image src={item.url} alt="" fill sizes="90px" className="object-contain p-1" />}
@@ -180,7 +202,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
                 <legend className="text-sm font-black text-apple-gray-900">款式</legend>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {product.variants.map((variant) => (
-                    <button key={variant.id} type="button" aria-pressed={selectedVariant?.id === variant.id} onClick={() => selectVariant(variant)} className={`rounded-md border px-4 py-2.5 text-sm font-bold transition ${selectedVariant?.id === variant.id ? 'border-black bg-black text-white' : 'border-black/15 bg-white text-apple-gray-700 hover:border-black/40'}`}>{variant.name}</button>
+                    <button key={variant.id} type="button" aria-pressed={selectedVariant?.id === variant.id} onClick={() => selectVariant(variant)} className={`min-h-11 rounded-md border px-4 py-2.5 text-sm font-bold transition ${selectedVariant?.id === variant.id ? 'border-black bg-black text-white' : 'border-black/15 bg-white text-apple-gray-700 hover:border-black/40'}`}>{variant.name}</button>
                   ))}
                 </div>
               </fieldset>
@@ -191,7 +213,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
                 <legend className="text-sm font-black text-apple-gray-900">商品尺碼</legend>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {product.sizes.map((size) => (
-                    <button key={size} type="button" aria-pressed={selectedSize === size} onClick={() => setSelectedSize(size)} className={`min-w-12 rounded-md border px-3 py-2.5 text-sm font-bold transition ${selectedSize === size ? 'border-black bg-black text-white' : 'border-black/15 bg-white text-apple-gray-700 hover:border-black/40'}`}>{size}</button>
+                    <button key={size} type="button" aria-pressed={selectedSize === size} onClick={() => setSelectedSize(size)} className={`min-h-11 min-w-12 rounded-md border px-3 py-2.5 text-sm font-bold transition ${selectedSize === size ? 'border-black bg-black text-white' : 'border-black/15 bg-white text-apple-gray-700 hover:border-black/40'}`}>{size}</button>
                   ))}
                 </div>
               </fieldset>
@@ -219,17 +241,17 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
             <div className="mt-6 flex items-end justify-between gap-4 border-t border-black/10 pt-6">
               <div>
                 <p className="text-sm font-black text-apple-gray-900">數量</p>
-                <div className="mt-2 inline-grid grid-cols-[40px_48px_40px] overflow-hidden rounded-md border border-black/15">
-                  <button type="button" onClick={() => setQuantity((value) => Math.max(1, value - 1))} className="flex h-10 items-center justify-center hover:bg-apple-gray-100" aria-label="減少數量"><Minus className="h-4 w-4" /></button>
-                  <span className="flex h-10 items-center justify-center border-x border-black/10 text-sm font-black">{quantity}</span>
-                  <button type="button" onClick={() => setQuantity((value) => Math.min(Math.max(1, remainingStock), value + 1))} disabled={isSoldOut} className="flex h-10 items-center justify-center hover:bg-apple-gray-100 disabled:opacity-40" aria-label="增加數量"><Plus className="h-4 w-4" /></button>
+                <div className="mt-2 inline-grid grid-cols-[44px_48px_44px] overflow-hidden rounded-md border border-black/15">
+                  <button type="button" onClick={() => setQuantity((value) => Math.max(1, value - 1))} className="flex h-11 items-center justify-center hover:bg-apple-gray-100" aria-label="減少數量"><Minus className="h-4 w-4" /></button>
+                  <span className="flex h-11 items-center justify-center border-x border-black/10 text-sm font-black">{quantity}</span>
+                  <button type="button" onClick={() => setQuantity((value) => Math.min(Math.max(1, remainingStock), value + 1))} disabled={isSoldOut} className="flex h-11 items-center justify-center hover:bg-apple-gray-100 disabled:opacity-40" aria-label="增加數量"><Plus className="h-4 w-4" /></button>
                 </div>
               </div>
               <p className={`text-sm font-bold ${isSoldOut ? 'text-red-600' : 'text-apple-gray-500'}`}>{isSoldOut ? '目前售完' : `尚有 ${remainingStock} 件`}</p>
             </div>
 
             {isPurchasable ? (
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <div className="product-inline-actions mt-6 grid gap-3 sm:grid-cols-2">
                 <button type="button" onClick={() => addSelectedProduct(true)} className="apple-button-outline w-full gap-2 rounded-md"><ShoppingBag className="h-4 w-4" />加入購物車</button>
                 <button type="button" onClick={() => { if (addSelectedProduct(false)) router.push('/checkout') }} className="apple-button-primary w-full rounded-md">直接購買</button>
               </div>
@@ -245,6 +267,19 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
           <h2 className="text-xl font-black text-apple-gray-950">商品簡介</h2>
           <p className="whitespace-pre-line text-base leading-8 text-apple-gray-700">{getProductIntro(product, { includeSpecifications: false })}</p>
         </section>
+      </div>
+
+      <div className="mobile-fixed-action-bar mobile-product-actions" aria-label="商品操作">
+        {isPurchasable ? (
+          <>
+            <button type="button" onClick={() => addSelectedProduct(true)} className="apple-button-outline gap-2"><ShoppingBag aria-hidden="true" className="h-4 w-4" />加入購物車</button>
+            <button type="button" onClick={() => { if (addSelectedProduct(false)) router.push('/checkout') }} className="apple-button-primary">直接購買</button>
+          </>
+        ) : isSoldOut ? (
+          <button type="button" disabled className="apple-button-primary col-span-2 opacity-60">目前售完</button>
+        ) : (
+          <a href={brand.instagramUrl} target="_blank" rel="noreferrer" className="apple-button-primary col-span-2">聯絡購買</a>
+        )}
       </div>
 
       <ShopCartDrawer products={products} open={isCartOpen} onOpenChange={setIsCartOpen} />

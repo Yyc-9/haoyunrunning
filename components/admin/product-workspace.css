@@ -174,7 +174,27 @@
   .product-catalog-tools { padding: 14px 16px; }
   .product-catalog-list { max-height: 190px; }
   .product-catalog-item { padding: 14px 16px; }
-  .product-editor-header { position: sticky; top: 72px; z-index: 2; }
+  .product-editor-header { position: sticky; top: 0; z-index: 2; align-items: flex-start; flex-direction: column; gap: 12px; padding: 14px 16px; }
+  .product-editor-heading { width: 100%; }
+  .product-editor-actions { width: 100%; flex-direction: row; }
+  .product-editor-actions > * { min-height: 44px; flex: 1 1 0; }
+  .product-save-state { white-space: normal; }
+  .product-workspace-body { min-width: 0; }
+  .product-editor-scroll { min-width: 0; }
+  .product-property-fields { display: flex; grid-template-columns: none; }
+  .product-specification-row { grid-template-columns: minmax(0, 1fr); }
+  .product-specification-remove { margin-top: 0 !important; width: 44px !important; min-height: 44px !important; justify-self: start; }
+  .product-variant-top { grid-template-columns: minmax(0, 1fr); }
+  .product-variant-top > .product-text-action,
+  .product-variant-top > .product-icon-action { justify-self: start; min-height: 44px; }
+  .product-media-row { grid-template-columns: 20px minmax(50px, auto) minmax(0, 1fr); gap: 7px; }
+  .product-media-row > .product-upload-action,
+  .product-media-row > .product-media-actions { grid-column: 2 / -1; justify-self: start; min-height: 44px; }
+  .product-text-action { min-height: 44px; }
+  .product-icon-action { width: 44px; height: 44px; min-height: 44px; }
+  .product-editor-footer { padding: 16px; }
+  .product-delete-confirm { margin: 0 16px 16px; }
+  .product-notice { margin-left: 16px; margin-right: 16px; }
   .product-content-fields, .product-property-fields { padding: 20px 16px; }
   .product-property-fields { gap: 20px 16px; }
   .product-editor-scroll { overflow: visible; }
@@ -185,7 +205,7 @@
   .product-variant-heading { align-items: flex-start; flex-direction: column; }
   .product-editor-heading { gap: 8px; }
   .product-editor-heading h3 { font-size: 18px; }
-  .product-editor-actions { flex-direction: column; }
+  .product-editor-actions { width: 100%; flex-direction: row; }
 }
 @media (prefers-reduced-motion: reduce) {
   .product-workspace *, .product-toggle-track > span { transition: none !important; animation: none !important; }

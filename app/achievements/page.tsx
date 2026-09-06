@@ -63,7 +63,7 @@ export default function AchievementsPage() {
   const badges = achievements.badges.length ? achievements.badges : badgeSeries
   const steps = achievements.howToSteps.length ? achievements.howToSteps : applicationSteps
   return (
-    <main translate="no" className="kinetic-page kinetic-page-gold min-h-screen bg-[#f5f3ef] pt-20 sm:pt-24">
+    <main translate="no" className="mobile-brand-page kinetic-page kinetic-page-gold min-h-screen bg-[#f5f3ef] pt-20 sm:pt-24">
       <section className="kinetic-hero overflow-hidden bg-[#0f0d0c] px-4 py-12 text-white sm:px-6 sm:py-16 lg:px-8 lg:py-20">
         <div className="container mx-auto grid max-w-7xl gap-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(520px,1.15fr)] lg:items-center">
           <div>

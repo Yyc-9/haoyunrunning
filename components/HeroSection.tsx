@@ -24,8 +24,8 @@ const storyImages = [
   },
 ]
 
-const TRAIL_POOL_SIZE = 8
-const TRAIL_DISTANCE = 92
+const TRAIL_POOL_SIZE = 3
+const TRAIL_DISTANCE = 72
 const ENTRANCE_EASE = [0.16, 1, 0.3, 1] as const
 
 export default function HeroSection({ initialImages }: HeroSectionProps) {
@@ -60,23 +60,25 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
 
   useEffect(() => {
     const hero = heroRef.current
-    if (!hero || prefersReducedMotion || !window.matchMedia('(pointer: fine)').matches) return
+    if (!hero) return
 
-    const emitTrail = (x: number, y: number) => {
+    const emitTrail = (x: number, y: number, force = false) => {
       const lastPoint = lastPointRef.current
-      if (Math.hypot(x - lastPoint.x, y - lastPoint.y) < TRAIL_DISTANCE) return
+      if (!force && Math.hypot(x - lastPoint.x, y - lastPoint.y) < TRAIL_DISTANCE) return
 
       const poolIndex = poolIndexRef.current
       const item = trailItemsRef.current[poolIndex % TRAIL_POOL_SIZE]
       if (!item || trailImages.length === 0) return
 
       const image = trailImages[imageIndexRef.current % trailImages.length]
-      item.style.left = `${x}px`
-      item.style.top = `${y}px`
-      item.style.backgroundImage = `url("${image}")`
-      item.style.setProperty('--trail-rotate', `${(poolIndex % 2 ? 1 : -1) * (5 + (poolIndex % 7))}deg`)
-      item.style.setProperty('--trail-drift-x', `${((poolIndex % 3) - 1) * 22}px`)
-      item.style.setProperty('--trail-drift-y', `${-20 - (poolIndex % 4) * 9}px`)
+      const itemWidth = item.getBoundingClientRect().width || 104
+      const safeX = Math.max(itemWidth / 2 + 10, Math.min(hero.clientWidth - itemWidth / 2 - 10, x))
+      item.style.left = String(safeX) + 'px'
+      item.style.top = String(y) + 'px'
+      item.style.backgroundImage = 'url(\"' + image + '\")'
+      item.style.setProperty('--trail-rotate', String((poolIndex % 2 ? 1 : -1) * (5 + (poolIndex % 7))) + 'deg')
+      item.style.setProperty('--trail-drift-x', String(((poolIndex % 3) - 1) * 22) + 'px')
+      item.style.setProperty('--trail-drift-y', String(-20 - (poolIndex % 4) * 9) + 'px')
       item.classList.remove('home-hero-trail-visible')
       void item.offsetWidth
       item.classList.add('home-hero-trail-visible')
@@ -86,28 +88,7 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
       lastPointRef.current = { x, y }
     }
 
-    const handlePointerMove = (event: PointerEvent) => {
-      const rect = hero.getBoundingClientRect()
-      const x = event.clientX - rect.left
-      const y = event.clientY - rect.top
-      const xPercent = (x / rect.width) * 100
-      const yPercent = (y / rect.height) * 100
-      const dx = xPercent - 50
-      const dy = yPercent - 50
-
-      hero.style.setProperty('--hero-x', `${xPercent.toFixed(2)}%`)
-      hero.style.setProperty('--hero-y', `${yPercent.toFixed(2)}%`)
-      hero.style.setProperty('--hero-one-x', `${dx * 0.12}px`)
-      hero.style.setProperty('--hero-one-y', `${dy * 0.08}px`)
-      hero.style.setProperty('--hero-two-x', `${dx * -0.08}px`)
-      hero.style.setProperty('--hero-two-y', `${dy * 0.06}px`)
-      hero.style.setProperty('--hero-three-x', `${dx * 0.06}px`)
-      hero.style.setProperty('--hero-three-y', `${dy * -0.07}px`)
-
-      if (y > 110) emitTrail(x, y)
-    }
-
-    const handlePointerLeave = () => {
+    const resetHeroMotion = () => {
       hero.style.setProperty('--hero-x', '76%')
       hero.style.setProperty('--hero-y', '42%')
       hero.style.setProperty('--hero-one-x', '0px')
@@ -119,12 +100,83 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
       lastPointRef.current = { x: -999, y: -999 }
     }
 
+    const handlePointerMove = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse' && event.pointerType !== 'pen') return
+      if (prefersReducedMotion) return
+      const rect = hero.getBoundingClientRect()
+      const x = event.clientX - rect.left
+      const y = event.clientY - rect.top
+      const xPercent = (x / rect.width) * 100
+      const yPercent = (y / rect.height) * 100
+      const dx = xPercent - 50
+      const dy = yPercent - 50
+
+      hero.style.setProperty('--hero-x', String(xPercent.toFixed(2)) + '%')
+      hero.style.setProperty('--hero-y', String(yPercent.toFixed(2)) + '%')
+      hero.style.setProperty('--hero-one-x', String(dx * 0.12) + 'px')
+      hero.style.setProperty('--hero-one-y', String(dy * 0.08) + 'px')
+      hero.style.setProperty('--hero-two-x', String(dx * -0.08) + 'px')
+      hero.style.setProperty('--hero-two-y', String(dy * 0.06) + 'px')
+      hero.style.setProperty('--hero-three-x', String(dx * 0.06) + 'px')
+      hero.style.setProperty('--hero-three-y', String(dy * -0.07) + 'px')
+
+      if (y > 110) emitTrail(x, y)
+    }
+
+    let touchStart: { x: number; y: number } | null = null
+    let lastTouchX = 0
+    const handleTouchStart = (event: TouchEvent) => {
+      const touch = event.changedTouches[0]
+      if (!touch) return
+      const rect = hero.getBoundingClientRect()
+      touchStart = { x: touch.clientX - rect.left, y: touch.clientY - rect.top }
+      lastTouchX = touchStart.x
+      lastPointRef.current = touchStart
+    }
+    const handleTouchMove = (event: TouchEvent) => {
+      if (!touchStart || prefersReducedMotion) return
+      const touch = event.changedTouches[0]
+      if (!touch) return
+      const rect = hero.getBoundingClientRect()
+      const x = touch.clientX - rect.left
+      const y = touch.clientY - rect.top
+      if (Math.abs(x - touchStart.x) <= Math.abs(y - touchStart.y) + 8) return
+      if (Math.abs(x - lastTouchX) >= TRAIL_DISTANCE) {
+        const direction = x > lastTouchX ? 1 : -1
+        emitTrail(x, Math.max(140, Math.min(rect.height - 300, y)))
+        lastTouchX += direction * TRAIL_DISTANCE
+      }
+    }
+    const handleTouchEnd = (event: TouchEvent) => {
+      if (!touchStart) return
+      const touch = event.changedTouches[0]
+      if (!touch) return
+      const rect = hero.getBoundingClientRect()
+      const x = touch.clientX - rect.left
+      const y = touch.clientY - rect.top
+      const dx = x - touchStart.x
+      const dy = y - touchStart.y
+      if (Math.hypot(dx, dy) < 16) {
+        emitTrail(x, Math.max(140, Math.min(rect.height - 300, y)), true)
+      }
+      touchStart = null
+      lastTouchX = 0
+    }
+
     hero.addEventListener('pointermove', handlePointerMove)
-    hero.addEventListener('pointerleave', handlePointerLeave)
+    hero.addEventListener('pointerleave', resetHeroMotion)
+    hero.addEventListener('touchstart', handleTouchStart, { passive: true })
+    hero.addEventListener('touchmove', handleTouchMove, { passive: true })
+    hero.addEventListener('touchend', handleTouchEnd, { passive: true })
+    hero.addEventListener('touchcancel', handleTouchEnd, { passive: true })
 
     return () => {
       hero.removeEventListener('pointermove', handlePointerMove)
-      hero.removeEventListener('pointerleave', handlePointerLeave)
+      hero.removeEventListener('pointerleave', resetHeroMotion)
+      hero.removeEventListener('touchstart', handleTouchStart)
+      hero.removeEventListener('touchmove', handleTouchMove)
+      hero.removeEventListener('touchend', handleTouchEnd)
+      hero.removeEventListener('touchcancel', handleTouchEnd)
     }
   }, [prefersReducedMotion, trailImages])
 
@@ -229,7 +281,7 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
         </h1>
         <p className="home-hero-pointer-instruction">
           <span aria-hidden="true" />
-          移動滑鼠，讓好運的訓練片段沿著你的跑跡出現
+          輕觸或橫向滑動，留下你的好運跑跡
         </p>
       </motion.div>
 

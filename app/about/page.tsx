@@ -10,7 +10,7 @@ export default function AboutPage() {
   const { about, pageMedia } = useSiteContent()
 
   return (
-    <main className="kinetic-page min-h-screen bg-white pt-20 sm:pt-24">
+    <main className="mobile-brand-page kinetic-page min-h-screen bg-white pt-20 sm:pt-24">
       <section className="kinetic-hero relative isolate flex min-h-[680px] overflow-hidden text-white sm:min-h-[700px]">
         <Image
           src={pageMedia.aboutPageHero}

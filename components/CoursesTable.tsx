@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowUpRight, Clock3, MapPin } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
@@ -45,6 +45,37 @@ export default function CoursesTable() {
   const { courses } = useSiteContent()
   const [levelFilter, setLevelFilter] = useState<LevelFilter>('all')
   const [cityFilter, setCityFilter] = useState('all')
+
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem('goodluck-courses-view')
+      if (saved) {
+        const parsed = JSON.parse(saved) as { levelFilter?: LevelFilter; cityFilter?: string; scrollY?: number }
+        if (parsed.levelFilter) setLevelFilter(parsed.levelFilter)
+        if (parsed.cityFilter) setCityFilter(parsed.cityFilter)
+        if (typeof parsed.scrollY === 'number') window.requestAnimationFrame(() => window.scrollTo({ top: parsed.scrollY }))
+      }
+    } catch {
+      // Ignore storage failures in private browsing contexts.
+    }
+  }, [])
+
+  useEffect(() => {
+    const persistView = () => {
+      try {
+        sessionStorage.setItem('goodluck-courses-view', JSON.stringify({ levelFilter, cityFilter, scrollY: window.scrollY }))
+      } catch {
+        // Ignore storage failures in private browsing contexts.
+      }
+    }
+
+    persistView()
+    window.addEventListener('scroll', persistView, { passive: true })
+    return () => {
+      persistView()
+      window.removeEventListener('scroll', persistView)
+    }
+  }, [cityFilter, levelFilter])
 
   const localeText = (text: string) => language === 'zh-CN' ? text.replaceAll('週', '周') : text.replaceAll('周', '週')
   const weekdayText = (text: string) => formatCourseWeekday(localeText(text), language)

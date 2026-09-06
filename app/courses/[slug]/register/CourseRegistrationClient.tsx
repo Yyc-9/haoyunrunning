@@ -13,6 +13,7 @@ import { displayCourseLocation, displayCourseTime } from '@/lib/course-sort'
 import { paymentOrderStatusDescriptions, paymentOrderStatusLabels } from '@/lib/payment'
 import { supabase } from '@/lib/supabase'
 import DirectCourseRegistrationForm from './DirectCourseRegistrationForm'
+import MobileContextHeader from '@/components/MobileContextHeader'
 
 type RegistrationPayload = {
   availability?: CourseAvailability
@@ -126,7 +127,8 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
 
   if (!course) {
     return (
-      <main className="min-h-screen bg-apple-gray-50 px-4 pt-32">
+      <main className="mobile-focused-main min-h-screen bg-apple-gray-50 px-4 pt-32">
+        <MobileContextHeader backHref="/courses" backLabel="課程" title="課程報名" />
         <div className="mx-auto max-w-xl rounded-lg border border-black/10 bg-white p-8 text-center">
           <h1 className="text-2xl font-black">找不到這個課程</h1>
           <Link href="/courses" className="apple-button-primary mt-6">返回課程列表</Link>
@@ -141,8 +143,9 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
   const canSubmitTransfer = enrollment && ['pending_transfer', 'rejected'].includes(enrollment.status)
 
   return (
-    <main className="min-h-screen bg-apple-gray-50 pt-20">
-      <header className="border-b border-black/10 bg-white px-4 py-8 sm:px-6">
+    <main className="mobile-focused-main min-h-screen bg-apple-gray-50 pt-20">
+      <MobileContextHeader backHref={'/courses/' + course.slug} backLabel="課程" title={formatCourseWeekday(course.name) + '報名'} />
+      <header className="registration-native-header border-b border-black/10 bg-white px-4 py-8 sm:px-6">
         <div className="mx-auto max-w-5xl">
           <Link href={`/courses/${course.slug}`} className="text-sm font-bold text-apple-blue">返回課程詳情</Link>
           <div className="mt-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">

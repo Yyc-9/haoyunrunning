@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowUpRight, Award, BadgeCheck, Route, UserRound, UsersRound } from 'lucide-react'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSiteContent } from '@/app/site-content-provider'
 import { getDefaultCourseCoachKeys } from '@/lib/coach-profiles'
 import { formatCourseWeekday } from '@/lib/course-weekday'
@@ -37,6 +37,48 @@ export default function TeamRosterClient() {
   }, [courseOverrides, courses])
 
   const coaches = Object.values(coachProfiles).filter((coach) => coach.published)
+  const [selectedCoachKey, setSelectedCoachKey] = useState<string | null>(null)
+  const selectedCoach = coaches.find((coach) => coach.coachKey === selectedCoachKey) ?? null
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const previousFocusRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    if (!selectedCoach) return
+    previousFocusRef.current = document.activeElement as HTMLElement | null
+    document.body.classList.add('mobile-sheet-open')
+    closeButtonRef.current?.focus()
+
+    const handleDialogKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setSelectedCoachKey(null)
+        return
+      }
+      if (event.key !== 'Tab') return
+
+      const dialog = closeButtonRef.current?.closest<HTMLElement>('[role="dialog"]')
+      const focusable = dialog
+        ? Array.from(dialog.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+        : []
+      if (!focusable.length) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleDialogKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleDialogKeyDown)
+      document.body.classList.remove('mobile-sheet-open')
+      previousFocusRef.current?.focus()
+    }
+  }, [selectedCoach])
 
   return (
     <main className="kinetic-page min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
@@ -73,7 +115,20 @@ export default function TeamRosterClient() {
             </span>
           </div>
 
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          <div className="team-coach-index mb-4 flex gap-2 overflow-x-auto pb-1 md:hidden" aria-label="教練索引">
+            {coaches.map((coach, index) => (
+              <button
+                key={coach.coachKey}
+                type="button"
+                onClick={() => document.getElementById('coach-' + coach.coachKey)?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })}
+                className="min-h-11 shrink-0 rounded-full border border-black/10 bg-white px-4 text-sm font-black text-apple-gray-700"
+              >
+                {index + 1}. {coach.displayName}
+              </button>
+            ))}
+          </div>
+
+          <div className="team-coach-row touch-scroll-row gap-4 md:grid md:grid-cols-2 md:gap-5 xl:grid-cols-3">
             {coaches.map((coach) => {
               const coachAssignments = assignments.get(coach.coachKey) ?? []
               const imageUrl = coach.fullBodyImageUrl || coach.avatarUrl
@@ -82,7 +137,7 @@ export default function TeamRosterClient() {
                 <article
                   id={`coach-${coach.coachKey}`}
                   key={coach.coachKey}
-                  className="kinetic-card scroll-mt-32 overflow-hidden rounded-lg border border-black/10 bg-white shadow-sm transition target:border-black target:shadow-lg"
+                  className="team-coach-card kinetic-card scroll-mt-32 w-full shrink-0 overflow-hidden rounded-lg border border-black/10 bg-white shadow-sm transition target:border-black target:shadow-lg md:w-auto"
                 >
                   <div className="kinetic-image relative aspect-[3/2] w-full overflow-hidden border-b border-black/10 bg-apple-gray-100">
                       {imageUrl ? (
@@ -158,6 +213,15 @@ export default function TeamRosterClient() {
                       </div>
                     </details>
                   ) : null}
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCoachKey(coach.coachKey)}
+                    className="team-coach-detail-trigger mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-apple-blue px-4 py-3 text-sm font-black text-white transition hover:bg-apple-blue/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-apple-blue"
+                  >
+                    完整介紹
+                    <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+                  </button>
                   </div>
                 </article>
               )
@@ -165,6 +229,52 @@ export default function TeamRosterClient() {
           </div>
         </div>
       </section>
+
+      {selectedCoach ? (
+        <div className="team-coach-sheet-layer" role="presentation">
+          <button type="button" className="team-coach-sheet-backdrop" aria-label="關閉教練介紹" onClick={() => setSelectedCoachKey(null)} />
+          <section className="team-coach-sheet" role="dialog" aria-modal="true" aria-labelledby="team-coach-sheet-title">
+            <div className="team-coach-sheet-handle" aria-hidden="true" />
+            <div className="team-coach-sheet-header">
+              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full border border-black/10 bg-apple-gray-100">
+                {selectedCoach.avatarUrl || selectedCoach.fullBodyImageUrl ? (
+                  <Image src={selectedCoach.avatarUrl || selectedCoach.fullBodyImageUrl || ''} alt="" fill sizes="64px" className="object-cover" style={{ objectPosition: String(selectedCoach.avatarFocusX ?? 50) + '% ' + String(selectedCoach.avatarFocusY ?? 50) + '%' }} />
+                ) : <UserRound className="absolute inset-0 m-auto h-7 w-7 text-apple-gray-400" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 id="team-coach-sheet-title" className="truncate text-xl font-black text-apple-gray-950">{selectedCoach.displayName}</h2>
+                <p className="mt-1 text-sm font-bold text-apple-blue">{selectedCoach.role}</p>
+              </div>
+              <button ref={closeButtonRef} type="button" onClick={() => setSelectedCoachKey(null)} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/10 text-xl text-apple-gray-600" aria-label="關閉教練介紹">×</button>
+            </div>
+            <div className="team-coach-sheet-content">
+              <h3 className="text-lg font-black text-apple-gray-950">教練介紹</h3>
+              <p className="mt-3 whitespace-pre-line text-sm leading-7 text-apple-gray-700">{selectedCoach.bio}</p>
+              {selectedCoach.specialties.length ? (
+                <div className="mt-7">
+                  <h3 className="text-lg font-black text-apple-gray-950">擅長方向</h3>
+                  <div className="mt-3 flex flex-wrap gap-2">{selectedCoach.specialties.map((item) => <span key={item} className="rounded-md bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-900">{item}</span>)}</div>
+                </div>
+              ) : null}
+              {(selectedCoach.achievements.length || selectedCoach.certifications.length) ? (
+                <div className="mt-7">
+                  <h3 className="text-lg font-black text-apple-gray-950">經歷與證照</h3>
+                  <div className="mt-3 space-y-2 text-sm leading-6 text-apple-gray-700">
+                    {selectedCoach.achievements.map((item) => <p key={item}>{item}</p>)}
+                    {selectedCoach.certifications.map((item) => <p key={item}>{item}</p>)}
+                  </div>
+                </div>
+              ) : null}
+              {assignments.get(selectedCoach.coachKey)?.length ? (
+                <div className="mt-7">
+                  <h3 className="text-lg font-black text-apple-gray-950">本季度負責班級</h3>
+                  <div className="mt-3 space-y-2">{assignments.get(selectedCoach.coachKey)?.map((assignment) => <Link key={assignment.slug} href={'/courses/' + assignment.slug} onClick={() => setSelectedCoachKey(null)} className="flex min-h-11 items-center justify-between rounded-lg border border-black/10 px-4 text-sm font-bold text-apple-blue">{assignment.name}<ArrowUpRight className="h-4 w-4" /></Link>)}</div>
+                </div>
+              ) : null}
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   )
 }

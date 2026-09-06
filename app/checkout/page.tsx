@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   CheckCircle2,
+  ChevronDown,
   Landmark,
   LockKeyhole,
   MessageCircle,
@@ -14,6 +15,7 @@ import { useCart } from '@/app/cart-provider'
 import { useSiteContent } from '@/app/site-content-provider'
 import { supabase } from '@/lib/supabase'
 import { formatSelectedSpecifications, specificationSelectionError } from '@/lib/product-specifications'
+import MobileContextHeader from '@/components/MobileContextHeader'
 import type { ShopProduct } from '@/lib/shop-products'
 
 type CreatedOrder = {
@@ -119,7 +121,8 @@ export default function CheckoutPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+    <main className="mobile-focused-main min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+      <MobileContextHeader backHref="/shop" backLabel="購物車" title="確認訂單" />
       <section className="px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
         <div className="container mx-auto max-w-7xl">
           <div className="mb-10 max-w-3xl">
@@ -136,7 +139,7 @@ export default function CheckoutPage() {
           </div> : null}
 
           <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
-            <section className="apple-card p-6 md:p-8">
+            <section className="checkout-contact-card apple-card p-6 md:p-8">
               <div className="mb-6 flex items-center gap-3">
                 <Store className="h-5 w-5 text-apple-gray-700" />
                 <h2 className="text-xl font-bold text-apple-gray-900">聯絡與取貨資料</h2>
@@ -144,12 +147,12 @@ export default function CheckoutPage() {
 
               <div className="grid gap-5 sm:grid-cols-2">
                 <label className="block">
-                  <span className="mb-2 block text-sm font-bold text-apple-gray-700">姓名</span>
-                  <input className="apple-input" value={form.customerName} onChange={(event) => updateField('customerName', event.target.value)} autoComplete="name" placeholder="收件人姓名" />
+                  <span className="mb-2 block text-sm font-bold text-apple-gray-700">姓名 *</span>
+                  <input required className="apple-input" value={form.customerName} onChange={(event) => updateField('customerName', event.target.value)} autoComplete="name" placeholder="收件人姓名" />
                 </label>
                 <label className="block">
-                  <span className="mb-2 block text-sm font-bold text-apple-gray-700">聯絡方式</span>
-                  <input className="apple-input" value={form.contact} onChange={(event) => updateField('contact', event.target.value)} autoComplete="tel" placeholder="手機號碼或 LINE ID" />
+                  <span className="mb-2 block text-sm font-bold text-apple-gray-700">聯絡方式 *</span>
+                  <input required className="apple-input" value={form.contact} onChange={(event) => updateField('contact', event.target.value)} autoComplete="tel" placeholder="手機號碼或 LINE ID" />
                 </label>
                 <label className="block sm:col-span-2">
                   <span className="mb-2 block text-sm font-bold text-apple-gray-700">電子信箱</span>
@@ -164,17 +167,23 @@ export default function CheckoutPage() {
                       <p className="mt-1 text-sm leading-6 text-apple-gray-600">請依右側訂單小計完成匯款，並確認銀行機構、代碼與帳號後再轉帳。</p>
                     </div>
                   </div>
-                  <div className="mt-4 overflow-hidden rounded-xl border border-black/10 bg-white p-2">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/api/shop/payment-info" alt="好運跑班銀行匯款帳戶" className="h-auto w-full rounded-lg" />
-                  </div>
+                  <details className="group mt-4 overflow-hidden rounded-xl border border-black/10 bg-white">
+                    <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-black text-apple-gray-900">
+                      <span className="flex items-center gap-2"><LockKeyhole className="h-4 w-4" />查看好運匯款帳戶</span>
+                      <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+                    </summary>
+                    <div className="border-t border-black/10 p-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/api/shop/payment-info" alt="好運跑班銀行匯款帳戶" className="h-auto w-full rounded-lg" />
+                    </div>
+                  </details>
                   <div className="mt-3 flex items-start gap-2 rounded-lg bg-white/75 px-3 py-2.5 text-xs font-semibold leading-5 text-apple-gray-600">
                     <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0" />
                     網站只記錄轉出帳號後五碼，不會要求網銀密碼或完整付款帳號；匯款備註請保持空白。
                   </div>
                   <label className="mt-4 block">
-                    <span className="mb-2 block text-sm font-black text-apple-gray-800">轉出帳號後五碼</span>
-                    <input inputMode="numeric" maxLength={5} value={transferLastFive} onChange={(event) => { setTransferLastFive(event.target.value.replace(/\D/g, '').slice(0, 5)); setError('') }} className="apple-input min-h-12 bg-white text-lg tracking-[0.25em]" placeholder="12345" />
+                    <span className="mb-2 block text-sm font-black text-apple-gray-800">轉出帳號後五碼 *</span>
+                    <input required inputMode="numeric" pattern="[0-9]{5}" maxLength={5} value={transferLastFive} onChange={(event) => { setTransferLastFive(event.target.value.replace(/\D/g, '').slice(0, 5)); setError('') }} className="apple-input min-h-12 bg-white text-lg tracking-[0.25em]" placeholder="12345" />
                     <span className="mt-2 block text-xs leading-5 text-apple-gray-500">財務會依後五碼與訂單金額核對入帳。</span>
                   </label>
                 </section>
@@ -186,7 +195,7 @@ export default function CheckoutPage() {
               </div>
             </section>
 
-            <aside className="apple-card p-6 md:p-8 lg:sticky lg:top-28">
+            <aside className="checkout-summary-card apple-card p-6 md:p-8 lg:sticky lg:top-28">
               <h2 className="mb-6 text-xl font-bold text-apple-gray-900">訂單摘要</h2>
               {items.length > 0 ? (
                 <div className="mb-6 space-y-4">
@@ -229,7 +238,7 @@ export default function CheckoutPage() {
 
               {error ? <div className="mb-4 rounded-lg bg-red-50 p-4 text-sm font-semibold leading-6 text-red-700">{error}</div> : null}
 
-              <button type="button" onClick={submitOrder} disabled={isSubmitting || items.length === 0 || transferLastFive.length !== 5 || !catalog || Boolean(catalogError) || optionIssues.length > 0} className="apple-button-primary mb-3 w-full gap-2 disabled:cursor-not-allowed disabled:opacity-60">
+              <button type="button" onClick={submitOrder} disabled={isSubmitting || items.length === 0 || !form.customerName.trim() || !form.contact.trim() || transferLastFive.length !== 5 || !catalog || Boolean(catalogError) || optionIssues.length > 0} className="checkout-inline-submit apple-button-primary mb-3 w-full gap-2 disabled:cursor-not-allowed disabled:opacity-60">
                 <Send className="h-4 w-4" />
 	                {isSubmitting ? '正在提交匯款訂單...' : '提交匯款與自取訂單'}
               </button>
@@ -239,6 +248,10 @@ export default function CheckoutPage() {
         </div>
       </section>
 
+      <div className="mobile-checkout-footer" aria-label="訂單送出">
+        <div><span>小計</span><strong>{'NT$' + (total / 100).toFixed(0)}</strong></div>
+        <button type="button" onClick={submitOrder} disabled={isSubmitting || items.length === 0 || !form.customerName.trim() || !form.contact.trim() || transferLastFive.length !== 5 || !catalog || Boolean(catalogError) || optionIssues.length > 0} className="apple-button-primary gap-2 disabled:cursor-not-allowed disabled:opacity-60"><Send aria-hidden="true" className="h-4 w-4" />{isSubmitting ? '正在提交...' : '提交匯款與自取訂單'}</button>
+      </div>
     </main>
   )
 }

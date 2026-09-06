@@ -1,7 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CheckCircle2, ChevronDown, Loader2, RefreshCw, ShieldCheck, UserRoundCheck } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { CheckCircle2, ChevronDown, Loader2, RefreshCw, ShieldCheck, UserRoundCheck, X } from 'lucide-react'
 import type { AcceptanceTestPhase } from '@/lib/attendance-acceptance-test'
 import { supabase } from '@/lib/supabase'
 
@@ -45,10 +45,30 @@ type AcceptanceTest = {
   }>
 }
 
+type CoachActionForm =
+  | { kind: 'leave_review'; item: DutyItem; decision: 'approved' | 'rejected'; required: boolean }
+  | { kind: 'assign_substitute'; item: DutyItem; required: boolean }
+  | { kind: 'confirm_substitute'; item: DutyItem; emergency: boolean; required: boolean }
+
 const attendanceLabel: Record<string, string> = {
   upcoming: '尚未開放', check_in_open: '待簽到', on_time: '準時', late: '遲到',
   not_checked_in: '應到未簽到', substitute_absent: '代班未到', cancelled: '本堂停課',
   missing_start_time: '請補齊開始時間', leave_approved: '已請假，待安排代班',
+}
+
+function auditLabel(action: string) {
+  const labels: Record<string, string> = {
+    review_leave: '請假核對',
+    leave_approved: '核准請假',
+    leave_rejected: '拒絕請假',
+    assign_substitute: '指定代班',
+    substitute_assigned: '指定代班',
+    confirm_substitute: '確認代班',
+    substitute_confirmed: '確認代班',
+    emergency_substitute_confirmed: '緊急確認代班',
+    manual_correction: '人工修正出勤',
+  }
+  return labels[action] ?? '排班資料更新'
 }
 
 function taipeiYearMonth() {
@@ -86,6 +106,13 @@ export default function AdminCoachDuty() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [scheduleFilter, setScheduleFilter] = useState('all')
   const [substituteByItem, setSubstituteByItem] = useState<Record<string, string>>({})
+  const [correctionItem, setCorrectionItem] = useState<DutyItem | null>(null)
+  const [correctionState, setCorrectionState] = useState<'on_time' | 'late' | 'not_checked_in'>('not_checked_in')
+  const [correctionReason, setCorrectionReason] = useState('')
+  const correctionDialogRef = useRef<HTMLElement>(null)
+  const [actionForm, setActionForm] = useState<CoachActionForm | null>(null)
+  const [actionReason, setActionReason] = useState('')
+  const actionDialogRef = useRef<HTMLElement>(null)
 
   const load = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true)
@@ -110,6 +137,86 @@ export default function AdminCoachDuty() {
     const timer = window.setInterval(() => { void load(true) }, 45_000)
     return () => window.clearInterval(timer)
   }, [load])
+  useEffect(() => {
+    if (!correctionItem) return
+
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const focusableElements = () => Array.from(
+      correctionDialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+      ) ?? []
+    )
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setCorrectionItem(null)
+        return
+      }
+      if (event.key !== 'Tab') return
+      const focusable = focusableElements()
+      if (!focusable.length) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.body.classList.add('admin-mobile-sheet-open')
+    const frame = window.requestAnimationFrame(() => correctionDialogRef.current?.querySelector<HTMLTextAreaElement>('textarea')?.focus())
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      document.body.classList.remove('admin-mobile-sheet-open')
+      document.removeEventListener('keydown', handleKeyDown)
+      window.requestAnimationFrame(() => previousFocus?.focus())
+    }
+  }, [correctionItem])
+
+  useEffect(() => {
+    if (!actionForm) return
+
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const focusableElements = () => Array.from(
+      actionDialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+      ) ?? []
+    )
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setActionForm(null)
+        setActionReason('')
+        return
+      }
+      if (event.key !== 'Tab') return
+      const focusable = focusableElements()
+      if (!focusable.length) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.body.classList.add('admin-mobile-sheet-open')
+    const frame = window.requestAnimationFrame(() => actionDialogRef.current?.querySelector<HTMLTextAreaElement>('textarea')?.focus())
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      document.body.classList.remove('admin-mobile-sheet-open')
+      document.removeEventListener('keydown', handleKeyDown)
+      window.requestAnimationFrame(() => previousFocus?.focus())
+    }
+  }, [actionForm])
 
   const yearOptions = [...new Set([currentPeriod.year, ...items.map((item) => item.sessionDate.slice(0, 4))])].sort((a, b) => b.localeCompare(a))
   const periodItems = useMemo(() => items.filter((item) => {
@@ -166,25 +273,76 @@ export default function AdminCoachDuty() {
     setError('')
     setMessage('')
     try {
-      const response = await fetch('/api/admin/coach-duty', { method: 'PATCH', headers: { Authorization: `Bearer ${await accessToken()}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ assignmentId: id, ...body }) })
+      const response = await fetch('/api/admin/coach-duty', { method: 'PATCH', headers: { Authorization: 'Bearer ' + await accessToken(), 'Content-Type': 'application/json' }, body: JSON.stringify({ assignmentId: id, ...body }) })
       const payload = await response.json().catch(() => ({})) as { error?: string; message?: string }
       if (!response.ok) throw new Error(payload.error || '更新失敗。')
       setMessage(payload.message || '資料已更新。')
       await load()
+      return true
     } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : '更新失敗。')
+      return false
     } finally {
       setSaving('')
     }
   }
 
-  function reasonPrompt(title: string, required = true) {
-    const value = window.prompt(title, '')?.trim() || ''
-    return required && !value ? null : value
+  function courseHasStarted(item: DutyItem) {
+    if (!item.startTime) return false
+    const timestamp = new Date(`${item.sessionDate}T${item.startTime}:00+08:00`).getTime()
+    return Number.isFinite(timestamp) && timestamp <= Date.now()
+  }
+
+  function openActionForm(form: CoachActionForm) {
+    setActionForm(form)
+    setActionReason('')
+    setError('')
+  }
+
+  async function submitActionForm() {
+    if (!actionForm) return
+    const reason = actionReason.trim()
+    if (actionForm.required && !reason) {
+      setError('請填寫原因。')
+      return
+    }
+
+    const body = actionForm.kind === 'leave_review'
+      ? { action: 'review_leave', decision: actionForm.decision, reason }
+      : actionForm.kind === 'assign_substitute'
+        ? { action: 'assign_substitute', substituteCoachId: substituteByItem[actionForm.item.id] || actionForm.item.substituteCoachId, reason }
+        : { action: 'confirm_substitute', emergency: actionForm.emergency, reason }
+    const saved = await action(actionForm.item.id, body)
+    if (saved) {
+      setActionForm(null)
+      setActionReason('')
+    }
+  }
+
+  function openCorrection(item: DutyItem) {
+    setCorrectionItem(item)
+    setCorrectionState(item.attendanceState === 'late' ? 'late' : item.attendanceState === 'on_time' ? 'on_time' : 'not_checked_in')
+    setCorrectionReason('')
+    setError('')
+  }
+
+  async function saveCorrection() {
+    if (!correctionItem) return
+    const reason = correctionReason.trim()
+    if (!reason) {
+      setError('人工修正必須填寫原因。')
+      return
+    }
+    const saved = await action(correctionItem.id, { action: 'manual_correction', attendanceState: correctionState, reason })
+    if (saved) {
+      setCorrectionItem(null)
+      setCorrectionReason('')
+    }
   }
 
   return (
-    <details open className="group border-b border-black/10 bg-white">
+    <>
+      <details open className="group border-b border-black/10 bg-white">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5"><div><div className="flex flex-wrap items-center gap-2"><UserRoundCheck className="h-5 w-5" /><h2 className="text-lg font-black">教練簽到、請假與代班</h2><span className="rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-black text-orange-800">待處理 {periodItems.filter((item) => item.adminStatus === 'pending').length}</span><span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-black text-blue-800">代班待回覆 {periodItems.filter((item) => item.adminStatus === 'not_required' && item.substituteResponse === 'pending').length}</span><span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-black text-red-800">異常 {periodItems.filter((item) => ['not_checked_in', 'substitute_absent', 'missing_start_time'].includes(item.attendanceState) || (item.leaveStatus === 'approved' && !item.actualCoachId)).length}</span></div><p className="mt-1 text-sm text-apple-gray-600">原教練可直接邀請代班；受邀教練接受後立即生效，管理員保留查看與修正權限。</p></div><ChevronDown className="h-5 w-5 shrink-0 transition-transform group-open:rotate-180" /></summary>
       <div className="border-t border-black/10 p-4 sm:p-5">
         {acceptanceTest && acceptanceTest.phase !== 'hidden' ? (
@@ -254,19 +412,60 @@ export default function AdminCoachDuty() {
               <div className="grid gap-2 text-xs font-semibold text-apple-gray-600 sm:grid-cols-2 lg:grid-cols-4"><p>本筆原定教練：{item.scheduledCoachName}</p><p>角色：{item.coachRole === 'substitute' ? '代班教練' : item.coachRole === 'head_coach' ? '主教練' : item.coachRole === 'assistant' ? '助教' : '教練'}</p><p>排班：{isDirectSubstituteActive ? '代班已接受並生效' : isDirectInvitation && item.substituteResponse === 'pending' ? '原教練已邀請，待代班回覆' : isDirectInvitation && item.substituteResponse === 'rejected' ? '代班已拒絕，待重新邀請' : item.leaveStatus === 'requested' ? '請假待核對' : item.leaveStatus === 'approved' ? '請假已核准' : item.leaveStatus === 'rejected' ? '請假已拒絕' : '原定排班'}</p><p>代班：{item.substituteCoachName ? `${item.substituteCoachName}（${item.substituteResponse === 'accepted' ? '已接受' : item.substituteResponse === 'rejected' ? '已拒絕' : '待回覆'}）` : '未安排'}</p><p>簽到：{item.checkedInAt ? `${formatDate(item.checkedInAt, true)}${item.manualCorrection ? '（人工修正）' : ''}` : '尚無記錄'}</p></div>
               {item.leaveReason ? <p className="mt-3 rounded-lg bg-amber-50 p-3 text-xs font-bold text-amber-800">請假原因：{item.leaveReason}{item.recommendedSubstituteName ? `｜原教練邀請：${item.recommendedSubstituteName}` : ''}</p> : null}
               <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                {item.leaveStatus === 'requested' && !isDirectInvitation ? <><button type="button" disabled={saving === item.id} onClick={() => action(item.id, { action: 'review_leave', decision: 'approved', reason: reasonPrompt('核准備註（可留空）', false) || '' })} className="rounded-lg bg-black px-3 py-2.5 text-xs font-bold text-white">核准請假</button><button type="button" disabled={saving === item.id} onClick={() => { const reason = reasonPrompt('拒絕原因（必填）'); if (reason) action(item.id, { action: 'review_leave', decision: 'rejected', reason }) }} className="rounded-lg border border-red-200 bg-white px-3 py-2.5 text-xs font-bold text-red-700">拒絕請假</button></> : null}
-                {item.leaveStatus === 'approved' || item.leaveStatus === 'requested' ? <><select value={substituteByItem[item.id] ?? item.substituteCoachId} onChange={(event) => setSubstituteByItem((current) => ({ ...current, [item.id]: event.target.value }))} className="apple-input py-2 text-xs"><option value="">選擇代班教練</option>{coaches.filter((coach) => coach.id !== item.scheduledCoachId).map((coach) => <option key={coach.id} value={coach.id}>{coach.name}</option>)}</select><button type="button" disabled={!substituteByItem[item.id] && !item.substituteCoachId} onClick={() => { const reason = reasonPrompt('指定／更換代班原因（開課後必填）', false); action(item.id, { action: 'assign_substitute', substituteCoachId: substituteByItem[item.id] || item.substituteCoachId, reason: reason || '' }) }} className="rounded-lg border border-black/10 bg-white px-3 py-2.5 text-xs font-bold">指定／更換代班</button></> : null}
-                {item.substituteResponse === 'accepted' && !isDirectSubstituteActive ? <button type="button" onClick={() => action(item.id, { action: 'confirm_substitute', reason: '' })} className="rounded-lg bg-blue-700 px-3 py-2.5 text-xs font-bold text-white">最終確認代班</button> : null}
-                {item.substituteCoachId && item.substituteResponse !== 'accepted' ? <button type="button" onClick={() => { const reason = reasonPrompt('緊急確認代班原因（必填）'); if (reason) action(item.id, { action: 'confirm_substitute', emergency: true, reason }) }} className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs font-bold text-amber-800">緊急確認代班</button> : null}
-                <button type="button" onClick={() => { const reason = reasonPrompt('人工修正原因（必填）'); if (!reason) return; const state = window.prompt('輸入 on_time、late 或 not_checked_in', item.attendanceState === 'late' ? 'late' : item.attendanceState === 'on_time' ? 'on_time' : 'not_checked_in')?.trim(); if (state) action(item.id, { action: 'manual_correction', attendanceState: state, reason }) }} className="rounded-lg border border-black/10 bg-white px-3 py-2.5 text-xs font-bold">人工修正出勤</button>
+                {item.leaveStatus === 'requested' && !isDirectInvitation ? <><button type="button" disabled={saving === item.id} onClick={() => openActionForm({ kind: 'leave_review', item, decision: 'approved', required: false })} className="min-h-11 rounded-lg bg-black px-3 py-2.5 text-xs font-bold text-white">核准請假</button><button type="button" disabled={saving === item.id} onClick={() => openActionForm({ kind: 'leave_review', item, decision: 'rejected', required: true })} className="min-h-11 rounded-lg border border-red-200 bg-white px-3 py-2.5 text-xs font-bold text-red-700">拒絕請假</button></> : null}
+                {item.leaveStatus === 'approved' || item.leaveStatus === 'requested' ? <><select value={substituteByItem[item.id] ?? item.substituteCoachId} onChange={(event) => setSubstituteByItem((current) => ({ ...current, [item.id]: event.target.value }))} className="apple-input min-h-11 py-2 text-xs"><option value="">選擇代班教練</option>{coaches.filter((coach) => coach.id !== item.scheduledCoachId).map((coach) => <option key={coach.id} value={coach.id}>{coach.name}</option>)}</select><button type="button" disabled={!substituteByItem[item.id] && !item.substituteCoachId} onClick={() => openActionForm({ kind: 'assign_substitute', item, required: courseHasStarted(item) })} className="min-h-11 rounded-lg border border-black/10 bg-white px-3 py-2.5 text-xs font-bold">指定／更換代班</button></> : null}
+                {item.substituteResponse === 'accepted' && !isDirectSubstituteActive ? <button type="button" onClick={() => openActionForm({ kind: 'confirm_substitute', item, emergency: false, required: false })} className="min-h-11 rounded-lg bg-blue-700 px-3 py-2.5 text-xs font-bold text-white">最終確認代班</button> : null}
+                {item.substituteCoachId && item.substituteResponse !== 'accepted' ? <button type="button" onClick={() => openActionForm({ kind: 'confirm_substitute', item, emergency: true, required: true })} className="min-h-11 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs font-bold text-amber-800">緊急確認代班</button> : null}
+                <button type="button" onClick={() => openCorrection(item)} className="rounded-lg border border-black/10 bg-white px-3 py-2.5 text-xs font-bold">人工修正出勤</button>
               </div>
-              {latestAudit ? <p className="mt-3 text-[11px] font-semibold text-apple-gray-500">最近稽核：{latestAudit.action} · {formatDate(latestAudit.created_at, true)}{latestAudit.reason ? ` · ${latestAudit.reason}` : ''}</p> : null}
+              {latestAudit ? <p className="mt-3 text-[11px] font-semibold text-apple-gray-500">最近稽核：{auditLabel(latestAudit.action)} · {formatDate(latestAudit.created_at, true)}{latestAudit.reason ? ` · ${latestAudit.reason}` : ''}</p> : null}
             </div></details>
           })}
           {!loading && !filtered.length ? <p className="rounded-lg border border-dashed border-black/15 p-8 text-center text-sm font-semibold text-apple-gray-500">目前沒有符合篩選條件的課次。</p> : null}
         </div>
         <p className="mt-4 rounded-lg bg-violet-50 p-3 text-xs font-bold leading-5 text-violet-800">課酬目前只預留事實來源與狀態欄位，所有課次統一顯示「待設定課酬」；尚未啟用金額、扣薪、結算或付款。</p>
       </div>
-    </details>
+      </details>
+      {actionForm ? (
+        <div className="fixed inset-0 z-[125] flex items-end justify-center bg-black/40 p-0 backdrop-blur-[2px] sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="coach-action-title" onMouseDown={(event) => { if (event.target === event.currentTarget) { setActionForm(null); setActionReason('') } }}>
+          <section ref={actionDialogRef} className="admin-coach-action-sheet w-full max-w-xl rounded-t-3xl bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl sm:rounded-3xl sm:p-6">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h2 id="coach-action-title" className="text-xl font-black text-apple-gray-900">{actionForm.kind === 'leave_review' ? (actionForm.decision === 'approved' ? '核准請假' : '拒絕請假') : actionForm.kind === 'assign_substitute' ? '指定／更換代班' : actionForm.emergency ? '緊急確認代班' : '最終確認代班'}</h2>
+                <p className="mt-1 text-xs leading-5 text-apple-gray-500">{actionForm.item.courseName} · {formatDate(actionForm.item.sessionDate)} {actionForm.item.startTime || '未設定'}</p>
+              </div>
+              <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-apple-gray-600 hover:bg-apple-gray-100" aria-label="關閉操作視窗" onClick={() => { setActionForm(null); setActionReason('') }}><X className="h-5 w-5" /></button>
+            </div>
+            <div className="grid gap-3">
+              <div className="grid grid-cols-2 gap-3 rounded-xl bg-apple-gray-50 p-3 text-xs">
+                <p><span className="block text-apple-gray-400">原定教練</span><strong className="mt-1 block text-apple-gray-900">{actionForm.item.scheduledCoachName || '待安排'}</strong></p>
+                <p><span className="block text-apple-gray-400">目前代班</span><strong className="mt-1 block text-apple-gray-900">{actionForm.item.substituteCoachName || '尚未指定'}</strong></p>
+              </div>
+              {actionForm.kind === 'assign_substitute' ? <p className="rounded-xl bg-blue-50 p-3 text-xs leading-5 text-blue-800">請先在課次卡片選擇代班教練，再回到這裡確認指定。</p> : null}
+              <label className="grid gap-1.5"><span className="text-xs font-bold text-apple-gray-500">操作說明{actionForm.required ? ' *' : '（可留空）'}</span><textarea value={actionReason} onChange={(event) => { setActionReason(event.target.value); if (error) setError('') }} className="min-h-24 w-full rounded-xl border border-black/10 px-3 py-3 text-sm outline-none focus:border-[#1597a8] focus:ring-4 focus:ring-[#1597a8]/10" placeholder={actionForm.required ? '請填寫原因' : '可補充這次處理的原因'} /></label>
+              {actionForm.required ? <p className="text-xs leading-5 text-amber-700">這項處理需要留下原因，方便日後核對。</p> : null}
+              {error ? <p className="rounded-xl bg-red-50 p-3 text-xs font-bold leading-5 text-red-700" role="alert">{error}</p> : null}
+              <p className="rounded-xl bg-[#eef4f5] p-3 text-xs leading-5 text-[#4c656e]">儲存後會保留操作人、時間與原因，方便日後追查。</p>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2 border-t border-black/10 pt-3"><button type="button" className="min-h-11 rounded-xl border border-black/10 bg-white px-3 text-sm font-bold" onClick={() => { setActionForm(null); setActionReason('') }}>取消</button><button type="button" className="min-h-11 rounded-xl bg-black px-3 text-sm font-bold text-white disabled:opacity-40" disabled={saving === actionForm.item.id || (actionForm.kind === 'assign_substitute' && !(substituteByItem[actionForm.item.id] || actionForm.item.substituteCoachId))} onClick={() => void submitActionForm()}>{saving === actionForm.item.id ? '儲存中…' : actionForm.kind === 'leave_review' ? (actionForm.decision === 'approved' ? '確認核准' : '確認拒絕') : actionForm.kind === 'assign_substitute' ? '確認指定' : actionForm.emergency ? '確認緊急代班' : '確認代班'}</button></div>
+          </section>
+        </div>
+      ) : null}
+      {correctionItem ? (
+        <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/40 p-0 backdrop-blur-[2px] sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="coach-correction-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setCorrectionItem(null) }}>
+          <section ref={correctionDialogRef} className="admin-coach-action-sheet w-full max-w-xl rounded-t-3xl bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl sm:rounded-3xl sm:p-6">
+            <div className="mb-4 flex items-start justify-between gap-3"><div><h2 id="coach-correction-title" className="text-xl font-black text-apple-gray-900">人工修正出勤</h2><p className="mt-1 text-xs leading-5 text-apple-gray-500">{correctionItem.courseName} · {formatDate(correctionItem.sessionDate)} {correctionItem.startTime || '未設定'}</p></div><button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-apple-gray-600 hover:bg-apple-gray-100" aria-label="關閉人工修正" onClick={() => setCorrectionItem(null)}><X className="h-5 w-5" /></button></div>
+            <div className="grid gap-3">
+              <fieldset><legend className="mb-2 text-xs font-bold text-apple-gray-500">簽到結果</legend><div className="grid grid-cols-3 gap-2">{([['on_time', '準時'], ['late', '遲到'], ['not_checked_in', '未到']] as const).map(([value, label]) => <button type="button" aria-pressed={correctionState === value} key={value} className={correctionState === value ? 'min-h-11 rounded-xl border border-[#0c7887] bg-[#edf8f7] px-2 text-xs font-black text-[#0c7887]' : 'min-h-11 rounded-xl border border-black/10 bg-white px-2 text-xs font-black text-apple-gray-700'} onClick={() => setCorrectionState(value)}>{label}</button>)}</div></fieldset>
+              <div className="grid grid-cols-2 gap-3 rounded-xl bg-apple-gray-50 p-3 text-xs"><p><span className="block text-apple-gray-400">實際到課教練</span><strong className="mt-1 block text-apple-gray-900">{correctionItem.actualCoachName || correctionItem.scheduledCoachName || '待安排'}</strong></p><p><span className="block text-apple-gray-400">目前簽到時間</span><strong className="mt-1 block text-apple-gray-900">{correctionItem.checkedInAt ? formatDate(correctionItem.checkedInAt, true) : '尚無記錄'}</strong></p><p><span className="block text-apple-gray-400">薪資狀態</span><strong className="mt-1 block text-apple-gray-900">{correctionItem.salaryStatusLabel}</strong></p></div>
+              <label className="grid gap-1.5"><span className="text-xs font-bold text-apple-gray-500">管理員修正原因 *</span><textarea value={correctionReason} onChange={(event) => { setCorrectionReason(event.target.value); if (error) setError('') }} className="min-h-24 w-full rounded-xl border border-black/10 px-3 py-3 text-sm outline-none focus:border-[#1597a8] focus:ring-4 focus:ring-[#1597a8]/10" placeholder="請說明為何需要人工修正" /></label>
+              {error ? <p className="rounded-xl bg-red-50 p-3 text-xs font-bold leading-5 text-red-700" role="alert">{error}</p> : null}
+              <p className="rounded-xl bg-[#eef4f5] p-3 text-xs leading-5 text-[#4c656e]">儲存後會保留操作人、時間與原因，方便日後追查。</p>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2 border-t border-black/10 pt-3"><button type="button" className="min-h-11 rounded-xl border border-black/10 bg-white px-3 text-sm font-bold" onClick={() => setCorrectionItem(null)}>取消</button><button type="button" className="min-h-11 rounded-xl bg-black px-3 text-sm font-bold text-white disabled:opacity-40" disabled={saving === correctionItem.id} onClick={() => void saveCorrection()}>{saving === correctionItem.id ? '儲存中…' : '儲存簽到'}</button></div>
+          </section>
+        </div>
+      ) : null}
+    </>
   )
 }

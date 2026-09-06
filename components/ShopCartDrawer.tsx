@@ -2,10 +2,10 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowRight, Minus, Package, Plus, ShoppingCart, Trash2, X } from 'lucide-react'
+import { ArrowRight, Minus, Package, Plus, ShoppingBag, Trash2, X } from 'lucide-react'
 import { useCart, type CartItem } from '@/app/cart-provider'
 import { useToast } from '@/app/toast-provider'
 import type { ShopProduct } from '@/lib/shop-products'
@@ -25,7 +25,54 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
   const { items, itemCount, total, updateQuantity, removeItem, clear, isEmpty } = useCart()
   const { showToast } = useToast()
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null)
-  useEffect(() => { setPortalRoot(document.body) }, [])
+  const [isMobile, setIsMobile] = useState(false)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 767px)')
+    const syncViewport = () => setIsMobile(media.matches)
+    syncViewport()
+    setPortalRoot(document.body)
+    media.addEventListener('change', syncViewport)
+    return () => media.removeEventListener('change', syncViewport)
+  }, [])
+  useEffect(() => {
+    if (!open) return
+    const previousFocus = document.activeElement as HTMLElement | null
+    document.body.classList.add('mobile-sheet-open')
+    closeButtonRef.current?.focus()
+
+    const handleDialogKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onOpenChange(false)
+        return
+      }
+      if (event.key !== 'Tab') return
+
+      const dialog = closeButtonRef.current?.closest<HTMLElement>('[role="dialog"]')
+      const focusable = dialog
+        ? Array.from(dialog.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+        : []
+      if (!focusable.length) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleDialogKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleDialogKeyDown)
+      document.body.classList.remove('mobile-sheet-open')
+      previousFocus?.focus()
+    }
+  }, [onOpenChange, open])
 
   const getProduct = (item: CartItem) => products.find((product) => product.id === item.productId)
 
@@ -56,18 +103,18 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
       <button
         type="button"
         onClick={() => onOpenChange(true)}
-        className="fixed bottom-5 right-5 z-40 inline-flex h-14 items-center gap-3 rounded-full bg-black px-5 text-sm font-black text-white shadow-2xl transition hover:-translate-y-0.5 hover:bg-apple-gray-900"
+        className="shop-cart-trigger fixed bottom-5 right-5 z-40 inline-flex h-14 items-center gap-3 rounded-full bg-black px-5 text-sm font-black text-white shadow-2xl transition hover:-translate-y-0.5 hover:bg-apple-gray-900"
         aria-label="開啟購物車"
       >
         <span className="relative">
-          <ShoppingCart className="h-5 w-5" />
+          <ShoppingBag className="h-5 w-5" />
           {itemCount > 0 ? (
             <span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-apple-orange px-1 text-[11px] leading-none text-white">
               {itemCount}
             </span>
           ) : null}
         </span>
-        <span className="hidden sm:inline">購物車</span>
+        <span className="shop-cart-label hidden sm:inline">購物車</span>
       </button>
 
       {portalRoot ? createPortal(<AnimatePresence>
@@ -85,21 +132,25 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
               onClick={() => onOpenChange(false)}
             />
             <motion.aside
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
+              initial={isMobile ? { x: 0, y: '100%' } : { x: '100%', y: 0 }}
+              animate={{ x: 0, y: 0 }}
+              exit={isMobile ? { x: 0, y: '100%' } : { x: '100%', y: 0 }}
               transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-              className="absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-white shadow-2xl"
+              className="shop-cart-sheet absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-white shadow-2xl"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="shop-cart-title"
             >
               <div className="flex items-center justify-between border-b border-black/10 px-5 py-4">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-apple-gray-500">Cart</p>
-                  <h2 className="text-xl font-black text-apple-gray-950">購物車</h2>
+                  <h2 id="shop-cart-title" className="text-xl font-black text-apple-gray-950">購物車</h2>
                 </div>
                 <button
+                  ref={closeButtonRef}
                   type="button"
                   onClick={() => onOpenChange(false)}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 text-apple-gray-700 transition hover:bg-apple-gray-100"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-black/10 text-apple-gray-700 transition hover:bg-apple-gray-100"
                   aria-label="關閉購物車"
                 >
                   <X className="h-5 w-5" />
@@ -145,7 +196,7 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
                             <button
                               type="button"
                               onClick={() => removeItem(item.id)}
-                              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-apple-gray-400 transition hover:bg-red-50 hover:text-red-600"
+                              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-apple-gray-400 transition hover:bg-red-50 hover:text-red-600"
                               aria-label={`移除 ${item.name}`}
                             >
                               <Trash2 className="h-4 w-4" />
@@ -157,7 +208,7 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
                               <button
                                 type="button"
                                 onClick={() => changeQuantity(item, item.quantity - 1)}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-apple-gray-800 shadow-sm"
+                                className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-apple-gray-800 shadow-sm"
                                 aria-label="減少數量"
                               >
                                 <Minus className="h-4 w-4" />
@@ -166,7 +217,7 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
                               <button
                                 type="button"
                                 onClick={() => changeQuantity(item, item.quantity + 1)}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-apple-gray-800 shadow-sm"
+                                className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-apple-gray-800 shadow-sm"
                                 aria-label="增加數量"
                               >
                                 <Plus className="h-4 w-4" />
@@ -180,7 +231,7 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
                   </div>
                 ) : (
                   <div className="flex min-h-[18rem] flex-col items-center justify-center rounded-3xl border border-dashed border-black/15 bg-apple-gray-50 p-8 text-center">
-                    <ShoppingCart className="mb-4 h-12 w-12 text-apple-gray-300" />
+                    <ShoppingBag className="mb-4 h-12 w-12 text-apple-gray-300" />
                     <p className="text-lg font-black text-apple-gray-900">購物車是空的</p>
                     <p className="mt-2 text-sm leading-6 text-apple-gray-500">加入商品後，這裡會顯示品項、尺碼、規格、數量與小計。</p>
                   </div>

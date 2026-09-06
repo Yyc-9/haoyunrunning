@@ -5,22 +5,24 @@ import { ArrowLeft, CalendarClock, Instagram, PartyPopper, Sparkles } from 'luci
 import { useLanguage } from '@/app/language-context'
 import LeadCollectionForm from '@/components/LeadCollectionForm'
 import { useSiteContent } from '@/app/site-content-provider'
+import MobileContextHeader from '@/components/MobileContextHeader'
 
 export default function AnniversaryPageClient() {
   const { t } = useLanguage()
   const { brand, pageMedia, anniversary } = useSiteContent()
 
   return (
-    <main className="kinetic-page min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+    <main className="mobile-focused-main mobile-activity-page kinetic-page min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+      <MobileContextHeader backHref="/" backLabel="首頁" title={anniversary.title} />
       <section className="px-4 py-12 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-6xl">
-          <Link href="/" className="mb-8 inline-flex items-center gap-2 text-sm font-bold text-apple-gray-700 hover:text-apple-blue">
+          <Link href="/" className="mobile-activity-native-back mb-8 inline-flex items-center gap-2 text-sm font-bold text-apple-gray-700 hover:text-apple-blue">
             <ArrowLeft className="h-4 w-4" />
             {anniversary.secondaryCta}
           </Link>
 
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-stretch">
-            <section className="kinetic-card kinetic-hero relative overflow-hidden rounded-[2rem] bg-apple-gray-900 p-8 text-white shadow-xl md:p-12">
+            <section className="mobile-activity-hero kinetic-card kinetic-hero relative overflow-hidden rounded-[2rem] bg-apple-gray-900 p-8 text-white shadow-xl md:p-12">
               <div
                 className="absolute inset-0 bg-cover bg-center opacity-35"
                 style={{ backgroundImage: `url("${pageMedia.anniversaryHero}")` }}

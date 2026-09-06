@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ChevronDown, CircleUserRound, ClipboardList, Globe2, Menu, X, User, LogOut, LogIn, ShieldCheck, ShoppingBag } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
@@ -12,6 +12,7 @@ import { useLanguage } from '@/app/language-context'
 import { languages } from '@/lib/dictionary'
 import AuthModal from '@/components/AuthModal'
 import WeekdayLogo from '@/components/WeekdayLogo'
+import MobileBottomNav from '@/components/MobileBottomNav'
 import { supabase } from '@/lib/supabase'
 
 export default function Navigation() {
@@ -28,6 +29,16 @@ export default function Navigation() {
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const router = useRouter()
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
+
+  const isMobileFocused = pathname === '/admin'
+    || pathname === '/checkout'
+    || pathname === '/profile/edit'
+    || pathname === '/anniversary'
+    || pathname === '/group-signup'
+    || pathname.startsWith('/admin/')
+    || (pathname.startsWith('/courses/') && (pathname.split('/').length <= 3 || pathname.endsWith('/register')))
+    || (pathname.startsWith('/shop/') && pathname.split('/').length <= 3)
 
   const switchTestMode = async (mode: 'student' | 'coach') => {
     if (!user?.testAccount || user.testAccount.mode === mode || !supabase) return
@@ -82,7 +93,13 @@ export default function Navigation() {
       if (!(event.target as HTMLElement).closest('[data-account-menu-root]')) setIsAccountOpen(false)
     }
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setIsAccountOpen(false)
+      if (event.key !== 'Escape') return
+      setIsAccountOpen(false)
+      setIsLanguageOpen(false)
+      if (isMenuOpen) {
+        setIsMenuOpen(false)
+        requestAnimationFrame(() => menuButtonRef.current?.focus())
+      }
     }
 
     document.addEventListener('pointerdown', closeAccountMenu)
@@ -91,7 +108,13 @@ export default function Navigation() {
       document.removeEventListener('pointerdown', closeAccountMenu)
       document.removeEventListener('keydown', closeOnEscape)
     }
-  }, [])
+  }, [isMenuOpen])
+
+  useEffect(() => {
+    if (!isMenuOpen) return
+    document.body.classList.add('mobile-menu-open')
+    return () => document.body.classList.remove('mobile-menu-open')
+  }, [isMenuOpen])
 
   const navItems = [
     { key: 'home', name: t.navigation.home, href: '/' },
@@ -246,6 +269,7 @@ export default function Navigation() {
     <>
       <motion.nav
         data-scrolled={isScrolled}
+        data-mobile-focused={isMobileFocused ? 'true' : undefined}
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.3 }}
@@ -390,11 +414,11 @@ export default function Navigation() {
             </div>
 
             {/* Compact Auth + Menu */}
-            <div className="flex items-center gap-2 justify-self-end xl:hidden">
+            <div className="mobile-compact-controls flex items-center gap-2 justify-self-end xl:hidden">
               {isLoading ? (
-                <div className="h-10 w-20 animate-pulse rounded-full bg-apple-gray-100 ring-1 ring-black/10" />
+                <div className="mobile-account-control h-10 w-20 animate-pulse rounded-full bg-apple-gray-100 ring-1 ring-black/10" />
               ) : isLoggedIn ? (
-                <div data-account-menu-root className="relative">
+                <div data-account-menu-root className="mobile-account-control relative">
                   <button
                     type="button"
                     onClick={() => {
@@ -418,13 +442,14 @@ export default function Navigation() {
                     setIsAuthModalOpen(true)
                     setIsMenuOpen(false)
                   }}
-                  className="inline-flex h-9 items-center justify-center rounded-full border border-black/10 bg-white px-3 text-sm font-bold text-apple-gray-950 shadow-sm transition-colors duration-200 hover:text-apple-blue sm:h-10 sm:px-4"
+                  className="mobile-account-control inline-flex h-9 items-center justify-center rounded-full border border-black/10 bg-white px-3 text-sm font-bold text-apple-gray-950 shadow-sm transition-colors duration-200 hover:text-apple-blue sm:h-10 sm:px-4"
                 >
                   <LogIn className="mr-1.5 h-4 w-4" />
                   {t.common.login}
                 </motion.button>
               )}
               <motion.button
+                ref={menuButtonRef}
                 type="button"
                 whileTap={{ scale: 0.95 }}
                 onClick={() => {
@@ -433,6 +458,8 @@ export default function Navigation() {
                 }}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white text-apple-gray-700 shadow-sm transition-colors duration-200 hover:bg-apple-gray-100 sm:h-10 sm:w-10"
                 aria-label={isMenuOpen ? '關閉選單' : '開啟選單'}
+                aria-expanded={isMenuOpen}
+                aria-controls="mobile-site-menu"
               >
                 {isMenuOpen ? (
                   <X className="h-5 w-5" />
@@ -453,7 +480,8 @@ export default function Navigation() {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-x-0 top-20 z-40 max-h-[calc(100vh-5rem)] overflow-y-auto border-b border-apple-gray-200 bg-white/95 backdrop-blur-glass xl:hidden"
+            id="mobile-site-menu"
+            className="mobile-site-menu fixed inset-x-0 top-20 z-40 max-h-[calc(100vh-5rem)] overflow-y-auto border-b border-apple-gray-200 bg-white/95 backdrop-blur-glass xl:hidden"
           >
             <div className="container mx-auto px-4 py-6">
               <div className="space-y-4">
@@ -579,6 +607,7 @@ export default function Navigation() {
         onClose={() => setIsAuthModalOpen(false)}
         mode={authMode}
       />
+      <MobileBottomNav hidden={isMobileFocused} />
     </>
   )
 }

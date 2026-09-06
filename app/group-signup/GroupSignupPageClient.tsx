@@ -5,6 +5,7 @@ import { ArrowLeft, BookOpenCheck, CalendarDays, Instagram, UsersRound } from 'l
 import { useLanguage } from '@/app/language-context'
 import LeadCollectionForm from '@/components/LeadCollectionForm'
 import { useSiteContent } from '@/app/site-content-provider'
+import MobileContextHeader from '@/components/MobileContextHeader'
 
 function localizeCourseTitle(title: string, language: string) {
   if (language === 'zh-CN') {
@@ -25,10 +26,11 @@ export default function GroupSignupPageClient() {
   const courseOptions = courses.map((course) => localizeCourseTitle(course.title, language))
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+    <main className="mobile-focused-main mobile-activity-page min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+      <MobileContextHeader backHref="/" backLabel="首頁" title={t.groupSignup.title} />
       <section className="px-4 py-12 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-6xl">
-          <Link href="/" className="mb-8 inline-flex items-center gap-2 text-sm font-bold text-apple-gray-700 hover:text-apple-blue">
+          <Link href="/" className="mobile-activity-native-back mb-8 inline-flex items-center gap-2 text-sm font-bold text-apple-gray-700 hover:text-apple-blue">
             <ArrowLeft className="h-4 w-4" />
             {t.groupSignup.backHome}
           </Link>
