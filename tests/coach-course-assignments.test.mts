@@ -7,6 +7,15 @@ const mapStart = source.indexOf('const coachesBySlug')
 const mapEnd = source.indexOf('if (coachesBySlug', mapStart)
 const coachMap = source.slice(mapStart, mapEnd)
 
+test("Peter 使用獨立身份與照片，不繼承詠馨的課程或經歷", () => {
+  assert.match(source, /peter: \{/)
+  assert.match(source, /avatars\/peter\.jpg/)
+  assert.doesNotMatch(source, /yongXin|詠馨/)
+  assert.doesNotMatch(coachMap, /coachProfiles\.peter/)
+  const profiles = readFileSync(new URL("../lib/coach-profiles.ts", import.meta.url), "utf8")
+  assert.match(profiles, /if \(row\.coach_key === .yongXin.\) continue/)
+})
+
 test('鄔惟喬僅隸屬週二竹市班', () => {
   assert.match(
     coachMap,

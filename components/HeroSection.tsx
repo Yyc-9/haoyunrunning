@@ -24,8 +24,9 @@ const storyImages = [
   },
 ]
 
-const TRAIL_POOL_SIZE = 3
+const TRAIL_POOL_SIZE = 12
 const TRAIL_DISTANCE = 72
+const TRAIL_INTERVAL = 120
 const ENTRANCE_EASE = [0.16, 1, 0.3, 1] as const
 
 export default function HeroSection({ initialImages }: HeroSectionProps) {
@@ -34,6 +35,7 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
   const poolIndexRef = useRef(0)
   const imageIndexRef = useRef(0)
   const lastPointRef = useRef({ x: -999, y: -999 })
+  const loadedImagesRef = useRef(new Set<string>())
   const prefersReducedMotion = useReducedMotion()
   const { heroSlides: syncedImages, hasSyncedContent } = useSiteContent()
   const managedImages = hasSyncedContent ? syncedImages : initialImages
@@ -52,26 +54,43 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
   )
 
   useEffect(() => {
+    let cancelled = false
     trailImages.forEach((src) => {
       const preload = new window.Image()
       preload.src = src
+      void preload.decode().then(() => {
+        if (!cancelled) loadedImagesRef.current.add(src)
+      }).catch(() => { /* Skip unavailable images instead of flashing an empty card. */ })
     })
+    return () => { cancelled = true }
   }, [trailImages])
 
   useEffect(() => {
     const hero = heroRef.current
     if (!hero) return
+    const activeItems = new Set<HTMLSpanElement>()
+    let lastEmission = -Infinity
+    let frame = 0
+    const releaseTrail = (event: AnimationEvent) => {
+      const item = event.target as HTMLSpanElement
+      if (!activeItems.has(item)) return
+      activeItems.delete(item)
+      item.classList.remove('home-hero-trail-visible')
+    }
 
     const emitTrail = (x: number, y: number, force = false) => {
       const lastPoint = lastPointRef.current
       if (!force && Math.hypot(x - lastPoint.x, y - lastPoint.y) < TRAIL_DISTANCE) return
+      const now = performance.now()
+      if (!force && now - lastEmission < TRAIL_INTERVAL) return
 
       const poolIndex = poolIndexRef.current
-      const item = trailItemsRef.current[poolIndex % TRAIL_POOL_SIZE]
-      if (!item || trailImages.length === 0) return
+      const item = trailItemsRef.current.find((candidate) => candidate && !activeItems.has(candidate))
+      const readyImages = trailImages.filter((src) => loadedImagesRef.current.has(src))
+      if (!item || readyImages.length === 0) return
 
-      const image = trailImages[imageIndexRef.current % trailImages.length]
-      const itemWidth = item.getBoundingClientRect().width || 104
+      const image = readyImages[imageIndexRef.current % readyImages.length]
+      const itemWidth = item.offsetWidth || 104
       const safeX = Math.max(itemWidth / 2 + 10, Math.min(hero.clientWidth - itemWidth / 2 - 10, x))
       item.style.left = String(safeX) + 'px'
       item.style.top = String(y) + 'px'
@@ -79,9 +98,9 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
       item.style.setProperty('--trail-rotate', String((poolIndex % 2 ? 1 : -1) * (5 + (poolIndex % 7))) + 'deg')
       item.style.setProperty('--trail-drift-x', String(((poolIndex % 3) - 1) * 22) + 'px')
       item.style.setProperty('--trail-drift-y', String(-20 - (poolIndex % 4) * 9) + 'px')
-      item.classList.remove('home-hero-trail-visible')
-      void item.offsetWidth
+      activeItems.add(item)
       item.classList.add('home-hero-trail-visible')
+      lastEmission = now
 
       poolIndexRef.current += 1
       imageIndexRef.current += 1
@@ -89,6 +108,7 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
     }
 
     const resetHeroMotion = () => {
+      cancelAnimationFrame(frame)
       hero.style.setProperty('--hero-x', '76%')
       hero.style.setProperty('--hero-y', '42%')
       hero.style.setProperty('--hero-one-x', '0px')
@@ -100,7 +120,7 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
       lastPointRef.current = { x: -999, y: -999 }
     }
 
-    const handlePointerMove = (event: PointerEvent) => {
+    const updatePointer = (event: PointerEvent) => {
       if (event.pointerType !== 'mouse' && event.pointerType !== 'pen') return
       if (prefersReducedMotion) return
       const rect = hero.getBoundingClientRect()
@@ -121,6 +141,10 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
       hero.style.setProperty('--hero-three-y', String(dy * -0.07) + 'px')
 
       if (y > 110) emitTrail(x, y)
+    }
+    const handlePointerMove = (event: PointerEvent) => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => updatePointer(event))
     }
 
     let touchStart: { x: number; y: number } | null = null
@@ -164,6 +188,7 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
     }
 
     hero.addEventListener('pointermove', handlePointerMove)
+    hero.addEventListener('animationend', releaseTrail)
     hero.addEventListener('pointerleave', resetHeroMotion)
     hero.addEventListener('touchstart', handleTouchStart, { passive: true })
     hero.addEventListener('touchmove', handleTouchMove, { passive: true })
@@ -171,6 +196,9 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
     hero.addEventListener('touchcancel', handleTouchEnd, { passive: true })
 
     return () => {
+      cancelAnimationFrame(frame)
+      activeItems.forEach((item) => item.classList.remove('home-hero-trail-visible'))
+      hero.removeEventListener('animationend', releaseTrail)
       hero.removeEventListener('pointermove', handlePointerMove)
       hero.removeEventListener('pointerleave', resetHeroMotion)
       hero.removeEventListener('touchstart', handleTouchStart)
