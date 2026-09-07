@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import {
   paymentOrderStatusDescriptions,
@@ -57,4 +58,19 @@ test('報名同意記錄的政策版本皆已設定', () => {
   ]) {
     assert.match(version, /^\d{4}-\d{2}-\d{2}$/)
   }
+})
+
+test('課程報名操作在桌面顯示並只於手機固定', () => {
+  const registrationForm = readFileSync(
+    new URL('../app/courses/[slug]/register/DirectCourseRegistrationForm.tsx', import.meta.url),
+    'utf8',
+  )
+  const globalStyles = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8')
+
+  assert.match(registrationForm, /className="mobile-registration-actions mt-8 flex/)
+  assert.doesNotMatch(registrationForm, /mobile-registration-actions mobile-fixed-action-bar/)
+  assert.match(
+    globalStyles,
+    /\.mobile-fixed-action-bar,\s*\.mobile-registration-actions\s*\{[^}]*position: fixed;[^}]*display: grid;/s,
+  )
 })
