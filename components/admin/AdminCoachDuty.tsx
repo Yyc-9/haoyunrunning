@@ -52,7 +52,7 @@ type CoachActionForm =
 
 const attendanceLabel: Record<string, string> = {
   upcoming: '尚未開放', check_in_open: '待簽到', on_time: '準時', late: '遲到',
-  not_checked_in: '應到未簽到', substitute_absent: '代班未到', cancelled: '本堂停課',
+  not_checked_in: '未簽到待確認', substitute_absent: '未簽到待確認', cancelled: '本堂停課',
   missing_start_time: '請補齊開始時間', leave_approved: '已請假，待安排代班',
 }
 
@@ -61,11 +61,22 @@ function auditLabel(action: string) {
     review_leave: '請假核對',
     leave_approved: '核准請假',
     leave_rejected: '拒絕請假',
+    admin_leave_requested: '管理員代提請假',
+    leave_requested_for_admin: '請假待管理員安排',
     assign_substitute: '指定代班',
     substitute_assigned: '指定代班',
+    admin_direct_substitute_invited: '管理員直接邀請代班',
+    direct_substitute_invited: '原教練邀請代班',
     confirm_substitute: '確認代班',
     substitute_confirmed: '確認代班',
     emergency_substitute_confirmed: '緊急確認代班',
+    substitute_accepted: '接受管理員代班',
+    substitute_rejected: '拒絕管理員代班',
+    direct_substitute_accepted: '接受直接代班',
+    direct_substitute_rejected: '拒絕直接代班',
+    admin_recorded_coach_checkin: '管理員補登簽到',
+    coach_checked_in: '教練本人簽到',
+    attendance_manually_corrected: '人工修正出勤',
     manual_correction: '人工修正出勤',
   }
   return labels[action] ?? '排班資料更新'
@@ -77,6 +88,10 @@ function taipeiYearMonth() {
     year: parts.find((part) => part.type === 'year')?.value ?? String(new Date().getFullYear()),
     month: parts.find((part) => part.type === 'month')?.value ?? String(new Date().getMonth() + 1).padStart(2, '0'),
   }
+}
+
+function taipeiDateKey() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
 }
 
 function formatDate(value: string, withTime = false) {
@@ -105,6 +120,7 @@ export default function AdminCoachDuty() {
   const [coachFilter, setCoachFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [scheduleFilter, setScheduleFilter] = useState('all')
+  const [priorityFilter, setPriorityFilter] = useState<'today' | 'pending' | 'all'>('today')
   const [substituteByItem, setSubstituteByItem] = useState<Record<string, string>>({})
   const [correctionItem, setCorrectionItem] = useState<DutyItem | null>(null)
   const [correctionState, setCorrectionState] = useState<'on_time' | 'late' | 'not_checked_in'>('not_checked_in')
@@ -230,8 +246,7 @@ export default function AdminCoachDuty() {
     ['遲到', periodItems.filter((item) => item.attendanceState === 'late').length, 'text-amber-700'],
     ['請假代班完成', periodItems.filter((item) => item.leaveStatus === 'approved' && item.actualCoachId && ['on_time', 'late'].includes(item.attendanceState)).length, 'text-blue-700'],
     ['待安排代班', periodItems.filter((item) => item.leaveStatus === 'approved' && !item.actualCoachId).length, 'text-amber-700'],
-    ['應到未簽到', periodItems.filter((item) => item.attendanceState === 'not_checked_in').length, 'text-red-700'],
-    ['代班未到', periodItems.filter((item) => item.attendanceState === 'substitute_absent').length, 'text-red-700'],
+    ['未簽到待確認', periodItems.filter((item) => ['not_checked_in', 'substitute_absent'].includes(item.attendanceState)).length, 'text-amber-700'],
   ] as const
 
   const courseOptions = [...new Map(items.map((item) => [item.courseSeasonCourseId, item.courseName])).entries()]
@@ -255,6 +270,12 @@ export default function AdminCoachDuty() {
   }, [items])
 
   const filtered = useMemo(() => items.filter((item) => {
+    if (priorityFilter === 'today' && item.sessionDate !== taipeiDateKey()) return false
+    const pending = item.adminStatus === 'pending'
+      || item.substituteResponse === 'pending'
+      || item.leaveStatus === 'requested'
+      || (item.leaveStatus === 'approved' && !item.actualCoachId)
+    if (priorityFilter === 'pending' && !pending) return false
     if (yearFilter !== 'all' && item.sessionDate.slice(0, 4) !== yearFilter) return false
     if (monthFilter !== 'all' && item.sessionDate.slice(5, 7) !== monthFilter) return false
     if (courseFilter !== 'all' && item.courseSeasonCourseId !== courseFilter) return false
@@ -266,7 +287,7 @@ export default function AdminCoachDuty() {
     if (statusFilter === 'anomaly' && !['not_checked_in', 'substitute_absent', 'missing_start_time'].includes(item.attendanceState) && !(item.leaveStatus === 'approved' && !item.actualCoachId)) return false
     if (statusFilter !== 'all' && statusFilter !== 'anomaly' && item.attendanceState !== statusFilter) return false
     return true
-  }), [coachFilter, courseFilter, items, monthFilter, scheduleFilter, statusFilter, yearFilter])
+  }), [coachFilter, courseFilter, items, monthFilter, priorityFilter, scheduleFilter, statusFilter, yearFilter])
 
   async function action(id: string, body: Record<string, unknown>) {
     setSaving(id)
@@ -383,6 +404,10 @@ export default function AdminCoachDuty() {
           <p className="text-xs font-semibold text-apple-gray-500">資料會每 45 秒自動更新；需要立即核對時可手動刷新。</p>
           <button type="button" onClick={() => void load()} disabled={loading} className="apple-button-outline gap-2 px-4 py-2 text-xs disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />刷新教練出勤</button>
         </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2" aria-label="優先篩選">
+          <span className="mr-1 text-xs font-black text-apple-gray-500">優先查看</span>
+          {([['today', '今天'], ['pending', '待處理'], ['all', '全部']] as const).map(([value, label]) => <button type="button" key={value} onClick={() => setPriorityFilter(value)} className={priorityFilter === value ? 'min-h-11 rounded-full bg-black px-4 py-2 text-xs font-black text-white' : 'min-h-11 rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-bold text-apple-gray-700'} aria-pressed={priorityFilter === value}>{label}</button>)}
+        </div>
         <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-[120px_130px_1fr_1fr_170px_150px]">
           <select value={yearFilter} onChange={(event) => setYearFilter(event.target.value)} className="apple-input" aria-label="年份篩選">
             <option value="all">全部年份</option>
@@ -395,7 +420,7 @@ export default function AdminCoachDuty() {
           <select value={courseFilter} onChange={(event) => setCourseFilter(event.target.value)} className="apple-input"><option value="all">全部課程</option>{courseOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select>
           <select value={coachFilter} onChange={(event) => setCoachFilter(event.target.value)} className="apple-input"><option value="all">全部教練</option>{coaches.map((coach) => <option key={coach.id} value={coach.id}>{coach.name}</option>)}</select>
           <select value={scheduleFilter} onChange={(event) => setScheduleFilter(event.target.value)} className="apple-input"><option value="all">全部排班</option><option value="leave">只看請假</option><option value="substitute">只看代班</option><option value="regular">原定出勤</option></select>
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="apple-input"><option value="all">全部狀態</option><option value="anomaly">只看異常</option><option value="on_time">準時</option><option value="late">遲到</option><option value="not_checked_in">應到未簽到</option><option value="substitute_absent">代班未到</option><option value="missing_start_time">未設定時間</option></select>
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="apple-input"><option value="all">全部狀態</option><option value="anomaly">只看異常</option><option value="on_time">準時</option><option value="late">遲到</option><option value="not_checked_in">未簽到待確認</option><option value="substitute_absent">未簽到待確認（代班）</option><option value="missing_start_time">未設定時間</option></select>
         </div>
         {error ? <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p> : null}
         {message ? <p className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{message}</p> : null}

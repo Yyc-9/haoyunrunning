@@ -2,8 +2,12 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
+  canChangeSubstituteAtState,
   canCoachRequestLeave,
   canCoachViewCheckInControl,
+  canRecordCoachCheckin,
+  canRequestLeaveAtState,
+  canReviewLeaveAtState,
   coachDutyActionCoachId,
   coachDutyPunctuality,
   coachDutyWindow,
@@ -137,4 +141,56 @@ test('管理員可操作任一課次，但簽到與請假仍寫入該堂對應�
     isAdmin: false,
     userId: 'other-coach',
   }), null)
+})
+
+test('狀態 guard 拒絕停課、已簽到與已結束的一般轉換', () => {
+  const base = {
+    cancelled: false,
+    hasCheckin: false,
+    leaveStatus: 'none' as const,
+    substituteResponse: 'none' as const,
+    windowPhase: 'open' as const,
+  }
+
+  assert.equal(canRequestLeaveAtState(base), true)
+  assert.equal(canRequestLeaveAtState({ ...base, hasCheckin: true }), false)
+  assert.equal(canRequestLeaveAtState({ ...base, cancelled: true }), false)
+  assert.equal(canRequestLeaveAtState({ ...base, windowPhase: 'closed' }), false)
+  assert.equal(canRequestLeaveAtState({ ...base, windowPhase: 'closed', isAdmin: true, hasReason: true }), true)
+  assert.equal(canChangeSubstituteAtState({ ...base, windowPhase: 'closed', isAdmin: true, hasReason: true }), true)
+  assert.equal(canChangeSubstituteAtState({ ...base, windowPhase: 'closed', isAdmin: true }), false)
+})
+
+test('管理員可核對待安排代班或待回覆的請假，不誤用申請請假 guard', () => {
+  const base = {
+    cancelled: false,
+    hasCheckin: false,
+    leaveStatus: 'requested' as const,
+    decision: 'approved' as const,
+    windowPhase: 'open' as const,
+  }
+
+  assert.equal(canReviewLeaveAtState(base), true)
+  assert.equal(canReviewLeaveAtState({ ...base, decision: 'rejected', hasReason: true }), true)
+  assert.equal(canReviewLeaveAtState({ ...base, decision: 'rejected' }), false)
+  assert.equal(canReviewLeaveAtState({ ...base, windowPhase: 'closed', hasReason: true }), true)
+  assert.equal(canReviewLeaveAtState({ ...base, leaveStatus: 'approved' }), false)
+})
+
+test('簽到 guard 只允許本堂實際教練在時間窗內簽到', () => {
+  const base = {
+    cancelled: false,
+    hasCheckin: false,
+    actualCoachId: 'coach-b',
+    scheduledCoachId: 'coach-a',
+    leaveStatus: 'approved' as const,
+    userId: 'coach-b',
+    windowPhase: 'open' as const,
+  }
+
+  assert.equal(canRecordCoachCheckin(base), true)
+  assert.equal(canRecordCoachCheckin({ ...base, userId: 'coach-a' }), false)
+  assert.equal(canRecordCoachCheckin({ ...base, hasCheckin: true }), false)
+  assert.equal(canRecordCoachCheckin({ ...base, windowPhase: 'closed' }), false)
+  assert.equal(canRecordCoachCheckin({ ...base, actualCoachId: 'coach-a', userId: 'coach-a', leaveStatus: 'approved' }), false)
 })

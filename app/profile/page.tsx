@@ -9,23 +9,23 @@ import {
   Sparkles, Target, TicketCheck, Trophy, UserRound, UsersRound,
 } from 'lucide-react'
 import { useAuth } from '@/app/providers'
-import CoachVerificationPanel from '@/components/CoachVerificationPanel'
 import StudentAttendancePanel from '@/components/StudentAttendancePanel'
 import {
   emptyProfile, getRaceCountdown, getRaceEvent, getTargetEventLabel, type AccountProfile, type Achievement,
 } from '@/lib/runner-profile'
 import { supabase } from '@/lib/supabase'
 
-type CoachVerificationEligibility = {
-  eligible: true
+type CoachAccountState = {
+  status: 'pending' | 'pending_email' | 'enabled' | 'disabled' | 'conflict'
   coachKey: string
   coachName: string
+  message?: string
 }
 
 type AccountPayload = {
   profile?: AccountProfile
   achievements?: Achievement[]
-  coachVerification?: CoachVerificationEligibility | null
+  coachAccount?: CoachAccountState | null
   error?: string
 }
 
@@ -66,8 +66,7 @@ export default function ProfilePage() {
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [isAccountLoading, setIsAccountLoading] = useState(true)
   const [error, setError] = useState('')
-  const [coachVerification, setCoachVerification] = useState<CoachVerificationEligibility | null>(null)
-  const [verificationMessage, setVerificationMessage] = useState('')
+  const [coachAccount, setCoachAccount] = useState<CoachAccountState | null>(null)
   const [countdownNow, setCountdownNow] = useState<Date | null>(null)
   const [isAttendanceOpen, setIsAttendanceOpen] = useState(false)
 
@@ -83,19 +82,13 @@ export default function ProfilePage() {
       if (!response.ok || !payload.profile) throw new Error(payload.error || '讀取帳戶資料失敗。')
       setProfile({ ...emptyProfile, ...payload.profile })
       setAchievements(payload.achievements ?? [])
-      setCoachVerification(payload.coachVerification ?? null)
+      setCoachAccount(payload.coachAccount ?? null)
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : '讀取帳戶資料失敗。')
     } finally {
       setIsAccountLoading(false)
     }
   }, [isLoggedIn])
-
-  const handleCoachVerified = useCallback(async () => {
-    setCoachVerification(null)
-    setVerificationMessage('教練身份認證完成，教練工作台已開放。')
-    await loadAccount()
-  }, [loadAccount])
 
   useEffect(() => {
     if (!isLoading && isLoggedIn) loadAccount()
@@ -106,12 +99,6 @@ export default function ProfilePage() {
     const timer = window.setInterval(() => setCountdownNow(new Date()), 1000)
     return () => window.clearInterval(timer)
   }, [])
-
-  useEffect(() => {
-    if (!verificationMessage) return
-    const timer = window.setTimeout(() => setVerificationMessage(''), 5000)
-    return () => window.clearTimeout(timer)
-  }, [verificationMessage])
 
   useEffect(() => {
     const openAttendanceFromHash = () => {
@@ -158,7 +145,6 @@ export default function ProfilePage() {
     <main className="min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
       <div className="container mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-12">
         {error ? <p role="alert" className="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p> : null}
-        {verificationMessage ? <p role="status" className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-800">{verificationMessage}</p> : null}
 
         <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mobile-profile-card relative overflow-hidden rounded-lg bg-black text-white shadow-xl">
           <div className="absolute inset-y-0 left-0 w-2 bg-emerald-400" />
@@ -216,11 +202,12 @@ export default function ProfilePage() {
           </div>
         </motion.section>
 
-        {isStudentAccount && coachVerification?.eligible ? (
-          <CoachVerificationPanel
-            coachName={coachVerification.coachName}
-            onVerified={handleCoachVerified}
-          />
+        {isStudentAccount && coachAccount ? (
+          <section role="status" className={`mt-5 rounded-lg border p-4 sm:mt-8 sm:p-5 ${coachAccount.status === 'disabled' || coachAccount.status === 'conflict' ? 'border-amber-200 bg-amber-50 text-amber-950' : 'border-apple-blue/20 bg-white text-black'}`}>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-apple-blue">教練帳號</p>
+            <h2 className="mt-1 text-lg font-black">{coachAccount.coachName} · {coachAccount.status === 'disabled' ? '已停用' : '待啟用'}</h2>
+            <p className="mt-2 text-sm leading-6 text-apple-gray-600">{coachAccount.message || '管理員已登記這個信箱；完成信箱驗證並重新登入後，系統會自動啟用教練工作台。'}</p>
+          </section>
         ) : null}
 
         {isStudentAccount ? (

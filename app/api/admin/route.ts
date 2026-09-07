@@ -220,14 +220,16 @@ type PaymentAccountRow = {
   updated_at: string
 }
 
-type CoachInviteRow = {
+type CoachAccountAllowlistRow = {
   id: string
-  code: string
   coach_key: string
-  used_by: string | null
-  used_at: string | null
-  expires_at: string | null
+  email: string
+  status: 'pending' | 'enabled' | 'disabled'
+  profile_id: string | null
   created_at: string
+  updated_at: string
+  enabled_at: string | null
+  disabled_at: string | null
 }
 
 type CourseSeasonSyncSourceRow = {
@@ -244,8 +246,10 @@ type CourseSeasonSyncSourceRow = {
 }
 
 type AdminPatchBody =
-  | { action?: 'set_coach_role'; userId?: string; enabled?: boolean }
+  | { action?: 'register_coach_account'; coachKey?: string; verificationEmail?: string; note?: string }
+  | { action?: 'set_coach_account_status'; allowlistId?: string; enabled?: boolean; reason?: string }
   | { action?: 'link_coach_public_profile'; userId?: string; coachKey?: string }
+  | { action?: 'set_coach_role'; userId?: string; enabled?: boolean }
   | { action?: 'create_coach_invite'; coachKey?: string; verificationEmail?: string }
   | { action?: 'review_order'; orderId?: string; orderKind?: 'course' | 'shop'; status?: PaymentOrderStatus; reviewNote?: string }
   | { action?: 'resolve_attendance_anomaly'; attendanceId?: string; outcome?: 'supplement_paid' | 'waived' | 'reopen'; resolutionNote?: string }
@@ -292,6 +296,77 @@ function normalizeEmail(value: unknown) {
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+}
+
+type AuthUserSummary = {
+  id: string
+  email?: string | null
+  email_confirmed_at?: string | null
+}
+
+type AuthUserLookup = {
+  user: AuthUserSummary | null
+  error: string | null
+}
+
+async function listAuthUsers() {
+  if (!supabaseAdmin) return { users: [] as AuthUserSummary[], error: 'Supabase 尚未設定。' }
+  const users: AuthUserSummary[] = []
+  const perPage = 1000
+  for (let page = 1; page <= 100; page += 1) {
+    const result = await supabaseAdmin.auth.admin.listUsers({ page, perPage })
+    if (result.error) return { users: [], error: result.error.message || '無法讀取登入帳號。' }
+    const pageUsers = result.data?.users ?? []
+    users.push(...pageUsers.map((user) => ({
+      id: user.id,
+      email: user.email,
+      email_confirmed_at: user.email_confirmed_at,
+    })))
+    if (pageUsers.length < perPage) return { users, error: null }
+  }
+  return { users: [], error: '登入帳號數量超過單次管理範圍，請稍後再試。' }
+}
+
+async function findAuthUserByEmail(email: string): Promise<AuthUserLookup> {
+  const result = await listAuthUsers()
+  if (result.error) {
+    console.warn('[admin] Unable to read auth users for coach account action.', result.error)
+    return { user: null, error: result.error }
+  }
+  return {
+    user: result.users.find((user) => normalizeEmail(user.email) === email) ?? null,
+    error: null,
+  }
+}
+
+function coachAccountActionError(error: { code?: string | null; message?: string | null } | null | undefined) {
+  const message = error?.message || ''
+  const known = [
+    'admin_required',
+    'allowlist_missing',
+    'allowlist_disabled',
+    'email_mismatch',
+    'email_unverified',
+    'profile_missing',
+    'identity_collision',
+    'identity_owned',
+    'email_conflict',
+    'admin_protected',
+  ].find((key) => message.includes(key))
+  if (error?.code === 'PGRST202' || error?.code === '42P01') {
+    return { status: 503, error: '教練帳號資料庫功能尚未更新，請先套用管理員審閱的 SQL。' }
+  }
+  if (known === 'admin_required') return { status: 403, error: '目前帳號沒有管理員權限。' }
+  if (known === 'allowlist_missing') return { status: 404, error: '找不到這筆教練帳號登記。' }
+  if (known === 'allowlist_disabled') return { status: 409, error: '這筆教練帳號已明確停用，請先由管理員重新啟用。' }
+  if (known === 'email_unverified') return { status: 409, error: '此信箱尚未完成驗證，完成驗證後才能啟用教練帳號。' }
+  if (known === 'email_mismatch') return { status: 409, error: '登入信箱與管理員登記不一致。' }
+  if (known === 'profile_missing') return { status: 409, error: '找不到要啟用的帳號資料。' }
+  if (known === 'admin_protected') return { status: 409, error: '管理員帳號保留管理員權限，不能用教練停用操作。' }
+  if (['identity_collision', 'identity_owned', 'email_conflict'].includes(known || '')) {
+    return { status: 409, error: '教練信箱或公開身份已連結其他帳號，未套用這次變更。' }
+  }
+  return { status: 500, error: message || '教練帳號操作失敗。' }
 }
 
 function commaSeparated(value: unknown) {
@@ -412,14 +487,6 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request)
   if (auth.error) return auth.error
 
-  const { error: inviteCleanupError } = await supabaseAdmin!
-    .from('coach_invites')
-    .delete()
-    .not('used_at', 'is', null)
-  if (inviteCleanupError) {
-    console.warn('[admin] Used coach invite cleanup failed.', inviteCleanupError.message)
-  }
-
   const [
     profilesResult,
     bindingsResult,
@@ -431,7 +498,7 @@ export async function GET(request: NextRequest) {
     shopOrderItemsResult,
     paymentAccountsResult,
     siteContentResult,
-    coachInvitesResult,
+    coachAccountsResult,
     coachPublicProfilesResult,
     courseAttendanceResult,
     attendanceResolutionsResult,
@@ -487,11 +554,9 @@ export async function GET(request: NextRequest) {
       .select('key, value')
       .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'courses_page_content', 'testimonials_content', 'team_content', 'achievements_content', 'anniversary_content', 'page_media']),
     supabaseAdmin!
-      .from('coach_invites')
-      .select('id, code, coach_key, used_by, used_at, expires_at, created_at')
-      .is('used_at', null)
-      .order('created_at', { ascending: false })
-      .limit(30),
+      .from('coach_account_allowlist')
+      .select('id, coach_key, email, status, profile_id, created_at, updated_at, enabled_at, disabled_at')
+      .order('created_at', { ascending: false }),
     supabaseAdmin!
       .from('coach_public_profiles')
       .select('*'),
@@ -531,7 +596,7 @@ export async function GET(request: NextRequest) {
     isOptionalSchemaError(shopOrderItemsResult.error) ? null : shopOrderItemsResult.error,
     isOptionalSchemaError(paymentAccountsResult.error) ? null : paymentAccountsResult.error,
     isOptionalSchemaError(siteContentResult.error) ? null : siteContentResult.error,
-    coachInvitesResult.error,
+    isOptionalSchemaError(coachAccountsResult.error) ? null : coachAccountsResult.error,
     coachPublicProfilesResult.error,
     courseAttendanceResult.error,
     attendanceResolutionsResult.error,
@@ -571,7 +636,12 @@ export async function GET(request: NextRequest) {
     coachProfiles: publicCoachProfiles,
   }
   const managedCourses = applyCourseOverrides(siteContent.courseOverrides, { includeInactive: true, coachProfiles: publicCoachProfiles })
-  const coachInvites = (coachInvitesResult.data ?? []) as CoachInviteRow[]
+  const coachAccounts = coachAccountsResult.error
+    ? []
+    : (coachAccountsResult.data ?? []) as CoachAccountAllowlistRow[]
+  const authUsersResult = await listAuthUsers()
+  const authUsers = authUsersResult.users
+  const authUsersAvailable = !authUsersResult.error
   const coursePaymentOrders = orders.filter((order) => order.source === 'course_payment')
 
   const profilesById = new Map(profiles.map((profile) => [profile.id, profile]))
@@ -661,6 +731,79 @@ export async function GET(request: NextRequest) {
       createdAt: coach.created_at,
     }
   })
+
+  const authUsersByEmail = new Map(
+    authUsers
+      .map((authUser) => [normalizeEmail(authUser.email), authUser] as const)
+      .filter(([email]) => Boolean(email)),
+  )
+  const profilesByEmail = new Map(
+    profiles
+      .map((profile) => [normalizeEmail(profile.email), profile] as const)
+      .filter(([email]) => Boolean(email)),
+  )
+  const coachAccountRoster = coachAccounts.map((account) => {
+    const publicProfile = publicCoachRowsByKey.get(account.coach_key)
+    const profile = account.profile_id
+      ? profilesById.get(account.profile_id) ?? profilesByEmail.get(account.email)
+      : profilesByEmail.get(account.email)
+    const authUser = authUsersByEmail.get(account.email)
+    const linkedProfileId = publicProfile?.owner_profile_id ?? account.profile_id ?? profile?.id ?? null
+    const linkedProfile = linkedProfileId ? profilesById.get(linkedProfileId) ?? profile : profile
+    const active = account.status !== 'disabled' && (linkedProfile?.role === 'coach' || linkedProfile?.role === 'admin')
+    const publicProfileData = publicProfile
+      ? publicCoachProfiles[publicProfile.coach_key]
+      : null
+    const assignedCourses = publicProfile
+      ? managedCourses.filter((course) => {
+          const coachKeys = siteContent.courseOverrides[course.slug]?.coachKeys
+            ?? getDefaultCourseCoachKeys(course.slug)
+          return coachKeys.includes(publicProfile.coach_key)
+        })
+      : []
+    return {
+      id: account.id,
+      coachKey: account.coach_key,
+      name: linkedProfile?.name || publicProfileData?.displayName || account.email,
+      email: account.email,
+      profileId: linkedProfileId,
+      role: linkedProfile?.role ?? null,
+      status: account.status === 'disabled' ? 'disabled' as const : active ? 'enabled' as const : 'pending' as const,
+      registered: authUsersAvailable ? Boolean(authUser) : null,
+      emailConfirmed: authUsersAvailable ? Boolean(authUser?.email_confirmed_at) : null,
+      boundStudentCount: linkedProfileId ? (bindingsByCoach.get(linkedProfileId) ?? []).length : 0,
+      courses: assignedCourses.map((course) => course.name).join('、'),
+      publicProfileName: publicProfileData?.displayName || publicProfile?.display_name || account.coach_key,
+      publicCoachKey: publicProfile?.coach_key ?? account.coach_key,
+      createdAt: account.created_at,
+      updatedAt: account.updated_at,
+      enabledAt: account.enabled_at,
+      disabledAt: account.disabled_at,
+    }
+  })
+  const allowlistedCoachKeys = new Set(coachAccounts.map((account) => account.coach_key))
+  const legacyCoachAccounts = coaches
+    .filter((coach) => ![...allowlistedCoachKeys].some((coachKey) => publicCoachRowsByKey.get(coachKey)?.owner_profile_id === coach.id))
+    .map((coach) => ({
+      id: `legacy:${coach.id}`,
+      coachKey: coach.publicCoachKey,
+      name: coach.name,
+      email: coach.email,
+      profileId: coach.id,
+      role: coach.role,
+      status: 'enabled' as const,
+      registered: true,
+      emailConfirmed: true,
+      boundStudentCount: coach.boundStudentCount,
+      courses: coach.courses,
+      publicProfileName: coach.publicProfileName,
+      publicCoachKey: coach.publicCoachKey,
+      createdAt: coach.createdAt,
+      updatedAt: coach.createdAt,
+      enabledAt: coach.createdAt,
+      disabledAt: null,
+    }))
+  const allCoachAccounts = [...coachAccountRoster, ...legacyCoachAccounts]
 
   const courseDashboardOrders = coursePaymentOrders.map((order) => {
     const studentType = order.registration_identity || payloadText(order.payload, 'studentType')
@@ -797,7 +940,7 @@ export async function GET(request: NextRequest) {
   const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
   const overview = {
     studentCount: students.length,
-    coachCount: coaches.filter((coach) => coach.coachEnabled).length,
+    coachCount: allCoachAccounts.filter((coach) => coach.status === 'enabled').length,
     pendingOrderCount: dashboardOrders.filter((order) => order.status === 'pending_review').length,
     approvedOrderCount: dashboardOrders.filter((order) => order.status === 'approved').length,
     unopenedPlanCount: students.filter((student) => !student.planEnabled).length,
@@ -879,19 +1022,7 @@ export async function GET(request: NextRequest) {
     coachOptions: coaches
       .filter((coach) => coach.coachEnabled)
       .map((coach) => ({ id: coach.id, name: coach.name, email: coach.email })),
-    coachInvites: coachInvites.map((invite) => ({
-      id: invite.id,
-      code: invite.code,
-      coachKey: invite.coach_key,
-      coachName: publicCoachProfiles[invite.coach_key]?.displayName || invite.coach_key,
-      verificationEmail: publicCoachRowsByKey.get(invite.coach_key)?.verification_email ?? '',
-      usedBy: invite.used_by
-        ? profilesById.get(invite.used_by)?.name || profilesById.get(invite.used_by)?.email || '已使用'
-        : '',
-      usedAt: invite.used_at,
-      expiresAt: invite.expires_at,
-      createdAt: invite.created_at,
-    })),
+    coachAccounts: allCoachAccounts,
     coachPublicProfiles: publicCoachRows.map((row) => ({
       coachKey: row.coach_key,
       displayName: publicCoachProfiles[row.coach_key]?.displayName || row.display_name || row.coach_key,
@@ -1283,127 +1414,94 @@ export async function PATCH(request: NextRequest) {
     return json({ season, message: '季度狀態已更新，報名資料不會被刪除。' })
   }
 
-  if (body.action === 'create_coach_invite') {
+  if (body.action === 'register_coach_account') {
     const coachKey = cleanText(body.coachKey)
-    const requestedVerificationEmail = normalizeEmail(body.verificationEmail)
+    const verificationEmail = normalizeEmail(body.verificationEmail)
+    const note = cleanText(body.note).slice(0, 500)
     if (!/^[A-Za-z0-9-]{1,80}$/.test(coachKey)) {
-      return json({ error: '請先選擇要連結的公開教練身份。' }, { status: 400 })
+      return json({ error: '請先選擇要登記的公開教練身份。' }, { status: 400 })
     }
-
-    const { data: coachIdentity, error: coachIdentityError } = await supabaseAdmin!
-      .from('coach_public_profiles')
-      .select('coach_key, display_name, owner_profile_id, verification_email')
-      .eq('coach_key', coachKey)
-      .maybeSingle()
-    if (coachIdentityError) {
-      return json({ error: coachIdentityError.message }, { status: 500 })
-    }
-    if (!coachIdentity) {
-      return json({ error: '找不到這份公開教練資料。' }, { status: 404 })
-    }
-    if (coachIdentity.owner_profile_id) {
-      return json({ error: '這份公開教練資料已經連結登入帳號。' }, { status: 409 })
-    }
-
-    const verificationEmail = requestedVerificationEmail || normalizeEmail(coachIdentity.verification_email)
     if (!isValidEmail(verificationEmail)) {
       return json({ error: '請填寫這位教練實際登入網站的有效信箱。' }, { status: 400 })
     }
-    if (verificationEmail !== normalizeEmail(coachIdentity.verification_email)) {
-      const { error: verificationEmailError } = await supabaseAdmin!
-        .from('coach_public_profiles')
-        .update({ verification_email: verificationEmail })
-        .eq('coach_key', coachKey)
-        .is('owner_profile_id', null)
-      if (verificationEmailError) {
-        const duplicate = verificationEmailError.code === '23505'
-        return json({
-          error: duplicate
-            ? '這個登入信箱已經指定給其他公開教練身份。'
-            : verificationEmailError.message,
-        }, { status: duplicate ? 409 : 500 })
-      }
+
+    const authLookup = await findAuthUserByEmail(verificationEmail)
+    if (authLookup.error) {
+      return json({ error: '目前無法確認登入帳號，未寫入教練登記。' }, { status: 503 })
+    }
+    const authUser = authLookup.user
+    const { data: account, error } = await supabaseAdmin!.rpc('register_coach_account', {
+      p_actor_id: auth.user.id,
+      p_coach_key: coachKey,
+      p_email: verificationEmail,
+      p_profile_id: authUser?.id ?? null,
+      p_email_confirmed: Boolean(authUser?.email_confirmed_at),
+      p_note: note,
+    })
+    if (error) {
+      const mapped = coachAccountActionError(error)
+      return json({ error: mapped.error, code: error.code || 'COACH_ACCOUNT_OPERATION_FAILED' }, { status: mapped.status })
+    }
+    const status = account?.status === 'enabled' ? 'enabled' : 'pending'
+    return json({
+      account,
+      message: status === 'enabled'
+        ? '已登記並啟用教練帳號。'
+        : authUser
+          ? '已登記教練帳號；完成信箱驗證後即可啟用。'
+          : '已登記教練信箱；待教練首次登入並完成信箱驗證後啟用。',
+    })
+  }
+
+  if (body.action === 'set_coach_account_status') {
+    const allowlistId = cleanText(body.allowlistId)
+    const enabled = body.enabled === true
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(allowlistId)) {
+      return json({ error: '教練帳號登記 ID 無效。' }, { status: 400 })
     }
 
-    const { data: existingInvite, error: existingInviteError } = await supabaseAdmin!
-      .from('coach_invites')
-      .select('id, code, coach_key, expires_at, created_at')
-      .eq('coach_key', coachKey)
+    const { data: allowlist, error: allowlistError } = await supabaseAdmin!
+      .from('coach_account_allowlist')
+      .select('id, email, profile_id, status')
+      .eq('id', allowlistId)
       .maybeSingle()
-    if (existingInviteError) {
-      return json({ error: existingInviteError.message }, { status: 500 })
-    }
-    if (existingInvite && (!existingInvite.expires_at || new Date(existingInvite.expires_at).getTime() > Date.now())) {
-      return json({ invite: existingInvite, message: `${coachIdentity.display_name} 已有可使用的專屬認證碼。` })
-    }
-    if (existingInvite) {
-      const { error: deleteExpiredError } = await supabaseAdmin!
-        .from('coach_invites')
-        .delete()
-        .eq('id', existingInvite.id)
-      if (deleteExpiredError) {
-        return json({ error: deleteExpiredError.message }, { status: 500 })
-      }
+    if (allowlistError || !allowlist) {
+      return json({ error: allowlistError?.message || '找不到這筆教練帳號登記。' }, { status: 404 })
     }
 
-    const code = `HYCOACH-${randomUUID().replaceAll('-', '').slice(0, 16).toUpperCase()}`
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-    const { data: invite, error } = await supabaseAdmin!
-      .from('coach_invites')
-      .insert({
-        code,
-        coach_key: coachKey,
-        created_by: auth.user.id,
-        expires_at: expiresAt,
-      })
-      .select('id, code, coach_key, expires_at, created_at')
-      .single()
-
-    if (error || !invite) {
-      return json({ error: error?.message || '生成教練認證碼失敗。' }, { status: 500 })
+    const authLookup = enabled ? await findAuthUserByEmail(normalizeEmail(allowlist.email)) : { user: null, error: null }
+    if (authLookup.error) {
+      return json({ error: '目前無法確認登入帳號，未變更教練狀態。' }, { status: 503 })
     }
+    const authUser = authLookup.user
+    if (enabled && allowlist.profile_id && authUser && allowlist.profile_id !== authUser.id) {
+      return json({ error: '這筆教練登記已綁定其他帳號，未套用啟用操作。' }, { status: 409 })
+    }
+    const { data: account, error } = await supabaseAdmin!.rpc('set_coach_account_status', {
+      p_actor_id: auth.user.id,
+      p_allowlist_id: allowlistId,
+      p_enabled: enabled,
+      p_profile_id: enabled ? authUser?.id ?? null : allowlist.profile_id ?? null,
+      p_login_email: enabled ? authUser?.email ?? '' : '',
+      p_email_confirmed: enabled ? Boolean(authUser?.email_confirmed_at) : false,
+      p_reason: cleanText(body.reason).slice(0, 500),
+    })
+    if (error) {
+      const mapped = coachAccountActionError(error)
+      return json({ error: mapped.error, code: error.code || 'COACH_ACCOUNT_OPERATION_FAILED' }, { status: mapped.status })
+    }
+    return json({
+      account,
+      message: enabled ? '教練帳號已重新啟用；若尚未完成信箱驗證，會保持待啟用。' : '教練帳號已停用，之後登入不會自動恢復。',
+    })
+  }
 
-    return json({ invite, message: `${coachIdentity.display_name} 的專屬認證碼已生成，有效期 30 天。` })
+  if (body.action === 'create_coach_invite') {
+    return json({ error: '教練認證碼已取消，請改用登記信箱管理教練帳號。', code: 'COACH_CODE_RETIRED' }, { status: 410 })
   }
 
   if (body.action === 'set_coach_role') {
-    const userId = cleanText(body.userId)
-    const enabled = body.enabled === true
-
-    if (!userId) {
-      return json({ error: '缺少使用者 ID。' }, { status: 400 })
-    }
-
-    if (enabled) {
-      return json({ error: '新增教練請使用一次性教練認證碼。' }, { status: 400 })
-    }
-
-    const { data: target, error: targetError } = await supabaseAdmin!
-      .from('profiles')
-      .select('id, role')
-      .eq('id', userId)
-      .single()
-
-    if (targetError || !target) {
-      return json({ error: targetError?.message || '找不到使用者。' }, { status: 404 })
-    }
-
-    if (target.role === 'admin') {
-      return json({ error: '管理員角色不能在這裡被改為普通教練或學員。' }, { status: 400 })
-    }
-
-    const { data: profile, error } = await supabaseAdmin!
-      .from('profiles')
-      .update({ role: 'student' })
-      .eq('id', userId)
-      .select('id, role, name, email')
-      .single()
-
-    if (error || !profile) {
-      return json({ error: error?.message || '更新教練權限失敗。' }, { status: 500 })
-    }
-
-    return json({ profile, message: '已取消教練權限；如需重新啟用，請使用新的教練認證碼。' })
+    return json({ error: '舊版教練角色操作已取消，請改用教練帳號登記／停用／啟用。', code: 'COACH_ROLE_ACTION_RETIRED' }, { status: 410 })
   }
 
   if (body.action === 'link_coach_public_profile') {
@@ -1422,11 +1520,24 @@ export async function PATCH(request: NextRequest) {
     if (coachKey) {
       const { data: publicProfile, error: publicProfileError } = await supabaseAdmin!
         .from('coach_public_profiles')
-        .select('coach_key')
+        .select('coach_key, owner_profile_id')
         .eq('coach_key', coachKey)
         .maybeSingle()
       if (publicProfileError || !publicProfile) {
         return json({ error: publicProfileError?.message || '找不到要連結的公開教練資料。' }, { status: 404 })
+      }
+      if (publicProfile.owner_profile_id && publicProfile.owner_profile_id !== userId) {
+        return json({ error: '這份公開教練資料已經連結其他帳號，未套用這次變更。' }, { status: 409 })
+      }
+      const { data: existingLink, error: existingLinkError } = await supabaseAdmin!
+        .from('coach_public_profiles')
+        .select('coach_key')
+        .eq('owner_profile_id', userId)
+        .neq('coach_key', coachKey)
+        .maybeSingle()
+      if (existingLinkError) return json({ error: existingLinkError.message }, { status: 500 })
+      if (existingLink) {
+        return json({ error: '這個帳號已連結其他公開教練身份，請先解除原連結。' }, { status: 409 })
       }
     }
 
@@ -1437,19 +1548,14 @@ export async function PATCH(request: NextRequest) {
     if (clearOwnerError) return json({ error: clearOwnerError.message }, { status: 500 })
 
     if (coachKey) {
-      const { error: clearSelectedError } = await supabaseAdmin!
-        .from('coach_public_profiles')
-        .update({ owner_profile_id: null })
-        .eq('coach_key', coachKey)
-      if (clearSelectedError) return json({ error: clearSelectedError.message }, { status: 500 })
-
       const { data: linked, error: linkError } = await supabaseAdmin!
         .from('coach_public_profiles')
         .update({ owner_profile_id: userId })
         .eq('coach_key', coachKey)
+        .is('owner_profile_id', null)
         .select('coach_key')
-        .single()
-      if (linkError || !linked) return json({ error: linkError?.message || '找不到要連結的公開教練資料。' }, { status: 404 })
+        .maybeSingle()
+      if (linkError || !linked) return json({ error: linkError?.message || '這份公開教練資料剛剛已被其他帳號連結。' }, { status: 409 })
     }
 
     return json({ message: coachKey ? '教練帳號與公開資料已連結。' : '已解除公開教練資料連結。' })

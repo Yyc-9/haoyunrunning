@@ -195,7 +195,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return nextUser
   }, [])
 
-  const applyAuthUser = useCallback((authUser: SupabaseUser, fallbackRole?: User['role']) => {
+  const applyAuthUser = useCallback((authUser: SupabaseUser) => {
     const nextUser: User = {
       id: authUser.id,
       name:
@@ -206,7 +206,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       phone: '',
       gender: 'other',
       pb: '',
-      role: fallbackRole || 'student',
+      role: 'student',
     }
 
     setUser(nextUser)
@@ -262,7 +262,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (serverError instanceof AccountSessionError && serverError.code === 'SESSION_REVOKED') {
         await supabase.auth.signOut({ scope: 'local' })
         removeSupabaseSessionFallback()
-        window.localStorage.removeItem('goodluck-user-role')
         setUser(null)
         setSessionNotice(serverError.message)
         return null
@@ -282,11 +281,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Load profile error:', error)
       }
 
-      const savedRole =
-        typeof window !== 'undefined'
-          ? (window.localStorage.getItem('goodluck-user-role') as User['role'] | null)
-          : null
-
       const fallbackUser: User = {
         id: userId,
         name: fallbackEmail ? fallbackEmail.split('@')[0] : '好運會員',
@@ -294,7 +288,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         phone: '',
         gender: 'other',
         pb: '',
-        role: savedRole || 'student',
+        role: 'student',
       }
 
       setUser(fallbackUser)
@@ -336,12 +330,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } = await supabase.auth.getSession()
 
       if (session?.user && mounted) {
-        const savedRole =
-          typeof window !== 'undefined'
-            ? (window.localStorage.getItem('goodluck-user-role') as User['role'] | null)
-            : null
-
-        applyAuthUser(session.user, savedRole || undefined)
+        applyAuthUser(session.user)
         await loadProfile(session.user.id, session.user.email ?? '')
       }
 
@@ -362,12 +351,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!mounted) return
 
       if (session?.user) {
-        const savedRole =
-          typeof window !== 'undefined'
-            ? (window.localStorage.getItem('goodluck-user-role') as User['role'] | null)
-            : null
-
-        applyAuthUser(session.user, savedRole || undefined)
+        applyAuthUser(session.user)
 
         setTimeout(() => {
           loadProfile(session.user.id, session.user.email ?? '')
@@ -446,7 +430,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       supabase.auth.signOut({ scope: 'local' })
     }
     removeSupabaseSessionFallback()
-    window.localStorage.removeItem('goodluck-user-role')
     setUser(null)
   }, [])
 
@@ -516,9 +499,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateUser = useCallback((data: Partial<User>) => {
     setUser(prev => {
       const nextUser = prev ? { ...prev, ...data } : null
-      if (data.role) {
-        window.localStorage.setItem('goodluck-user-role', data.role)
-      }
       return nextUser
     })
   }, [])

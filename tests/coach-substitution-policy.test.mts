@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   createDirectSubstituteInvitation,
+  createLeaveRequest,
   respondToDirectSubstituteInvitation,
 } from '../lib/coach-substitution-policy.ts'
 
@@ -107,4 +108,25 @@ test('等待回覆或拒絕時保留原教練角色', () => {
 
   assert.equal(invitation.coach_role, 'assistant')
   assert.equal(rejection.coach_role, 'assistant')
+})
+
+test('未選代班時請假交給管理員安排且保留原教練責任', () => {
+  assert.deepEqual(createLeaveRequest({
+    scheduledCoachId: 'coach-a',
+    scheduledCoachRole: 'coach',
+    reason: '臨時身體不適',
+    requestedAt: '2026-07-24T10:00:00.000Z',
+  }), {
+    leave_status: 'requested',
+    leave_reason: '臨時身體不適',
+    leave_requested_at: '2026-07-24T10:00:00.000Z',
+    recommended_substitute_id: null,
+    substitute_coach_id: null,
+    substitute_response: 'none',
+    substitute_responded_at: null,
+    actual_coach_id: 'coach-a',
+    coach_role: 'coach',
+    admin_status: 'pending',
+    admin_reason: '',
+  })
 })

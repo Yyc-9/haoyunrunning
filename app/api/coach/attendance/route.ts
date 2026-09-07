@@ -5,6 +5,7 @@ import { attendanceCourseLabel, taipeiDateKey, type CourseAttendanceStatus } fro
 import { getCourseSeasons } from '@/lib/course-seasons-server'
 import { applyCourseOverrides } from '@/lib/managed-courses'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
+import { allowedSessionDateSet, filterCourseEnrollmentsByAccess, filterCourseMakeupsBySessionAccess, filterRowsBySessionAccess } from '@/lib/coach-attendance-access'
 import { syncCoachSessionAssignments } from '@/lib/coach-session-duty'
 import { getIsolatedMondayCourse, getIsolatedTestAccount, isolatedTestStudentFixtures, updateIsolatedTestState } from '@/lib/test-account'
 
@@ -168,6 +169,7 @@ export async function GET(request: NextRequest) {
   const seasonIds = [...new Set(access.courses.map((course) => course.seasonId))]
   const offeringIds = access.courses.map((course) => course.courseSeasonCourseId)
   const courseAccess = new Set(access.courses.map((course) => `${course.seasonId}:${course.courseSlug}`))
+  const sessionAccess = allowedSessionDateSet(access.courses)
 
   const [enrollmentResult, attendanceResult, makeupResult, cancellationResult] = await Promise.all([
     supabaseAdmin!
@@ -200,9 +202,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: firstError.message }, { status: 500, headers: noStoreHeaders })
   }
 
-  const makeupEnrollmentIds = new Set((makeupResult.data ?? []).map((requestRow) => requestRow.enrollment_id))
+  const attendance = filterRowsBySessionAccess(attendanceResult.data ?? [], sessionAccess)
+  const makeups = filterCourseMakeupsBySessionAccess(makeupResult.data ?? [], sessionAccess)
+  const cancellations = filterRowsBySessionAccess(cancellationResult.data ?? [], sessionAccess)
+  const makeupEnrollmentIds = new Set(makeups.map((requestRow) => requestRow.enrollment_id))
   const seen = new Set<string>()
-  const enrollments = (enrollmentResult.data ?? []).flatMap((row) => {
+  const permittedEnrollments = filterCourseEnrollmentsByAccess(enrollmentResult.data ?? [], courseAccess, makeupEnrollmentIds)
+  const enrollments = permittedEnrollments.flatMap((row) => {
     const hasRegularAccess = Boolean(row.season_id && courseAccess.has(`${row.season_id}:${row.course_slug}`))
     if (!hasRegularAccess && !makeupEnrollmentIds.has(row.id)) return []
     const key = `${row.season_id}:${row.course_slug}:${row.email.trim().toLowerCase()}`
@@ -228,9 +234,9 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     courses: access.courses,
     enrollments,
-    attendance: attendanceResult.data ?? [],
-    makeups: makeupResult.data ?? [],
-    cancellations: cancellationResult.data ?? [],
+    attendance,
+    makeups,
+    cancellations,
   }, { headers: noStoreHeaders })
 }
 

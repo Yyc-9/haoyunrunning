@@ -116,7 +116,7 @@ export default function CoachDashboardClient() {
             </span>
             <p className="mt-5 text-xs font-black text-apple-blue">COACH ACCESS</p>
             <h1 className="mt-2 text-2xl font-black text-black sm:text-3xl">此頁面只供已認證教練使用</h1>
-            <p className="mx-auto mt-3 max-w-lg text-sm leading-7 text-apple-gray-600">若您的登入信箱已由管理員登記，請前往個人帳戶完成教練身份認證。</p>
+            <p className="mx-auto mt-3 max-w-lg text-sm leading-7 text-apple-gray-600">教練信箱由管理員登記後，使用該信箱正常登入即可，不需要認證碼。若剛完成登記，請先確認信箱驗證，再重新登入。</p>
             <Link href="/profile" className="apple-button-primary mt-6 inline-flex gap-2 px-6 py-3">
               前往個人帳戶
               <ArrowRight className="h-4 w-4" />
@@ -133,17 +133,19 @@ export default function CoachDashboardClient() {
         <div className="container mx-auto max-w-7xl">
           <CoachSubNav />
 
-          <header className="mb-6 border-b border-black/10 pb-6 sm:mb-8 sm:pb-8">
+          <header className="mb-3 border-b border-black/10 pb-3 sm:mb-8 sm:pb-8">
             <div className="min-w-0">
               <p className="text-xs font-bold text-apple-blue sm:text-sm">教練工作台</p>
               <h1 className="mt-1 truncate text-2xl font-black text-black sm:text-4xl">{greeting}，{coachName}</h1>
-              <p className="mt-2 text-sm leading-6 text-apple-gray-600">今天有 {students.length} 位名下學員，{pendingSignups} 項團練報名待跟進。</p>
+              <p className="mt-2 hidden text-sm leading-6 text-apple-gray-600 sm:block">今天有 {students.length} 位名下學員，{pendingSignups} 項團練報名待跟進。</p>
             </div>
           </header>
 
           {error ? <p className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-800">{error}</p> : null}
 
-          <div className="mb-5 grid grid-cols-3 gap-3 sm:mb-8 sm:gap-4">
+          <CoachDutyPanel />
+
+          <div className="my-5 grid grid-cols-3 gap-3 sm:my-8 sm:gap-4">
             {[
               { label: '名下學員', value: students.length, icon: UsersRound },
               { label: '團練報名', value: groupSignups.length, icon: ClipboardList },
@@ -156,8 +158,6 @@ export default function CoachDashboardClient() {
               </div>
             ))}
           </div>
-
-          <CoachDutyPanel />
 
           <div className="mb-6 grid gap-5 lg:grid-cols-[360px_1fr]">
             <CoachAccessPanel onStudentBound={loadWorkspace} />

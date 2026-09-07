@@ -147,7 +147,15 @@ export async function syncCoachSessionAssignments() {
     .select('coach_key, owner_profile_id')
     .not('owner_profile_id', 'is', null)
   if (identityError) throw identityError
-  const ownerByCoachKey = new Map((identities ?? []).map((row) => [row.coach_key, row.owner_profile_id as string]))
+  const ownerIds = [...new Set((identities ?? []).map((row) => row.owner_profile_id).filter((value): value is string => Boolean(value)))]
+  const { data: owners, error: ownerError } = ownerIds.length
+    ? await supabaseAdmin.from('profiles').select('id, role').in('id', ownerIds)
+    : { data: [], error: null }
+  if (ownerError) throw ownerError
+  const enabledOwnerIds = new Set((owners ?? []).filter((row) => row.role === 'coach' || row.role === 'admin').map((row) => row.id))
+  const ownerByCoachKey = new Map((identities ?? [])
+    .filter((row) => row.owner_profile_id && enabledOwnerIds.has(row.owner_profile_id))
+    .map((row) => [row.coach_key, row.owner_profile_id as string]))
   const rows = courses.flatMap((course) => course.sessionDates.flatMap((sessionDate) => course.coachKeys.flatMap((coachKey, index) => {
     const profileId = ownerByCoachKey.get(coachKey)
     if (!profileId) return []
@@ -268,9 +276,10 @@ export async function loadCoachDutyItems(options: { userId?: string; isAdmin?: b
           leaveStatus: row.leave_status,
           substituteResponse: row.substitute_response,
           hasCheckin: Boolean(checkin),
+          windowPhase: window.phase,
         }),
         canRespondSubstitute: row.substitute_coach_id === options.userId && row.substitute_response === 'pending',
-        managedByAdmin: Boolean(options.isAdmin),
+        managedByAdmin: Boolean(options.isAdmin && (!options.userId || options.userId !== actualCoachId)),
         salaryStatus: 'pending_rate',
         salaryStatusLabel: '待設定課酬',
         isCancelled: cancelled,

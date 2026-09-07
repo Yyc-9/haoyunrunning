@@ -3,94 +3,42 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   BellRing,
-  CalendarClock,
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
   Loader2,
   MapPin,
-  UserRoundCheck,
-  X,
+  RefreshCw,
 } from 'lucide-react'
 import { APP_TIME_ZONE_LABEL } from '@/lib/app-time'
 import AcceptanceTestCheckin from '@/components/AcceptanceTestCheckin'
+import CoachDutyDetails, {
+  formatDutyDate,
+  formatDutyTime,
+  stateMeta,
+  type CoachOption,
+  type DutyAction,
+  type DutyItem,
+  type DutyTask,
+} from '@/components/coach/CoachDutyDetails'
 import {
   groupCoachDutyCalendarItems,
   selectCoachDutyCalendarDate,
 } from '@/lib/coach-duty-calendar'
 import { supabase } from '@/lib/supabase'
 
-type DutyItem = {
-  id: string
-  courseName: string
-  location: string
-  sessionDate: string
-  startTime: string
-  scheduledCoachId: string
-  scheduledCoachName: string
-  actualCoachId: string
-  actualCoachName: string
-  leaveStatus: 'none' | 'requested' | 'approved' | 'rejected'
-  leaveReason: string
-  substituteCoachId: string
-  substituteCoachName: string
-  substituteResponse: 'none' | 'pending' | 'accepted' | 'rejected'
-  adminStatus: 'not_required' | 'pending' | 'approved' | 'rejected'
-  attendanceState: string
-  checkedInAt: string
-  punctuality: '' | 'on_time' | 'late'
-  canViewCheckIn: boolean
-  canCheckIn: boolean
-  checkInOpensAt: string
-  canRequestLeave: boolean
-  canRespondSubstitute: boolean
-  managedByAdmin: boolean
-  isCancelled: boolean
-}
-
-type CoachOption = { id: string; name: string }
-
 const weekdays = ['週一', '週二', '週三', '週四', '週五', '週六', '週日']
 
-const stateMeta: Record<string, { label: string; chip: string; dot: string }> = {
-  upcoming: { label: '尚未開放', chip: 'border-blue-200 bg-blue-50 text-blue-800', dot: 'bg-blue-400' },
-  check_in_open: { label: '可簽到', chip: 'border-blue-700 bg-blue-700 text-white', dot: 'bg-blue-700' },
-  on_time: { label: '準時簽到', chip: 'border-emerald-200 bg-emerald-50 text-emerald-800', dot: 'bg-emerald-500' },
-  late: { label: '遲到簽到', chip: 'border-amber-200 bg-amber-50 text-amber-800', dot: 'bg-amber-500' },
-  not_checked_in: { label: '應到未簽到', chip: 'border-red-200 bg-red-50 text-red-800', dot: 'bg-red-500' },
-  substitute_absent: { label: '代班未到', chip: 'border-red-200 bg-red-50 text-red-800', dot: 'bg-red-500' },
-  cancelled: { label: '本堂停課', chip: 'border-gray-200 bg-gray-100 text-gray-700', dot: 'bg-gray-400' },
-  missing_start_time: { label: '請補齊開始時間', chip: 'border-red-200 bg-red-50 text-red-800', dot: 'bg-red-500' },
-  leave_approved: { label: '已請假，待完成代班', chip: 'border-orange-200 bg-orange-50 text-orange-800', dot: 'bg-orange-500' },
-}
-
 function taipeiDateKey(value: string | Date) {
+  const date = typeof value === 'string' ? new Date(value) : value
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Taipei',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).formatToParts(typeof value === 'string' ? new Date(value) : value)
+  }).formatToParts(date)
   const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? ''
-  return `${part('year')}-${part('month')}-${part('day')}`
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat('zh-TW', {
-    timeZone: 'Asia/Taipei',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'short',
-  }).format(new Date(`${value}T12:00:00+08:00`))
-}
-
-function formatTime(value: string) {
-  if (!value) return ''
-  return new Intl.DateTimeFormat('zh-TW', {
-    timeZone: 'Asia/Taipei',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value))
+  return part('year') + '-' + part('month') + '-' + part('day')
 }
 
 function monthLabel(year: number, month: number) {
@@ -98,10 +46,29 @@ function monthLabel(year: number, month: number) {
     .format(new Date(Date.UTC(year, month - 1, 15)))
 }
 
-async function token() {
+function shortServerTime(value: string) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(date)
+}
+
+async function accessToken() {
   const { data: { session } } = supabase ? await supabase.auth.getSession() : { data: { session: null } }
   if (!session?.access_token) throw new Error('登入狀態已失效，請重新登入。')
   return session.access_token
+}
+
+type DutyPayload = {
+  items?: DutyItem[]
+  coaches?: CoachOption[]
+  serverTime?: string
+  error?: string
 }
 
 export default function CoachDutyPanel() {
@@ -110,52 +77,68 @@ export default function CoachDutyPanel() {
   const [serverTime, setServerTime] = useState('')
   const [viewYear, setViewYear] = useState(0)
   const [viewMonth, setViewMonth] = useState(0)
+  const [viewMode, setViewMode] = useState<'agenda' | 'calendar'>('agenda')
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedId, setSelectedId] = useState('')
+  const [detailTask, setDetailTask] = useState<DutyTask>('check_in')
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState('')
+  const [savingKey, setSavingKey] = useState('')
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [leaveReason, setLeaveReason] = useState<Record<string, string>>({})
-  const [recommendedCoach, setRecommendedCoach] = useState<Record<string, string>>({})
+  const [invitedSubstitute, setInvitedSubstitute] = useState<Record<string, string>>({})
+  const [manualReason, setManualReason] = useState<Record<string, string>>({})
+  const [refreshing, setRefreshing] = useState(false)
   const desktopDialogRef = useRef<HTMLDivElement>(null)
   const mobileDialogRef = useRef<HTMLDivElement>(null)
-  const calendarRef = useRef<HTMLDivElement>(null)
   const dateRefs = useRef(new Map<string, HTMLButtonElement>())
+  const returnFocusRef = useRef<HTMLElement | null>(null)
+  const requestInFlightRef = useRef(false)
 
   const load = useCallback(async (quiet = false) => {
+    if (requestInFlightRef.current) return false
+    requestInFlightRef.current = true
     if (!quiet) setLoading(true)
-    setError('')
+    if (!quiet) setError('')
     try {
       const response = await fetch('/api/coach/session-duty', {
         cache: 'no-store',
-        headers: { Authorization: `Bearer ${await token()}` },
+        headers: { Authorization: 'Bearer ' + await accessToken() },
       })
-      const payload = await response.json().catch(() => ({})) as {
-        items?: DutyItem[]
-        coaches?: CoachOption[]
-        serverTime?: string
-        error?: string
-      }
+      const payload = await response.json().catch(() => ({})) as DutyPayload
       if (!response.ok) throw new Error(payload.error || '讀取到課資料失敗。')
-      setItems(payload.items ?? [])
+      setError('')
+
+      const nextItems = payload.items ?? []
+      const nextServerTime = payload.serverTime || ''
+      setItems(nextItems)
       setCoaches(payload.coaches ?? [])
-      setServerTime(payload.serverTime || new Date().toISOString())
-      if (!viewYear || !viewMonth) {
-        const today = taipeiDateKey(payload.serverTime || new Date())
-        setViewYear(Number(today.slice(0, 4)))
-        setViewMonth(Number(today.slice(5, 7)))
+      setServerTime(nextServerTime)
+      if (nextServerTime) {
+        const today = taipeiDateKey(nextServerTime)
+        setViewYear((current) => current || Number(today.slice(0, 4)))
+        setViewMonth((current) => current || Number(today.slice(5, 7)))
       }
+      setSelectedId((current) => current && nextItems.some((item) => item.id === current) ? current : '')
+      setSelectedDate((current) => current && nextItems.some((item) => item.sessionDate === current) ? current : '')
+      return true
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : '讀取到課資料失敗。')
+      return false
     } finally {
+      requestInFlightRef.current = false
       setLoading(false)
     }
-  }, [viewMonth, viewYear])
+  }, [])
 
-  useEffect(() => { void load() }, [load])
   useEffect(() => {
-    const refresh = () => { if (document.visibilityState === 'visible') void load(true) }
+    void load()
+  }, [load])
+
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === 'visible') void load(true)
+    }
     window.addEventListener('focus', refresh)
     document.addEventListener('visibilitychange', refresh)
     const timer = window.setInterval(refresh, 45_000)
@@ -167,45 +150,21 @@ export default function CoachDutyPanel() {
   }, [load])
 
   const selectedItem = items.find((item) => item.id === selectedId) ?? null
-  const selectedDateItems = selectedDate
-    ? groupCoachDutyCalendarItems(items).get(selectedDate) ?? []
-    : []
-  const pendingInvitations = useMemo(
-    () => items
-      .filter((item) => item.canRespondSubstitute)
-      .sort((left, right) => `${left.sessionDate}${left.startTime}`.localeCompare(`${right.sessionDate}${right.startTime}`)),
-    [items],
-  )
-  const closeSelected = useCallback(() => {
-    const activeDate = selectedDate
-    setSelectedDate('')
-    setSelectedId('')
-    window.requestAnimationFrame(() => dateRefs.current.get(activeDate)?.focus())
-  }, [selectedDate])
-
-  useEffect(() => {
-    if (!selectedItem) return
-    const activeDialog = () => window.matchMedia('(min-width: 768px)').matches
-      ? desktopDialogRef.current
-      : mobileDialogRef.current
-    window.requestAnimationFrame(() => activeDialog()?.focus())
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeSelected()
-    }
-    const closeOnOutside = (event: PointerEvent) => {
-      if (activeDialog()?.contains(event.target as Node)) return
-      if (dateRefs.current.get(selectedDate)?.contains(event.target as Node)) return
-      closeSelected()
-    }
-    document.addEventListener('keydown', closeOnEscape)
-    document.addEventListener('pointerdown', closeOnOutside)
-    return () => {
-      document.removeEventListener('keydown', closeOnEscape)
-      document.removeEventListener('pointerdown', closeOnOutside)
-    }
-  }, [closeSelected, selectedDate, selectedItem])
-
+  const eventsByDate = useMemo(() => groupCoachDutyCalendarItems(items), [items])
+  const selectedDateItems = selectedDate ? eventsByDate.get(selectedDate) ?? [] : []
   const todayKey = taipeiDateKey(serverTime || new Date())
+  const todayItems = useMemo(() => items
+    .filter((item) => item.sessionDate === todayKey)
+    .sort((left, right) => left.startTime.localeCompare(right.startTime)), [items, todayKey])
+  const nextItems = useMemo(() => items
+    .filter((item) => item.sessionDate > todayKey && !item.isCancelled)
+    .sort((left, right) => (left.sessionDate + left.startTime).localeCompare(right.sessionDate + right.startTime)), [items, todayKey])
+  const agendaItems = todayItems.length ? todayItems : nextItems.slice(0, 3)
+  const pendingInvitations = useMemo(() => items
+    .filter((item) => item.canRespondSubstitute)
+    .sort((left, right) => (left.sessionDate + left.startTime).localeCompare(right.sessionDate + right.startTime)), [items])
+  const pendingNeedsAdminReview = pendingInvitations.some((item) => item.adminStatus !== 'not_required')
+
   const monthDays = useMemo(() => {
     if (!viewYear || !viewMonth) return []
     const first = new Date(Date.UTC(viewYear, viewMonth - 1, 1))
@@ -214,336 +173,356 @@ export default function CoachDutyPanel() {
     const slots = Math.ceil((mondayOffset + daysInMonth) / 7) * 7
     return Array.from({ length: slots }, (_, index) => {
       const date = new Date(Date.UTC(viewYear, viewMonth - 1, index - mondayOffset + 1))
-      const key = date.toISOString().slice(0, 10)
       return {
-        key,
+        key: date.toISOString().slice(0, 10),
         day: date.getUTCDate(),
         inMonth: date.getUTCMonth() === viewMonth - 1,
-        column: index % 7,
       }
     })
   }, [viewMonth, viewYear])
-  const eventsByDate = useMemo(() => groupCoachDutyCalendarItems(items), [items])
+
+  const closeSelected = useCallback(() => {
+    const fallbackDate = selectedDate
+    const target = returnFocusRef.current ?? dateRefs.current.get(fallbackDate)
+    setSelectedDate('')
+    setSelectedId('')
+    window.requestAnimationFrame(() => {
+      target?.focus()
+      returnFocusRef.current = null
+    })
+  }, [selectedDate])
+
+  const openDetails = useCallback((item: DutyItem, task: DutyTask = 'check_in', trigger?: HTMLElement) => {
+    returnFocusRef.current = trigger ?? null
+    setSelectedDate(item.sessionDate)
+    setSelectedId(item.id)
+    setDetailTask(task)
+  }, [])
+
+  useEffect(() => {
+    if (!selectedId) return
+    const isMobile = window.matchMedia('(max-width: 767px)').matches
+    const dialog = isMobile ? mobileDialogRef.current : desktopDialogRef.current
+    const previousOverflow = document.body.style.overflow
+    if (isMobile) document.body.style.overflow = 'hidden'
+    const focusableSelector = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    const focusFirst = () => {
+      const first = dialog?.querySelector<HTMLElement>(focusableSelector)
+      ;(first ?? dialog)?.focus()
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        closeSelected()
+        return
+      }
+      if (event.key !== 'Tab' || !dialog) return
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector))
+      if (!focusable.length) {
+        event.preventDefault()
+        dialog.focus()
+        return
+      }
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    window.requestAnimationFrame(focusFirst)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [closeSelected, selectedId])
 
   function moveMonth(offset: number) {
     const date = new Date(Date.UTC(viewYear, viewMonth - 1 + offset, 1))
     setViewYear(date.getUTCFullYear())
     setViewMonth(date.getUTCMonth() + 1)
-    closeSelected()
+    if (selectedItem) closeSelected()
   }
 
   function goToday() {
     setViewYear(Number(todayKey.slice(0, 4)))
     setViewMonth(Number(todayKey.slice(5, 7)))
-    closeSelected()
+    if (selectedItem) closeSelected()
   }
 
-  async function act(id: string, body: Record<string, unknown>) {
-    setSaving(id)
+  async function act(id: string, body: DutyAction) {
+    if (savingKey) return
+    const task: DutyTask = body.intent === 'request_leave'
+      ? 'leave'
+      : body.intent === 'respond_substitute'
+        ? 'substitute'
+        : 'check_in'
+    setDetailTask(task)
+    setSavingKey(id)
     setError('')
     setMessage('')
     try {
       const response = await fetch('/api/coach/session-duty', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${await token()}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: 'Bearer ' + await accessToken(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ assignmentId: id, ...body }),
       })
       const payload = await response.json().catch(() => ({})) as { error?: string; message?: string }
-      if (!response.ok) throw new Error(payload.error || '操作失敗。')
-      setMessage(payload.message || '資料已更新。')
-      await load(true)
+      if (!response.ok) throw new Error(payload.error || '操作失敗，請重新整理後再試。')
+      const refreshed = await load(true)
+      setMessage(refreshed
+        ? payload.message || '操作已完成，畫面已從伺服器更新。'
+        : '操作已送出，但目前無法取得最新狀態，請重新整理確認。')
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : '操作失敗。')
+      setError(actionError instanceof Error ? actionError.message : '操作失敗，請重新整理後再試。')
     } finally {
-      setSaving('')
+      setSavingKey('')
     }
   }
 
-  function DutyDetails({ item }: { item: DutyItem }) {
-    const meta = stateMeta[item.attendanceState] ?? stateMeta.upcoming
-    const checkInLabel = item.checkedInAt
-      ? item.punctuality === 'late' ? '已完成遲到簽到' : '已完成準時簽到'
-      : item.canCheckIn
-        ? item.managedByAdmin ? '確認教練到課' : '本人到課簽到'
-        : item.attendanceState === 'missing_start_time'
-          ? '尚未設定簽到時間'
-          : ['not_checked_in', 'substitute_absent'].includes(item.attendanceState)
-            ? '簽到時間已結束'
-            : item.checkInOpensAt
-              ? `將於 ${formatTime(item.checkInOpensAt)} 開放簽到`
-              : '簽到尚未開放'
-    return (
-      <>
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-wide text-apple-blue">授課安排</p>
-            <h3 className="mt-1 text-xl font-black text-black">{item.courseName}</h3>
-          </div>
-          <button type="button" onClick={closeSelected} aria-label="關閉課程詳情" className="rounded-full p-2 hover:bg-black/5">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="mt-4 space-y-2 text-sm font-semibold text-apple-gray-600">
-          <p>{formatDate(item.sessionDate)} · {item.startTime || '未設定開始時間'}</p>
-          <p className="flex items-center gap-2"><MapPin className="h-4 w-4 shrink-0" />{item.location || '地點待確認'}</p>
-          <p>原定教練：{item.scheduledCoachName}</p>
-          <p>實際授課：{item.actualCoachName || '待安排'}</p>
-        </div>
-        {item.managedByAdmin ? (
-          <p className="mt-3 rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold leading-5 text-blue-800">
-            管理員可操作所有課次；簽到會記錄本堂實際授課教練，請假會保留本堂原定教練，並留下管理員操作紀錄。
-          </p>
-        ) : null}
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className={`rounded-full border px-3 py-1.5 text-xs font-black ${meta.chip}`}>{meta.label}</span>
-          {item.adminStatus === 'pending' ? <span className="rounded-full bg-orange-50 px-3 py-1.5 text-xs font-black text-orange-800">等待管理員處理</span> : null}
-          {item.adminStatus === 'approved' ? <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-800">管理員已確認</span> : null}
-        </div>
-        {item.checkedInAt ? <p className="mt-3 text-xs font-bold text-emerald-700">伺服器簽到時間：{formatTime(item.checkedInAt)}</p> : item.checkInOpensAt ? <p className="mt-3 text-xs font-semibold text-apple-gray-500">簽到開放時間：{formatTime(item.checkInOpensAt)}（{APP_TIME_ZONE_LABEL}）</p> : null}
-
-        {item.canViewCheckIn ? (
-          <button
-            type="button"
-            disabled={!item.canCheckIn || saving === item.id}
-            onClick={() => act(item.id, { intent: 'check_in' })}
-            className={`mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-full px-5 text-sm font-black transition-colors ${
-              item.checkedInAt
-                ? 'cursor-default bg-emerald-100 text-emerald-800'
-                : item.canCheckIn
-                  ? 'bg-blue-700 text-white hover:bg-blue-800'
-                  : 'cursor-not-allowed bg-apple-gray-100 text-apple-gray-500'
-            }`}
-          >
-            {saving === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserRoundCheck className="h-4 w-4" />}
-            {checkInLabel}
-          </button>
-        ) : null}
-
-        {item.canRespondSubstitute ? (
-          <div className="mt-4 rounded-xl bg-blue-50 p-3">
-            <p className="text-sm font-black text-blue-950">邀請你代班本堂課程</p>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <button type="button" disabled={saving === item.id} onClick={() => act(item.id, { intent: 'respond_substitute', response: 'accepted' })} className="rounded-lg bg-black px-4 py-2.5 text-xs font-bold text-white">接受代班</button>
-              <button type="button" disabled={saving === item.id} onClick={() => act(item.id, { intent: 'respond_substitute', response: 'rejected' })} className="rounded-lg border border-black/10 bg-white px-4 py-2.5 text-xs font-bold">拒絕代班</button>
-            </div>
-          </div>
-        ) : null}
-
-        {item.canRequestLeave ? (
-          <details className="mt-4 rounded-xl border border-black/10 bg-apple-gray-50">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
-              <span className="flex items-center gap-2 text-sm font-black">
-                <CalendarClock className="h-4 w-4 text-orange-600" />
-                {item.substituteResponse === 'rejected'
-                  ? '重新邀請代班教練'
-                  : item.managedByAdmin
-                    ? '為原定教練登記請假並邀請代班'
-                    : '申請請假並邀請代班'}
-              </span>
-              <span className="text-[11px] font-bold text-apple-gray-500">不限簽到時段</span>
-            </summary>
-            <div className="space-y-3 border-t border-black/10 p-4">
-              <textarea value={leaveReason[item.id] || ''} onChange={(event) => setLeaveReason((current) => ({ ...current, [item.id]: event.target.value }))} rows={3} className="apple-input resize-y" placeholder="請假原因（必填）" />
-              <label>
-                <span className="mb-1 block text-xs font-bold text-apple-gray-500">邀請代班教練（必選）</span>
-                <select value={recommendedCoach[item.id] || ''} onChange={(event) => setRecommendedCoach((current) => ({ ...current, [item.id]: event.target.value }))} className="apple-input">
-                  <option value="">選擇代班教練</option>
-                  {coaches.filter((coach) => coach.id !== item.scheduledCoachId).map((coach) => <option key={coach.id} value={coach.id}>{coach.name}</option>)}
-                </select>
-              </label>
-              <button type="button" disabled={saving === item.id || !leaveReason[item.id]?.trim() || !recommendedCoach[item.id]} onClick={() => act(item.id, { intent: 'request_leave', reason: leaveReason[item.id], invitedSubstituteId: recommendedCoach[item.id] })} className="apple-button-primary min-h-11 w-full disabled:opacity-40">{item.substituteResponse === 'rejected' ? '重新送出代班邀請' : '送出請假與代班邀請'}</button>
-            </div>
-          </details>
-        ) : null}
-
-        {item.leaveStatus !== 'none' ? (
-          <p className="mt-4 flex items-start gap-2 rounded-xl bg-orange-50 p-3 text-xs font-bold leading-5 text-orange-800">
-            <CalendarClock className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>{item.substituteResponse === 'accepted'
-              ? `原教練已請假｜代班 ${item.substituteCoachName} 已接受並生效`
-              : item.substituteResponse === 'rejected'
-                ? `代班 ${item.substituteCoachName} 已拒絕，可重新邀請其他教練`
-                : item.substituteCoachName
-                  ? `請假邀請已送出｜等待 ${item.substituteCoachName} 回覆`
-                  : `請假：${item.leaveStatus === 'approved' ? '已核准' : item.leaveStatus === 'rejected' ? '已拒絕' : '處理中'}｜待安排代班`}</span>
-          </p>
-        ) : null}
-      </>
-    )
-  }
-
-  function DateDutyDetails({ item, dateItems }: { item: DutyItem; dateItems: DutyItem[] }) {
-    return (
-      <>
-        {dateItems.length > 1 ? (
-          <div className="mb-4">
-            <p className="mb-2 text-xs font-black text-apple-gray-500">{formatDate(item.sessionDate)} · 本日 {dateItems.length} 堂</p>
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {dateItems.map((dateItem) => {
-                const active = dateItem.id === item.id
-                return (
-                  <button
-                    key={dateItem.id}
-                    type="button"
-                    onClick={() => setSelectedId(dateItem.id)}
-                    className={`shrink-0 rounded-full border px-3 py-2 text-xs font-black ${
-                      active ? 'border-black bg-black text-white' : 'border-black/10 bg-white text-black'
-                    }`}
-                  >
-                    {dateItem.startTime || '--:--'} · {dateItem.courseName} · {dateItem.scheduledCoachName}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        ) : null}
-        <DutyDetails item={item} />
-      </>
-    )
-  }
+  const scheduleHeading = todayItems.length ? '今日課程' : '下一堂課'
+  const scheduleSubheading = todayItems.length
+    ? String(todayItems.length) + ' 堂課｜時間以伺服器資料為準'
+    : nextItems.length
+      ? '最近一堂：' + formatDutyDate(nextItems[0].sessionDate) + '｜時間以伺服器資料為準'
+      : '目前沒有需要簽到或處理的授課課次。'
 
   return (
-    <>
-      <AcceptanceTestCheckin role="coach" className="mb-4 sm:mb-6" />
-
-      {pendingInvitations.length ? (
-        <details open className="mb-4 overflow-hidden rounded-2xl border border-blue-200 bg-blue-50 shadow-sm sm:mb-6">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 sm:p-5">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-700 text-white"><BellRing className="h-5 w-5" /></span>
-              <div className="min-w-0">
-                <p className="text-xs font-black text-blue-700">系統訊息</p>
-                <h2 className="truncate text-base font-black text-blue-950 sm:text-lg">代班邀請</h2>
-              </div>
-            </div>
-            <span className="rounded-full bg-blue-700 px-3 py-1.5 text-xs font-black text-white">待回覆 {pendingInvitations.length}</span>
-          </summary>
-          <div className="space-y-3 border-t border-blue-200 p-4 sm:p-5">
-            {pendingInvitations.map((item) => (
-              <article key={item.id} className="rounded-xl border border-blue-200 bg-white p-4">
-                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-                  <div className="min-w-0">
-                    <p className="text-sm font-black text-black">{item.courseName}</p>
-                    <p className="mt-1 text-xs font-semibold leading-5 text-apple-gray-600">{formatDate(item.sessionDate)} · {item.startTime || '未設定開始時間'} · {item.location || '地點待確認'}</p>
-                    <p className="mt-1 text-xs font-bold text-blue-800">邀請人：{item.scheduledCoachName}{item.leaveReason ? `｜請假原因：${item.leaveReason}` : ''}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button type="button" disabled={saving === item.id} onClick={() => act(item.id, { intent: 'respond_substitute', response: 'accepted' })} className="rounded-lg bg-black px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">接受代班</button>
-                    <button type="button" disabled={saving === item.id} onClick={() => act(item.id, { intent: 'respond_substitute', response: 'rejected' })} className="rounded-lg border border-black/10 bg-white px-4 py-2.5 text-xs font-bold disabled:opacity-50">拒絕代班</button>
-                  </div>
-                </div>
-              </article>
-            ))}
+    <section data-testid="coach-workbench" className="overflow-visible rounded-2xl border border-[#0d3b3a]/15 bg-white shadow-sm">
+      <div className="border-b border-[#0d3b3a]/10 bg-[#f3f8f7] p-3 sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="hidden text-xs font-black tracking-wide text-[#176b67] sm:block">本人到課工作台</p>
+            <h2 className="mt-0 text-2xl font-black text-[#0d3b3a] sm:mt-1 sm:text-3xl"><span className="sm:hidden">{todayItems.length ? '今日課程' : '近期課程'}</span><span className="hidden sm:inline">今天先把到課記好</span></h2>
+            <p className="mt-1 text-sm font-semibold leading-5 text-apple-gray-600 sm:mt-2 sm:leading-6"><span className="sm:hidden">{todayItems.length ? '可直接完成簽到' : '下一堂課時間以伺服器資料為準'}</span><span className="hidden sm:inline">{scheduleSubheading}。本人簽到與學員出席核實是兩份獨立紀錄。</span></p>
           </div>
-        </details>
-      ) : null}
-
-      <section className="mb-6 overflow-visible rounded-2xl border border-black/10 bg-white shadow-sm sm:mb-8">
-      <div className="flex flex-col gap-4 border-b border-black/10 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-        <div>
-          <p className="text-xs font-bold text-apple-blue">教練本人到課</p>
-          <h2 className="mt-1 text-xl font-black text-black sm:text-2xl">我的授課日程</h2>
-          <p className="mt-1 text-xs font-semibold leading-5 text-apple-gray-500">本人到課簽到與學員出席核實是兩份獨立紀錄。</p>
+          <div className="flex items-center gap-2 text-xs font-bold text-apple-gray-600">
+            {serverTime ? <span>上次更新 {shortServerTime(serverTime)}（{APP_TIME_ZONE_LABEL}）</span> : <span>等待伺服器時間</span>}
+            <button type="button" disabled={loading || refreshing} onClick={async () => { setRefreshing(true); await load(true); setRefreshing(false) }} aria-label="重新整理到課資料" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-black/10 bg-white text-[#0d3b3a] hover:bg-white/80 disabled:opacity-50">
+              <RefreshCw className={refreshing ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} aria-hidden="true" />
+            </button>
+          </div>
         </div>
-        <div className="flex items-center justify-between gap-2 sm:justify-end">
-          <button type="button" onClick={goToday} className="rounded-lg border border-black/10 px-3 py-2 text-sm font-bold">今天</button>
-          <button type="button" onClick={() => moveMonth(-1)} aria-label="上個月" className="rounded-lg border border-black/10 p-2.5"><ChevronLeft className="h-4 w-4" /></button>
-          <button type="button" onClick={() => moveMonth(1)} aria-label="下個月" className="rounded-lg border border-black/10 p-2.5"><ChevronRight className="h-4 w-4" /></button>
+        <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-[#0d3b3a]/10 bg-white p-1 sm:mt-5 md:hidden" role="tablist" aria-label="工作台檢視">
+          <button type="button" role="tab" aria-selected={viewMode === 'agenda'} onClick={() => setViewMode('agenda')} className={viewMode === 'agenda' ? 'min-h-11 rounded-lg bg-[#0d3b3a] px-3 py-2 text-sm font-black text-white' : 'min-h-11 rounded-lg px-3 py-2 text-sm font-black text-[#0d3b3a]'}>今日／近期</button>
+          <button type="button" role="tab" aria-selected={viewMode === 'calendar'} onClick={() => setViewMode('calendar')} className={viewMode === 'calendar' ? 'min-h-11 rounded-lg bg-[#0d3b3a] px-3 py-2 text-sm font-black text-white' : 'min-h-11 rounded-lg px-3 py-2 text-sm font-black text-[#0d3b3a]'}><CalendarDays className="mr-1 inline h-4 w-4" aria-hidden="true" />日曆</button>
         </div>
       </div>
-      {error ? <p className="m-4 rounded-lg bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p> : null}
-      {message ? <p className="m-4 rounded-lg bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{message}</p> : null}
-      {loading && !items.length ? (
-        <div className="p-12 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></div>
-      ) : (
-        <div ref={calendarRef} className="relative p-3 sm:p-5">
-          <h3 className="mb-3 text-center text-lg font-black text-black sm:text-xl">{viewYear && viewMonth ? monthLabel(viewYear, viewMonth) : ''}</h3>
-          <div className="grid grid-cols-7 border-l border-t border-black/10">
-            {weekdays.map((weekday) => <div key={weekday} className="border-b border-r border-black/10 bg-apple-gray-50 px-1 py-2 text-center text-[10px] font-black text-apple-gray-500 sm:text-xs">{weekday}</div>)}
-            {monthDays.map((day) => {
-              const events = eventsByDate.get(day.key) ?? []
-              const selected = selectedDate === day.key && selectedItem
-              return (
-                <div
-                  key={day.key}
-                  data-calendar-day={day.key}
-                  className={`relative flex min-h-16 flex-col items-center border-b border-r border-black/10 p-1 text-center sm:min-h-20 sm:p-1.5 ${day.inMonth ? 'bg-white' : 'bg-apple-gray-50/70'}`}
-                >
-                  {events.length ? (
-                    <button
-                      ref={(node) => { if (node) dateRefs.current.set(day.key, node); else dateRefs.current.delete(day.key) }}
-                      type="button"
-                      aria-haspopup="dialog"
-                      aria-expanded={Boolean(selected)}
-                      aria-label={`${formatDate(day.key)}，${events.length} 堂授課日程`}
-                      onClick={() => {
-                        const next = selectCoachDutyCalendarDate(eventsByDate, day.key, selectedDate)
-                        setSelectedDate(next.selectedDate)
-                        setSelectedId(next.selectedId)
-                      }}
-                      className={`flex h-full min-h-14 w-full flex-col items-center rounded-xl px-1 py-1.5 transition hover:bg-black/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-apple-blue sm:min-h-[68px] ${
-                        selected ? 'bg-blue-50' : ''
-                      }`}
-                    >
-                      <span
-                        data-calendar-day-number
-                        className={`mx-auto flex h-7 w-7 items-center justify-center rounded-full text-center text-xs font-bold leading-none tabular-nums ${day.key === todayKey ? 'bg-apple-blue text-white' : day.inMonth ? 'text-black' : 'text-apple-gray-300'}`}
-                      >
-                        {day.day}
-                      </span>
-                      <span className="mt-auto flex min-h-3 max-w-full items-center justify-center gap-1" aria-hidden="true">
-                        {events.slice(0, 4).map((item) => {
-                          const meta = stateMeta[item.attendanceState] ?? stateMeta.upcoming
-                          return <span key={item.id} className={`h-2 w-2 shrink-0 rounded-full ${meta.dot}`} />
-                        })}
-                        {events.length > 4 ? <span className="text-[9px] font-black text-apple-gray-500">+{events.length - 4}</span> : null}
-                      </span>
+
+      {error ? <p role="alert" className="m-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold leading-6 text-red-800 sm:m-6">{error}</p> : null}
+      {message ? <p role="status" className="m-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold leading-6 text-emerald-800 sm:m-6">{message}</p> : null}
+
+      <div className="p-4 sm:p-6">
+        <div className={(viewMode === 'calendar' ? 'hidden md:grid' : 'grid') + ' gap-5 lg:grid-cols-[minmax(0,1fr)_320px]'}>
+          <section data-testid="coach-agenda" aria-labelledby="coach-agenda-title" className="min-w-0">
+            <div className="hidden items-end justify-between gap-3 sm:flex">
+              <div>
+                <p className="text-xs font-black tracking-wide text-apple-gray-500">{todayItems.length ? 'TODAY' : 'UP NEXT'}</p>
+                <h3 id="coach-agenda-title" className="mt-1 text-xl font-black text-black sm:text-2xl">{scheduleHeading}</h3>
+              </div>
+              {todayItems.length ? <span className="rounded-full bg-[#e6f1ef] px-3 py-1.5 text-xs font-black text-[#0d3b3a]">{todayItems.length} 堂</span> : null}
+            </div>
+
+            {loading && !items.length ? (
+              <div className="mt-3 space-y-3 sm:mt-4" aria-label="正在讀取今日課程">
+                <div className="h-36 animate-pulse rounded-2xl bg-apple-gray-100" />
+                <div className="h-36 animate-pulse rounded-2xl bg-apple-gray-100" />
+              </div>
+            ) : agendaItems.length ? (
+              <div className="mt-3 space-y-3 sm:mt-4">
+                {agendaItems.map((item) => {
+                  const meta = stateMeta[item.attendanceState] ?? stateMeta.upcoming
+                  const selected = item.id === selectedId
+                  const checkInBusy = savingKey === item.id && detailTask === 'check_in'
+                  const cardTask: DutyTask = item.canRespondSubstitute ? 'substitute' : item.canRequestLeave ? 'leave' : 'check_in'
+                  return (
+                    <article key={item.id} data-testid={'coach-duty-card-' + item.id} className={selected ? 'rounded-2xl border border-[#176b67] p-4 ring-2 ring-[#176b67]/10 transition sm:p-5' : 'rounded-2xl border border-black/10 p-4 transition hover:border-black/20 sm:p-5'}>
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xl font-black tabular-nums text-[#0d3b3a]">{formatDutyTime(item.startTime) || '未設定'}</span>
+                            <span className={'rounded-full border px-2.5 py-1 text-xs font-black ' + meta.chip}>{meta.label}</span>
+                          </div>
+                          <h4 className="mt-2 text-lg font-black text-black">{item.courseName}</h4>
+                          <div className="mt-2 grid gap-1 text-sm font-semibold leading-6 text-apple-gray-600 sm:grid-cols-2">
+                            <p className="flex items-center gap-2"><MapPin className="h-4 w-4 shrink-0 text-[#176b67]" aria-hidden="true" />{item.location || '地點待確認'}</p>
+                            <p>本人角色：{item.coachRole === 'head_coach' ? '主教練' : item.coachRole === 'assistant' ? '助教' : item.coachRole === 'substitute' ? '代班教練' : '教練'}</p>
+                          </div>
+                          {item.checkedInAt ? <p className="mt-2 text-sm font-bold text-emerald-700">{item.manualCorrection ? '管理員登記時間' : '伺服器時間'}：{formatDutyTime(item.checkedInAt)}</p> : item.attendanceState === 'not_checked_in' ? <p className="mt-2 text-sm font-bold text-amber-800">未簽到，待管理員確認；不等同未到課。</p> : null}
+                        </div>
+                        <button type="button" onClick={(event) => openDetails(item, cardTask, event.currentTarget)} aria-expanded={selected} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-black text-black hover:bg-apple-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-apple-blue">查看詳情</button>
+                      </div>
+                      <div className="mt-4 flex flex-col gap-2 border-t border-black/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                        {item.canCheckIn && !item.checkedInAt && !item.managedByAdmin ? (
+                          <button type="button" disabled={Boolean(savingKey)} onClick={() => void act(item.id, { intent: 'check_in' })} className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#0d3b3a] px-5 py-3 text-base font-black text-white hover:bg-[#14534f] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50">{checkInBusy ? <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden="true" /> : null}本人到課簽到</button>
+                        ) : item.canCheckIn && item.managedByAdmin ? (
+                          <button type="button" onClick={(event) => openDetails(item, 'check_in', event.currentTarget)} className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-[#176b67] bg-[#e6f1ef] px-5 py-3 text-base font-black text-[#0d3b3a] hover:bg-[#d6ebe7] sm:w-auto">開啟詳情填寫補登原因</button>
+                        ) : (
+                          <p className="text-sm font-bold text-apple-gray-600">{item.checkedInAt ? (item.manualCorrection ? '已由管理員登記到課' : '已完成本人到課簽到') : item.canRequestLeave ? '可在詳情中申請請假' : '目前沒有可執行的簽到任務'}</p>
+                        )}
+                        <div className="flex flex-wrap items-center gap-2 text-sm font-bold text-apple-gray-600">
+                          {item.canRespondSubstitute ? <span className="rounded-full bg-sky-50 px-3 py-1.5 text-sky-900">代班待回覆</span> : null}
+                          {item.canRequestLeave ? <button type="button" onClick={(event) => openDetails(item, 'leave', event.currentTarget)} className="inline-flex min-h-11 items-center gap-1 whitespace-nowrap rounded-lg px-2 py-2 text-[#176b67] underline underline-offset-2">請假／代班</button> : null}
+                        </div>
+                      </div>
+                    </article>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="mt-4 rounded-2xl border border-dashed border-black/15 bg-apple-gray-50 p-6 text-center">
+                <p className="text-base font-black text-black">目前沒有下一堂授課安排</p>
+                <p className="mt-2 text-sm font-semibold leading-6 text-apple-gray-600">若管理員新增課次，重新整理後會在這裡顯示。</p>
+              </div>
+            )}
+          </section>
+
+          <section aria-labelledby="coach-substitute-title" className="rounded-2xl border border-sky-200 bg-sky-50 p-4 sm:p-5">
+            <div className="flex items-start gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sky-700 text-white"><BellRing className="h-5 w-5" aria-hidden="true" /></span>
+              <div className="min-w-0">
+                <p className="text-xs font-black tracking-wide text-sky-700">NEEDS YOUR REPLY</p>
+                <h3 id="coach-substitute-title" className="mt-1 text-lg font-black text-sky-950">待回覆代班</h3>
+                <p className="mt-1 text-sm font-semibold leading-6 text-sky-900">{pendingNeedsAdminReview ? '部分邀請接受後仍需管理員最終確認，請先確認時間。' : '接受後會成為實際授課教練，請先確認時間。'}</p>
+              </div>
+              <span className="ml-auto rounded-full bg-sky-700 px-2.5 py-1.5 text-xs font-black text-white">{pendingInvitations.length}</span>
+            </div>
+            {pendingInvitations.length ? (
+              <div className="mt-4 space-y-3">
+                {pendingInvitations.map((item) => (
+                  <article key={item.id} className="rounded-xl border border-sky-200 bg-white p-3">
+                    <button type="button" onClick={(event) => openDetails(item, 'substitute', event.currentTarget)} className="block min-h-11 w-full text-left">
+                      <p className="text-base font-black text-black">{item.courseName}</p>
+                      <p className="mt-1 text-sm font-semibold leading-5 text-apple-gray-600">{formatDutyDate(item.sessionDate)} · {formatDutyTime(item.startTime) || '未設定時間'} · {item.location || '地點待確認'}</p>
+                      <p className="mt-1 text-sm font-bold text-sky-900">邀請人：{item.scheduledCoachName}</p>
                     </button>
-                  ) : (
-                    <span
-                      data-calendar-day-number
-                      className={`mx-auto flex h-7 w-7 items-center justify-center rounded-full text-center text-xs font-bold leading-none tabular-nums ${day.key === todayKey ? 'bg-apple-blue text-white' : day.inMonth ? 'text-black' : 'text-apple-gray-300'}`}
-                    >
-                      {day.day}
-                    </span>
-                  )}
-                  {selected ? (
-                    <div
-                      ref={desktopDialogRef}
-                      role="dialog"
-                      aria-modal="false"
-                      aria-label={`${formatDate(day.key)}授課安排`}
-                      tabIndex={-1}
-                      className={`absolute top-[calc(100%-4px)] z-50 hidden w-[390px] max-w-[calc(100vw-3rem)] rounded-2xl border border-black/10 bg-white p-5 shadow-2xl outline-none md:block ${day.column >= 5 ? 'right-0' : 'left-0'}`}
-                    >
-                      <span className={`absolute -top-2 h-4 w-4 rotate-45 border-l border-t border-black/10 bg-white ${day.column >= 5 ? 'right-6' : 'left-6'}`} />
-                      <DateDutyDetails item={selected} dateItems={selectedDateItems} />
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <button type="button" disabled={Boolean(savingKey)} onClick={() => void act(item.id, { intent: 'respond_substitute', response: 'accepted' })} className="min-h-11 rounded-xl bg-black px-3 py-2.5 text-sm font-black text-white disabled:opacity-50">接受</button>
+                      <button type="button" disabled={Boolean(savingKey)} onClick={() => void act(item.id, { intent: 'respond_substitute', response: 'rejected' })} className="min-h-11 rounded-xl border border-black/15 bg-white px-3 py-2.5 text-sm font-black text-black disabled:opacity-50">拒絕</button>
                     </div>
-                  ) : null}
-                </div>
-              )
-            })}
-          </div>
-          {!items.length ? <p className="py-8 text-center text-sm font-semibold text-apple-gray-500">目前沒有需要簽到或處理的授課課次。</p> : null}
+                  </article>
+                ))}
+              </div>
+            ) : <p className="mt-4 rounded-xl border border-dashed border-sky-200 bg-white/70 p-4 text-sm font-semibold leading-6 text-sky-900">目前沒有待回覆的代班邀請。</p>}
+          </section>
         </div>
-      )}
+
+        <AcceptanceTestCheckin role="coach" className="mt-5" />
+
+        <section data-testid="coach-calendar" aria-labelledby="coach-calendar-title" className={viewMode === 'agenda' ? 'mt-5 hidden rounded-2xl border border-black/10 bg-white md:block' : 'mt-5 block rounded-2xl border border-black/10 bg-white'}>
+          <div className="flex flex-col gap-3 border-b border-black/10 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+            <div>
+              <p className="text-xs font-black tracking-wide text-apple-gray-500">CALENDAR</p>
+              <h3 id="coach-calendar-title" className="mt-1 text-xl font-black text-black">日曆</h3>
+              <p className="mt-1 text-sm font-semibold leading-6 text-apple-gray-600">日曆是補充入口；今天與近期課程已先列在上方。</p>
+            </div>
+            <div className="flex items-center justify-between gap-2 sm:justify-end">
+              <button type="button" onClick={goToday} className="min-h-11 rounded-xl border border-black/10 px-3 py-2 text-sm font-black">今天</button>
+              <button type="button" onClick={() => moveMonth(-1)} aria-label="上個月" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-black/10"><ChevronLeft className="h-5 w-5" aria-hidden="true" /></button>
+              <span className="min-w-[120px] text-center text-base font-black text-black">{viewYear && viewMonth ? monthLabel(viewYear, viewMonth) : '日曆載入中'}</span>
+              <button type="button" onClick={() => moveMonth(1)} aria-label="下個月" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-black/10"><ChevronRight className="h-5 w-5" aria-hidden="true" /></button>
+            </div>
+          </div>
+          {loading && !items.length ? <div className="p-10 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" aria-hidden="true" /><p className="mt-2 text-sm font-semibold text-apple-gray-500">正在讀取日曆</p></div> : (
+            <div className="overflow-x-auto p-3 sm:p-5">
+              <div className="min-w-[620px]">
+                <div className="grid grid-cols-7 border-l border-t border-black/10">
+                  {weekdays.map((weekday) => <div key={weekday} className="border-b border-r border-black/10 bg-apple-gray-50 px-1 py-2 text-center text-xs font-black text-apple-gray-500">{weekday}</div>)}
+                  {monthDays.map((day) => {
+                    const events = eventsByDate.get(day.key) ?? []
+                    const selected = selectedDate === day.key && Boolean(selectedItem)
+                    return (
+                      <div key={day.key} className={day.inMonth ? 'relative flex min-h-20 flex-col items-center border-b border-r border-black/10 bg-white p-1.5 text-center' : 'relative flex min-h-20 flex-col items-center border-b border-r border-black/10 bg-apple-gray-50/70 p-1.5 text-center'}>
+                        {events.length ? (
+                          <button
+                            ref={(node) => { if (node) dateRefs.current.set(day.key, node); else dateRefs.current.delete(day.key) }}
+                            type="button"
+                            aria-haspopup="dialog"
+                            aria-expanded={selected}
+                            aria-label={formatDutyDate(day.key) + '，' + events.length + ' 堂授課日程'}
+                            onClick={(event) => {
+                              if (selected) {
+                                closeSelected()
+                                return
+                              }
+                              const next = selectCoachDutyCalendarDate(eventsByDate, day.key, selectedDate)
+                              returnFocusRef.current = event.currentTarget
+                              setSelectedDate(next.selectedDate)
+                              setSelectedId(next.selectedId)
+                              setDetailTask('check_in')
+                            }}
+                            className="flex h-full min-h-[68px] w-full flex-col items-center rounded-xl px-1 py-1.5 transition hover:bg-black/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-apple-blue"
+                          >
+                            <span className={day.key === todayKey ? 'mx-auto flex h-7 w-7 items-center justify-center rounded-full bg-[#176b67] text-xs font-bold leading-none text-white tabular-nums' : day.inMonth ? 'mx-auto flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold leading-none text-black tabular-nums' : 'mx-auto flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold leading-none text-apple-gray-300 tabular-nums'}>{day.day}</span>
+                            <span className="mt-auto flex min-h-3 max-w-full items-center justify-center gap-1" aria-hidden="true">
+                              {events.slice(0, 4).map((item) => <span key={item.id} className={'h-2 w-2 shrink-0 rounded-full ' + (stateMeta[item.attendanceState] ?? stateMeta.upcoming).dot} />)}
+                              {events.length > 4 ? <span className="text-[9px] font-black text-apple-gray-500">+{events.length - 4}</span> : null}
+                            </span>
+                          </button>
+                        ) : <span className={day.key === todayKey ? 'mx-auto flex h-7 w-7 items-center justify-center rounded-full bg-[#176b67] text-xs font-bold leading-none text-white tabular-nums' : day.inMonth ? 'mx-auto flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold leading-none text-black tabular-nums' : 'mx-auto flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold leading-none text-apple-gray-300 tabular-nums'}>{day.day}</span>}
+                      </div>
+                    )
+                  })}
+                </div>
+                {!items.length ? <p className="py-8 text-center text-sm font-semibold text-apple-gray-500">目前沒有需要簽到或處理的授課課次。</p> : null}
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
 
       {selectedItem ? (
-        <div className="fixed inset-0 z-[80] flex items-end bg-black/30 md:hidden">
-          <div
-            ref={mobileDialogRef}
-            role="dialog"
-            aria-modal="true"
-            aria-label={`${selectedItem.courseName}授課安排`}
-            tabIndex={-1}
-            className="max-h-[86dvh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl outline-none"
-          >
-            <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-black/15" />
-            <DateDutyDetails item={selectedItem} dateItems={selectedDateItems} />
+        <>
+          <div className="fixed inset-0 z-[80] hidden bg-black/30 md:block" aria-hidden="true" onMouseDown={(event) => { if (event.target === event.currentTarget) closeSelected() }} />
+          <div className="fixed inset-0 z-[90] flex items-end bg-black/30 md:hidden" onMouseDown={(event) => { if (event.target === event.currentTarget) closeSelected() }}>
+            <div ref={mobileDialogRef} role="dialog" aria-modal="true" aria-label={selectedItem.courseName + '授課安排'} tabIndex={-1} className="max-h-[min(88dvh,760px)] w-full overflow-y-auto overscroll-contain rounded-t-3xl bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl outline-none">
+              <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-black/15" aria-hidden="true" />
+              <CoachDutyDetails
+                item={selectedItem}
+                dateItems={selectedDateItems}
+                coaches={coaches}
+                activeTask={detailTask}
+                onTaskChange={setDetailTask}
+                leaveReason={leaveReason[selectedItem.id] || ''}
+                invitedSubstituteId={invitedSubstitute[selectedItem.id] || ''}
+                manualReason={manualReason[selectedItem.id] || ''}
+                onLeaveReasonChange={(value) => setLeaveReason((current) => ({ ...current, [selectedItem.id]: value }))}
+                onInvitedSubstituteChange={(value) => setInvitedSubstitute((current) => ({ ...current, [selectedItem.id]: value }))}
+                onManualReasonChange={(value) => setManualReason((current) => ({ ...current, [selectedItem.id]: value }))}
+                onAction={(action) => void act(selectedItem.id, action)}
+                savingKey={savingKey}
+                onClose={closeSelected}
+                onSelectItem={(id) => { setSelectedId(id); setDetailTask('check_in') }}
+              />
+            </div>
           </div>
-        </div>
+          <div className="fixed inset-0 z-[95] hidden md:block" onMouseDown={(event) => { if (event.target === event.currentTarget) closeSelected() }}>
+            <div ref={desktopDialogRef} role="dialog" aria-modal="false" aria-label={selectedItem.courseName + '授課安排'} tabIndex={-1} className="fixed left-1/2 top-24 z-[100] max-h-[calc(100dvh-8rem)] w-[min(500px,calc(100vw-2rem))] -translate-x-1/2 overflow-y-auto rounded-2xl border border-black/10 bg-white p-5 shadow-2xl outline-none sm:p-6">
+              <CoachDutyDetails
+                item={selectedItem}
+                dateItems={selectedDateItems}
+                coaches={coaches}
+                activeTask={detailTask}
+                onTaskChange={setDetailTask}
+                leaveReason={leaveReason[selectedItem.id] || ''}
+                invitedSubstituteId={invitedSubstitute[selectedItem.id] || ''}
+                manualReason={manualReason[selectedItem.id] || ''}
+                onLeaveReasonChange={(value) => setLeaveReason((current) => ({ ...current, [selectedItem.id]: value }))}
+                onInvitedSubstituteChange={(value) => setInvitedSubstitute((current) => ({ ...current, [selectedItem.id]: value }))}
+                onManualReasonChange={(value) => setManualReason((current) => ({ ...current, [selectedItem.id]: value }))}
+                onAction={(action) => void act(selectedItem.id, action)}
+                savingKey={savingKey}
+                onClose={closeSelected}
+                onSelectItem={(id) => { setSelectedId(id); setDetailTask('check_in') }}
+              />
+            </div>
+          </div>
+        </>
       ) : null}
-      </section>
-    </>
+    </section>
   )
 }

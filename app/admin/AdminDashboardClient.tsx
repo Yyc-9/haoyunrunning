@@ -8,13 +8,11 @@ import {
   Boxes,
   CalendarRange,
   CheckCircle2,
-  Copy,
   FileSpreadsheet,
   LayoutDashboard,
   Loader2,
   ShieldCheck,
   Landmark,
-  KeyRound,
   PanelsTopLeft,
   UserCog,
   UsersRound,
@@ -60,20 +58,28 @@ export type AdminDashboardPayload = {
   siteContent: SiteContent
   courses: AdminCourseSummary[]
   coachOptions: Array<{ id: string; name: string; email: string }>
-  coachInvites: CoachInvite[]
+  coachAccounts: AdminCoachAccount[]
   coachPublicProfiles: Array<{ coachKey: string; displayName: string; ownerProfileId: string | null; verificationEmail: string }>
 }
 
-type CoachInvite = {
+export type AdminCoachAccount = {
   id: string
-  code: string
   coachKey: string
-  coachName: string
-  verificationEmail: string
-  usedBy: string
-  usedAt: string | null
-  expiresAt: string | null
+  name: string
+  email: string
+  profileId: string | null
+  role: 'student' | 'coach' | 'admin' | null
+  status: 'pending' | 'enabled' | 'disabled'
+  registered: boolean | null
+  emailConfirmed: boolean | null
+  boundStudentCount: number
+  courses: string
+  publicProfileName: string
+  publicCoachKey: string
   createdAt: string
+  updatedAt: string
+  enabledAt: string | null
+  disabledAt: string | null
 }
 
 type CourseCapacityRow = {
@@ -254,23 +260,6 @@ async function fetchAdminDashboard() {
   return payload
 }
 
-async function fetchCoachInviteStatus() {
-  const token = await getAccessToken()
-  if (!token) throw new Error('請先登入管理員帳號。')
-
-  const response = await fetch('/api/admin/coach-invite-status', {
-    cache: 'no-store',
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  const payload = (await response.json().catch(() => ({}))) as Pick<
-    AdminDashboardPayload,
-    'coachInvites' | 'coachPublicProfiles'
-  > & { error?: string }
-
-  if (!response.ok) throw new Error(payload.error || '讀取教練認證狀態失敗。')
-  return payload
-}
-
 async function adminAction(body: Record<string, unknown>) {
   const token = await getAccessToken()
   if (!token) {
@@ -313,10 +302,10 @@ export default function AdminDashboardClient() {
   const [studentQuery, setStudentQuery] = useState('')
   const [coachQuery, setCoachQuery] = useState('')
   const [productEditState, setProductEditState] = useState<ProductEditState>({ dirty: false, busy: false })
-  const [selectedCoachInviteKey, setSelectedCoachInviteKey] = useState('')
-  const [selectedCoachInviteEmail, setSelectedCoachInviteEmail] = useState('')
+  const [selectedCoachAccountKey, setSelectedCoachAccountKey] = useState('')
+  const [selectedCoachAccountEmail, setSelectedCoachAccountEmail] = useState('')
   const [studentPlanFilter, setStudentPlanFilter] = useState<'all' | 'enabled' | 'missing'>('all')
-  const [coachRoleFilter, setCoachRoleFilter] = useState<'all' | 'coach' | 'admin'>('all')
+  const [coachStatusFilter, setCoachStatusFilter] = useState<'all' | 'enabled' | 'pending' | 'disabled'>('all')
   const [accountForm, setAccountForm] = useState({
     label: '',
     accountName: '',
@@ -344,40 +333,6 @@ export default function AdminDashboardClient() {
   useEffect(() => {
     loadDashboard()
   }, [loadDashboard])
-
-  useEffect(() => {
-    if (activeTab !== 'coaches') return
-
-    let cancelled = false
-    const syncCoachInviteStatus = async () => {
-      try {
-        const snapshot = await fetchCoachInviteStatus()
-        if (cancelled) return
-        setData((current) => current ? {
-          ...current,
-          coachInvites: snapshot.coachInvites,
-          coachPublicProfiles: snapshot.coachPublicProfiles,
-        } : current)
-      } catch {
-        // The full dashboard refresh remains available if a background sync is interrupted.
-      }
-    }
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') syncCoachInviteStatus()
-    }
-
-    syncCoachInviteStatus()
-    const timer = window.setInterval(syncCoachInviteStatus, 10_000)
-    window.addEventListener('focus', syncCoachInviteStatus)
-    document.addEventListener('visibilitychange', handleVisibility)
-
-    return () => {
-      cancelled = true
-      window.clearInterval(timer)
-      window.removeEventListener('focus', syncCoachInviteStatus)
-      document.removeEventListener('visibilitychange', handleVisibility)
-    }
-  }, [activeTab])
 
   useEffect(() => {
     if (!message && !(error && data)) return
@@ -412,31 +367,24 @@ export default function AdminDashboardClient() {
         .some((value) => value.toLowerCase().includes(text))
     })
   }, [data?.students, studentPlanFilter, studentQuery])
-  const filteredCoaches = useMemo(() => {
+  const filteredCoachAccounts = useMemo(() => {
     const text = coachQuery.trim().toLowerCase()
 
-    return (data?.coaches ?? []).filter((coach) => {
-      if (coachRoleFilter !== 'all' && coach.role !== coachRoleFilter) return false
+    return (data?.coachAccounts ?? []).filter((account) => {
+      if (coachStatusFilter !== 'all' && account.status !== coachStatusFilter) return false
       if (!text) return true
 
-      return [coach.name, coach.email, coach.role, coach.courses, coach.publicProfileName]
+      return [account.name, account.email, account.role || '', account.status, account.courses, account.publicProfileName]
         .filter(Boolean)
         .some((value) => value.toLowerCase().includes(text))
     })
-  }, [coachQuery, coachRoleFilter, data?.coaches])
-  const availableCoachInviteProfiles = useMemo(() => {
-    return (data?.coachPublicProfiles ?? []).filter((profile) => !profile.ownerProfileId)
-  }, [data?.coachPublicProfiles])
-  const assignedCoachInvites = useMemo(
-    () => (data?.coachInvites ?? []).filter((invite) => Boolean(invite.verificationEmail)),
-    [data?.coachInvites]
-  )
-  const unassignedCoachInviteCount = (data?.coachInvites.length ?? 0) - assignedCoachInvites.length
-  const verificationCoachProfiles = useMemo(
-    () => (data?.coachPublicProfiles ?? []).filter((profile) => Boolean(profile.verificationEmail)),
-    [data?.coachPublicProfiles]
-  )
-  const verifiedCoachProfileCount = verificationCoachProfiles.filter((profile) => Boolean(profile.ownerProfileId)).length
+  }, [coachQuery, coachStatusFilter, data?.coachAccounts])
+  const availableCoachAccountProfiles = useMemo(() => {
+    const registeredKeys = new Set((data?.coachAccounts ?? []).map((account) => account.coachKey))
+    return (data?.coachPublicProfiles ?? []).filter((profile) => !registeredKeys.has(profile.coachKey))
+  }, [data?.coachAccounts, data?.coachPublicProfiles])
+  const enabledCoachAccountCount = (data?.coachAccounts ?? []).filter((account) => account.status === 'enabled').length
+  const pendingCoachAccountCount = (data?.coachAccounts ?? []).filter((account) => account.status === 'pending').length
   const activeTabDefinition = tabs.find((tab) => tab.id === activeTab) ?? tabs[0]
   const ActiveTabIcon = activeTabDefinition.icon
   const overviewMetrics = data ? [
@@ -509,16 +457,16 @@ export default function AdminDashboardClient() {
     }
   }
 
-  async function createCoachInvite() {
-    if (!selectedCoachInviteKey || !selectedCoachInviteEmail.trim()) return
-    const created = await runAction('create-coach-invite', {
-      action: 'create_coach_invite',
-      coachKey: selectedCoachInviteKey,
-      verificationEmail: selectedCoachInviteEmail,
+  async function registerCoachAccount() {
+    if (!selectedCoachAccountKey || !selectedCoachAccountEmail.trim()) return
+    const created = await runAction('register-coach-account', {
+      action: 'register_coach_account',
+      coachKey: selectedCoachAccountKey,
+      verificationEmail: selectedCoachAccountEmail,
     })
     if (created) {
-      setSelectedCoachInviteKey('')
-      setSelectedCoachInviteEmail('')
+      setSelectedCoachAccountKey('')
+      setSelectedCoachAccountEmail('')
     }
   }
 
@@ -855,107 +803,61 @@ export default function AdminDashboardClient() {
             <section className="apple-card overflow-hidden">
               <AdminCoachDuty />
               <div className="border-b border-black/10 bg-apple-gray-100 p-5">
-                <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+                <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
                   <div>
-                    <div className="flex items-center gap-2">
-                      <KeyRound className="h-5 w-5 text-apple-gray-700" />
-                      <h2 className="text-lg font-black text-apple-gray-900">專屬教練認證碼</h2>
-                    </div>
-                    <p className="mt-1 text-sm text-apple-gray-600">每組認證碼只對應一份公開教練資料。使用者登入並完成認證後，教練權限、公開身份與負責課程會一起連結。</p>
+                    <h2 className="text-xl font-black text-apple-gray-900">教練帳號登記</h2>
+                    <p className="mt-1 max-w-3xl text-sm leading-6 text-apple-gray-600">管理員只需登記既有公開教練資料的登入信箱；已註冊帳號會在信箱已驗證後原子連結，未註冊者會等首次登入，不會替他建立帳號或寄送郵件。</p>
                     <div className="mt-3 flex flex-wrap gap-2 text-xs font-black">
-                      <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-emerald-800">
-                        已完成 {verifiedCoachProfileCount} / {verificationCoachProfiles.length}
-                      </span>
-                      <span className="rounded-full bg-amber-100 px-3 py-1.5 text-amber-800">
-                        待認證 {assignedCoachInvites.length}
-                      </span>
+                      <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-emerald-800">已啟用 {enabledCoachAccountCount}</span>
+                      <span className="rounded-full bg-amber-100 px-3 py-1.5 text-amber-800">待啟用 {pendingCoachAccountCount}</span>
+                      <span className="rounded-full bg-black/5 px-3 py-1.5 text-apple-gray-700">共 {data.coachAccounts.length} 筆登記</span>
                     </div>
                   </div>
-                  <div className="grid min-w-0 gap-2 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)_auto] lg:min-w-[520px]">
+                  <div className="grid min-w-0 gap-2 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)_auto] lg:min-w-[560px]">
                     <select
-                      value={selectedCoachInviteKey}
+                      value={selectedCoachAccountKey}
                       onChange={(event) => {
                         const coachKey = event.target.value
-                        const profile = availableCoachInviteProfiles.find((item) => item.coachKey === coachKey)
-                        setSelectedCoachInviteKey(coachKey)
-                        setSelectedCoachInviteEmail(profile?.verificationEmail ?? '')
+                        const profile = availableCoachAccountProfiles.find((item) => item.coachKey === coachKey)
+                        setSelectedCoachAccountKey(coachKey)
+                        setSelectedCoachAccountEmail(profile?.verificationEmail ?? '')
                       }}
                       className="apple-input min-w-0 bg-white py-2.5 text-sm"
-                      aria-label="選擇公開教練身份"
+                      aria-label="選擇要登記的公開教練身份"
                     >
-                      <option value="">{availableCoachInviteProfiles.length ? '選擇尚未認證的教練' : '所有教練皆已完成認證'}</option>
-                      {availableCoachInviteProfiles.map((profile) => (
+                      <option value="">{availableCoachAccountProfiles.length ? '選擇要登記的教練' : '目前沒有待登記的公開教練'}</option>
+                      {availableCoachAccountProfiles.map((profile) => (
                         <option key={profile.coachKey} value={profile.coachKey}>{profile.displayName}</option>
                       ))}
                     </select>
                     <input
                       type="email"
-                      value={selectedCoachInviteEmail}
-                      onChange={(event) => setSelectedCoachInviteEmail(event.target.value)}
+                      value={selectedCoachAccountEmail}
+                      onChange={(event) => setSelectedCoachAccountEmail(event.target.value)}
                       placeholder="教練登入信箱"
                       className="apple-input min-w-0 bg-white py-2.5 text-sm"
                       aria-label="教練登入信箱"
                     />
                     <button
                       type="button"
-                      onClick={createCoachInvite}
-                      disabled={!selectedCoachInviteKey || !selectedCoachInviteEmail.trim() || updatingId === 'create-coach-invite'}
+                      onClick={registerCoachAccount}
+                      disabled={!selectedCoachAccountKey || !selectedCoachAccountEmail.trim() || updatingId === 'register-coach-account'}
                       className="apple-button-primary gap-2 whitespace-nowrap px-5 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {updatingId === 'create-coach-invite' ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
-                      儲存認證資料
+                      {updatingId === 'register-coach-account' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                      登記教練帳號
                     </button>
                   </div>
                 </div>
-
-                <div className="mt-4 grid max-h-[420px] gap-2 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-3">
-                  {assignedCoachInvites.map((invite) => {
-                    const expired = Boolean(invite.expiresAt && new Date(invite.expiresAt).getTime() < Date.now())
-                    return (
-                      <div key={invite.id} className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 bg-white p-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-black text-apple-gray-900">{invite.coachName}</p>
-                          <p className="mt-1 truncate font-mono text-xs font-bold text-apple-gray-600">{invite.code}</p>
-                          <p className="mt-1 truncate text-xs text-apple-gray-500">{invite.verificationEmail}</p>
-                          <p className={`mt-1 text-xs font-semibold ${expired ? 'text-amber-700' : 'text-emerald-700'}`}>
-                            {expired ? '已過期，可重新生成' : `可使用 · 有效至 ${formatDate(invite.expiresAt)}`}
-                          </p>
-                        </div>
-                        {!expired ? (
-                          <button
-                            type="button"
-                            onClick={() => navigator.clipboard.writeText(invite.code)}
-                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-black/10 text-apple-gray-700 hover:bg-apple-gray-100"
-                            aria-label="複製認證碼"
-                            title="複製認證碼"
-                          >
-                            <Copy className="h-4 w-4" />
-                          </button>
-                        ) : null}
-                      </div>
-                    )
-                  })}
-                  {assignedCoachInvites.length === 0 ? (
-                    <p className="text-sm font-semibold text-emerald-700">
-                      {verificationCoachProfiles.length > 0 && verifiedCoachProfileCount === verificationCoachProfiles.length
-                        ? '名單中的教練皆已完成身份認證。'
-                        : '目前沒有可使用的專屬認證碼。'}
-                    </p>
-                  ) : null}
-                </div>
-                {unassignedCoachInviteCount > 0 ? (
-                  <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-800">
-                    另有 {unassignedCoachInviteCount} 份舊教練資料尚未指定登入信箱，認證碼不會對任何普通帳戶開放；可從上方選擇教練後補上信箱。
-                  </p>
-                ) : null}
               </div>
+
               <div className="border-b border-black/10 p-5">
                 <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
                   <div>
                     <h2 className="text-xl font-black text-apple-gray-900">教練管理</h2>
-                    <p className="mt-1 text-sm text-apple-gray-600">只有成功使用教練認證碼的帳號與超級管理員會顯示在這裡。取消後如需重新啟用，必須使用新的認證碼。</p>
+                    <p className="mt-1 text-sm text-apple-gray-600">名冊會顯示全部已登記信箱，包括尚未註冊、尚未驗證及明確停用的帳號。停用不會因日後登入自動恢復。</p>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-[minmax(220px,1fr)_150px] lg:w-[500px]">
+                  <div className="grid gap-3 sm:grid-cols-[minmax(220px,1fr)_150px] lg:w-[520px]">
                     <input
                       value={coachQuery}
                       onChange={(event) => setCoachQuery(event.target.value)}
@@ -963,126 +865,76 @@ export default function AdminDashboardClient() {
                       className="apple-input"
                     />
                     <select
-                      value={coachRoleFilter}
-                      onChange={(event) => setCoachRoleFilter(event.target.value as typeof coachRoleFilter)}
+                      value={coachStatusFilter}
+                      onChange={(event) => setCoachStatusFilter(event.target.value as typeof coachStatusFilter)}
                       className="apple-input"
+                      aria-label="篩選教練帳號狀態"
                     >
-                      <option value="all">全部角色</option>
-                      <option value="coach">教練</option>
-                      <option value="admin">管理員</option>
+                      <option value="all">全部狀態</option>
+                      <option value="enabled">已啟用</option>
+                      <option value="pending">待啟用</option>
+                      <option value="disabled">已停用</option>
                     </select>
                   </div>
                 </div>
               </div>
-              <div className="hidden overflow-x-auto xl:block">
-                <table className="w-full table-fixed text-left text-sm">
-                  <thead className="bg-apple-gray-100 text-apple-gray-600">
-                    <tr>
-                      <th className="w-[10%] px-3 py-3 font-bold">姓名</th>
-                      <th className="w-[16%] px-3 py-3 font-bold">信箱</th>
-                      <th className="w-[12%] px-3 py-3 font-bold">權限狀態</th>
-                      <th className="w-[18%] px-3 py-3 font-bold">公開教練身份</th>
-                      <th className="w-[8%] px-3 py-3 font-bold">學員數</th>
-                      <th className="w-[14%] px-3 py-3 font-bold">負責課程</th>
-                      <th className="w-[11%] px-3 py-3 font-bold">建立時間</th>
-                      <th className="w-[11%] px-3 py-3 font-bold">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-black/10">
-                    {filteredCoaches.map((coach) => (
-                      <tr key={coach.id}>
-                        <td className="truncate px-3 py-3 font-bold text-apple-gray-900" title={coach.name}>{coach.name}</td>
-                        <td className="truncate px-3 py-3 text-apple-gray-600" title={coach.email || undefined}>{coach.email || '-'}</td>
-                        <td className="px-3 py-3">
-                          <span className={`inline-flex rounded-full px-2 py-1 text-[11px] font-bold ${coach.coachEnabled ? 'bg-emerald-50 text-emerald-700' : 'bg-apple-gray-100 text-apple-gray-600'}`}>
-                            {coach.role === 'admin' ? '管理員' : coach.coachEnabled ? '教練已啟用' : '未啟用'}
-                          </span>
-                        </td>
-                        <td className="px-3 py-3">
+
+              <div className="divide-y divide-black/10">
+                {filteredCoachAccounts.map((account) => {
+                  const isLegacy = account.id.startsWith('legacy:')
+                  const statusLabel = account.status === 'enabled' ? '教練已啟用' : account.status === 'disabled' ? '已停用' : '待啟用'
+                  const statusClass = account.status === 'enabled' ? 'bg-emerald-50 text-emerald-700' : account.status === 'disabled' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'
+                  return (
+                    <article key={account.id} className="p-4 sm:p-5">
+                      <div className="grid gap-4 xl:grid-cols-[minmax(220px,1fr)_minmax(180px,1fr)_minmax(220px,1.1fr)_minmax(190px,auto)] xl:items-center">
+                        <div className="min-w-0">
+                          <div className="flex items-start justify-between gap-3 xl:block">
+                            <div className="min-w-0">
+                              <h3 className="truncate font-black text-apple-gray-900">{account.name}</h3>
+                              <p className="mt-1 truncate text-sm text-apple-gray-500">{account.email || '未提供信箱'}</p>
+                            </div>
+                            <span className={'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ' + statusClass}>{statusLabel}</span>
+                          </div>
+                          <p className="mt-2 text-xs text-apple-gray-500">{account.registered === null ? '帳號狀態暫不可查' : account.registered ? (account.emailConfirmed ? '已註冊 · 信箱已驗證' : '已註冊 · 等待信箱驗證') : '尚未註冊，等待首次登入'}{account.role === 'admin' ? ' · 管理員權限保留' : ''}</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 rounded-xl bg-apple-gray-50 p-3 text-sm">
+                          <div><p className="text-xs font-bold text-apple-gray-400">綁定學員</p><p className="mt-1 font-black text-apple-gray-900">{account.boundStudentCount} 位</p></div>
+                          <div><p className="text-xs font-bold text-apple-gray-400">建立時間</p><p className="mt-1 text-xs font-semibold leading-5 text-apple-gray-700">{formatDate(account.createdAt)}</p></div>
+                          <div className="col-span-2"><p className="text-xs font-bold text-apple-gray-400">負責課程</p><p className="mt-1 break-words font-semibold leading-5 text-apple-gray-700">{account.courses || '暫無資料'}</p></div>
+                        </div>
+                        <label className="block min-w-0">
+                          <span className="mb-2 block text-xs font-bold text-apple-gray-500">公開教練身份</span>
                           <select
-                            value={coach.publicCoachKey}
-                            disabled={!coach.coachEnabled || updatingId === `coach-profile-${coach.id}`}
-                            onChange={(event) => runAction(`coach-profile-${coach.id}`, { action: 'link_coach_public_profile', userId: coach.id, coachKey: event.target.value })}
-                            className="apple-input w-full min-w-0 py-2 text-xs disabled:opacity-50"
-                            aria-label={`設定 ${coach.name} 的公開教練身份`}
+                            value={account.publicCoachKey}
+                            disabled={account.status !== 'enabled' || !account.profileId || isLegacy || updatingId === 'coach-profile-' + account.profileId}
+                            onChange={(event) => runAction('coach-profile-' + account.profileId, { action: 'link_coach_public_profile', userId: account.profileId, coachKey: event.target.value })}
+                            className="apple-input w-full min-w-0 py-2.5 text-sm disabled:opacity-50"
+                            aria-label={'設定 ' + account.name + ' 的公開教練身份'}
                           >
                             <option value="">尚未連結</option>
-                            {data.coachPublicProfiles.map((profile) => <option key={profile.coachKey} value={profile.coachKey}>{profile.displayName}{profile.ownerProfileId && profile.ownerProfileId !== coach.id ? '（已連結其他帳號）' : ''}</option>)}
+                            {data.coachPublicProfiles.map((profile) => <option key={profile.coachKey} value={profile.coachKey}>{profile.displayName}{profile.ownerProfileId && profile.ownerProfileId !== account.profileId ? '（已連結其他帳號）' : ''}</option>)}
                           </select>
-                        </td>
-                        <td className="px-3 py-3 text-apple-gray-700">{coach.boundStudentCount}</td>
-                        <td className="truncate px-3 py-3 text-apple-gray-600" title={coach.courses || undefined}>{coach.courses || '暫無資料'}</td>
-                        <td className="px-3 py-3 text-xs text-apple-gray-600">{formatDate(coach.createdAt)}</td>
-                        <td className="px-3 py-3">
-                          <button
-                            type="button"
-                            disabled={coach.role === 'admin' || updatingId === coach.id}
-                            onClick={() => runAction(coach.id, { action: 'set_coach_role', userId: coach.id, enabled: false })}
-                            className="w-full rounded-lg bg-black px-2 py-2 text-[11px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
-                          >
-                            {coach.role === 'admin' ? '保留管理員權限' : '取消教練權限'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </label>
+                        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                          {account.role === 'admin' ? (
+                            <button type="button" disabled className="w-full rounded-xl border border-black/10 bg-apple-gray-100 px-4 py-2.5 text-sm font-bold text-apple-gray-500">保留管理員權限（不可停用）</button>
+                          ) : isLegacy ? (
+                            <p className="rounded-xl bg-apple-gray-50 px-4 py-2.5 text-center text-xs font-semibold leading-5 text-apple-gray-500">完成資料庫登記後可管理狀態</p>
+                          ) : account.status === 'disabled' ? (
+                            <button type="button" disabled={updatingId === account.id} onClick={() => runAction(account.id, { action: 'set_coach_account_status', allowlistId: account.id, enabled: true })} className="w-full rounded-xl bg-black px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">重新啟用</button>
+                          ) : (
+                            <button type="button" disabled={updatingId === account.id} onClick={() => void runAction(account.id, { action: 'set_coach_account_status', allowlistId: account.id, enabled: false })} className="w-full rounded-xl border border-red-200 px-4 py-2.5 text-sm font-bold text-red-700 disabled:cursor-not-allowed disabled:opacity-40">停用教練帳號</button>
+                          )}
+                          {account.status === 'pending' && account.registered && account.emailConfirmed && !isLegacy ? (
+                            <button type="button" disabled={updatingId === 'activate-' + account.id} onClick={() => runAction('activate-' + account.id, { action: 'set_coach_account_status', allowlistId: account.id, enabled: true })} className="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-800 disabled:cursor-not-allowed disabled:opacity-40">檢查並啟用</button>
+                          ) : null}
+                        </div>
+                      </div>
+                    </article>
+                  )
+                })}
               </div>
-              <div className="divide-y divide-black/10 xl:hidden">
-                {filteredCoaches.map((coach) => (
-                  <article key={coach.id} className="p-4 sm:p-5">
-                    <div className="flex min-w-0 items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="truncate font-black text-apple-gray-900">{coach.name}</h3>
-                        <p className="mt-1 truncate text-sm text-apple-gray-500">{coach.email || '未提供信箱'}</p>
-                      </div>
-                      <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${coach.coachEnabled ? 'bg-emerald-50 text-emerald-700' : 'bg-apple-gray-100 text-apple-gray-600'}`}>
-                        {coach.role === 'admin' ? '管理員' : coach.coachEnabled ? '教練已啟用' : '未啟用'}
-                      </span>
-                    </div>
-                    <div className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-apple-gray-50 p-3 text-sm">
-                      <div>
-                        <p className="text-xs font-bold text-apple-gray-400">綁定學員</p>
-                        <p className="mt-1 font-black text-apple-gray-900">{coach.boundStudentCount} 位</p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-apple-gray-400">建立時間</p>
-                        <p className="mt-1 text-xs font-semibold leading-5 text-apple-gray-700">{formatDate(coach.createdAt)}</p>
-                      </div>
-                      <div className="col-span-2 min-w-0">
-                        <p className="text-xs font-bold text-apple-gray-400">負責課程</p>
-                        <p className="mt-1 break-words font-semibold leading-5 text-apple-gray-700">{coach.courses || '暫無資料'}</p>
-                      </div>
-                    </div>
-                    <label className="mt-4 block">
-                      <span className="mb-2 block text-xs font-bold text-apple-gray-500">公開教練身份</span>
-                      <select
-                        value={coach.publicCoachKey}
-                        disabled={!coach.coachEnabled || updatingId === `coach-profile-${coach.id}`}
-                        onChange={(event) => runAction(`coach-profile-${coach.id}`, { action: 'link_coach_public_profile', userId: coach.id, coachKey: event.target.value })}
-                        className="apple-input w-full min-w-0 py-2.5 text-sm disabled:opacity-50"
-                        aria-label={`設定 ${coach.name} 的公開教練身份`}
-                      >
-                        <option value="">尚未連結</option>
-                        {data.coachPublicProfiles.map((profile) => <option key={profile.coachKey} value={profile.coachKey}>{profile.displayName}{profile.ownerProfileId && profile.ownerProfileId !== coach.id ? '（已連結其他帳號）' : ''}</option>)}
-                      </select>
-                    </label>
-                    <button
-                      type="button"
-                      disabled={coach.role === 'admin' || updatingId === coach.id}
-                      onClick={() => runAction(coach.id, { action: 'set_coach_role', userId: coach.id, enabled: false })}
-                      className="mt-3 w-full rounded-xl bg-black px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      {coach.role === 'admin' ? '保留管理員權限' : '取消教練權限'}
-                    </button>
-                  </article>
-                ))}
-              </div>
-              {filteredCoaches.length === 0 ? (
-                <div className="p-8 text-center text-sm font-semibold text-apple-gray-500">
-                  目前沒有符合條件的教練帳號。生成認證碼後，使用者完成認證就會加入這份名單。
-                </div>
-              ) : null}
+              {filteredCoachAccounts.length === 0 ? <div className="p-8 text-center text-sm font-semibold text-apple-gray-500">目前沒有符合條件的教練帳號。</div> : null}
             </section>
           ) : null}
 

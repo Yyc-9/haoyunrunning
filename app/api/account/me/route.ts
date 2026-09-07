@@ -65,56 +65,108 @@ async function getAchievementCollection(profileId: string) {
   })
 }
 
-async function getCoachVerification(profile: Record<string, unknown>) {
-  if (!supabaseAdmin || profile.role === 'coach' || profile.role === 'admin') return null
+type CoachAccountState = {
+  status: 'pending' | 'pending_email' | 'enabled' | 'disabled' | 'conflict'
+  coachKey: string
+  coachName: string
+  message?: string
+}
 
-  const email = typeof profile.email === 'string' ? profile.email.trim().toLowerCase() : ''
+type CoachAllowlistRow = {
+  id: string
+  coach_key: string
+  email: string
+  status: 'pending' | 'enabled' | 'disabled'
+  profile_id: string | null
+}
+
+function isOptionalCoachSchemaError(error: { code?: string | null; message?: string | null } | null) {
+  return Boolean(error && ['42P01', 'PGRST202', 'PGRST205', 'PGRST204'].includes(error.code || ''))
+}
+
+function coachStateFromError(error: { code?: string | null; message?: string | null }, fallback: CoachAllowlistRow): CoachAccountState | null {
+  if (isOptionalCoachSchemaError(error)) return null
+  const message = error.message || ''
+  if (message.includes('allowlist_disabled')) {
+    return { status: 'disabled', coachKey: fallback.coach_key, coachName: fallback.coach_key, message: '此教練帳號已由管理員停用。' }
+  }
+  if (['identity_collision', 'identity_owned', 'email_conflict', 'email_mismatch'].some((key) => message.includes(key))) {
+    return { status: 'conflict', coachKey: fallback.coach_key, coachName: fallback.coach_key, message: '教練身份或登入信箱與其他帳號衝突，請聯絡管理員處理。' }
+  }
+  throw error
+}
+
+async function syncCoachAccount(user: Awaited<ReturnType<typeof getAuthedUser>>): Promise<CoachAccountState | null> {
+  if (!supabaseAdmin || !user) return null
+  const email = (user.email ?? '').trim().toLowerCase()
   if (!email) return null
 
-  const { data: coachProfile, error: coachProfileError } = await supabaseAdmin
+  const { data: allowlist, error: allowlistError } = await supabaseAdmin
+    .from('coach_account_allowlist')
+    .select('id, coach_key, email, status, profile_id')
+    .eq('email', email)
+    .maybeSingle()
+  if (allowlistError) {
+    if (isOptionalCoachSchemaError(allowlistError)) return null
+    throw allowlistError
+  }
+  if (!allowlist) return null
+
+  const row = allowlist as CoachAllowlistRow
+  const { data: publicProfile, error: publicProfileError } = await supabaseAdmin
     .from('coach_public_profiles')
-    .select('coach_key, display_name')
-    .eq('verification_email', email)
-    .is('owner_profile_id', null)
+    .select('display_name')
+    .eq('coach_key', row.coach_key)
     .maybeSingle()
+  if (publicProfileError) throw publicProfileError
+  const coachName = publicProfile?.display_name || row.coach_key
+  const base = { coachKey: row.coach_key, coachName }
+  if (row.status === 'disabled') return { ...base, status: 'disabled', message: '此教練帳號已由管理員停用。' }
+  if (!user.email_confirmed_at) {
+    return { ...base, status: 'pending_email', message: '請先完成登記信箱驗證，驗證後重新登入即可啟用教練帳號。' }
+  }
 
-  if (coachProfileError) throw coachProfileError
-  if (!coachProfile) return null
+  const { data: activation, error: activationError } = await supabaseAdmin.rpc('activate_coach_allowlist', {
+    p_allowlist_id: row.id,
+    p_profile_id: user.id,
+    p_login_email: email,
+    p_email_confirmed: true,
+    p_actor_id: user.id,
+    p_reason: 'verified_login',
+  })
+  if (activationError) {
+    const state = coachStateFromError(activationError, row)
+    if (state) return { ...state, coachName }
+    return null
+  }
+  if (activation?.status === 'enabled') return { ...base, status: 'enabled' }
+  return { ...base, status: 'pending', message: '教練帳號已登記，完成驗證後即可啟用。' }
+}
 
-  const { data: invite, error: inviteError } = await supabaseAdmin
-    .from('coach_invites')
-    .select('id, expires_at')
-    .eq('coach_key', coachProfile.coach_key)
-    .is('used_at', null)
-    .maybeSingle()
-
-  if (inviteError) throw inviteError
-  if (!invite) return null
-  if (invite.expires_at && new Date(invite.expires_at).getTime() <= Date.now()) return null
-
-  return {
-    eligible: true,
-    coachKey: coachProfile.coach_key,
-    coachName: coachProfile.display_name,
+async function safeSyncCoachAccount(user: Awaited<ReturnType<typeof getAuthedUser>>) {
+  try {
+    return await syncCoachAccount(user)
+  } catch (error) {
+    console.error('[account] Coach account synchronization skipped.', error)
+    return null
   }
 }
 
-async function accountResponse(profile: Record<string, unknown>) {
-  if (!supabaseAdmin) return NextResponse.json({ profile, achievements: [] }, { headers: noStoreHeaders })
+async function accountResponse(profile: Record<string, unknown>, coachAccount: CoachAccountState | null = null) {
+  if (!supabaseAdmin) return NextResponse.json({ profile, achievements: [], coachAccount }, { headers: noStoreHeaders })
 
   const testAccount = await getIsolatedTestAccount({
     id: String(profile.id),
     email: typeof profile.email === 'string' ? profile.email : '',
   })
 
-  const [achievements, billingResult, coachVerification] = await Promise.all([
+  const [achievements, billingResult] = await Promise.all([
     getAchievementCollection(String(profile.id)),
     supabaseAdmin
       .from('profile_billing_preferences')
       .select('invoice_type, invoice_carrier, tax_id')
       .eq('profile_id', String(profile.id))
       .maybeSingle(),
-    getCoachVerification(profile),
   ])
 
   if (billingResult.error) throw billingResult.error
@@ -136,7 +188,7 @@ async function accountResponse(profile: Record<string, unknown>) {
       tax_id: billingResult.data?.tax_id ?? '',
     },
     achievements,
-    coachVerification,
+    coachAccount,
   }, { headers: noStoreHeaders })
 }
 
@@ -221,6 +273,7 @@ export async function GET(request: NextRequest) {
     const nextEmail = (user.email ?? existingProfile.email ?? '').trim().toLowerCase()
     const shouldPromoteAdmin =
       existingProfile.role !== 'admin' && await isAdminAllowlistedEmail(nextEmail)
+    let responseProfile = existingProfile
     if (
       (nextEmail && nextEmail !== existingProfile.email) ||
       shouldPromoteAdmin
@@ -235,14 +288,26 @@ export async function GET(request: NextRequest) {
         .select('*')
         .single()
 
-      if (updateError) {
-        return NextResponse.json({ error: updateError.message }, { status: 500 })
+      if (updateError || !updatedProfile) {
+        return NextResponse.json({ error: updateError?.message || '更新帳號資料失敗。' }, { status: 500 })
       }
-
-      return accountResponse(updatedProfile)
+      responseProfile = updatedProfile
     }
 
-    return accountResponse(existingProfile)
+    const coachAccount = await safeSyncCoachAccount(user)
+    if (coachAccount?.status === 'enabled') {
+      const { data: refreshedProfile, error: refreshedProfileError } = await supabaseAdmin
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+      if (refreshedProfileError || !refreshedProfile) {
+        return NextResponse.json({ error: refreshedProfileError?.message || '讀取教練帳號狀態失敗。' }, { status: 500 })
+      }
+      responseProfile = refreshedProfile
+    }
+
+    return accountResponse(responseProfile, coachAccount)
   }
 
   const email = (user.email ?? '').trim().toLowerCase()
@@ -272,7 +337,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: coachBindingError.message }, { status: 500 })
   }
 
-  return accountResponse(profile)
+  const coachAccount = await safeSyncCoachAccount(user)
+  if (coachAccount?.status === 'enabled') {
+    const { data: refreshedProfile, error: refreshedProfileError } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+    if (refreshedProfileError || !refreshedProfile) {
+      return NextResponse.json({ error: refreshedProfileError?.message || '讀取教練帳號狀態失敗。' }, { status: 500 })
+    }
+    return accountResponse(refreshedProfile, coachAccount)
+  }
+
+  return accountResponse(profile, coachAccount)
 }
 
 export async function PATCH(request: NextRequest) {
@@ -379,5 +457,18 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
-  return accountResponse(profile)
+  const coachAccount = await safeSyncCoachAccount(user)
+  let responseProfile = profile
+  if (coachAccount?.status === 'enabled') {
+    const { data: refreshedProfile, error: refreshedProfileError } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+    if (refreshedProfileError || !refreshedProfile) {
+      return NextResponse.json({ error: refreshedProfileError?.message || '讀取教練帳號狀態失敗。' }, { status: 500 })
+    }
+    responseProfile = refreshedProfile
+  }
+  return accountResponse(responseProfile, coachAccount)
 }

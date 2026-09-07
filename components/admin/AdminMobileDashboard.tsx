@@ -118,6 +118,9 @@ export default function AdminMobileDashboard({ data, runAction, updatingId, acti
   const [mobileError, setMobileError] = useState('')
   const [productEditState, setProductEditState] = useState<ProductEditState>({ dirty: false, busy: false })
   const [seasonSection, setSeasonSection] = useState<'students' | 'settings'>('students')
+  const [coachRegisterKey, setCoachRegisterKey] = useState('')
+  const [coachRegisterEmail, setCoachRegisterEmail] = useState('')
+  const [coachStatusFilter, setCoachStatusFilter] = useState<'all' | 'enabled' | 'pending' | 'disabled'>('all')
 
   const pendingOrders = useMemo(
     () => data.orders.filter((order) => order.status === 'pending_review'),
@@ -143,6 +146,13 @@ export default function AdminMobileDashboard({ data, runAction, updatingId, acti
   ).size
   const selectedStudent = data.students.find((student) => student.id === selectedStudentId) ?? null
   const selectedStudentOrders = selectedStudent ? studentOrders(selectedStudent, data.orders) : []
+  const availableCoachProfiles = useMemo(() => {
+    const registeredKeys = new Set(data.coachAccounts.map((account) => account.coachKey))
+    return data.coachPublicProfiles.filter((profile) => !registeredKeys.has(profile.coachKey))
+  }, [data.coachAccounts, data.coachPublicProfiles])
+  const filteredCoachAccounts = useMemo(() => {
+    return data.coachAccounts.filter((account) => coachStatusFilter === 'all' || account.status === coachStatusFilter)
+  }, [coachStatusFilter, data.coachAccounts])
 
   const filteredStudents = useMemo(() => {
     const query = studentQuery.trim().toLowerCase()
@@ -263,6 +273,22 @@ export default function AdminMobileDashboard({ data, runAction, updatingId, acti
     await mobileAction(`unbind-${bindingId}`, { action: 'unbind_student', bindingId })
   }
 
+  async function registerCoachAccount() {
+    if (!coachRegisterKey || !coachRegisterEmail.trim()) {
+      setMobileError('請先選擇教練身份並填寫登入信箱。')
+      return
+    }
+    const success = await mobileAction('register-coach-account', {
+      action: 'register_coach_account',
+      coachKey: coachRegisterKey,
+      verificationEmail: coachRegisterEmail,
+    })
+    if (success) {
+      setCoachRegisterKey('')
+      setCoachRegisterEmail('')
+    }
+  }
+
   async function createPaymentAccount() {
     if (!accountForm.label.trim() || !accountForm.accountName.trim() || !accountForm.bankName.trim() || !accountForm.accountNumber.trim()) {
       setMobileError('請填寫通道名稱、戶名、銀行名稱與收款帳號。')
@@ -311,7 +337,7 @@ export default function AdminMobileDashboard({ data, runAction, updatingId, acti
                 <div className="admin-mobile-task-note"><span>{longestPending ? `最久${waitLabel(longestPending.submittedAt)}` : '目前沒有待核對款項'}</span><strong>開始核對 →</strong></div>
               </button>
               <button type="button" className="admin-mobile-task" data-tone="danger" onClick={() => navigate('coaches')}>
-                <div className="admin-mobile-task-grid"><span className="admin-mobile-task-icon"><AlertTriangle className="h-5 w-5" aria-hidden="true" /></span><span><h3>排班與簽到異常</h3><p>未簽到、代班與人工修正待處理</p></span><span className="admin-mobile-task-value">{anomalyCount}</span></div>
+                <div className="admin-mobile-task-grid"><span className="admin-mobile-task-icon"><AlertTriangle className="h-5 w-5" aria-hidden="true" /></span><span><h3>教練管理工作區</h3><p>排班、簽到與教練帳號登記</p></span><span className="admin-mobile-task-value">查看</span></div>
               </button>
               <button type="button" className="admin-mobile-task" onClick={() => navigate('students')}>
                 <div className="admin-mobile-task-grid"><span className="admin-mobile-task-icon"><UsersRound className="h-5 w-5" aria-hidden="true" /></span><span><h3>學員待處理（去重）</h3><p>已確認付款但課表待開通 {paidWithoutPlanCount} 位 · 未綁教練 {withoutCoachCount} 位（同一學員可能同時符合）</p></span><span className="admin-mobile-task-value">{attentionStudentCount}</span></div>
@@ -376,7 +402,30 @@ export default function AdminMobileDashboard({ data, runAction, updatingId, acti
           </section>
         ) : null}
 
-        {view === 'coaches' ? <section className="admin-mobile-screen admin-mobile-external"><div className="admin-mobile-backrow"><button type="button" className="admin-mobile-back" onClick={() => navigate('overview')}><ArrowLeft className="h-4 w-4" />返回總覽</button></div><div className="admin-mobile-coach"><AdminCoachDuty /></div></section> : null}
+        {view === 'coaches' ? (
+          <section className="admin-mobile-screen admin-mobile-external">
+            <div className="admin-mobile-backrow"><button type="button" className="admin-mobile-back" onClick={() => navigate('overview')}><ArrowLeft className="h-4 w-4" />返回總覽</button></div>
+            <div className="admin-mobile-coach"><AdminCoachDuty /></div>
+            <div className="admin-mobile-card admin-mobile-detail-card" style={{ marginTop: 14 }}>
+              <div className="admin-mobile-sectionhead" style={{ marginTop: 0 }}><h2>教練帳號登記</h2><span>{data.coachAccounts.length} 筆</span></div>
+              <p className="admin-mobile-boundary">只登記既有公開教練資料的登入信箱；未註冊者等首次登入，已停用者不會自動恢復。</p>
+              <div className="admin-mobile-form">
+                <label className="admin-mobile-field"><span>公開教練身份</span><select className="admin-mobile-control" value={coachRegisterKey} onChange={(event) => { const key = event.target.value; const profile = availableCoachProfiles.find((item) => item.coachKey === key); setCoachRegisterKey(key); setCoachRegisterEmail(profile?.verificationEmail || '') }}><option value="">選擇要登記的教練</option>{availableCoachProfiles.map((profile) => <option key={profile.coachKey} value={profile.coachKey}>{profile.displayName}</option>)}</select></label>
+                <label className="admin-mobile-field"><span>登入信箱</span><input className="admin-mobile-control" type="email" value={coachRegisterEmail} onChange={(event) => setCoachRegisterEmail(event.target.value)} placeholder="教練登入信箱" /></label>
+                <button type="button" className="admin-mobile-button" data-tone="accent" disabled={Boolean(updatingId) || !coachRegisterKey || !coachRegisterEmail.trim()} onClick={() => void registerCoachAccount()}>登記教練帳號</button>
+              </div>
+            </div>
+            <div className="admin-mobile-sectionhead" style={{ marginTop: 20 }}><h2>帳號狀態</h2><div className="admin-mobile-chiprow" role="tablist" aria-label="教練帳號狀態篩選">{([['all', '全部'], ['enabled', '已啟用'], ['pending', '待啟用'], ['disabled', '已停用']] as const).map(([id, label]) => <button type="button" role="tab" aria-selected={coachStatusFilter === id} key={id} className="admin-mobile-chip" data-active={coachStatusFilter === id} onClick={() => setCoachStatusFilter(id)}>{label}</button>)}</div></div>
+            <div className="admin-mobile-stack" style={{ marginTop: 10 }}>
+              {filteredCoachAccounts.map((account) => {
+                const legacy = account.id.startsWith('legacy:')
+                const statusTone = account.status === 'enabled' ? 'ok' : account.status === 'disabled' ? 'error' : 'wait'
+                return <article key={account.id} className="admin-mobile-card admin-mobile-detail-card"><div className="admin-mobile-cardtop"><div><span className="admin-mobile-status" data-tone={statusTone}>{account.status === 'enabled' ? '教練已啟用' : account.status === 'disabled' ? '已停用' : '待啟用'}</span><h3 style={{ margin: '7px 0 0', color: '#092d3a' }}>{account.name}</h3><p className="admin-mobile-subtitle" style={{ marginTop: 4 }}>{account.email || '未提供信箱'}</p></div><span className="admin-mobile-status">{account.registered === null ? '帳號狀態暫不可查' : account.registered ? (account.emailConfirmed ? '信箱已驗證' : '待驗證') : '待首次登入'}</span></div><div className="admin-mobile-info"><div className="admin-mobile-info-line"><span>綁定學員</span><strong>{account.boundStudentCount} 位</strong></div><div className="admin-mobile-info-line"><span>負責課程</span><strong>{account.courses || '暫無資料'}</strong></div></div>{account.role === 'admin' ? <p className="admin-mobile-boundary"><strong>管理員權限保留：</strong>不可用教練停用操作。</p> : legacy ? <p className="admin-mobile-boundary">完成資料庫登記後可管理狀態。</p> : <button type="button" className="admin-mobile-button" data-tone={account.status === 'disabled' ? 'accent' : 'danger'} disabled={updatingId === account.id} onClick={() => void mobileAction(account.id, { action: 'set_coach_account_status', allowlistId: account.id, enabled: account.status === 'disabled' })}>{account.status === 'disabled' ? '重新啟用' : '停用教練帳號'}</button>}</article>
+              })}
+              {!filteredCoachAccounts.length ? <p className="admin-mobile-boundary">沒有符合條件的教練帳號。</p> : null}
+            </div>
+          </section>
+        ) : null}
 
         {view === 'seasons' ? <section className="admin-mobile-screen admin-mobile-external"><div className="admin-mobile-backrow"><button type="button" className="admin-mobile-back" onClick={() => navigate('overview')}><ArrowLeft className="h-4 w-4" />返回總覽</button></div><div className="admin-mobile-segmented" role="tablist" aria-label="季度管理分段"><button type="button" role="tab" aria-selected={seasonSection === 'students'} data-active={seasonSection === 'students'} onClick={() => setSeasonSection('students')}>學員與統計</button><button type="button" role="tab" aria-selected={seasonSection === 'settings'} data-active={seasonSection === 'settings'} onClick={() => setSeasonSection('settings')}>季度設定</button></div>{seasonSection === 'students' ? <div className="admin-mobile-enrollment"><AdminEnrollmentAnalytics orders={data.orders} courseCapacity={data.courseCapacity} seasons={data.courseSeasons} syncSources={data.seasonSyncSources} runAction={mobileAction} updatingId={updatingId} /></div> : <div className="admin-mobile-content-manager"><AdminContentManager content={data.siteContent} courses={data.courses} seasons={data.courseSeasons} scope="seasons" onBack={() => setSeasonSection('students')} runAction={mobileAction} /></div>}</section> : null}
         {view === 'products' ? <section className="admin-mobile-screen admin-mobile-external"><div className="admin-mobile-backrow"><button type="button" className="admin-mobile-back" onClick={() => navigate('overview')}><ArrowLeft className="h-4 w-4" />返回總覽</button></div><div className="admin-mobile-product"><AdminProductWorkspace products={data.products} runAction={mobileAction} onStateChange={setProductEditState} /></div><div className="admin-mobile-boundary"><strong>未儲存保護：</strong>{productEditState.dirty ? '目前商品有未儲存變更，請先儲存或放棄後再離開。' : '商品編輯器沿用現有圖片裁切、規格、上下架與刪除保護。'}</div></section> : null}

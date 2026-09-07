@@ -9,6 +9,8 @@ export type CoachDutyAttendanceState =
   | 'missing_start_time'
   | 'leave_approved'
 
+export type CoachDutyWindowPhase = 'upcoming' | 'open' | 'closed' | 'missing'
+
 export function coachDutyActionCoachId(input: {
   action: 'check_in' | 'request_leave'
   actualCoachId: string
@@ -51,7 +53,9 @@ export function canCoachRequestLeave(input: {
   leaveStatus: 'none' | 'requested' | 'approved' | 'rejected'
   substituteResponse: 'none' | 'pending' | 'accepted' | 'rejected'
   hasCheckin: boolean
+  windowPhase?: CoachDutyWindowPhase
 }) {
+  if (input.windowPhase && (input.windowPhase === 'closed' || input.windowPhase === 'missing') && !input.isAdmin) return false
   return !input.cancelled
     && (input.isAdmin || input.scheduledCoachId === input.userId)
     && (
@@ -59,6 +63,70 @@ export function canCoachRequestLeave(input: {
       || (input.leaveStatus === 'requested' && input.substituteResponse === 'rejected')
     )
     && !input.hasCheckin
+}
+
+/**
+ * State guard shared by API transitions. The UI may be stale, so the server
+ * must repeat these checks after loading the current assignment.
+ */
+export function canRequestLeaveAtState(input: {
+  cancelled: boolean
+  hasCheckin: boolean
+  isAdmin?: boolean
+  leaveStatus: 'none' | 'requested' | 'approved' | 'rejected'
+  substituteResponse: 'none' | 'pending' | 'accepted' | 'rejected'
+  windowPhase: CoachDutyWindowPhase
+  hasReason?: boolean
+}) {
+  if (input.cancelled || input.hasCheckin) return false
+  if (!(
+    input.leaveStatus === 'none'
+    || (input.leaveStatus === 'requested' && input.substituteResponse === 'rejected')
+  )) return false
+  if (input.windowPhase !== 'closed' && input.windowPhase !== 'missing') return true
+  return Boolean(input.isAdmin && input.hasReason)
+}
+
+export function canReviewLeaveAtState(input: {
+  cancelled: boolean
+  hasCheckin: boolean
+  leaveStatus: 'none' | 'requested' | 'approved' | 'rejected'
+  decision: 'approved' | 'rejected'
+  windowPhase: CoachDutyWindowPhase
+  hasReason?: boolean
+}) {
+  if (input.cancelled || input.hasCheckin || input.leaveStatus !== 'requested') return false
+  if (input.decision === 'rejected' && !input.hasReason) return false
+  if ((input.windowPhase === 'closed' || input.windowPhase === 'missing') && !input.hasReason) return false
+  return true
+}
+
+export function canChangeSubstituteAtState(input: {
+  cancelled: boolean
+  hasCheckin: boolean
+  isAdmin?: boolean
+  windowPhase: CoachDutyWindowPhase
+  hasReason?: boolean
+}) {
+  if (input.cancelled || input.hasCheckin) return false
+  if (input.windowPhase !== 'closed' && input.windowPhase !== 'missing') return true
+  return Boolean(input.isAdmin && input.hasReason)
+}
+
+export function canRecordCoachCheckin(input: {
+  cancelled: boolean
+  hasCheckin: boolean
+  actualCoachId: string
+  scheduledCoachId: string
+  leaveStatus: 'none' | 'requested' | 'approved' | 'rejected'
+  isAdmin?: boolean
+  userId?: string
+  windowPhase: CoachDutyWindowPhase
+}) {
+  if (input.cancelled || input.hasCheckin || input.windowPhase !== 'open') return false
+  if (!input.actualCoachId) return false
+  if (input.leaveStatus === 'approved' && input.actualCoachId === input.scheduledCoachId) return false
+  return Boolean(input.isAdmin || input.actualCoachId === input.userId)
 }
 
 function sessionStart(sessionDate: string, startTime: string) {
@@ -70,7 +138,7 @@ export function coachDutyWindow(
   sessionDate: string,
   startTime: string,
   now = new Date(),
-) {
+): { startsAt: Date | null; opensAt: Date | null; closesAt: Date | null; phase: CoachDutyWindowPhase } {
   const startsAt = sessionStart(sessionDate, startTime)
   if (!startsAt) {
     return {
