@@ -191,18 +191,6 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
 
   return (
     <section ref={heroRef} className="home-hero" aria-labelledby="home-hero-title">
-      <svg
-        className="home-hero-track"
-        viewBox="0 0 1600 820"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
-        <path className="home-hero-track-ghost" d="M-90 185 C 250 55, 385 430, 716 302 S 1115 110, 1690 454" />
-        <path className="home-hero-track-edge" d="M-90 137 C 250 7, 385 382, 716 254 S 1115 62, 1690 406" />
-        <path className="home-hero-track-edge" d="M-90 233 C 250 103, 385 478, 716 350 S 1115 158, 1690 502" />
-        <path className="home-hero-track-accent" d="M-90 185 C 250 55, 385 430, 716 302 S 1115 110, 1690 454" />
-      </svg>
-
       <p className="home-hero-kinetic home-hero-kinetic-run" aria-hidden="true">
         RUN
       </p>

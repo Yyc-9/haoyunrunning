@@ -165,12 +165,12 @@
   height: min(920px, 100dvh);
   min-height: 720px;
   overflow: hidden;
-  color: #173d3b;
+  color: #faf7f2;
   background:
-    radial-gradient(circle at var(--hero-x) var(--hero-y), rgb(220 238 215 / 32%), transparent 18%) center / auto no-repeat,
-    linear-gradient(28deg, rgb(248 246 237 / 76%) 0%, rgb(248 246 237 / 12%) 45%, transparent 70%) center / auto no-repeat,
+    radial-gradient(circle at var(--hero-x) var(--hero-y), rgb(208 198 222 / 12%), transparent 18%) center / auto no-repeat,
+    linear-gradient(28deg, rgb(19 17 23 / 90%) 0%, rgb(19 17 23 / 68%) 40%, rgb(19 17 23 / 10%) 72%) center / auto no-repeat,
     linear-gradient(to bottom, rgb(248 246 237 / 90%), transparent 150px) center / auto no-repeat,
-    url('/site-visuals/home-hero-push-off.webp') center / cover no-repeat,
+    url('/site-visuals/home-hero-track-photo-v1.jpg') center / cover no-repeat,
     #eeeae0;
 }
 
@@ -179,8 +179,8 @@
   inset: 0;
   z-index: -1;
   background-image:
-    linear-gradient(rgb(46 83 74 / 16%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(46 83 74 / 16%) 1px, transparent 1px);
+    linear-gradient(rgb(226 218 235 / 16%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(226 218 235 / 16%) 1px, transparent 1px);
   background-size: 72px 72px;
   mask-image: linear-gradient(to bottom, #000, transparent 88%);
   opacity: 0.18;
@@ -194,7 +194,7 @@
   z-index: -1;
   width: 660px;
   height: 660px;
-  border: 110px solid rgb(177 154 110 / 10%);
+  border: 110px solid rgb(208 198 222 / 8%);
   border-radius: 50%;
   transform: rotate(-12deg);
   content: '';
@@ -215,28 +215,28 @@
 }
 
 .home-hero-track-ghost {
-  stroke: rgb(75 106 89 / 7%);
+  stroke: rgb(226 218 235 / 7%);
   stroke-width: 92;
 }
 
 .home-hero-track-edge {
-  stroke: rgb(51 90 76 / 26%);
+  stroke: rgb(226 218 235 / 24%);
   stroke-width: 2;
   stroke-dasharray: 3 17;
 }
 
 .home-hero-track-accent {
-  stroke: #ab8b4f;
+  stroke: #c9bed8;
   stroke-width: 7;
   stroke-dasharray: 1 19;
-  filter: drop-shadow(0 0 12px rgb(171 139 79 / 25%));
+  filter: drop-shadow(0 2px 10px rgb(19 17 23 / 24%));
 }
 
 .home-hero-kinetic {
   position: absolute;
   z-index: 0;
   margin: 0;
-  color: rgb(42 80 67 / 6%);
+  color: rgb(226 218 235 / 6%);
   font-size: clamp(10rem, 21vw, 20.125rem);
   font-weight: 950;
   line-height: 0.76;
@@ -255,7 +255,7 @@
   top: 465px;
   left: 22%;
   color: transparent;
-  -webkit-text-stroke: 2px rgb(42 80 67 / 13%);
+  -webkit-text-stroke: 2px rgb(226 218 235 / 13%);
   transform: rotate(-4deg);
 }
 
@@ -365,7 +365,7 @@
   width: 34px;
   height: 3px;
   border-radius: 999px;
-  background: #ab8b4f;
+  background: #c9bed8;
   content: '';
 }
 
@@ -375,7 +375,7 @@
   font-weight: 850;
   line-height: 0.98;
   letter-spacing: -0.065em;
-  text-shadow: 0 2px 24px rgb(248 246 237 / 55%);
+  text-shadow: 0 3px 20px rgb(19 17 23 / 48%);
   text-wrap: balance;
 }
 
@@ -384,7 +384,7 @@
 }
 
 .home-hero-copy h1 span:last-child {
-  color: #356353;
+  color: #e3d9ef;
 }
 
 .home-hero-pointer-instruction {
@@ -392,7 +392,7 @@
   align-items: center;
   gap: 14px;
   margin: 26px 0 0;
-  color: #36594f;
+  color: #eee7f3;
   font-size: 0.875rem;
   font-weight: 700;
 }
@@ -401,9 +401,9 @@
   position: relative;
   width: 42px;
   height: 42px;
-  border: 1px solid rgb(49 87 72 / 32%);
+  border: 1px solid rgb(226 218 235 / 44%);
   border-radius: 50%;
-  background: rgb(250 249 242 / 52%);
+  background: rgb(28 25 34 / 55%);
   backdrop-filter: blur(8px);
 }
 
@@ -414,8 +414,8 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #47735c;
-  box-shadow: 0 0 0 7px rgb(71 115 92 / 14%);
+  background: #e3d9ef;
+  box-shadow: 0 0 0 7px rgb(227 217 239 / 14%);
   transform: translate(-50%, -50%);
   animation: homeHeroGesture 1.8s ease-in-out infinite;
   content: '';
@@ -435,9 +435,9 @@
   width: 235px;
   padding: 18px 19px;
   border-radius: 3px 24px 24px;
-  background: #dce6c9;
+  background: #e3dce9;
   box-shadow: 0 22px 58px rgb(2 34 49 / 20%);
-  color: #093448;
+  color: #302837;
 }
 
 .home-hero-story-stamp small {
@@ -497,9 +497,9 @@
     height: max(760px, 100svh);
     min-height: 760px;
     background:
-      radial-gradient(circle at 86% 28%, rgb(220 238 215 / 28%), transparent 26%),
-      linear-gradient(to top, rgb(248 246 237 / 86%), rgb(248 246 237 / 10%) 55%, transparent 75%),
-      url('/site-visuals/home-hero-push-off.webp') 64% center / cover no-repeat,
+      radial-gradient(circle at 86% 28%, rgb(208 198 222 / 10%), transparent 26%),
+      linear-gradient(to top, rgb(19 17 23 / 94%), rgb(19 17 23 / 70%) 42%, rgb(19 17 23 / 12%) 75%),
+      url('/site-visuals/home-hero-track-photo-v1.jpg') 64% center / cover no-repeat,
       #eeeae0;
   }
 
