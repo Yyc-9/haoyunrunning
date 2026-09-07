@@ -88,8 +88,6 @@ export function coachPublicProfilesFromRows(rows: CoachPublicProfileRow[] | null
   const result = { ...defaultCoachPublicProfiles }
 
   for (const row of rows ?? []) {
-    // Retire the public listing without deleting historical attendance or accounts.
-    if (row.coach_key === 'yongXin') continue
     const initialized = row.profile_initialized === true
     const fallback = result[row.coach_key] ?? {
       coachKey: row.coach_key,

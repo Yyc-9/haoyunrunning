@@ -349,6 +349,16 @@ export const coachProfiles = {
     style: '協助教練掌握不同程度跑者的課堂狀態，讓訓練更有秩序。',
     achievements: ['好運跑班課程助教'],
   },
+  yongXin: {
+    name: '詠馨助教',
+    role: '好運跑班助教',
+    imageUrl: '/coaches/2026/avatars/yong-xin.jpg',
+    fullBodyImageUrl: '/coaches/2026/yong-xin.jpg',
+    bio: '好運跑班助教，協助課堂示範、團練陪跑與學員狀態觀察。',
+    specialties: ['課堂協助', '團練陪跑', '學員狀態觀察'],
+    style: '用清楚提醒與陪伴協助跑者完成當日訓練。',
+    achievements: ['好運跑班課程助教'],
+  },
   peter: {
     name: 'Peter 教練',
     role: '好運跑班教練',
@@ -367,7 +377,7 @@ function getCourseCoaches(course: Course): Coach[] {
 
   const coachesBySlug: Record<string, Coach[]> = {
     'zhubei-night-run-monday': [coachProfiles.liuChengEn, coachProfiles.bianbian, coachProfiles.luoPeiCi],
-    'taipei-pb-tuesday': [coachProfiles.chenShengQi, coachProfiles.wuPeiCi],
+    'taipei-pb-tuesday': [coachProfiles.chenShengQi, coachProfiles.wuPeiCi, coachProfiles.yongXin],
     'hsinchu-beginner-tuesday': [coachProfiles.bianbian, coachProfiles.wuWeiQiao],
     'hsinchu-morning-run-wednesday': [coachProfiles.chenShengQi, coachProfiles.liuChengEn, coachProfiles.xiaoHe],
     'taipei-night-run-wednesday': [],

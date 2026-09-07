@@ -10,10 +10,11 @@ const coachMap = source.slice(mapStart, mapEnd)
 test("Peter 使用獨立身份與照片，不繼承詠馨的課程或經歷", () => {
   assert.match(source, /peter: \{/)
   assert.match(source, /avatars\/peter-941\.jpg/)
-  assert.doesNotMatch(source, /yongXin|詠馨/)
+  assert.match(source, /yongXin: \{/)
+  assert.match(coachMap, /'taipei-pb-tuesday': \[coachProfiles\.chenShengQi, coachProfiles\.wuPeiCi, coachProfiles\.yongXin\]/)
   assert.doesNotMatch(coachMap, /coachProfiles\.peter/)
   const profiles = readFileSync(new URL("../lib/coach-profiles.ts", import.meta.url), "utf8")
-  assert.match(profiles, /if \(row\.coach_key === .yongXin.\) continue/)
+  assert.doesNotMatch(profiles, /if \(row\.coach_key === .yongXin.\) continue/)
 })
 
 test('鄔惟喬僅隸屬週二竹市班', () => {
