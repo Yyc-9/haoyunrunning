@@ -32,6 +32,14 @@ export const courseSeasonStatusLabels: Record<CourseSeasonStatus, string> = {
   archived: '已封存',
 }
 
+/** Enrollment work defaults to the recruiting season, never a hard-coded quarter. */
+export function preferredCourseSeasonId(seasons: readonly Pick<CourseSeason, 'id' | 'status' | 'isCurrent' | 'code'>[]) {
+  const rank: Record<CourseSeasonStatus, number> = { enrolling: 0, active: 1, draft: 2, completed: 3, archived: 4 }
+  return [...seasons].sort((a, b) => rank[a.status] - rank[b.status]
+    || Number(b.isCurrent) - Number(a.isCurrent)
+    || b.code.localeCompare(a.code))[0]?.id ?? ''
+}
+
 function taipeiDateKey(date: Date) {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Taipei',

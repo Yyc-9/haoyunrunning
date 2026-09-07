@@ -262,6 +262,7 @@ type AdminPatchBody =
   | { action?: 'duplicate_season_course'; seasonId?: string; courseSlug?: string }
   | { action?: 'delete_season_course'; seasonId?: string; courseSlug?: string }
   | { action?: 'create_next_course_season'; sourceSeasonId?: string }
+  | { action?: 'delete_course_season'; seasonId?: string }
   | { action?: 'activate_course_season'; seasonId?: string }
   | { action?: 'update_course_season_status'; seasonId?: string; status?: CourseSeasonStatus }
   | { action?: 'create_payment_account'; label?: string; accountName?: string; bankName?: string; bankCode?: string; accountNumber?: string; weight?: number }
@@ -1134,6 +1135,22 @@ export async function PATCH(request: NextRequest) {
     const { error } = await supabaseAdmin!.from('course_season_courses').delete().eq('id', offering.id)
     if (error) return json({ error: error.message || '移除課程失敗。' }, { status: 500 })
     return json({ message: '空白課程已移除，其他季度與既有資料不受影響。' })
+  }
+
+  if (body.action === 'delete_course_season') {
+    const seasonId = cleanText(body.seasonId)
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(seasonId)) {
+      return json({ error: '季度資料無效。' }, { status: 400 })
+    }
+    const { data, error } = await supabaseAdmin!.rpc('delete_empty_course_season', {
+      p_season_id: seasonId,
+      p_actor_profile_id: auth.user.id,
+    })
+    if (error) {
+      const status = error.code === 'P0002' ? 404 : ['P0001', '23503'].includes(error.code) ? 409 : 500
+      return json({ error: error.code === 'PGRST202' ? '季度刪除功能尚待資料庫更新，請稍後再試；目前未刪除任何資料。' : error.message }, { status })
+    }
+    return json({ ...data, message: '空白季度及其課程設定已刪除，其他季度與歷史資料不受影響。' })
   }
 
   if (body.action === 'create_next_course_season') {

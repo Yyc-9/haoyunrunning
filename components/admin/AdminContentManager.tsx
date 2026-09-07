@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowDown,
   ArrowUp,
@@ -30,7 +30,7 @@ import {
 } from 'lucide-react'
 import { APP_TIME_ZONE_LABEL } from '@/lib/app-time'
 import { supabase } from '@/lib/supabase'
-import { courseSeasonStatusLabels, type CourseSeason, type CourseSeasonStatus } from '@/lib/course-seasons'
+import { courseSeasonStatusLabels, preferredCourseSeasonId, type CourseSeason, type CourseSeasonStatus } from '@/lib/course-seasons'
 import { isLegacyCourseTargetAudience } from '@/lib/managed-courses'
 import { orderedWeekdays } from '@/lib/course-sort'
 import { defaultCourseBillingConfig, type CourseBillingConfig } from '@/lib/course-pricing'
@@ -78,6 +78,7 @@ type AdminContentManagerProps = {
   courses: CourseSummary[]
   seasons: CourseSeason[]
   scope?: 'content' | 'seasons'
+  onBack?: () => void
   runAction: (id: string, action: Record<string, unknown>) => Promise<boolean>
 }
 
@@ -307,7 +308,7 @@ function courseDraft(course: CourseSummary, override?: CourseOverride): CourseOv
   }
 }
 
-export default function AdminContentManager({ content, courses, seasons, scope = 'content', runAction }: AdminContentManagerProps) {
+export default function AdminContentManager({ content, courses, seasons, scope = 'content', onBack, runAction }: AdminContentManagerProps) {
   const [mode, setMode] = useState<ContentMode>(scope === 'seasons' ? 'seasons' : 'overview')
   const [slides, setSlides] = useState(content.heroSlides)
   const [activities, setActivities] = useState<HomeActivity[]>(content.activities)
@@ -321,7 +322,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
   const [anniversary, setAnniversary] = useState<AnniversaryContent>(content.anniversary)
   const [coachDrafts, setCoachDrafts] = useState<Record<string, CoachPublicProfile>>(content.coachProfiles)
   const [pageMedia, setPageMedia] = useState<PageMedia>(content.pageMedia)
-  const currentSeason = seasons.find((season) => season.isCurrent) ?? seasons[0] ?? null
+  const currentSeason = seasons.find((season) => season.id === preferredCourseSeasonId(seasons)) ?? null
   const [selectedSeasonId, setSelectedSeasonId] = useState(currentSeason?.id ?? '')
   const [seasonOverrides, setSeasonOverrides] = useState<Record<string, Record<string, CourseOverride>>>(() =>
     Object.fromEntries(seasons.map((season) => [season.id, season.courseOverrides]))
@@ -345,6 +346,8 @@ export default function AdminContentManager({ content, courses, seasons, scope =
   const [courseMessage, setCourseMessage] = useState('')
   const [showNewCourse, setShowNewCourse] = useState(false)
   const [newCourseName, setNewCourseName] = useState('')
+  const seasonActionBusy = useRef(false)
+  const [seasonActionPending, setSeasonActionPending] = useState(false)
   const [newCourseTemplateSlug, setNewCourseTemplateSlug] = useState(courses[0]?.slug ?? '')
 
   useEffect(() => {
@@ -367,7 +370,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
     setSeasonCapacities(Object.fromEntries(seasons.map((season) => [season.id, season.courseCapacities])))
     setSeasonBillingConfigs(Object.fromEntries(seasons.map((season) => [season.id, season.courseBillingConfigs])))
     if (!seasons.some((season) => season.id === selectedSeasonId)) {
-      setSelectedSeasonId(seasons.find((season) => season.isCurrent)?.id ?? seasons[0]?.id ?? '')
+      setSelectedSeasonId(preferredCourseSeasonId(seasons))
     }
   }, [seasons, selectedSeasonId])
 
@@ -450,9 +453,36 @@ export default function AdminContentManager({ content, courses, seasons, scope =
 
   function changeMode(nextMode: ContentMode) {
     if (nextMode === mode) return
+    if (!confirmLeaveCourse()) return
     setLocalError('')
     setCourseMessage('')
     setMode(nextMode)
+  }
+
+  function confirmLeaveCourse() {
+    if (mode !== 'courses' || !selectedCourse || !selectedSeason) return true
+    const dirty = JSON.stringify(draft) !== JSON.stringify(courseDraft(selectedCourse, courseOverrides[selectedCourse.slug]))
+      || draftCapacity !== (seasonCapacities[selectedSeason.id]?.[selectedCourse.slug] ?? 40)
+      || JSON.stringify(draftBilling) !== JSON.stringify(seasonBillingConfigs[selectedSeason.id]?.[selectedCourse.slug] ?? defaultCourseBillingConfig(selectedCourse, selectedSeason.code))
+      || (showNewCourse && Boolean(newCourseName.trim()))
+    return !dirty || window.confirm('有尚未儲存的課程修改，確定放棄並返回／切換嗎？')
+  }
+
+  async function deleteSeason(season: CourseSeason) {
+    if (seasonActionBusy.current) return
+    if (!window.confirm(`確定刪除「${season.name}」及其課程設定？此操作無法復原。有報名、點名、請假或補課等紀錄的季度不能刪除，請改用封存。`)) return
+    seasonActionBusy.current = true
+    setSeasonActionPending(true)
+    try {
+      const deleted = await runAction(`delete-season-${season.id}`, { action: 'delete_course_season', seasonId: season.id })
+      if (deleted && selectedSeasonId === season.id) {
+        setSelectedSeasonId(preferredCourseSeasonId(seasons.filter((item) => item.id !== season.id)))
+        setSelectedSlug('')
+      }
+    } finally {
+      seasonActionBusy.current = false
+      setSeasonActionPending(false)
+    }
   }
 
   async function addHeroImage(file?: File) {
@@ -532,11 +562,18 @@ export default function AdminContentManager({ content, courses, seasons, scope =
   }
 
   async function createNextSeason() {
-    if (!selectedSeason) return
-    await runAction(`create-season-${selectedSeason.id}`, {
-      action: 'create_next_course_season',
-      sourceSeasonId: selectedSeason.id,
-    })
+    if (!selectedSeason || seasonActionBusy.current) return
+    seasonActionBusy.current = true
+    setSeasonActionPending(true)
+    try {
+      await runAction(`create-season-${selectedSeason.id}`, {
+        action: 'create_next_course_season',
+        sourceSeasonId: selectedSeason.id,
+      })
+    } finally {
+      seasonActionBusy.current = false
+      setSeasonActionPending(false)
+    }
   }
 
   async function createSeasonCourse() {
@@ -675,6 +712,10 @@ export default function AdminContentManager({ content, courses, seasons, scope =
       </aside>
 
       <div id="admin-content-panel" className="min-w-0 lg:min-h-[720px] lg:self-start">
+        {scope === 'seasons' ? <button type="button" className="apple-button-outline mb-4 gap-2 px-4 py-2.5" onClick={() => {
+          if (mode === 'courses') changeMode('seasons')
+          else onBack?.()
+        }}><Undo2 className="h-4 w-4" />{mode === 'courses' ? '返回季度列表' : '返回學員與統計'}</button> : null}
         <p className="sr-only" aria-live="polite">目前顯示：{activeMode?.label}</p>
         {localError ? <p className="mb-5 rounded-lg bg-red-50 px-5 py-4 text-sm font-semibold text-red-600">{localError}</p> : null}
 
@@ -1097,7 +1138,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                   {seasons.map((season) => <option key={season.id} value={season.id}>{season.name}</option>)}
                 </select>
               </Field>
-              <button type="button" disabled={!selectedSeason} onClick={createNextSeason} className="apple-button-primary gap-2 px-5 py-3 disabled:opacity-40"><Copy className="h-4 w-4" />複製建立下一季</button>
+              <button type="button" disabled={!selectedSeason || seasonActionPending} onClick={createNextSeason} className="apple-button-primary gap-2 px-5 py-3 disabled:opacity-40"><Copy className="h-4 w-4" />複製建立下一季</button>
             </div>
             <div className="divide-y divide-black/10">
               {seasons.map((season) => (
@@ -1120,6 +1161,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                     </select>
                     <button type="button" onClick={() => { setSelectedSeasonId(season.id); changeMode('courses') }} className="apple-button-outline px-4 py-2.5">管理這季課程</button>
                     {!season.isCurrent ? <button type="button" onClick={() => activateSeason(season)} className="apple-button-primary gap-2 px-4 py-2.5"><CheckCircle2 className="h-4 w-4" />設為前台招生</button> : null}
+                    <button type="button" onClick={() => deleteSeason(season)} disabled={seasonActionPending || season.isCurrent || ['enrolling', 'active'].includes(season.status) || season.registrationCount > 0} title="僅可刪除非招生中、非進行中且無營運紀錄的季度；有紀錄請封存" aria-label={`刪除 ${season.name}`} className="inline-flex items-center justify-center gap-1 rounded-lg border border-red-200 px-4 py-2.5 text-sm font-bold text-red-700 disabled:opacity-40"><Trash2 className="h-4 w-4" />刪除季度</button>
                   </div>
                 </article>
               ))}
@@ -1132,8 +1174,8 @@ export default function AdminContentManager({ content, courses, seasons, scope =
             {panelHeader(`${selectedSeason.name}課程資料`, selectedSeason.isCurrent ? '儲存後會同步發布到首頁、訓練課程、日程表、課程詳情與報名頁。' : '這是非當前季度，儲存只會更新草稿或歷史資料，不影響前台。', '/courses')}
             <div className="border-b border-black/10 bg-apple-gray-50 p-5">
               <div className="grid gap-4 lg:grid-cols-[minmax(180px,.7fr)_minmax(280px,1.3fr)_auto] lg:items-end">
-                <Field label="管理季度"><select value={selectedSeasonId} onChange={(e) => { setSelectedSeasonId(e.target.value); setCourseMessage('') }} className="apple-input">{seasons.map((season) => <option key={season.id} value={season.id}>{season.name}{season.isCurrent ? '（前台招生）' : ''}</option>)}</select></Field>
-                <Field label="這一季的課程"><select value={selectedSlug} onChange={(e) => { setSelectedSlug(e.target.value); setCourseMessage('') }} className="apple-input" disabled={!seasonCourses.length}>{seasonCourses.length ? seasonCourses.map((course) => <option key={course.slug} value={course.slug}>{course.name}</option>) : <option value="">尚未建立課程</option>}</select></Field>
+                <Field label="管理季度"><select value={selectedSeasonId} onChange={(e) => { if (!confirmLeaveCourse()) return; setSelectedSeasonId(e.target.value); setCourseMessage('') }} className="apple-input">{seasons.map((season) => <option key={season.id} value={season.id}>{season.name}{season.isCurrent ? '（前台招生）' : ''}</option>)}</select></Field>
+                <Field label="這一季的課程"><select value={selectedSlug} onChange={(e) => { if (!confirmLeaveCourse()) return; setSelectedSlug(e.target.value); setCourseMessage('') }} className="apple-input" disabled={!seasonCourses.length}>{seasonCourses.length ? seasonCourses.map((course) => <option key={course.slug} value={course.slug}>{course.name}</option>) : <option value="">尚未建立課程</option>}</select></Field>
                 <div className="grid grid-cols-3 gap-2">
                   <button type="button" onClick={() => setShowNewCourse((current) => !current)} className="apple-button-primary gap-1 px-3 py-3 text-sm"><Plus className="h-4 w-4" />新增</button>
                   <button type="button" onClick={duplicateSeasonCourse} disabled={!selectedCourse} className="apple-button-outline gap-1 px-3 py-3 text-sm disabled:opacity-40"><Copy className="h-4 w-4" />複製</button>

@@ -1109,7 +1109,7 @@ export default function AdminDashboardClient() {
                   {seasonView === 'students' ? (
                     <AdminEnrollmentAnalytics orders={data.orders} courseCapacity={data.courseCapacity} seasons={data.courseSeasons} syncSources={data.seasonSyncSources} runAction={runAction} updatingId={updatingId} />
                   ) : (
-                    <AdminContentManager content={data.siteContent} courses={data.courses} seasons={data.courseSeasons} scope="seasons" runAction={runAction} />
+                    <AdminContentManager content={data.siteContent} courses={data.courses} seasons={data.courseSeasons} scope="seasons" onBack={() => setSeasonView('students')} runAction={runAction} />
                   )}
                 </section>
               ) : null}

@@ -37,7 +37,7 @@ export default function AnniversaryPageClient() {
                 <h1 className="text-4xl font-black leading-tight md:text-6xl">
                   {anniversary.title}
                 </h1>
-                <p className="mt-6 max-w-2xl text-lg leading-8 text-white/85">
+                <p className="mt-6 max-w-2xl whitespace-pre-wrap break-words text-lg leading-8 text-white/85">
                   {anniversary.subtitle}
                 </p>
 
@@ -70,7 +70,7 @@ export default function AnniversaryPageClient() {
                 <h2 className="mt-3 text-3xl font-black text-apple-gray-900">
                   {anniversary.status}
                 </h2>
-                <p className="mt-4 leading-7 text-apple-gray-600">
+                <p className="mt-4 whitespace-pre-wrap break-words leading-7 text-apple-gray-600">
                   {anniversary.noticeDescription}
                 </p>
               </div>
@@ -94,7 +94,7 @@ export default function AnniversaryPageClient() {
               <h2 className="mt-3 text-3xl font-black text-apple-gray-900">
                 {anniversary.formTitle}
               </h2>
-              <p className="mt-4 leading-7 text-apple-gray-600">
+              <p className="mt-4 whitespace-pre-wrap break-words leading-7 text-apple-gray-600">
                 {anniversary.formDescription}
               </p>
             </section>

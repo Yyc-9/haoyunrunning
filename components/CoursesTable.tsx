@@ -36,10 +36,6 @@ function getCourseTone(level: Exclude<LevelFilter, 'all'>) {
   return 'border-emerald-200 bg-emerald-50 text-emerald-950 hover:border-emerald-300'
 }
 
-function getCourseTime(classTime: string) {
-  return classTime.match(/(?:[01]\d|2[0-3]):[0-5]\d/)?.[0] ?? null
-}
-
 export default function CoursesTable() {
   const { language } = useLanguage()
   const { courses } = useSiteContent()
@@ -150,7 +146,6 @@ export default function CoursesTable() {
                         <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                         <span>{localeText(displayCourseLocation(course.location))} · {localeText(course.meetingPoint)}</span>
                       </p>
-                      <p className="mt-2 text-[11px] font-semibold opacity-60">{localeText(course.period)}</p>
                     </Link>
                   )
                 })}
@@ -173,7 +168,7 @@ export default function CoursesTable() {
                 <div key={weekday} className="min-h-40 border-r border-black/10 bg-white p-2 last:border-r-0">
                   <div className="space-y-2">
                     {weekdayCourses.map((course) => {
-                      const time = getCourseTime(course.classTime)
+                      const time = localeText(displayCourseTime(course.classTime))
                       return (
                         <Link key={course.slug} href={`/courses/${course.slug}`} className={`course-event-card group block rounded-lg border p-3 transition hover:-translate-y-0.5 hover:shadow-md ${getCourseTone(getCourseLevel(course.name))}`}>
                           <div className="flex items-start justify-between gap-2">
@@ -190,7 +185,6 @@ export default function CoursesTable() {
                             <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                             <span>{localeText(displayCourseLocation(course.location))} · {localeText(course.meetingPoint)}</span>
                           </p>
-                          <p className="mt-2 text-[11px] font-semibold opacity-60">{localeText(course.period)}</p>
                         </Link>
                       )
                     })}

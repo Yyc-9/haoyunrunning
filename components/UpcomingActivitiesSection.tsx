@@ -64,7 +64,7 @@ function ActivityCard({ activity, icon: Icon, index }: ActivityCardProps) {
         <h3 className="mb-3 text-xl font-bold text-apple-gray-900">
           {activity.title}
         </h3>
-        <p className="mb-8 max-w-lg leading-7 text-apple-gray-600">{activity.description}</p>
+        <p className="mb-8 max-w-lg whitespace-pre-wrap break-words leading-7 text-apple-gray-600">{activity.description}</p>
         <div className="inline-flex items-center text-sm font-semibold text-apple-blue">
           {activity.action}
           <ArrowUpRight className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1 group-focus-visible:translate-x-1 group-focus-visible:-translate-y-1" />

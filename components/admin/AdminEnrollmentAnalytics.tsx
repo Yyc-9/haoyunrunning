@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, BarChart3, CalendarRange, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, FileSpreadsheet, Loader2, Package, RotateCcw, Search, Trash2, X } from 'lucide-react'
-import type { CourseSeason } from '@/lib/course-seasons'
+import { preferredCourseSeasonId, type CourseSeason } from '@/lib/course-seasons'
 import { paymentOrderStatusDescriptions, paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
 import { supabase } from '@/lib/supabase'
 
@@ -153,11 +153,10 @@ function resultNumber(result: Record<string, unknown>, key: string) {
 }
 
 export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seasons, syncSources, runAction, updatingId }: Props) {
-  const initialSeasonId = seasons.find((season) => season.code === '2026-Q3')?.id
-    ?? seasons.find((season) => season.isCurrent)?.id
-    ?? seasons[0]?.id
-    ?? ''
-  const [seasonId, setSeasonId] = useState(initialSeasonId)
+  const [selectedSeasonId, setSeasonId] = useState<string | null>(null)
+  const seasonId = seasons.some((season) => season.id === selectedSeasonId)
+    ? selectedSeasonId!
+    : preferredCourseSeasonId(seasons)
   const [query, setQuery] = useState('')
   const [courseFilter, setCourseFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState<'all' | 'new' | 'returning'>('all')
@@ -238,6 +237,12 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
   }, [attendanceFilter, courseFilter, listKind, query, seasonOrders, shopOrders, statusFilter, typeFilter])
 
   useEffect(() => setPage(1), [attendanceFilter, courseFilter, listKind, query, seasonId, statusFilter, typeFilter])
+  useEffect(() => {
+    setCourseFilter('all')
+    setSelected(null)
+    setSyncScript('')
+    setSyncScriptError('')
+  }, [seasonId])
   useEffect(() => setReviewNote(selected?.reviewNote ?? ''), [selected])
   useEffect(() => setResolutionNote(''), [selected])
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize))
@@ -382,7 +387,7 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
               </span>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-black text-apple-gray-950">Q3 Google 表格同步</h3>
+                  <h3 className="font-black text-apple-gray-950">{season?.name} Google 表格同步</h3>
                   <span className={`rounded-full px-2 py-1 text-[11px] font-black ${syncSource.lastError ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
                     {syncSource.lastError ? '同步異常' : syncSource.lastSyncedAt ? '同步正常' : '已連結'}
                   </span>
@@ -555,7 +560,7 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
               {syncScriptError ? <p className="rounded-lg bg-red-50 p-4 text-sm font-bold text-red-700">{syncScriptError}</p> : (
                 <>
                   <ol className="grid gap-2 text-sm font-semibold leading-6 text-apple-gray-700 sm:grid-cols-3">
-                    <li className="rounded-lg bg-apple-gray-100 p-3"><span className="mr-2 font-black">1</span>在 Q3 表格開啟「擴充功能 → Apps Script」</li>
+                    <li className="rounded-lg bg-apple-gray-100 p-3"><span className="mr-2 font-black">1</span>在所選季度表格開啟「擴充功能 → Apps Script」</li>
                     <li className="rounded-lg bg-apple-gray-100 p-3"><span className="mr-2 font-black">2</span>貼上以下程式並儲存</li>
                     <li className="rounded-lg bg-apple-gray-100 p-3"><span className="mr-2 font-black">3</span>執行 setupGoodLuckRosterSync 並授權一次</li>
                   </ol>
