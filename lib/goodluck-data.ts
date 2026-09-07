@@ -352,8 +352,8 @@ export const coachProfiles = {
   peter: {
     name: 'Peter 教練',
     role: '好運跑班教練',
-    imageUrl: '/coaches/2026/avatars/peter.jpg',
-    fullBodyImageUrl: '/coaches/2026/peter.jpg',
+    imageUrl: '/coaches/2026/avatars/peter-941.jpg',
+    fullBodyImageUrl: '/coaches/2026/peter-941.jpg',
     bio: '好運跑班教練。',
     specialties: [],
     style: '',
