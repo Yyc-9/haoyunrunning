@@ -14,6 +14,7 @@ import {
   FileText,
   Film,
   GalleryHorizontalEnd,
+  GripVertical,
   Home,
   ImageIcon,
   ImagePlus,
@@ -321,6 +322,21 @@ export default function AdminContentManager({ content, courses, seasons, scope =
   const [achievements, setAchievements] = useState<AchievementsContent>(content.achievements)
   const [anniversary, setAnniversary] = useState<AnniversaryContent>(content.anniversary)
   const [coachDrafts, setCoachDrafts] = useState<Record<string, CoachPublicProfile>>(content.coachProfiles)
+  const [draggedCoach, setDraggedCoach] = useState<string | null>(null)
+  const orderedCoachKeys = Object.keys(coachDrafts).sort((a, b) => {
+    const order = team.coachOrder ?? []
+    const rank = (key: string) => order.includes(key) ? order.indexOf(key) : order.length
+    return rank(a) - rank(b)
+  })
+  function moveCoach(key: string, target: string) {
+    const keys = [...orderedCoachKeys]
+    const from = keys.indexOf(key)
+    const to = keys.indexOf(target)
+    if (from < 0 || to < 0 || from === to) return
+    keys.splice(from, 1)
+    keys.splice(to, 0, key)
+    setTeam((current) => ({ ...current, coachOrder: keys }))
+  }
   const [pageMedia, setPageMedia] = useState<PageMedia>(content.pageMedia)
   const currentSeason = seasons.find((season) => season.id === preferredCourseSeasonId(seasons)) ?? null
   const [selectedSeasonId, setSelectedSeasonId] = useState(currentSeason?.id ?? '')
@@ -350,7 +366,10 @@ export default function AdminContentManager({ content, courses, seasons, scope =
   const [seasonActionPending, setSeasonActionPending] = useState(false)
   const [newCourseTemplateSlug, setNewCourseTemplateSlug] = useState(courses[0]?.slug ?? '')
 
+  const previousContentRef = useRef(content)
   useEffect(() => {
+    const previous = previousContentRef.current
+    previousContentRef.current = content
     setSlides(content.heroSlides)
     setActivities(content.activities)
     setBrand(content.brand)
@@ -358,10 +377,12 @@ export default function AdminContentManager({ content, courses, seasons, scope =
     setAbout(content.about)
     setCoursesPage(content.coursesPage)
     setTestimonials(content.testimonials)
-    setTeam(content.team)
+    setTeam((current) => JSON.stringify(current) === JSON.stringify(previous.team) ? content.team : current)
     setAchievements(content.achievements)
     setAnniversary(content.anniversary)
-    setCoachDrafts(content.coachProfiles)
+    setCoachDrafts((current) => Object.fromEntries(Object.entries(content.coachProfiles).map(([key, profile]) => [key,
+      current[key] && JSON.stringify(current[key]) !== JSON.stringify(previous.coachProfiles[key]) ? current[key] : profile,
+    ])))
     setPageMedia(content.pageMedia)
   }, [content])
 
@@ -818,9 +839,9 @@ export default function AdminContentManager({ content, courses, seasons, scope =
 
         {mode === 'activities' ? (
           <div className="overflow-hidden rounded-lg border border-black/10 bg-white">{panelHeader('首頁活動入口', '新增活動、報名頁或外部連結，首頁會依順序顯示。', '/')}
-            <div className="divide-y divide-black/10">{activities.map((activity,index)=><div key={index} className="grid gap-3 p-5 md:grid-cols-2"><Field label="活動名稱"><input value={activity.title} onChange={(e)=>setActivities((c)=>c.map((x,i)=>i===index?{...x,title:e.target.value}:x))} className="apple-input" /></Field><Field label="按鈕文字"><input value={activity.action} onChange={(e)=>setActivities((c)=>c.map((x,i)=>i===index?{...x,action:e.target.value}:x))} className="apple-input" /></Field><Field label="活動說明" wide><textarea rows={3} value={activity.description} onChange={(e)=>setActivities((c)=>c.map((x,i)=>i===index?{...x,description:e.target.value}:x))} className="apple-input resize-y" /></Field><Field label="連結"><input value={activity.href} onChange={(e)=>setActivities((c)=>c.map((x,i)=>i===index?{...x,href:e.target.value}:x))} className="apple-input" /></Field><button title="刪除活動" type="button" onClick={()=>setActivities((c)=>c.filter((_,i)=>i!==index))} className="self-end justify-self-start rounded-lg px-3 py-2 text-sm font-bold text-red-600 hover:bg-red-50"><Trash2 className="mr-2 inline h-4 w-4" />刪除</button></div>)}</div>
+            <div className="divide-y divide-black/10">{activities.map((activity,index)=><div key={index} className="grid gap-3 p-5 md:grid-cols-2"><Field label="活動名稱"><input value={activity.title} onChange={(e)=>setActivities((c)=>c.map((x,i)=>i===index?{...x,title:e.target.value}:x))} className="apple-input" /></Field><Field label="按鈕文字（選填）"><input value={activity.action} onChange={(e)=>setActivities((c)=>c.map((x,i)=>i===index?{...x,action:e.target.value}:x))} className="apple-input" /></Field><Field label="活動說明" wide><textarea rows={3} value={activity.description} onChange={(e)=>setActivities((c)=>c.map((x,i)=>i===index?{...x,description:e.target.value}:x))} className="apple-input resize-y" /></Field><Field label="連結（選填，留空即為公告）"><input value={activity.href} onChange={(e)=>setActivities((c)=>c.map((x,i)=>i===index?{...x,href:e.target.value}:x))} className="apple-input" /></Field><button title="刪除活動" type="button" onClick={()=>setActivities((c)=>c.filter((_,i)=>i!==index))} className="self-end justify-self-start rounded-lg px-3 py-2 text-sm font-bold text-red-600 hover:bg-red-50"><Trash2 className="mr-2 inline h-4 w-4" />刪除</button></div>)}</div>
             <div className="flex flex-col justify-between gap-3 border-t border-black/10 p-5 lg:flex-row">
-              <button type="button" disabled={activities.length>=8} onClick={()=>setActivities((c)=>[...c,{title:'',description:'',action:'立即查看',href:'/'}])} className="apple-button-outline gap-2 px-5 py-3"><Plus className="h-4 w-4" />新增活動</button>
+              <button type="button" disabled={activities.length>=8} onClick={()=>setActivities((c)=>[...c,{title:'',description:'',action:'',href:''}])} className="apple-button-outline gap-2 px-5 py-3"><Plus className="h-4 w-4" />新增活動</button>
               {actionBar(() => setActivities(content.activities), saveButton('save-activities','home_activities',activities,'發布活動入口'))}
             </div>
           </div>
@@ -846,12 +867,20 @@ export default function AdminContentManager({ content, courses, seasons, scope =
 
             <div id="admin-coach-photos" className="scroll-mt-28 overflow-hidden rounded-lg border border-black/10 bg-white">
               {panelHeader('教練照片與公開資料', '課程頭像與團隊照片分開維護。更換後請按「儲存並發布教練資料」，同一位教練的所有課程會同步更新；課程歸屬仍在季度管理設定。', '/team')}
+              <div className="border-b border-black/10 p-5">
+                <p className="mb-4 text-sm leading-6 text-apple-gray-600">拖動把手或使用上下箭頭調整順序，然後儲存排序。只影響團隊陣容，不改變課程歸屬。</p>
+                {actionBar(() => setTeam((current) => ({ ...current, coachOrder: content.team.coachOrder ?? [] })), saveButton('save-coach-order', 'team_content', team, '儲存教練排序'))}
+              </div>
               <div className="divide-y divide-black/10">
-                {Object.values(coachDrafts)
-                  .sort((left, right) => Number(right.published) - Number(left.published) || left.displayName.localeCompare(right.displayName, 'zh-Hant'))
-                  .map((profile) => (
-                    <details key={profile.coachKey} className="group">
+                {orderedCoachKeys.map((key) => coachDrafts[key])
+                  .map((profile, index) => (
+                    <details key={profile.coachKey} className="group" onDragOver={(event) => { event.preventDefault() }} onDrop={(event) => { event.preventDefault(); if (draggedCoach) moveCoach(draggedCoach, profile.coachKey); setDraggedCoach(null) }}>
                       <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 hover:bg-apple-gray-50">
+                        <span className="flex shrink-0 items-center" onClick={(event) => event.preventDefault()}>
+                          <button type="button" draggable aria-label={`拖動${profile.displayName}排序`} onDragStart={(event) => { setDraggedCoach(profile.coachKey); event.dataTransfer.setData('text/plain', profile.coachKey); event.dataTransfer.effectAllowed = 'move' }} onDragEnd={() => setDraggedCoach(null)} className="flex h-11 w-8 cursor-grab items-center justify-center"><GripVertical className="h-5 w-5" /></button>
+                          <button type="button" disabled={index === 0} aria-label={`上移${profile.displayName}`} onClick={() => moveCoach(profile.coachKey, orderedCoachKeys[index - 1])} className="flex h-11 w-11 items-center justify-center disabled:opacity-25"><ArrowUp className="h-4 w-4" /></button>
+                          <button type="button" disabled={index === orderedCoachKeys.length - 1} aria-label={`下移${profile.displayName}`} onClick={() => moveCoach(profile.coachKey, orderedCoachKeys[index + 1])} className="flex h-11 w-11 items-center justify-center disabled:opacity-25"><ArrowDown className="h-4 w-4" /></button>
+                        </span>
                         <div className="min-w-0">
                           <p className="truncate font-black text-apple-gray-900">{profile.displayName}</p>
                           <p className="mt-1 truncate text-xs text-apple-gray-500">{profile.published ? '前台顯示中' : '前台隱藏'} · {profile.role || '尚未填寫職務'}</p>

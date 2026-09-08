@@ -17,7 +17,7 @@ export default function Footer() {
       links: [
         { name: '訓練課程', href: '/courses' },
         { name: '課程報名', href: '/courses' },
-        { name: '團練報名', href: '/group-signup' },
+        { name: '團練說明', href: '/group-signup' },
       ],
     },
     {

@@ -2009,7 +2009,7 @@ export async function PATCH(request: NextRequest) {
     } else if (section === 'home_activities') {
       const normalized = normalizeActivities(body.value)
       if (!Array.isArray(body.value) || normalized.length !== body.value.length) {
-        return json({ error: '請完整填寫每一則活動的名稱、說明、按鈕文字與連結。' }, { status: 400 })
+        return json({ error: '請填寫每一則活動的名稱與說明；連結可留空，填寫時請使用有效的網址。' }, { status: 400 })
       }
       value = normalized
     } else if (section === 'seasonal_update') {

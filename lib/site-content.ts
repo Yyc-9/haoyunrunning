@@ -1,3 +1,5 @@
+import { GROUP_DESCRIPTION, GROUP_LINE_URL } from '@/lib/group-practice'
+
 export type HomeActivity = {
   title: string
   description: string
@@ -124,6 +126,7 @@ export type TestimonialsContent = {
 }
 
 export type TeamContent = {
+  coachOrder?: string[]
   eyebrow: string
   title: string
   description: string
@@ -249,10 +252,10 @@ export const defaultHomeActivities: HomeActivity[] = [
     href: '/anniversary',
   },
   {
-    title: '團練報名',
-    description: '每週六開放式團練意向登記，方便教練掌握現場人數。',
-    action: '填寫團練意向',
-    href: '/group-signup',
+    title: '好運跑班 X 週末團練',
+    description: GROUP_DESCRIPTION,
+    action: '了解團練',
+    href: GROUP_LINE_URL,
   },
 ]
 
@@ -604,8 +607,8 @@ export function normalizeActivities(value: unknown) {
       const description = cleanString(activity.description, 500)
       const action = cleanString(activity.action, 60)
       const href = cleanString(activity.href, 2000)
-      if (!title || !description || !action || !href || !isSafePublicUrl(href)) return null
-      return { title, description, action, href }
+      if (!title || !description || (href && !isSafePublicUrl(href))) return null
+      return { title, description, action: href ? action || '查看詳情' : '', href }
     })
     .filter((item): item is HomeActivity => Boolean(item))
     .slice(0, 8)
@@ -809,6 +812,7 @@ export function normalizeTestimonialsContent(value: unknown): TestimonialsConten
 export function normalizeTeamContent(value: unknown): TeamContent {
   const source = value && typeof value === 'object' ? value as Partial<TeamContent> : {}
   return {
+    coachOrder: Array.isArray(source.coachOrder) ? [...new Set(source.coachOrder.filter((key): key is string => typeof key === 'string' && /^[a-zA-Z0-9_-]{1,80}$/.test(key)))].slice(0, 100) : [],
     eyebrow: cleanString(source.eyebrow, 80) === legacyTeamContent.eyebrow ? defaultTeamContent.eyebrow : cleanOr(source.eyebrow, defaultTeamContent.eyebrow, 80),
     title: cleanString(source.title, 160) === legacyTeamContent.title ? defaultTeamContent.title : cleanOr(source.title, defaultTeamContent.title, 160),
     description: cleanOr(source.description, defaultTeamContent.description, 1200),

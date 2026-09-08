@@ -45,7 +45,11 @@ export default function TeamRosterClient() {
     return byCoach
   }, [courseOverrides, courses])
 
-  const coaches = useMemo(() => Object.values(coachProfiles).filter((coach) => coach.published), [coachProfiles])
+  const coaches = useMemo(() => Object.values(coachProfiles).filter((coach) => coach.published).sort((a, b) => {
+    const order = team.coachOrder ?? []
+    const rank = (key: string) => order.includes(key) ? order.indexOf(key) : order.length
+    return rank(a.coachKey) - rank(b.coachKey)
+  }), [coachProfiles, team.coachOrder])
   const coachKeySignature = coaches.map((coach) => coach.coachKey).join('|')
   const [activeCoachKey, setActiveCoachKey] = useState<string | null>(null)
   const [selectedCoachKey, setSelectedCoachKey] = useState<string | null>(null)
@@ -232,7 +236,7 @@ export default function TeamRosterClient() {
           </div>
 
           <div ref={coachRowRef} className="team-coach-row touch-scroll-row gap-4 md:grid md:grid-cols-2 md:gap-5 xl:grid-cols-3">
-            {coaches.map((coach) => {
+            {coaches.map((coach, coachIndex) => {
               const coachAssignments = assignments.get(coach.coachKey) ?? []
               const imageUrl = coach.fullBodyImageUrl || coach.avatarUrl
 
@@ -263,6 +267,10 @@ export default function TeamRosterClient() {
                       ) : (
                         <UserRound className="absolute left-1/2 top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 text-apple-gray-300" />
                       )}
+                    <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-between px-2 md:hidden">
+                      <button type="button" aria-label="上一位教練" disabled={coachIndex === 0} tabIndex={coachIndex === activeCoachIndex ? 0 : -1} onClick={() => scrollToCoach(coaches[coachIndex - 1].coachKey)} className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-white/80 text-black shadow-sm backdrop-blur-sm disabled:opacity-30"><ChevronLeft className="h-5 w-5" /></button>
+                      <button type="button" aria-label="下一位教練" disabled={coachIndex === coaches.length - 1} tabIndex={coachIndex === activeCoachIndex ? 0 : -1} onClick={() => scrollToCoach(coaches[coachIndex + 1].coachKey)} className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-white/80 text-black shadow-sm backdrop-blur-sm disabled:opacity-30"><ChevronRight className="h-5 w-5" /></button>
+                    </div>
                   </div>
                   <div className="team-coach-card-body p-5 sm:p-6">
                     <div className="min-w-0">
@@ -342,28 +350,10 @@ export default function TeamRosterClient() {
           </div>
 
           <div className="team-coach-controls md:hidden" aria-label="教練卡片控制">
-            <button
-              type="button"
-              onClick={() => activeCoachIndex > 0 && scrollToCoach(coaches[activeCoachIndex - 1].coachKey)}
-              disabled={activeCoachIndex <= 0}
-              className="team-coach-control-button"
-              aria-label="上一位教練"
-            >
-              <ChevronLeft aria-hidden="true" className="h-5 w-5" />
-            </button>
             <p className="team-coach-control-status" aria-live="polite">
               <span>左右滑動</span>
               <span>第 {coaches.length ? activeCoachIndex + 1 : 0} / {coaches.length} 位</span>
             </p>
-            <button
-              type="button"
-              onClick={() => activeCoachIndex < coaches.length - 1 && scrollToCoach(coaches[activeCoachIndex + 1].coachKey)}
-              disabled={!coaches.length || activeCoachIndex >= coaches.length - 1}
-              className="team-coach-control-button"
-              aria-label="下一位教練"
-            >
-              <ChevronRight aria-hidden="true" className="h-5 w-5" />
-            </button>
           </div>
         </div>
       </section>

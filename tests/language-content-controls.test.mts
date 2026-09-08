@@ -17,6 +17,20 @@ registerHooks({
   },
 })
 
+test('公告可不填連結，外部連結仍驗證且預設按鈕文字', async () => {
+  const { normalizeActivities } = await import('../lib/site-content.ts')
+  const base = { title: '公告', description: '第一段\n\n第二段' }
+  assert.deepEqual(normalizeActivities([{ ...base, href: '', action: '' }]), [{ ...base, href: '', action: '' }])
+  assert.equal(normalizeActivities([{ ...base, href: 'https://example.com', action: '' }])[0].action, '查看詳情')
+  assert.equal(normalizeActivities([{ ...base, href: 'javascript:alert(1)' }]).length, 0)
+})
+
+test('團隊排序在內容正規化後保留，去重且相容舊資料', async () => {
+  const { normalizeTeamContent } = await import('../lib/site-content.ts')
+  assert.deepEqual(normalizeTeamContent({ coachOrder: ['peter', 'yongXin', 'peter', null] }).coachOrder, ['peter', 'yongXin'])
+  assert.deepEqual(normalizeTeamContent({}).coachOrder, [])
+})
+
 test('網站提供繁體、簡體與英文三種語言入口', () => {
   assert.deepEqual(languages.map((language) => language.code), ['zh-TW', 'zh-CN', 'en'])
 })

@@ -6,6 +6,7 @@ import { motion, useMotionValue, useReducedMotion, useSpring } from 'framer-moti
 import { ArrowUpRight, CalendarDays, PartyPopper, UsersRound, type LucideIcon } from 'lucide-react'
 import { useSiteContent } from '@/app/site-content-provider'
 import type { HomeActivity } from '@/lib/site-content'
+import { GROUP_PRACTICE_PATH, isGroupPractice } from '@/lib/group-practice'
 
 const icons = [PartyPopper, UsersRound]
 const ENTRANCE_EASE = [0.16, 1, 0.3, 1] as const
@@ -22,7 +23,10 @@ function ActivityCard({ activity, icon: Icon, index }: ActivityCardProps) {
   const rotateY = useMotionValue(0)
   const springRotateX = useSpring(rotateX, { stiffness: 180, damping: 22, mass: 0.8 })
   const springRotateY = useSpring(rotateY, { stiffness: 180, damping: 22, mass: 0.8 })
-  const isExternal = activity.href.startsWith('http')
+  const isGroup = isGroupPractice(activity)
+  const href = isGroup ? GROUP_PRACTICE_PATH : activity.href
+  const action = isGroup ? '了解團練' : activity.action
+  const isExternal = href.startsWith('http')
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLElement>) => {
     if (prefersReducedMotion || event.pointerType !== 'mouse') return
@@ -64,9 +68,9 @@ function ActivityCard({ activity, icon: Icon, index }: ActivityCardProps) {
         <h3 className="mb-3 text-xl font-bold text-apple-gray-900">
           {activity.title}
         </h3>
-        <p className="mb-8 max-w-lg whitespace-pre-wrap break-words leading-7 text-apple-gray-600">{activity.description}</p>
+        <p className={`mb-8 max-w-lg whitespace-pre-wrap break-words leading-7 text-apple-gray-600 ${isGroup ? 'group-practice-summary' : ''}`}>{isGroup ? activity.description.split(/\r?\n/).find((line) => line.trim()) : activity.description}</p>
         <div className="inline-flex items-center text-sm font-semibold text-apple-blue">
-          {activity.action}
+          {action}
           <ArrowUpRight className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1 group-focus-visible:translate-x-1 group-focus-visible:-translate-y-1" />
         </div>
       </div>
@@ -75,21 +79,31 @@ function ActivityCard({ activity, icon: Icon, index }: ActivityCardProps) {
 
   const linkClassName = 'group block rounded-3xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-apple-blue/25'
 
+  if (!href) return (
+    <article className="rounded-3xl border border-apple-gray-200 bg-white p-7 shadow-sm">
+      <h3 className="mb-3 text-xl font-bold text-apple-gray-900">{activity.title}</h3>
+      <details className="announcement-details">
+        <summary className="min-h-11 cursor-pointer py-3 font-semibold text-apple-blue">閱讀公告</summary>
+        <p className="announcement-copy whitespace-pre-wrap break-words text-base leading-7 text-apple-gray-600">{activity.description}</p>
+      </details>
+    </article>
+  )
+
   return isExternal ? (
     <a
-      href={activity.href}
+      href={href}
       target="_blank"
       rel="noreferrer"
       className={linkClassName}
-      aria-label={`${activity.action}：${activity.title}`}
+      aria-label={`${action}：${activity.title}`}
     >
       {content}
     </a>
   ) : (
     <Link
-      href={activity.href}
+      href={href}
       className={linkClassName}
-      aria-label={`${activity.action}：${activity.title}`}
+      aria-label={`${action}：${activity.title}`}
     >
       {content}
     </Link>

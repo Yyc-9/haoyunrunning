@@ -1973,6 +1973,15 @@
     line-height: 1.4;
   }
 
+  #updates article p.announcement-copy,
+  #updates article p.group-practice-summary {
+    display: block;
+    overflow: visible;
+    -webkit-line-clamp: unset;
+    font-size: 1rem;
+    line-height: 1.75;
+  }
+
   .course-filter-deck {
     display: flex;
     flex-direction: column;
@@ -2372,7 +2381,7 @@
 
   .team-coach-controls {
     display: grid;
-    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    grid-template-columns: minmax(0, 1fr);
     align-items: center;
     gap: 10px;
     margin-top: 12px;
