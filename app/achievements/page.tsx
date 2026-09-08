@@ -87,7 +87,7 @@ export default function AchievementsPage() {
             </div>
           </div>
 
-          <div className="relative aspect-[6/5] overflow-hidden rounded-2xl border border-white/10 bg-black">
+          <div className="relative aspect-[12/5] overflow-hidden rounded-2xl border border-white/10 bg-black md:aspect-[6/5]">
             <Image
               src={achievements.heroImage}
               alt="好運榮耀徽章與達標紀念卡全系列"

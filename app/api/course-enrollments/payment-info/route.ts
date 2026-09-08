@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => ({}))) as {
     courseSlug?: string
     quoteToken?: string
+    format?: string
   }
   const courseSlug = cleanText(body.courseSlug, 120)
   const quoteToken = cleanText(body.quoteToken, 12_000)
@@ -66,6 +67,15 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    if (body.format === 'json') {
+      const qr = await readFile(join(process.cwd(), 'private/course-registration/payment-qr.png'))
+      return NextResponse.json({
+        bankName: '中國信託',
+        bankCode: '822',
+        accountNumber: '0000554540468221',
+        qrCodeUrl: `data:image/png;base64,${qr.toString('base64')}`,
+      }, { headers: { 'Cache-Control': 'private, no-store, max-age=0' } })
+    }
     const image = await readFile(join(process.cwd(), 'private/course-registration/payment-info.jpg'))
     return new NextResponse(new Uint8Array(image), {
       status: 200,

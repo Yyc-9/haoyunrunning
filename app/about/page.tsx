@@ -34,7 +34,7 @@ export default function AboutPage() {
             </p>
           </div>
 
-          <div className="mt-16 grid gap-7 border-t border-white/35 pt-7 lg:grid-cols-3 lg:gap-0 lg:border-t-0 lg:pt-0">
+          <div className="mt-16 hidden gap-7 border-t border-white/35 pt-7 md:grid lg:grid-cols-3 lg:gap-0 lg:border-t-0 lg:pt-0">
             {about.philosophies.map((item, index) => (
               <article
                 key={item.title}
@@ -47,6 +47,16 @@ export default function AboutPage() {
             ))}
           </div>
         </div>
+      </section>
+
+      <section className="grid gap-6 border-b border-black/5 bg-white px-5 py-7 md:hidden" aria-label="品牌理念">
+        {about.philosophies.map((item) => (
+          <article key={item.title}>
+            <h2 className="text-lg font-black">{item.title}</h2>
+            <p className="mt-2 text-sm font-bold text-apple-gray-600">{item.english}</p>
+            <p className="mt-2 text-sm leading-6 text-apple-gray-600">{item.description}</p>
+          </article>
+        ))}
       </section>
 
       <section className="border-b border-black/5 bg-white px-4 py-8 sm:px-6 sm:py-10 lg:px-8">

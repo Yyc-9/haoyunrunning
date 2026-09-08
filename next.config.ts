@@ -3,7 +3,7 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   outputFileTracingRoot: process.cwd(),
   outputFileTracingIncludes: {
-    '/api/course-enrollments/payment-info': ['./private/course-registration/payment-info.jpg'],
+    '/api/course-enrollments/payment-info': ['./private/course-registration/payment-info.jpg', './private/course-registration/payment-qr.png'],
   },
   poweredByHeader: false,
   async headers() {
