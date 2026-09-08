@@ -881,7 +881,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                           <button type="button" disabled={index === 0} aria-label={`上移${profile.displayName}`} onClick={() => moveCoach(profile.coachKey, orderedCoachKeys[index - 1])} className="flex h-11 w-11 items-center justify-center disabled:opacity-25"><ArrowUp className="h-4 w-4" /></button>
                           <button type="button" disabled={index === orderedCoachKeys.length - 1} aria-label={`下移${profile.displayName}`} onClick={() => moveCoach(profile.coachKey, orderedCoachKeys[index + 1])} className="flex h-11 w-11 items-center justify-center disabled:opacity-25"><ArrowDown className="h-4 w-4" /></button>
                         </span>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1 text-left">
                           <p className="truncate font-black text-apple-gray-900">{profile.displayName}</p>
                           <p className="mt-1 truncate text-xs text-apple-gray-500">{profile.published ? '前台顯示中' : '前台隱藏'} · {profile.role || '尚未填寫職務'}</p>
                         </div>
