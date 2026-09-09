@@ -17,6 +17,13 @@ test("Peter 使用獨立身份與照片，不繼承詠馨的課程或經歷", ()
   assert.doesNotMatch(profiles, /if \(row\.coach_key === .yongXin.\) continue/)
 })
 
+test('祐安使用獨立身份與形象照，尚未綁定課程', () => {
+  assert.match(source, /youAn: \{/)
+  assert.match(source, /name: '祐安教練'/)
+  assert.match(source, /coaches\/2026\/you-an\.jpg/)
+  assert.doesNotMatch(coachMap, /coachProfiles\.youAn/)
+})
+
 test('鄔惟喬僅隸屬週二竹市班', () => {
   assert.match(
     coachMap,

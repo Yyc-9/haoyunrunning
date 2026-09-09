@@ -369,6 +369,18 @@ export const coachProfiles = {
     style: '',
     achievements: [],
   },
+  youAn: {
+    name: '祐安教練',
+    role: '好運跑班教練',
+    imageUrl: '/coaches/2026/you-an.jpg',
+    fullBodyImageUrl: '/coaches/2026/you-an.jpg',
+    avatarFocusY: 17,
+    fullBodyFocusY: 10,
+    bio: '好運跑班教練。',
+    specialties: [],
+    style: '',
+    achievements: [],
+  },
 } satisfies Record<string, Coach>
 
 function getCourseCoaches(course: Course): Coach[] {
