@@ -80,3 +80,13 @@ test('後台與前台共用頭像預覽，裁切上傳重設焦點並沿用受�
   assert.match(api, /getAdminProfile\(user\)/)
   assert.match(api, /只有超級管理員可以上傳網站媒體/)
 })
+
+test('公開教練資料儲存可建立尚未進入資料庫的新教練', () => {
+  const api = readFileSync(new URL('../app/api/admin/route.ts', import.meta.url), 'utf8')
+  const actionStart = api.indexOf("body.action === 'save_coach_public_profile'")
+  const actionEnd = api.indexOf("body.action === 'save_site_content'", actionStart)
+  const saveAction = api.slice(actionStart, actionEnd)
+
+  assert.match(saveAction, /\.upsert\(\{ coach_key: coachKey, \.\.\.value \}, \{ onConflict: 'coach_key' \}\)/)
+  assert.doesNotMatch(saveAction, /\.update\(value\)/)
+})

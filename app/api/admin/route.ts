@@ -1986,8 +1986,7 @@ export async function PATCH(request: NextRequest) {
 
     const { data: profile, error } = await supabaseAdmin!
       .from('coach_public_profiles')
-      .update(value)
-      .eq('coach_key', coachKey)
+      .upsert({ coach_key: coachKey, ...value }, { onConflict: 'coach_key' })
       .select('coach_key')
       .single()
     if (error || !profile) {
