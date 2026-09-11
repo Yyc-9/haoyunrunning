@@ -1,5 +1,6 @@
 'use client'
 
+import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowUpRight, ChevronLeft, ChevronRight, ListFilter, Route, UserRound, UsersRound, X } from 'lucide-react'
@@ -174,6 +175,11 @@ export default function TeamRosterClient() {
     }
   }, [selectedCoach])
 
+  const renderCoachDialog = (dialog: React.ReactNode) =>
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
+      ? createPortal(dialog, document.body)
+      : dialog
+
   return (
     <main className="kinetic-page min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
       <section className="kinetic-hero relative isolate flex min-h-[390px] overflow-hidden border-b border-black/10 text-white sm:min-h-[480px]">
@@ -346,7 +352,7 @@ export default function TeamRosterClient() {
         </div>
       </section>
 
-      {selectedCoach ? (
+      {selectedCoach ? renderCoachDialog(
         <div className="team-coach-sheet-layer" role="presentation">
           <button type="button" className="team-coach-sheet-backdrop" aria-label="關閉教練介紹" onClick={() => setSelectedCoachKey(null)} />
           <section id="team-coach-sheet" className="team-coach-sheet" role="dialog" aria-modal="true" aria-labelledby="team-coach-sheet-title">
