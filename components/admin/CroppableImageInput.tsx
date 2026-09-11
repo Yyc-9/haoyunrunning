@@ -83,6 +83,7 @@ export default function CroppableImageInput({
   const titleId = useId()
   const descriptionId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
   const imageRef = useRef<HTMLImageElement | null>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -117,12 +118,24 @@ export default function CroppableImageInput({
   useEffect(() => {
     if (!file || !previewUrl) return
     const previousOverflow = document.body.style.overflow
-    const triggerInput = inputRef.current
+    const trigger = triggerRef.current
+    // Focus restoration can scroll even overflow:hidden ancestors in WebKit.
+    // Keep the workspace and its nested editor at their pre-dialog positions.
+    const scrollPositions: Array<{ element: HTMLElement; top: number; left: number }> = []
+    for (let element = trigger?.parentElement; element; element = element.parentElement) {
+      scrollPositions.push({ element, top: element.scrollTop, left: element.scrollLeft })
+    }
     document.body.style.overflow = 'hidden'
-    dialogRef.current?.focus()
+    dialogRef.current?.focus({ preventScroll: true })
     return () => {
       document.body.style.overflow = previousOverflow
-      triggerInput?.focus()
+      if (trigger?.isConnected && !trigger.disabled) trigger.focus({ preventScroll: true })
+      for (const { element, top, left } of scrollPositions) {
+        if (element.isConnected) {
+          element.scrollTop = top
+          element.scrollLeft = left
+        }
+      }
     }
   }, [file, previewUrl])
 
@@ -142,13 +155,23 @@ export default function CroppableImageInput({
 
   return (
     <>
-      <label className={`${className} focus-within:outline focus-within:outline-2 focus-within:outline-offset-4 focus-within:outline-apple-blue`}>
+      <button
+        ref={triggerRef}
+        type="button"
+        disabled={disabled}
+        aria-haspopup="dialog"
+        onClick={() => inputRef.current?.click()}
+        className={`${className} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-apple-blue`}
+      >
         {children}
+      </button>
         <input
           ref={inputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp"
-          className="sr-only"
+          hidden
+          tabIndex={-1}
+          aria-hidden="true"
           disabled={disabled}
           onChange={(event) => {
             const selectedFile = event.target.files?.[0]
@@ -157,7 +180,6 @@ export default function CroppableImageInput({
             setFile(selectedFile)
           }}
         />
-      </label>
 
       {file && previewUrl ? createPortal(
         <div className="fixed inset-0 z-[130] flex items-end justify-center bg-black/65 p-0 sm:items-center sm:p-6" onMouseDown={(event) => { if (event.target === event.currentTarget && !processing) close() }}>
