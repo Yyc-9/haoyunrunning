@@ -293,11 +293,11 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
         <p className="home-hero-kicker">陪伴全球跑者的系統化訓練團隊</p>
         <h1 id="home-hero-title">
           <span>認識跑步，</span>
-          <span>跑向更穩定的自己</span>
+          <span>跑向更穩定的自己。</span>
         </h1>
         <p className="home-hero-pointer-instruction">
           <span aria-hidden="true" />
-          輕觸或橫向滑動，留下你的好運跑跡
+          輕觸或滑動，留下你的好運足跡。
         </p>
       </motion.div>
 
