@@ -31,7 +31,7 @@ import {
 } from 'lucide-react'
 import { APP_TIME_ZONE_LABEL } from '@/lib/app-time'
 import { supabase } from '@/lib/supabase'
-import { courseSeasonStatusLabels, preferredCourseSeasonId, type CourseSeason, type CourseSeasonStatus } from '@/lib/course-seasons'
+import { courseSeasonCampaignLabel, courseSeasonStatusLabels, preferredCourseSeasonId, type CourseSeason, type CourseSeasonStatus } from '@/lib/course-seasons'
 import { isLegacyCourseTargetAudience } from '@/lib/managed-courses'
 import { orderedWeekdays } from '@/lib/course-sort'
 import { defaultCourseBillingConfig, type CourseBillingConfig } from '@/lib/course-pricing'
@@ -1236,7 +1236,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
               <details className="rounded-lg border border-black/10 bg-apple-gray-50 md:col-span-2">
                 <summary className="cursor-pointer list-none px-4 py-4 font-black text-apple-gray-900">官網課程介紹文案</summary>
                 <div className="grid gap-4 border-t border-black/10 p-4 md:grid-cols-2">
-                  <Field label="季度英文小標"><input value={String(draft.campaignLabel ?? '')} onChange={(e) => setDraft((current) => ({ ...current, campaignLabel: e.target.value }))} className="apple-input" /></Field>
+                  <Field label="季度英文小標（依季度自動更新）"><input value={courseSeasonCampaignLabel(selectedSeason?.code ?? '') || String(draft.campaignLabel ?? '')} readOnly className="apple-input" /></Field>
                   <Field label="課程主標語"><input value={String(draft.slogan ?? '')} onChange={(e) => setDraft((current) => ({ ...current, slogan: e.target.value }))} className="apple-input" /></Field>
                   <Field label="本季訓練方向（每行一項，前台顯示前三項）" wide><textarea rows={5} value={(draft.benefits ?? []).slice(0, 3).join('\n')} onChange={(e) => setDraft((current) => ({ ...current, benefits: e.target.value.split('\n').map((item) => item.trim()).filter(Boolean).slice(0, 3) }))} className="apple-input resize-y" /></Field>
                   <Field label="開班提醒" wide><input value={String(draft.enrollmentNote ?? '')} onChange={(e) => setDraft((current) => ({ ...current, enrollmentNote: e.target.value }))} className="apple-input" placeholder="沒有提醒時可留空" /></Field>

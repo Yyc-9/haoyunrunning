@@ -159,8 +159,8 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
               </div>
             </div>
             <div className={`shrink-0 rounded-lg border px-4 py-3 ${isFull ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
-              <p className="text-xs font-bold">班額 {capacity} 人</p>
-              <p className="mt-1 text-lg font-black">{isLoading ? '讀取中' : isFull ? '目前額滿' : `剩餘 ${remaining} 位`}</p>
+              <p className="text-xs font-bold">本班名額 {capacity} 人</p>
+              <p className="mt-1 text-lg font-black">{isLoading ? '讀取中' : `剩餘名額 ${remaining} 人`}</p>
             </div>
           </div>
         </div>

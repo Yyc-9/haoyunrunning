@@ -66,6 +66,11 @@ export function applyCourseSeasonToContent(content: SiteContent, season: CourseS
   return season ? { ...content, courseOverrides: season.courseOverrides } : content
 }
 
+export function courseSeasonCampaignLabel(code: string) {
+  const match = /^(\d{4})-Q([1-4])$/.exec(code)
+  return match ? `S${match[2]} | ${match[1]} RUNNING CAMP` : ''
+}
+
 export function nextCourseSeasonIdentity(code: string) {
   const match = /^(\d{4})-Q([1-4])$/.exec(code)
   const currentYear = new Date().getFullYear()

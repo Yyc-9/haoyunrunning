@@ -42,11 +42,11 @@ export function validatePassword(password: string, minimumLength = 1): Validatio
 
 export function validatePhone(phone: string): ValidationError | null {
   if (!phone) {
-    return { field: 'phone', message: '請輸入手機號' }
+    return { field: 'phone', message: '請輸入手機號碼' }
   }
   const phoneRegex = /^1[3-9]\d{9}$/
   if (!phoneRegex.test(phone)) {
-    return { field: 'phone', message: '手機號格式不正確' }
+    return { field: 'phone', message: '手機號碼格式不正確' }
   }
   return null
 }
