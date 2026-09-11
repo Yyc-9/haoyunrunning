@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowUpRight, Award, BadgeCheck, ChevronLeft, ChevronRight, ListFilter, Route, UserRound, UsersRound, X } from 'lucide-react'
+import { ArrowUpRight, ChevronLeft, ChevronRight, ListFilter, Route, UserRound, UsersRound, X } from 'lucide-react'
 import { useReducedMotion } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSiteContent } from '@/app/site-content-provider'
@@ -310,28 +310,16 @@ export default function TeamRosterClient() {
                     </div>
                   ) : null}
 
-                  {coach.specialties.length ? (
-                    <div className="team-coach-card-desktop-detail mt-5">
-                      <p className="flex items-center gap-2 text-xs font-black text-apple-gray-400">
-                        <BadgeCheck className="h-3.5 w-3.5" />
-                        擅長方向
-                      </p>
-                      <p className="mt-2 text-sm leading-6 text-apple-gray-600">{coach.specialties.join('、')}</p>
-                    </div>
-                  ) : null}
-
-                  {(coach.achievements.length || coach.certifications.length) ? (
-                    <details className="team-coach-card-desktop-detail mt-5 border-t border-black/10 pt-4">
-                      <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-black text-apple-gray-800">
-                        <Award className="h-4 w-4 text-apple-blue" />
-                        經歷與證照
-                      </summary>
-                      <div className="mt-3 space-y-3 text-xs leading-6 text-apple-gray-600">
-                        {coach.achievements.length ? <p>{coach.achievements.join('・')}</p> : null}
-                        {coach.certifications.length ? <p>{coach.certifications.join('・')}</p> : null}
-                      </div>
-                    </details>
-                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCoachKey(coach.coachKey)}
+                    className="team-coach-desktop-open"
+                    aria-haspopup="dialog"
+                    aria-controls="team-coach-sheet"
+                    aria-label={'查看' + coach.displayName + '的擅長、經歷與證照'}
+                  >
+                    擅長・經歷與證照 <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+                  </button>
 
                   <button
                     type="button"
