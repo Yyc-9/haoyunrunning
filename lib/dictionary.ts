@@ -384,7 +384,7 @@ export const dictionary = {
     auth: {
       loginTitle: '登入帳戶',
       registerTitle: '建立帳戶',
-      loginSubtitle: '使用您的手機號碼或信箱登入',
+      loginSubtitle: '使用您的信箱登入',
       registerSubtitle: '加入好運跑班，開始您的跑步之旅',
       loginTab: '登入',
       registerTab: '註冊',
@@ -851,7 +851,7 @@ export const dictionary = {
     auth: {
       loginTitle: '登入帳戶',
       registerTitle: '建立帳戶',
-      loginSubtitle: '使用您的手机号码或信箱登入',
+      loginSubtitle: '使用您的信箱登入',
       registerSubtitle: '加入好運跑班，開始您的跑步之旅',
       loginTab: '登入',
       registerTab: '註冊',
@@ -1318,7 +1318,7 @@ export const dictionary = {
     auth: {
       loginTitle: 'Log In',
       registerTitle: 'Create Account',
-      loginSubtitle: 'Log in with your phone or email',
+      loginSubtitle: 'Log in with your email',
       registerSubtitle: 'Join Good Luck Running and start your journey',
       loginTab: 'Log In',
       registerTab: 'Sign Up',
