@@ -4,10 +4,11 @@ import test from 'node:test'
 import { getCourseCoachAvatarPresentation } from '../lib/course-coach-avatar.ts'
 import { getImageCropGeometry } from '../lib/image-crop.ts'
 
-test('課程依訓練營、地點、教練、藍圖順序閱讀，沒有無功能定位方框', () => {
+test('課程依訓練營、地點、教練順序閱讀，移除本季訓練藍圖', () => {
   const source = readFileSync(new URL('../app/courses/[slug]/CourseDetailClient.tsx', import.meta.url), 'utf8')
   const sections = [...source.matchAll(/data-course-section="([^"]+)"/g)].map((match) => match[1])
-  assert.deepEqual(sections, ['running-camp', 'location', 'coaches', 'blueprint'])
+  assert.deepEqual(sections, ['running-camp', 'location', 'coaches'])
+  assert.doesNotMatch(source, /本季訓練藍圖/)
   assert.doesNotMatch(source, /<Navigation\b|courseAvatarFrames/)
   assert.match(source, /<CourseCoachAvatar\b/)
 })

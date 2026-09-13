@@ -106,6 +106,7 @@ export function toTraditionalWebsiteText(value: string) {
   return curated
     .replaceAll('馬拉鬆', '馬拉松')
     .replaceAll('週賢峰', '周賢峰')
+    .replaceAll('控製', '控制')
 }
 
 const traditionalToSimplifiedPairs = [...simplifiedToTraditionalPhrases, ...simplifiedToTraditionalCharacters]

@@ -84,7 +84,7 @@ export default function CoursesTable() {
 
   const filterButtons: Array<{ value: LevelFilter; label: string }> = [
     { value: 'all', label: '全部' },
-    { value: 'beginner', label: '新手' },
+    { value: 'beginner', label: '初階' },
     { value: 'advanced', label: '進階' },
     { value: 'elite', label: '菁英' },
   ]

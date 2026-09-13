@@ -378,7 +378,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                         value={formData.email}
                         onChange={handleChange}
                         placeholder={t.auth.email}
-                        className="apple-input pl-10"
+                        className="apple-input !pl-11"
                         required
                       />
                     </div>
@@ -397,7 +397,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                         onChange={handleChange}
                         placeholder={t.auth.passwordPlaceholder}
                         minLength={activeMode === 'register' ? 10 : 1}
-                        className="apple-input pl-10 pr-10"
+                        className="apple-input !pl-11 !pr-11"
                         required
                       />
                       <button

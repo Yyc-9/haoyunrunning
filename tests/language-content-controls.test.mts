@@ -35,6 +35,26 @@ test('網站提供繁體、簡體與英文三種語言入口', () => {
   assert.deepEqual(languages.map((language) => language.code), ['zh-TW', 'zh-CN', 'en'])
 })
 
+test('各班介紹的訓練重點可儲存、清空及前台套用，舊課程保留原值', async () => {
+  const { normalizeCourseOverrides } = await import('../lib/site-content.ts')
+  const { applyCourseOverrides } = await import('../lib/managed-courses.ts')
+  const base = applyCourseOverrides({})[0]
+  const overrides = normalizeCourseOverrides({ [base.slug]: {
+    name: '測試班級', slogan: '測試標語', targetAudience: '測試對象',
+    customCampaignLabel: 'CUSTOM CAMP', trainingItems: ['  節奏控制 ', '技術', '耐力', '忽略'],
+  } })
+  assert.deepEqual(overrides[base.slug].trainingItems, ['節奏控制', '技術', '耐力'])
+  assert.equal(overrides[base.slug].customCampaignLabel, 'CUSTOM CAMP')
+  const course = applyCourseOverrides(overrides).find((item) => item.slug === base.slug)!
+  assert.deepEqual(course.trainingItems, ['節奏控制', '技術', '耐力'])
+  assert.equal(course.title, '測試班級')
+  assert.equal(course.slogan, '測試標語')
+  assert.equal(course.targetAudience, '測試對象')
+  const cleared = normalizeCourseOverrides({ [base.slug]: { trainingItems: [] } })
+  assert.deepEqual(applyCourseOverrides(cleared).find((item) => item.slug === base.slug)!.trainingItems, [])
+  assert.deepEqual(applyCourseOverrides({ [base.slug]: {} }).find((item) => item.slug === base.slug)!.trainingItems, base.trainingItems)
+})
+
 test('簡繁轉換保留跑班常用詞與馬拉松正字', () => {
   const traditional = '網站內容與課程聯絡、團隊陣容、圖片輪播與檔案預覽，四週年紀念，陪跑者完成波士頓馬拉松。'
   const simplified = '网站内容与课程联络、团队阵容、图片轮播与档案预览，四周年纪念，陪跑者完成波士顿马拉松。'

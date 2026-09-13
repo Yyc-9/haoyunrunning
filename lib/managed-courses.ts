@@ -58,7 +58,7 @@ export function applyCourseOverrides(
       const meetingPoint = override.meetingPoint || course.meetingPoint
       const focus = override.focus || course.focus
       const feeNote = override.feeNote || course.feeNote
-      const campaignLabel = override.campaignLabel || course.campaignLabel
+      const campaignLabel = override.customCampaignLabel || override.campaignLabel || course.campaignLabel
       const slogan = override.slogan || course.slogan
       const benefits = override.benefits?.length ? override.benefits : course.benefits
       const suitableFor = override.suitableFor?.length ? override.suitableFor : course.suitableFor
@@ -89,6 +89,7 @@ export function applyCourseOverrides(
         campaignLabel,
         slogan,
         benefits,
+        trainingItems: override.trainingItems ?? course.trainingItems,
         suitableFor,
         enrollmentNote,
         signupUrl,

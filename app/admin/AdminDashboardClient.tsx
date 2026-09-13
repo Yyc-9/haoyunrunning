@@ -121,6 +121,7 @@ type AdminCourseSummary = {
   targetAudience: string
   focus: string
   benefits: string[]
+  trainingItems: string[]
   suitableFor: string[]
   enrollmentNote: string
   signupUrl: string

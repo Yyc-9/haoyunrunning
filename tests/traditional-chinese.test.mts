@@ -4,6 +4,10 @@ import test from 'node:test'
 import { toSimplifiedWebsiteText, toTraditionalWebsiteText } from '../lib/traditional-chinese.ts'
 import { toTraditionalWithOpenCC } from '../lib/traditional-opencc.ts'
 
+test('控制不會被通用繁體轉換誤寫為控製', () => {
+  assert.equal(toTraditionalWebsiteText('呼吸與節奏控制、配速控製'), '呼吸與節奏控制、配速控制')
+})
+
 test('馬拉松在繁體轉換後仍使用正確用字', () => {
   assert.equal(toTraditionalWebsiteText('波士頓馬拉松'), '波士頓馬拉松')
   assert.equal(toTraditionalWebsiteText('波士顿马拉松'), '波士頓馬拉松')

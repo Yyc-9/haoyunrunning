@@ -380,7 +380,7 @@ export default function TeamRosterClient() {
               ) : null}
               {selectedCoach.specialties.length ? (
                 <div className="mt-7">
-                  <h3 className="text-lg font-black text-apple-gray-950">擅長方向</h3>
+                  <h3 className="text-lg font-black text-apple-gray-950">教學專長</h3>
                   <div className="mt-3 flex flex-wrap gap-2">{selectedCoach.specialties.map((item) => <span key={item} className="rounded-md bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-900">{item}</span>)}</div>
                 </div>
               ) : null}

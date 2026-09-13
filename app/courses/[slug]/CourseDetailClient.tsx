@@ -73,8 +73,6 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
   const courseText = (value: string) => formatCourseWeekday(text(value))
   const instagramUrl = brand.instagramUrl || course.instagramUrl || 'https://www.instagram.com/nurture.running.team/'
   const courseCoaches = course.coaches ?? (course.coach ? [course.coach] : [])
-  const seasonFocus = course.benefits.slice(0, 3)
-  const seasonGoal = course.slogan
 
   return (
     <main className="mobile-focused-main kinetic-page min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-20 sm:pt-24">
@@ -202,24 +200,6 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
               </div>
             </section>
 
-            <section data-course-section="blueprint" className="kinetic-card kinetic-reveal overflow-hidden rounded-[1.5rem] border border-black/10 bg-white shadow-sm">
-              <div className="border-b border-black/10 px-5 py-6 sm:px-7 sm:py-8">
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-apple-blue">TRAINING BLUEPRINT</p>
-                <h2 className="mt-3 text-2xl font-black leading-tight text-apple-gray-950 sm:text-3xl">本季訓練藍圖</h2>
-                <p className="mt-3 max-w-3xl text-base font-semibold leading-7 text-apple-gray-600">{text(seasonGoal)}</p>
-              </div>
-              <div className="grid md:grid-cols-3">
-                {seasonFocus.map((item, index) => (
-                  <article
-                    key={item}
-                    className={`p-5 sm:p-7 ${index ? 'border-t border-black/10 md:border-l md:border-t-0' : ''}`}
-                  >
-                    <span className="text-xs font-black text-apple-blue">0{index + 1}</span>
-                    <h3 className="mt-3 text-lg font-black leading-7 text-apple-gray-950">{text(item)}</h3>
-                  </article>
-                ))}
-              </div>
-            </section>
 
           </div>
         </div>

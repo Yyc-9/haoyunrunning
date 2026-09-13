@@ -23,7 +23,7 @@ export const coursePolicyRules = [
 export const invoiceDeliveryOptions = [
   '手機條碼載具（請於下方欄位填寫）',
   '寄至其他電子信箱（請於下方欄位填寫）',
-  '寄至本次報名的 Gmail 信箱',
+  '寄至本次的電子信箱或 Gmail 信箱',
 ] as const
 
 export type DirectCourseRegistration = {

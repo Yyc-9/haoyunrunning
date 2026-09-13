@@ -68,6 +68,7 @@ type CourseSummary = {
   targetAudience: string
   focus: string
   benefits: string[]
+  trainingItems: string[]
   suitableFor: string[]
   enrollmentNote: string
   signupUrl: string
@@ -296,12 +297,14 @@ function courseDraft(course: CourseSummary, override?: CourseOverride): CourseOv
     meetingPoint: override?.meetingPoint || course.meetingPoint,
     feeNote: override?.feeNote || course.feeNote,
     campaignLabel: override?.campaignLabel || course.campaignLabel,
+    customCampaignLabel: override?.customCampaignLabel,
     slogan: override?.slogan || course.slogan,
     targetAudience: override?.targetAudience && !isLegacyCourseTargetAudience(override.targetAudience)
       ? override.targetAudience
       : course.targetAudience,
     focus: override?.focus || course.focus,
     benefits: override?.benefits?.length ? override.benefits : course.benefits,
+    trainingItems: override?.trainingItems ?? course.trainingItems,
     suitableFor: override?.suitableFor?.length ? override.suitableFor : course.suitableFor,
     enrollmentNote: override?.enrollmentNote || course.enrollmentNote,
     signupUrl: override?.signupUrl || course.signupUrl,
@@ -419,6 +422,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
         : base.targetAudience,
       focus: override.focus || base.focus,
       benefits: override.benefits?.length ? override.benefits : base.benefits,
+      trainingItems: override.trainingItems ?? base.trainingItems,
       suitableFor: override.suitableFor?.length ? override.suitableFor : base.suitableFor,
       enrollmentNote: override.enrollmentNote || base.enrollmentNote,
       signupUrl: override.signupUrl || `/courses/${slug}/register`,
@@ -925,7 +929,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                           <Field label="暱稱"><input value={profile.nickname} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], nickname: event.target.value } }))} className="apple-input" /></Field>
                           <Field label="職務與專長" wide><input value={profile.role} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], role: event.target.value } }))} className="apple-input" /></Field>
                           <Field label="公開介紹" wide><textarea rows={5} value={profile.bio} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], bio: event.target.value } }))} className="apple-input resize-y" /></Field>
-                          <Field label="擅長方向（每行一項）"><textarea rows={5} value={profile.specialties.join('\n')} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], specialties: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean) } }))} className="apple-input resize-y" /></Field>
+                          <Field label="教學專長（每行一項）"><textarea rows={5} value={profile.specialties.join('\n')} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], specialties: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean) } }))} className="apple-input resize-y" /></Field>
                           <Field label="帶訓風格"><textarea rows={5} value={profile.style} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], style: event.target.value } }))} className="apple-input resize-y" /></Field>
                           <Field label="代表經歷（每行一項）"><textarea rows={6} value={profile.achievements.join('\n')} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], achievements: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean) } }))} className="apple-input resize-y" /></Field>
                           <Field label="教練證照（每行一項）"><textarea rows={6} value={profile.certifications.join('\n')} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], certifications: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean) } }))} className="apple-input resize-y" /></Field>
@@ -1236,11 +1240,11 @@ export default function AdminContentManager({ content, courses, seasons, scope =
               <details className="rounded-lg border border-black/10 bg-apple-gray-50 md:col-span-2">
                 <summary className="cursor-pointer list-none px-4 py-4 font-black text-apple-gray-900">官網課程介紹文案</summary>
                 <div className="grid gap-4 border-t border-black/10 p-4 md:grid-cols-2">
-                  <Field label="季度英文小標（依季度自動更新）"><input value={courseSeasonCampaignLabel(selectedSeason?.code ?? '') || String(draft.campaignLabel ?? '')} readOnly className="apple-input" /></Field>
+                  <Field label="季度英文小標（留白則依季度自動更新）"><input value={String(draft.customCampaignLabel ?? '')} placeholder={courseSeasonCampaignLabel(selectedSeason?.code ?? '')} onChange={(e) => setDraft((current) => ({ ...current, customCampaignLabel: e.target.value, campaignLabel: e.target.value || courseSeasonCampaignLabel(selectedSeason?.code ?? '') }))} className="apple-input" /></Field>
                   <Field label="課程主標語"><input value={String(draft.slogan ?? '')} onChange={(e) => setDraft((current) => ({ ...current, slogan: e.target.value }))} className="apple-input" /></Field>
-                  <Field label="本季訓練方向（每行一項，前台顯示前三項）" wide><textarea rows={5} value={(draft.benefits ?? []).slice(0, 3).join('\n')} onChange={(e) => setDraft((current) => ({ ...current, benefits: e.target.value.split('\n').map((item) => item.trim()).filter(Boolean).slice(0, 3) }))} className="apple-input resize-y" /></Field>
+                  <Field label="本期訓練重點（每行一項，最多三項）" wide><textarea rows={4} value={(draft.trainingItems ?? []).join('\n')} onChange={(e) => setDraft((current) => ({ ...current, trainingItems: e.target.value.split('\n').slice(0, 3) }))} className="apple-input resize-y" /></Field>
                   <Field label="開班提醒" wide><input value={String(draft.enrollmentNote ?? '')} onChange={(e) => setDraft((current) => ({ ...current, enrollmentNote: e.target.value }))} className="apple-input" placeholder="沒有提醒時可留空" /></Field>
-                  <p className="text-xs font-semibold leading-5 text-apple-gray-500 md:col-span-2">課程主標語與三項訓練方向會顯示在教練介紹後方的「本季訓練藍圖」；不會新增加購商品，也不會變更匯款與付款流程。</p>
+                  <p className="text-xs font-semibold leading-5 text-apple-gray-500 md:col-span-2">以上文案與課程名稱、適合對象會同步到本班課程詳情頂部。儲存當前招生季度後即可在前台查看。</p>
                 </div>
               </details>
               <div className="border-y border-black/10 py-5 md:col-span-2">

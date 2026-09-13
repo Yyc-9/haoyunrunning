@@ -30,10 +30,12 @@ export type CourseOverride = {
   meetingPoint?: string
   feeNote?: string
   campaignLabel?: string
+  customCampaignLabel?: string
   slogan?: string
   targetAudience?: string
   focus?: string
   benefits?: string[]
+  trainingItems?: string[]
   suitableFor?: string[]
   enrollmentNote?: string
   signupUrl?: string
@@ -657,10 +659,12 @@ export function normalizeCourseOverrides(value: unknown): Record<string, CourseO
       meetingPoint: cleanString(override.meetingPoint, 300),
       feeNote: cleanString(override.feeNote, 300),
       campaignLabel: cleanString(override.campaignLabel, 120),
+      customCampaignLabel: cleanString(override.customCampaignLabel, 120),
       slogan: cleanString(override.slogan, 300),
       targetAudience: cleanString(override.targetAudience, 500),
       focus: cleanString(override.focus, 300),
       benefits: benefits.length ? benefits : undefined,
+      trainingItems: Array.isArray(override.trainingItems) ? cleanStringList(override.trainingItems, 3, 240) : undefined,
       suitableFor: suitableFor.length ? suitableFor : undefined,
       enrollmentNote: cleanString(override.enrollmentNote, 300),
       signupUrl: signupUrl && isSafePublicUrl(signupUrl) ? signupUrl : '',

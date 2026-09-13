@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import './home-mobile-background.css'
 import NavigationWrapper from '@/components/NavigationWrapper'
 import Footer from '@/components/Footer'
 import { AuthProvider } from './providers'

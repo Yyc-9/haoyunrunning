@@ -92,7 +92,7 @@ export async function getCourseSeasons(options: { includeRegistrationStats?: boo
           course.course_slug,
           {
             ...(normalizeCourseOverrides({ [course.course_slug]: course.course_data })[course.course_slug] ?? {}),
-            ...(courseSeasonCampaignLabel(season.code) ? { campaignLabel: courseSeasonCampaignLabel(season.code) } : {}),
+            campaignLabel: normalizeCourseOverrides({ [course.course_slug]: course.course_data })[course.course_slug]?.customCampaignLabel || courseSeasonCampaignLabel(season.code),
             startTime: course.start_time?.slice(0, 5) ?? '',
             timeZone: 'Asia/Taipei' as const,
           },

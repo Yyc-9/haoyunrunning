@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
   const coachId = cleanText(body.coachId, 80)
 
   if (!isEmail(email)) {
-    return NextResponse.json({ error: '請輸入有效的信箱地址。', code: 'invalid_email' }, { status: 400 })
+    return NextResponse.json({ error: '請輸入有效的電子信箱。', code: 'invalid_email' }, { status: 400 })
   }
   if (password.length < 10 || password.length > 128) {
     return NextResponse.json({ error: '密碼請使用 10 至 128 個字元。', code: 'invalid_password' }, { status: 400 })

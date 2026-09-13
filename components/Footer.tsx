@@ -34,8 +34,6 @@ export default function Footer() {
       title: '聯絡',
       links: [
         { name: 'Instagram', href: brand.instagramUrl },
-        { name: '課程諮詢', href: brand.instagramUrl },
-        { name: '商品諮詢', href: brand.instagramUrl },
       ],
     },
     {

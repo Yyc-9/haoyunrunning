@@ -1,0 +1,11 @@
+/* Keep the desktop composition and pointer/touch animation unchanged. */
+@media (max-width: 767px) {
+  section.home-hero {
+    height: max(640px, 100svh);
+    min-height: 640px;
+    background:
+      linear-gradient(to bottom, transparent 22%, rgb(19 17 23 / 18%) 34%, #131117 60%),
+      url('/site-visuals/home-hero-track-photo-v1.jpg') center 90px / 100% auto no-repeat,
+      #131117;
+  }
+}
