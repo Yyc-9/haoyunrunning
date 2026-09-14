@@ -53,14 +53,25 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
       {preview ? (
         <>
           <div className="home-course-preview-hero group relative isolate flex min-h-[500px] overflow-hidden text-white sm:min-h-[560px]">
-            <Image
-              src={pageMedia.homeCoursesHero}
-              alt="好運跑班教練與跑者賽前集結"
-              fill
-              sizes="100vw"
-              className="home-course-preview-image object-cover object-center"
-            />
-            <div className="absolute inset-0 bg-black/55" />
+            <div className="home-course-preview-media">
+              <Image
+                src={pageMedia.homeCoursesHero}
+                alt="好運跑班教練與跑者賽前集結"
+                fill
+                sizes="100vw"
+                className="home-course-preview-image home-course-preview-panorama object-cover object-center"
+              />
+              <div className="home-course-preview-focus" aria-hidden="true">
+                <Image
+                  src={pageMedia.homeCoursesHero}
+                  alt=""
+                  fill
+                  sizes="(max-width: 767px) 46vw, 100vw"
+                  className="home-course-preview-focus-image object-cover object-center"
+                />
+              </div>
+            </div>
+            <div className="home-course-preview-scrim absolute inset-0 bg-black/55" />
             <div className="container relative z-10 mx-auto flex w-full max-w-7xl items-center px-5 py-16 sm:px-8 lg:px-12">
               <motion.div
                 initial={{ opacity: 0, y: 26 }}
@@ -74,7 +85,7 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
                 <p className="mt-6 max-w-2xl text-base leading-8 text-white/80 sm:text-xl sm:leading-9">
                   {home.coursesDescription}
                 </p>
-                <Link href="/courses" className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-black text-black transition hover:bg-white/90">
+                <Link href="/courses" className="mt-8 inline-flex min-h-[44px] items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-black text-black transition hover:bg-white/90">
                   {home.coursesCtaLabel}
                   <ChevronRight className="h-4 w-4" />
                 </Link>

@@ -28,6 +28,7 @@ const TRAIL_POOL_SIZE = 12
 const TRAIL_DISTANCE = 72
 const TRAIL_INTERVAL = 120
 const ENTRANCE_EASE = [0.16, 1, 0.3, 1] as const
+const HERO_MOBILE_IMAGE = '/site-visuals/home-hero-mobile-v2.jpg'
 
 export default function HeroSection({ initialImages }: HeroSectionProps) {
   const heroRef = useRef<HTMLElement>(null)
@@ -77,8 +78,10 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
       activeItems.delete(item)
       item.classList.remove('home-hero-trail-visible')
     }
+    const isMobileViewport = () => window.matchMedia('(max-width: 767px)').matches
 
     const emitTrail = (x: number, y: number, force = false) => {
+      if (isMobileViewport()) return
       const lastPoint = lastPointRef.current
       if (!force && Math.hypot(x - lastPoint.x, y - lastPoint.y) < TRAIL_DISTANCE) return
       const now = performance.now()
@@ -94,7 +97,7 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
       const safeX = Math.max(itemWidth / 2 + 10, Math.min(hero.clientWidth - itemWidth / 2 - 10, x))
       item.style.left = String(safeX) + 'px'
       item.style.top = String(y) + 'px'
-      item.style.backgroundImage = 'url(\"' + image + '\")'
+      item.style.setProperty('--trail-image', 'url("' + image + '")')
       item.style.setProperty('--trail-rotate', String((poolIndex % 2 ? 1 : -1) * (5 + (poolIndex % 7))) + 'deg')
       item.style.setProperty('--trail-drift-x', String(((poolIndex % 3) - 1) * 22) + 'px')
       item.style.setProperty('--trail-drift-y', String(-20 - (poolIndex % 4) * 9) + 'px')
@@ -121,6 +124,7 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
     }
 
     const updatePointer = (event: PointerEvent) => {
+      if (isMobileViewport()) return
       if (event.pointerType !== 'mouse' && event.pointerType !== 'pen') return
       if (prefersReducedMotion) return
       const rect = hero.getBoundingClientRect()
@@ -143,6 +147,10 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
       if (y > 110) emitTrail(x, y)
     }
     const handlePointerMove = (event: PointerEvent) => {
+      if (isMobileViewport()) {
+        cancelAnimationFrame(frame)
+        return
+      }
       cancelAnimationFrame(frame)
       frame = requestAnimationFrame(() => updatePointer(event))
     }
@@ -150,6 +158,11 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
     let touchStart: { x: number; y: number } | null = null
     let lastTouchX = 0
     const handleTouchStart = (event: TouchEvent) => {
+      if (isMobileViewport()) {
+        touchStart = null
+        lastTouchX = 0
+        return
+      }
       const touch = event.changedTouches[0]
       if (!touch) return
       const rect = hero.getBoundingClientRect()
@@ -158,6 +171,11 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
       lastPointRef.current = touchStart
     }
     const handleTouchMove = (event: TouchEvent) => {
+      if (isMobileViewport()) {
+        touchStart = null
+        lastTouchX = 0
+        return
+      }
       if (!touchStart || prefersReducedMotion) return
       const touch = event.changedTouches[0]
       if (!touch) return
@@ -172,6 +190,11 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
       }
     }
     const handleTouchEnd = (event: TouchEvent) => {
+      if (isMobileViewport()) {
+        touchStart = null
+        lastTouchX = 0
+        return
+      }
       if (!touchStart) return
       const touch = event.changedTouches[0]
       if (!touch) return
@@ -225,6 +248,17 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
       <p className="home-hero-kinetic home-hero-kinetic-together" aria-hidden="true">
         TOGETHER
       </p>
+
+      <figure className="home-hero-mobile-media" aria-hidden="true">
+        <Image
+          src={HERO_MOBILE_IMAGE}
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="home-hero-mobile-image"
+        />
+      </figure>
 
       <motion.figure
         initial={entrance}
