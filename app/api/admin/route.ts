@@ -251,7 +251,7 @@ type AdminPatchBody =
   | { action?: 'link_coach_public_profile'; userId?: string; coachKey?: string }
   | { action?: 'set_coach_role'; userId?: string; enabled?: boolean }
   | { action?: 'create_coach_invite'; coachKey?: string; verificationEmail?: string }
-  | { action?: 'review_order'; orderId?: string; orderKind?: 'course' | 'shop'; status?: PaymentOrderStatus; reviewNote?: string }
+  | { action?: 'review_order'; orderId?: string; orderKind?: 'course' | 'shop'; status?: PaymentOrderStatus; reviewNote?: string; confirmReceipt?: boolean }
   | { action?: 'resolve_attendance_anomaly'; attendanceId?: string; outcome?: 'supplement_paid' | 'waived' | 'reopen'; resolutionNote?: string }
   | { action?: 'delete_order'; orderId?: string; orderKind?: 'course' | 'shop' }
   | { action?: 'bind_student'; studentId?: string; coachId?: string }
@@ -879,7 +879,7 @@ export async function GET(request: NextRequest) {
       orderNumber: '',
       studentName: order.name,
       email: order.email,
-      courseName: order.preferred_course,
+      courseName: courseSeasons.find((season) => season.id === order.season_id)?.courseOverrides[order.course_slug || '']?.name || order.preferred_course,
       courseSlug: order.course_slug || '',
       seasonId: order.season_id || '',
       seasonName: courseSeasons.find((season) => season.id === order.season_id)?.name || '舊版報名',
@@ -1744,7 +1744,19 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (requestedStatus === 'approved') {
-      return json({ error: '「已確認入帳」只能透過銀行對帳，由財務確認後寫入。' }, { status: 409 })
+      if (body.confirmReceipt !== true || !reviewNote || reviewNote.length > 1000) {
+        return json({ error: '請先核實款項已實際入帳，並填寫 1 至 1000 字的核對依據。' }, { status: 400 })
+      }
+      // Use the same locked, capacity-checked transaction as finance. Never update status directly.
+      const { data: order, error } = await supabaseAdmin!.rpc('approve_course_enrollment', {
+        p_lead_id: orderId,
+        p_review_note: `超級管理員人工確認入帳｜操作人：${auth.adminProfile.id}｜核對依據：${reviewNote}`,
+      })
+      if (error) {
+        const full = error.message.includes('course capacity reached')
+        return json({ error: full ? '本班名額已滿，未確認入帳；請先處理班級名額。' : '確認入帳未完成，請重新整理核對狀態後再試。' }, { status: full ? 409 : 400 })
+      }
+      return json({ order, message: '已確認課程匯款入帳，確認時間、操作人及核對依據已保存。' })
     }
     if (requestedStatus !== 'rejected') {
       return json({ error: '這裡只能將課程報名標記為「匯款資料需補充」。' }, { status: 400 })

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, BarChart3, CalendarRange, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, FileSpreadsheet, Loader2, Package, RotateCcw, Search, Trash2, X } from 'lucide-react'
+import { AlertTriangle, BarChart3, CalendarRange, CheckCircle2, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, FileSpreadsheet, Loader2, Package, RotateCcw, Search, Trash2, X } from 'lucide-react'
 import { preferredCourseSeasonId, type CourseSeason } from '@/lib/course-seasons'
 import { paymentOrderStatusDescriptions, paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
 import { supabase } from '@/lib/supabase'
@@ -297,6 +297,20 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
     if (saved) setSelected(null)
   }
 
+  async function confirmCourseTransfer() {
+    if (!selected || selected.orderKind !== 'course' || selected.status === 'approved') return
+    if (!reviewNote.trim()) {
+      window.alert('請在管理備註填寫核對依據，例如入帳日期、實收金額與銀行交易參考號。')
+      return
+    }
+    if (!window.confirm(`確認「${selected.studentName}」的 ${selected.amountText} 已實際入帳？此操作會確認報名並占用班級名額，請勿僅憑匯款通知確認。`)) return
+    const saved = await runAction(selected.id, {
+      action: 'review_order', orderId: selected.id, orderKind: 'course',
+      status: 'approved', confirmReceipt: true, reviewNote: reviewNote.trim(),
+    })
+    if (saved) setSelected(null)
+  }
+
   async function deleteOrder() {
     if (!selected || selected.status === 'approved') return
     const inventoryMessage = selected.orderKind === 'shop' && selected.inventoryReserved
@@ -540,7 +554,8 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
               <label className="mt-5 block"><span className="mb-2 block text-xs font-bold text-apple-gray-500">管理備註</span><textarea value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} className="apple-input min-h-24 resize-y" placeholder={selected.orderKind === 'shop' ? '記錄匯款核對、自取時間或聯絡結果' : '記錄核對結果或需要補充的資料'} /></label>
             </div>
             <div className="grid gap-2 border-t bg-white p-4 sm:grid-cols-2">
-              <p className={`rounded-lg px-3 py-2 text-xs font-bold leading-5 sm:col-span-2 ${selected.orderKind === 'shop' ? 'bg-apple-gray-100 text-apple-gray-700' : 'bg-blue-50 text-blue-800'}`}>{selected.orderKind === 'shop' ? '商城使用銀行匯款付款，入帳後再安排跑班自取；可在銀行對帳頁核對，也可於此人工確認。' : '「已確認入帳」只能由銀行對帳完成；這裡保留異常處理與刪除，避免繞過財務確認。'}</p>
+              <p className={`rounded-lg px-3 py-2 text-xs font-bold leading-5 sm:col-span-2 ${selected.orderKind === 'shop' ? 'bg-apple-gray-100 text-apple-gray-700' : 'bg-blue-50 text-blue-800'}`}>{selected.orderKind === 'shop' ? '商城使用銀行匯款付款，入帳後再安排跑班自取；可在銀行對帳頁核對，也可於此人工確認。' : '財務可透過銀行對帳確認；超級管理員亦可核實實際入帳後，填寫管理備註並人工確認。系統保留操作人、時間及核對依據，財務之後仍可補登銀行對帳。'}</p>
+              {selected.orderKind === 'course' ? <button type="button" disabled={updatingId === selected.id || selected.status === 'approved'} onClick={confirmCourseTransfer} className="apple-button-primary gap-2 px-4 py-3 disabled:opacity-40"><CheckCircle2 className="h-4 w-4" />{selected.status === 'approved' ? '已確認入帳' : '確認入帳（管理員）'}</button> : null}
               {selected.orderKind === 'shop' ? <button type="button" disabled={updatingId === selected.id || selected.status === 'rejected' || selected.status === 'approved'} onClick={confirmShopTransfer} className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-40"><Package className="h-4 w-4" />確認匯款並安排自取</button> : null}
               <button type="button" disabled={updatingId === selected.id || selected.status === 'rejected' || selected.status === 'approved'} onClick={flagOrderForReview} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40"><RotateCcw className="h-4 w-4" />標記匯款資料需補充</button>
               <button type="button" disabled={updatingId === `delete-${selected.id}` || selected.status === 'approved'} onClick={deleteOrder} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40">{updatingId === `delete-${selected.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}刪除記錄</button>

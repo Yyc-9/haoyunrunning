@@ -27,8 +27,8 @@ test('匯款狀態使用同一組正式繁體文案', () => {
     approved: '已確認入帳',
     rejected: '匯款資料需補充',
   })
-  assert.match(paymentOrderStatusDescriptions.pending_review, /等待財務人工核對/)
-  assert.match(paymentOrderStatusDescriptions.approved, /財務確認入帳/)
+  assert.match(paymentOrderStatusDescriptions.pending_review, /等待財務或超級管理員核對/)
+  assert.match(paymentOrderStatusDescriptions.approved, /財務或超級管理員核實款項入帳/)
 })
 
 test('信用卡付款必須同時有明確開關與必要密鑰', () => {

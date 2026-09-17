@@ -53,6 +53,7 @@ import type { CoachPublicProfile } from '@/lib/coach-profiles'
 import { getYouTubeEmbedUrl } from '@/lib/youtube'
 import CroppableImageInput from '@/components/admin/CroppableImageInput'
 import CourseCoachAvatar from '@/components/CourseCoachAvatar'
+import { reconcileCourseField } from '@/lib/admin-course-edit-state'
 
 type CourseSummary = {
   slug: string
@@ -393,10 +394,8 @@ export default function AdminContentManager({ content, courses, seasons, scope =
     setSeasonOverrides(Object.fromEntries(seasons.map((season) => [season.id, season.courseOverrides])))
     setSeasonCapacities(Object.fromEntries(seasons.map((season) => [season.id, season.courseCapacities])))
     setSeasonBillingConfigs(Object.fromEntries(seasons.map((season) => [season.id, season.courseBillingConfigs])))
-    if (!seasons.some((season) => season.id === selectedSeasonId)) {
-      setSelectedSeasonId(preferredCourseSeasonId(seasons))
-    }
-  }, [seasons, selectedSeasonId])
+    setSelectedSeasonId((current) => seasons.some((season) => season.id === current) ? current : preferredCourseSeasonId(seasons))
+  }, [seasons])
 
   const selectedSeason = useMemo(() => seasons.find((season) => season.id === selectedSeasonId) ?? null, [seasons, selectedSeasonId])
   const courseOverrides = selectedSeason ? seasonOverrides[selectedSeason.id] ?? selectedSeason.courseOverrides : content.courseOverrides
@@ -434,13 +433,21 @@ export default function AdminContentManager({ content, courses, seasons, scope =
     if (selectedCourse || seasonCourses.length === 0) return
     setSelectedSlug(seasonCourses[0].slug)
   }, [seasonCourses, selectedCourse])
+  const courseSnapshotRef = useRef<{ key: string; draft: CourseOverride; capacity: number; billing: CourseBillingConfig } | null>(null)
   useEffect(() => {
     if (!selectedCourse) return
-    setDraft(courseDraft(selectedCourse, courseOverrides[selectedCourse.slug]))
-    setDraftCapacity(selectedSeason ? seasonCapacities[selectedSeason.id]?.[selectedCourse.slug] ?? 40 : 40)
-    setDraftBilling(selectedSeason
+    const key = `${selectedSeason?.id ?? ''}:${selectedCourse.slug}`
+    const nextDraft = courseDraft(selectedCourse, courseOverrides[selectedCourse.slug])
+    const nextCapacity = selectedSeason ? seasonCapacities[selectedSeason.id]?.[selectedCourse.slug] ?? 40 : 40
+    const nextBilling = selectedSeason
       ? seasonBillingConfigs[selectedSeason.id]?.[selectedCourse.slug] ?? defaultCourseBillingConfig(selectedCourse, selectedSeason.code)
-      : defaultCourseBillingConfig(selectedCourse))
+      : defaultCourseBillingConfig(selectedCourse)
+    const previous = courseSnapshotRef.current
+    const switched = !previous || previous.key !== key
+    setDraft((current) => reconcileCourseField(current, previous?.draft, nextDraft, !switched))
+    setDraftCapacity((current) => reconcileCourseField(current, previous?.capacity, nextCapacity, !switched))
+    setDraftBilling((current) => reconcileCourseField(current, previous?.billing, nextBilling, !switched))
+    courseSnapshotRef.current = { key, draft: nextDraft, capacity: nextCapacity, billing: nextBilling }
   }, [courseOverrides, seasonBillingConfigs, seasonCapacities, selectedCourse, selectedSeason])
 
   const allModes = [

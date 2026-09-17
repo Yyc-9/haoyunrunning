@@ -34,8 +34,8 @@ export const paymentOrderStatusLabels = {
 
 export const paymentOrderStatusDescriptions: Record<PaymentOrderStatus, string> = {
   pending_transfer: '尚未提交匯款帳號後五碼。',
-  pending_review: '已提交後五碼與申報金額，等待財務人工核對銀行入帳。',
-  approved: '後五碼與金額相符，且已由財務確認入帳。',
+  pending_review: '已提交後五碼與申報金額，等待財務或超級管理員核對銀行入帳。',
+  approved: '已由財務或超級管理員核實款項入帳。',
   rejected: '匯款資料需要補充或重新核對，請依核對說明處理。',
 }
 

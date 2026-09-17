@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
   AlertTriangle,
@@ -294,6 +294,7 @@ async function adminAction(body: Record<string, unknown>) {
 export default function AdminDashboardClient() {
   const [activeTab, setActiveTab] = useState<AdminTab>('overview')
   const [data, setData] = useState<AdminDashboardPayload | null>(null)
+  const dashboardRequestId = useRef(0)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
@@ -317,17 +318,20 @@ export default function AdminDashboardClient() {
   })
 
   const loadDashboard = useCallback(async (background = false) => {
+    const requestId = ++dashboardRequestId.current
     if (!background) setIsLoading(true)
     setError('')
 
     try {
-      setData(await fetchAdminDashboard())
+      const nextData = await fetchAdminDashboard()
+      if (requestId === dashboardRequestId.current) setData(nextData)
     } catch (loadError) {
+      if (requestId !== dashboardRequestId.current) return
       if (!background) setData(null)
       else setMessage('')
       setError(loadError instanceof Error ? loadError.message : '讀取管理員後台失敗。')
     } finally {
-      if (!background) setIsLoading(false)
+      if (!background && requestId === dashboardRequestId.current) setIsLoading(false)
     }
   }, [])
 
@@ -403,6 +407,8 @@ export default function AdminDashboardClient() {
 
     try {
       const result = await adminAction(action)
+      // An older background response must not overwrite the just-saved course name.
+      dashboardRequestId.current += 1
       setMessage(result.message || '操作已完成。')
       if (action.action === 'save_site_content' && result.siteContent && result.courses) {
         setData((current) => current ? {
@@ -421,6 +427,14 @@ export default function AdminDashboardClient() {
             courseCapacities: { ...season.courseCapacities, [saved.course_slug]: saved.capacity },
             courseBillingConfigs: { ...season.courseBillingConfigs, [saved.course_slug]: saved.billing_config },
           } : season),
+          courseCapacity: current.courseCapacity.map((course) => course.seasonId === saved.season_id && course.slug === saved.course_slug ? {
+            ...course,
+            name: saved.course_data.name || course.name,
+            capacity: saved.capacity,
+            remaining: Math.max(0, saved.capacity - course.paidCount),
+          } : course),
+          orders: current.orders.map((order) => order.orderKind === 'course' && order.seasonId === saved.season_id && order.courseSlug === saved.course_slug
+            ? { ...order, courseName: saved.course_data.name || order.courseName } : order),
         } : current)
         announceSiteContentUpdated()
       } else {
