@@ -1984,6 +1984,7 @@
   .home-hero-copy {
     right: 20px;
     bottom: calc(var(--mobile-bottom-height) + 22px);
+    bottom: calc(100% - 100svh + var(--mobile-bottom-height) + 22px);
     left: 20px;
     width: auto;
   }
