@@ -115,6 +115,7 @@ type ReconciliationPayload = {
 }
 
 type AccessStatus = {
+  readOnly?: boolean
   configured: boolean
   canManagePassword: boolean
   lockedUntil: string | null
@@ -168,8 +169,9 @@ async function getAdminToken() {
   return data.session?.access_token ?? ''
 }
 
-export default function AdminBankReconciliation({ paymentAccounts }: { paymentAccounts: PaymentAccount[] }) {
+export default function AdminBankReconciliation({ paymentAccounts, readOnly: viewOnly = false }: { paymentAccounts: PaymentAccount[]; readOnly?: boolean }) {
   const [accessStatus, setAccessStatus] = useState<AccessStatus | null>(null)
+  const readOnly = viewOnly || accessStatus?.readOnly === true
   const [financeToken, setFinanceToken] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -562,7 +564,7 @@ export default function AdminBankReconciliation({ paymentAccounts }: { paymentAc
         </div>
       ) : null}
 
-      {accessStatus.canManagePassword ? (
+      {!readOnly && accessStatus.canManagePassword ? (
         <details className="apple-card overflow-hidden">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 text-sm font-black text-apple-gray-800 sm:px-5">
             <span className="inline-flex items-center gap-2"><KeyRound className="h-4 w-4" />財務密碼設定</span>
@@ -615,8 +617,8 @@ export default function AdminBankReconciliation({ paymentAccounts }: { paymentAc
         </details>
       ) : null}
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)]">
-        <div className="apple-card overflow-hidden">
+      <div className={readOnly ? 'grid gap-5' : 'grid gap-5 xl:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)]'}>
+        {!readOnly && <div className="apple-card overflow-hidden">
           <div className="border-b border-black/10 p-5">
             <div className="flex items-center gap-3">
               <Upload className="h-5 w-5 text-apple-gray-700" />
@@ -736,8 +738,7 @@ export default function AdminBankReconciliation({ paymentAccounts }: { paymentAc
               </div>
             ) : null}
           </div>
-        </div>
-
+        </div>}
         <div className="apple-card overflow-hidden">
           <div className="border-b border-black/10 p-5">
             <div>
@@ -792,7 +793,7 @@ export default function AdminBankReconciliation({ paymentAccounts }: { paymentAc
                 </div>
               ) : null}
 
-              <button
+              {!readOnly && <button
                 type="button"
                 onClick={() => setBatchConfirmOpen(true)}
                 disabled={busy === 'confirm-batch' || ((statusCounts.get('matched') ?? 0) + (statusCounts.get('already_confirmed') ?? 0) === 0)}
@@ -800,8 +801,8 @@ export default function AdminBankReconciliation({ paymentAccounts }: { paymentAc
               >
                 {busy === 'confirm-batch' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                 第一步：確認全部唯一相符款項
-              </button>
-              {batchConfirmOpen ? (
+              </button>}
+              {!readOnly && batchConfirmOpen ? (
                 <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
                   <p className="text-sm font-black text-amber-900">請再次確認批次入帳</p>
                   <p className="mt-1 text-xs leading-5 text-amber-800">系統會將本批次所有唯一相符款項標記為已入帳，並依現有規則更新訂單與課表權限。</p>
@@ -822,7 +823,7 @@ export default function AdminBankReconciliation({ paymentAccounts }: { paymentAc
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <h3 className="font-black text-apple-gray-900">交易比對結果</h3>
-          <p className="mt-1 text-xs text-apple-gray-500">人工選擇金額不同的訂單後，仍需再次按下確認才會核准。</p>
+          <p className="mt-1 text-xs text-apple-gray-500">{readOnly ? '僅供查閱，無法變更比對結果或確認入帳。' : '人工選擇金額不同的訂單後，仍需再次按下確認才會核准。'}</p>
               </div>
               <div className="flex gap-2 overflow-x-auto pb-1">
                 <button
@@ -867,6 +868,7 @@ export default function AdminBankReconciliation({ paymentAccounts }: { paymentAc
                     busy={busy}
                     onAction={runAction}
                     desktop
+                    readOnly={readOnly}
                   />
                 ))}
               </tbody>
@@ -881,6 +883,7 @@ export default function AdminBankReconciliation({ paymentAccounts }: { paymentAc
                 candidates={candidatesByTransaction.get(transaction.id) ?? []}
                 busy={busy}
                 onAction={runAction}
+                readOnly={readOnly}
               />
             ))}
           </div>
@@ -899,12 +902,14 @@ function TransactionRow({
   busy,
   onAction,
   desktop = false,
+  readOnly = false,
 }: {
   transaction: BankTransaction
   candidates: Candidate[]
   busy: string
   onAction: (id: string, body: Record<string, unknown>) => Promise<boolean>
   desktop?: boolean
+  readOnly?: boolean
 }) {
   const selected = candidates.find((candidate) => candidate.selected)
   const canConfirm = ['matched', 'already_confirmed', 'manual_match'].includes(transaction.match_status) && Boolean(selected)
@@ -928,7 +933,7 @@ function TransactionRow({
   const candidatePicker = candidates.length > 0 ? (
     <select
       value={selected?.id ?? ''}
-      disabled={complete || rowBusy}
+      disabled={readOnly || complete || rowBusy}
       onChange={(event) => {
         if (event.target.value) {
           onAction(`select-${transaction.id}`, {
@@ -950,7 +955,7 @@ function TransactionRow({
     </select>
   ) : <span className="text-xs text-apple-gray-400">沒有後五碼相同的訂單</span>
 
-  const actions = !complete ? (
+  const actions = readOnly ? <span className="text-xs text-apple-gray-500">僅供查閱</span> : !complete ? (
     <div className="flex flex-wrap gap-2">
       <button
         type="button"
@@ -981,7 +986,7 @@ function TransactionRow({
     </span>
   )
 
-  const confirmation = confirmOpen && !complete ? (
+  const confirmation = !readOnly && confirmOpen && !complete ? (
     <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
       <p className="text-sm font-black text-amber-900">請再次確認入帳</p>
       <div className="mt-2 grid gap-1 text-xs leading-5 text-amber-900">

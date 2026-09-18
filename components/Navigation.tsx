@@ -14,6 +14,7 @@ import AuthModal from '@/components/AuthModal'
 import WeekdayLogo from '@/components/WeekdayLogo'
 import MobileBottomNav from '@/components/MobileBottomNav'
 import { supabase } from '@/lib/supabase'
+import { isFinanceViewer } from '@/lib/finance-viewers'
 
 export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -130,6 +131,7 @@ export default function Navigation() {
   const canSwitchLanguage = languages.length > 1
   const roleLabel = user?.role === 'admin' ? '超級管理員' : user?.role === 'coach' ? '教練' : '個人會員'
   const accountEntries = [
+    ...(isFinanceViewer(user?.email) ? [{ href: '/finance', label: '銀行對帳', description: '財務專用・對帳資料查閱', icon: ShieldCheck }] : []),
     ...(user?.role === 'admin' ? [{ href: '/admin', label: '超級管理員', description: '管理網站、訂單與內容', icon: ShieldCheck }] : []),
     ...(user?.role === 'admin' || user?.role === 'coach' ? [{ href: '/coach', label: '教練', description: '管理學員與訓練工作', icon: ClipboardList }] : []),
     { href: '/profile', label: '個人', description: '編輯跑者資料與查看勳章', icon: CircleUserRound },

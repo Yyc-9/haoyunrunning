@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
-  authenticateAdminRequest,
+  authenticateReconciliationUser,
   authenticateFinanceRequest,
   canManageFinancePassword,
   createFinanceAccessToken,
@@ -35,7 +35,7 @@ function cleanPassword(value: unknown) {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await authenticateAdminRequest(request)
+  const auth = await authenticateReconciliationUser(request)
   if ('response' in auth) return auth.response
 
   try {
@@ -55,7 +55,8 @@ export async function GET(request: NextRequest) {
 
     return json({
       configured: Boolean(credential),
-      canManagePassword: canManageFinancePassword(auth.adminProfile.email),
+      canManagePassword: !auth.readOnly && canManageFinancePassword(auth.adminProfile.email),
+      readOnly: auth.readOnly,
       lockedUntil: isLocked ? lockedUntil : null,
       passwordRequirements: '12 至 128 個字元，至少包含一個英文字母與一個數字。',
     })
@@ -126,8 +127,12 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const auth = await authenticateAdminRequest(request)
+  const auth = await authenticateReconciliationUser(request)
   if ('response' in auth) return auth.response
+
+  if (auth.readOnly && body.action !== 'unlock') {
+    return NextResponse.json({ error: '此帳號僅可查看銀行對帳。' }, { status: 403, headers: financeNoStoreHeaders() })
+  }
 
   const password = cleanPassword(body.password)
 

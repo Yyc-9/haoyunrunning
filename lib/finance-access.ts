@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { User } from '@supabase/supabase-js'
 import { getAdminEmails, getAdminProfile, type AdminProfile } from '@/lib/admin-auth'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
+import { isFinanceViewer } from '@/lib/finance-viewers'
 
 const scrypt = promisify(nodeScrypt)
 const FINANCE_TOKEN_LIFETIME_SECONDS = 30 * 60
@@ -32,6 +33,7 @@ type FinanceTokenPayload = {
 type AdminRequestAuth = {
   user: User
   adminProfile: AdminProfile
+  readOnly: boolean
 }
 
 export type FinanceRequestAuth = AdminRequestAuth & {
@@ -156,27 +158,34 @@ export async function getFinanceCredential() {
   return data as FinanceCredentialRow | null
 }
 
-export async function authenticateAdminRequest(request: NextRequest): Promise<AdminRequestAuth | { response: NextResponse }> {
+export async function authenticateReconciliationUser(request: NextRequest): Promise<AdminRequestAuth | { response: NextResponse }> {
   if (!supabaseAdmin) {
     return { response: jsonError('Supabase 尚未設定。', 500) }
   }
 
   const user = await getAuthedUser(request.headers.get('authorization')).catch(() => null)
   if (!user) {
-    return { response: jsonError('請先登入管理員帳號。', 401) }
+    return { response: jsonError('請先登入獲授權的財務或管理員帳號。', 401) }
   }
 
+  // Match the authenticated, confirmed email, never editable profile metadata.
+  if (isFinanceViewer(user.email) && user.email_confirmed_at) {
+    return { user, adminProfile: { id: user.id, email: user.email!, name: '', role: 'student' }, readOnly: true }
+  }
   const adminProfile = await getAdminProfile(user)
   if (!adminProfile) {
-    return { response: jsonError('目前帳號沒有管理員權限。', 403) }
+    return { response: jsonError('目前帳號沒有銀行對帳權限。', 403) }
   }
 
-  return { user, adminProfile }
+  return { user, adminProfile, readOnly: false }
 }
 
 export async function authenticateFinanceRequest(request: NextRequest): Promise<FinanceRequestAuth | { response: NextResponse }> {
-  const adminAuth = await authenticateAdminRequest(request)
+  const adminAuth = await authenticateReconciliationUser(request)
   if ('response' in adminAuth) return adminAuth
+  if (adminAuth.readOnly && request.method !== 'GET') {
+    return { response: jsonError('此帳號僅可查看銀行對帳，無法變更資料。', 403) }
+  }
 
   const credential = await getFinanceCredential()
   if (!credential) {
