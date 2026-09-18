@@ -87,6 +87,7 @@ function taipeiDateKey() {
 }
 
 function formatSessionDate(date: string) {
+  if (!date) return '尚未選擇課次'
   return new Intl.DateTimeFormat('zh-TW', {
     timeZone: 'Asia/Taipei',
     month: 'numeric',
@@ -98,7 +99,7 @@ function formatSessionDate(date: string) {
 function defaultSessionDate(course: AttendanceCourse | undefined) {
   if (!course) return ''
   const today = taipeiDateKey()
-  return [...course.sessionDates].reverse().find((date) => date <= today) ?? ''
+  return [...course.sessionDates].reverse().find((date) => date <= today) ?? course.sessionDates[0] ?? ''
 }
 
 async function getAccessToken() {
