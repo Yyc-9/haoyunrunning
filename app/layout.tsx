@@ -9,6 +9,9 @@ import { CartProvider } from './cart-provider'
 import { LanguageProvider } from './language-context'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { SiteContentProvider } from './site-content-provider'
+import { getPublicSiteContent } from '@/lib/public-site-content-server'
+
+export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://nurturerunningteam.com'),
@@ -43,16 +46,17 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const initialContent = await getPublicSiteContent().then((result) => result.content).catch(() => null)
   return (
     <html lang="zh-TW" className="scroll-smooth">
       <body className="min-h-screen bg-white text-black">
         <LanguageProvider>
-          <SiteContentProvider>
+          <SiteContentProvider initialContent={initialContent}>
             <AuthProvider>
               <CartProvider>
                 <ToastProvider>

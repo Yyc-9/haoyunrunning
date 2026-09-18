@@ -21,12 +21,12 @@ type SiteContentContextValue = SiteContent & {
 
 const SiteContentContext = createContext<SiteContentContextValue | null>(null)
 
-export function SiteContentProvider({ children }: { children: React.ReactNode }) {
+export function SiteContentProvider({ children, initialContent = null }: { children: React.ReactNode; initialContent?: SiteContent | null }) {
   const pathname = usePathname()
   const { language } = useLanguage()
-  const [content, setContent] = useState<SiteContent>(defaultSiteContent)
-  const [isLoading, setIsLoading] = useState(true)
-  const [hasSyncedContent, setHasSyncedContent] = useState(false)
+  const [content, setContent] = useState<SiteContent>(initialContent ?? defaultSiteContent)
+  const [isLoading, setIsLoading] = useState(!initialContent)
+  const [hasSyncedContent, setHasSyncedContent] = useState(Boolean(initialContent))
   const requestIdRef = useRef(0)
   const previousPathnameRef = useRef(pathname)
 
@@ -38,7 +38,7 @@ export function SiteContentProvider({ children }: { children: React.ReactNode })
       const response = await fetch('/api/site-content', { cache: 'no-store' })
       if (!response.ok) throw new Error('網站內容暫時無法更新。')
       const payload = (await response.json()) as { content?: SiteContent; source?: string }
-      if (requestId === requestIdRef.current && payload.content) {
+      if (requestId === requestIdRef.current && payload.content && payload.source === 'database') {
         setContent(payload.content)
         setHasSyncedContent(payload.source === 'database')
       }
@@ -50,8 +50,8 @@ export function SiteContentProvider({ children }: { children: React.ReactNode })
   }, [])
 
   useEffect(() => {
-    void loadContent(true)
-  }, [loadContent])
+    if (!initialContent) void loadContent(true)
+  }, [loadContent, initialContent])
 
   useEffect(() => {
     if (previousPathnameRef.current === pathname) return
@@ -78,9 +78,18 @@ export function SiteContentProvider({ children }: { children: React.ReactNode })
 
     window.addEventListener(SITE_CONTENT_UPDATED_EVENT, handleContentUpdate)
     window.addEventListener('storage', handleStorage)
+    function refreshVisibleContent() {
+      if (document.visibilityState === 'visible') void loadContent()
+    }
+    window.addEventListener('online', refreshVisibleContent)
+    window.addEventListener('pageshow', refreshVisibleContent)
+    document.addEventListener('visibilitychange', refreshVisibleContent)
     return () => {
       window.removeEventListener(SITE_CONTENT_UPDATED_EVENT, handleContentUpdate)
       window.removeEventListener('storage', handleStorage)
+      window.removeEventListener('online', refreshVisibleContent)
+      window.removeEventListener('pageshow', refreshVisibleContent)
+      document.removeEventListener('visibilitychange', refreshVisibleContent)
     }
   }, [loadContent])
 
@@ -100,14 +109,20 @@ export function SiteContentProvider({ children }: { children: React.ReactNode })
       ...localizedContent,
       courses: applyCourseOverrides(localizedContent.courseOverrides, {
         coachProfiles: localizedContent.coachProfiles,
-        onlyConfigured: Object.keys(localizedContent.courseOverrides).length > 0,
+        onlyConfigured: hasSyncedContent,
       }),
       isLoading,
       hasSyncedContent,
     }
   }, [content, hasSyncedContent, isLoading, language, pathname])
 
-  return <SiteContentContext.Provider value={value}>{children}</SiteContentContext.Provider>
+  return <SiteContentContext.Provider value={value}>{hasSyncedContent || pathname.startsWith('/admin') ? children : (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center" role="status">
+      <h1 className="text-xl font-bold">{isLoading ? '正在載入網站內容…' : '網站內容暫時無法載入'}</h1>
+      <p>請確認網路連線後重試，我們不會以舊版資料取代目前內容。</p>
+      <button type="button" className="apple-button-primary" disabled={isLoading} onClick={() => void loadContent(true)}>重新載入</button>
+    </div>
+  )}</SiteContentContext.Provider>
 }
 
 export function useSiteContent() {

@@ -9,21 +9,6 @@ type HeroSectionProps = {
   initialImages: string[]
 }
 
-const storyImages = [
-  {
-    src: '/site-visuals/about-belief-coaching.webp',
-    alt: '教練帶領好運跑班跑者訓練',
-  },
-  {
-    src: '/site-visuals/about-belief-foundation.webp',
-    alt: '好運跑班夥伴在跑道上一起前進',
-  },
-  {
-    src: '/site-visuals/about-fact-community.webp',
-    alt: '好運跑班跑者一起出發',
-  },
-]
-
 const TRAIL_POOL_SIZE = 12
 const TRAIL_DISTANCE = 72
 const TRAIL_INTERVAL = 120
@@ -46,9 +31,6 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
       Array.from(
         new Set([
           ...managedImages,
-          ...storyImages.map((image) => image.src),
-          '/site-visuals/about-belief-speed.webp',
-          '/site-visuals/testimonial-together.webp',
         ]),
       ).filter(Boolean),
     [managedImages],
@@ -260,51 +242,22 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
         />
       </figure>
 
-      <motion.figure
+      {managedImages.slice(0, 3).map((src, index) => <motion.figure
+        key={src}
         initial={entrance}
         animate={{ opacity: 1, y: 0 }}
-        transition={entranceTransition(0.65, 0.16)}
-        className="home-hero-photo home-hero-photo-one"
+        transition={entranceTransition(0.65, 0.16 + index * 0.08)}
+        className={`home-hero-photo home-hero-photo-${['one', 'two', 'three'][index]}`}
       >
         <Image
-          src={storyImages[0].src}
-          alt={storyImages[0].alt}
+          src={src}
+          alt={`好運跑班訓練紀錄 ${index + 1}`}
           fill
-          priority
+          priority={index === 0}
           sizes="(min-width: 1024px) 255px, 46vw"
           className="object-cover"
         />
-      </motion.figure>
-
-      <motion.figure
-        initial={entrance}
-        animate={{ opacity: 1, y: 0 }}
-        transition={entranceTransition(0.65, 0.24)}
-        className="home-hero-photo home-hero-photo-two"
-      >
-        <Image
-          src={storyImages[1].src}
-          alt={storyImages[1].alt}
-          fill
-          sizes="(min-width: 1024px) 230px, 38vw"
-          className="object-cover"
-        />
-      </motion.figure>
-
-      <motion.figure
-        initial={entrance}
-        animate={{ opacity: 1, y: 0 }}
-        transition={entranceTransition(0.65, 0.32)}
-        className="home-hero-photo home-hero-photo-three"
-      >
-        <Image
-          src={storyImages[2].src}
-          alt={storyImages[2].alt}
-          fill
-          sizes="285px"
-          className="object-cover"
-        />
-      </motion.figure>
+      </motion.figure>)}
 
       <div className="home-hero-trail-layer" aria-hidden="true">
         {Array.from({ length: TRAIL_POOL_SIZE }, (_, index) => (
