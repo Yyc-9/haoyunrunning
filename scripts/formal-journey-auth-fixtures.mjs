@@ -39,6 +39,28 @@ if (process.argv[2] === 'create') {
     await client.auth.signOut()
     console.log(`PASS independent login ${account.label}: ${profile.role}`)
   }
+} else if (process.argv[2] === 'cleanup') {
+  for (const account of state.accounts) {
+    if (account.deleted) continue
+    const { data: existing, error: readError } = await admin.auth.admin.getUserById(account.id)
+    if (readError) throw readError
+    if (existing.user.email !== account.email || existing.user.user_metadata.acceptance_fixture !== state.marker) throw new Error('Fixture ownership mismatch')
+    const { count, error: leadError } = await admin.from('signup_leads').select('id', { count: 'exact', head: true }).eq('email', account.email)
+    if (leadError || count !== 0) throw new Error('Remove linked test enrollments before deleting accounts')
+    const client = createClient(url, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
+    const { data: session, error: loginError } = await client.auth.signInWithPassword({email:account.email,password:account.password})
+    if (loginError) throw loginError
+    const revoked = await admin.auth.admin.signOut(session.session.access_token, 'global')
+    if (revoked.error) throw revoked.error
+    const deleted = await admin.auth.admin.deleteUser(account.id)
+    if (deleted.error) throw deleted.error
+    const after = await admin.auth.getUser(session.session.access_token)
+    if (after.data.user) throw new Error('Deleted fixture token remains accepted')
+    delete account.password
+    account.deleted = true
+    await save()
+    console.log(`CLEANED ${account.label}: sessions revoked, account deleted, old token rejected`)
+  }
 } else {
   throw new Error('Use create or verify. Cleanup must first remove linked acceptance fixtures and revoke sessions.')
 }

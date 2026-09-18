@@ -77,5 +77,15 @@ try {
   await check('原班教練可見補課完成且保留請假',async()=>{const r=await ok('coach-a','/api/coach/attendance');assert.equal(r.makeups.find(x=>x.id===request.id).status,'completed');assert.ok(r.attendance.some(x=>x.enrollment_id===lc.id&&x.status==='excused'))})
   await check('補課不擴大接收教練正式綁定',async()=>assert.equal((await ok('coach-b','/api/coach/students')).students.length,0))
  }
+ if(process.argv[2]==='deployed'){
+  const a=f.courses.find(c=>c.label==='a'),b=f.courses.find(c=>c.label==='b'),c=f.courses.find(c=>c.label==='c')
+  const ok=async(role,p)=>{const r=await call(role,p);assert.equal(r.status,200,JSON.stringify(r));return r.data}
+  await check('正式網址普通身份不能讀管理員資料',async()=>{for(const role of ['student','coach-a','coach-b'])assert.equal((await call(role,'/api/admin')).status,403)})
+  await check('正式網址保留兩筆入帳資格與兩筆自主簽到',async()=>{const r=await ok('student',path);assert.equal(r.enrollments.length,2);assert.equal(r.checkins.length,2);assert.equal(r.makeups[0].status,'completed')})
+  await check('正式網址原教練只見本班並可見補課完成',async()=>{const r=await ok('coach-a','/api/coach/attendance');assert.deepEqual(new Set(r.courses.map(x=>x.courseSeasonCourseId)),new Set([a.id,c.id]));assert.equal(r.makeups[0].status,'completed')})
+  await check('正式網址接收教練只見本班與指定補課學員',async()=>{const r=await ok('coach-b','/api/coach/attendance');assert.deepEqual(r.courses.map(x=>x.courseSeasonCourseId),[b.id]);assert.equal(r.enrollments.length,1);assert.equal(r.checkins.length,1)})
+  await check('正式網址新舊綁定規則正確',async()=>{assert.equal((await ok('coach-a','/api/coach/students')).students.length,1);assert.equal((await ok('coach-b','/api/coach/students')).students.length,0);assert.equal((await call('student','/api/student/bind-coach',{})).status,410)})
+  await check('公開課程頁不顯示驗收課程',async()=>{const r=await fetch(base+'/courses');assert.equal(r.status,200);assert.ok(!(await r.text()).includes('qa-journey-20260918'))})
+ }
  await writeFile(`${dir}/api-${process.argv[2]}-results.json`,JSON.stringify({base,passed:results}),{mode:0o600})
 } finally {for(const c of Object.values(clients))await c.auth.signOut()}
