@@ -5,6 +5,7 @@ import { AlertTriangle, BarChart3, CalendarRange, CheckCircle2, ChevronLeft, Che
 import { preferredCourseSeasonId, type CourseSeason } from '@/lib/course-seasons'
 import { paymentOrderStatusDescriptions, paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
 import { supabase } from '@/lib/supabase'
+import { courseRosterTable, rosterCsv } from '@/lib/enrollment-export'
 
 type PaymentStatus = PaymentOrderStatus
 
@@ -141,11 +142,6 @@ function formatDate(value: string) {
   }).format(timestamp)
 }
 
-function csvCell(value: unknown) {
-  let text = String(value ?? '')
-  if (/^[=+\-@]/.test(text)) text = `'${text}`
-  return `"${text.replaceAll('"', '""')}"`
-}
 
 function resultNumber(result: Record<string, unknown>, key: string) {
   const value = Number(result[key])
@@ -265,8 +261,9 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
       order.reviewNote ?? '',
       order.submittedAt,
     ])
-    const csv = [headers, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n')
-    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }))
+    const table = listKind === 'course' ? courseRosterTable(filtered, statusLabel) : { headers, rows }
+    const csv = rosterCsv(table.headers, table.rows)
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
     const link = document.createElement('a')
     link.href = url
     link.download = listKind === 'course' ? `${season?.name || '季度'}-學員名單.csv` : '好運商城訂單.csv'
@@ -488,7 +485,7 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
           {listKind === 'course' ? <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as typeof typeFilter)} className="apple-input"><option value="all">全部身分</option><option value="new">新生</option><option value="returning">舊生</option></select> : null}
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} className="apple-input"><option value="all">全部狀態</option>{Object.entries(listKind === 'course' ? courseStatusLabels : shopStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
           {listKind === 'course' ? <select value={attendanceFilter} onChange={(event) => setAttendanceFilter(event.target.value as typeof attendanceFilter)} className="apple-input"><option value="all">全部點名核對</option><option value="open">計費異常待處理</option></select> : null}
-          <button type="button" onClick={exportRoster} disabled={!filtered.length} className="apple-button-outline gap-2 px-4 py-2.5 text-sm disabled:opacity-40"><Download className="h-4 w-4" />匯出</button>
+          <button type="button" onClick={exportRoster} title={`匯出目前篩選的 ${filtered.length} 筆完整資料（含所有分頁）`} disabled={!filtered.length} className="apple-button-outline gap-2 px-4 py-2.5 text-sm disabled:opacity-40"><Download className="h-4 w-4" />匯出完整資料</button>
         </div>
         <div className="admin-enrollment-desktop-table overflow-x-auto">
           <table className="w-full min-w-[920px] text-left text-sm">

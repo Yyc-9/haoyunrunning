@@ -844,6 +844,9 @@ export async function GET(request: NextRequest) {
       : []
     const emergencyContactName = payloadText(order.payload, 'emergencyContactName')
     const emergencyContactPhone = payloadText(order.payload, 'emergencyContactPhone')
+    const agreements = order.payload?.agreements && typeof order.payload.agreements === 'object'
+      ? order.payload.agreements as Record<string, unknown> : {}
+    const consentText = (key: string) => agreements[key] === true ? '已同意' : agreements[key] === false ? '未同意' : ''
     const deductedSessions = (deductionsByEnrollment.get(order.id) ?? []).map((record) => {
       const coach = profilesById.get(record.deducted_by)
       const coachName = coach?.name || coach?.email || '教練'
@@ -864,6 +867,8 @@ export async function GET(request: NextRequest) {
       { label: '手機電話', value: order.phone || '' },
       { label: 'LINE ID', value: payloadText(order.payload, 'lineId') },
       { label: '緊急聯絡人', value: [emergencyContactName, emergencyContactPhone].filter(Boolean).join('｜') },
+      { label: '緊急聯絡人姓名', value: emergencyContactName },
+      { label: '緊急聯絡人電話', value: emergencyContactPhone },
       { label: '推薦人', value: payloadText(order.payload, 'referrer') },
       { label: '近期挑戰', value: payloadText(order.payload, 'recentChallenge') },
       { label: '近期目標', value: payloadText(order.payload, 'recentGoal') || order.goal || '' },
@@ -872,6 +877,14 @@ export async function GET(request: NextRequest) {
       { label: '發票方式', value: payloadText(order.payload, 'invoiceDelivery') },
       { label: '載具或信箱', value: payloadText(order.payload, 'invoiceDetail') },
       { label: '統編與抬頭', value: payloadText(order.payload, 'taxInvoiceInfo') },
+      { label: '教練代課同意', value: consentText('coachSubstituteConsent') },
+      { label: '課程規範同意', value: consentText('rulesConsent') },
+      { label: '報名最終同意', value: consentText('finalConsent') },
+      { label: '同意時間', value: recordText(agreements, 'agreedAt') },
+      { label: '課程條款版本', value: recordText(agreements, 'courseTermsVersion') },
+      { label: '退費政策版本', value: recordText(agreements, 'refundPolicyVersion') },
+      { label: '隱私政策版本', value: recordText(agreements, 'privacyPolicyVersion') },
+      { label: '發票說明版本', value: recordText(agreements, 'invoiceNoticeVersion') },
     ].filter((detail) => detail.value)
 
     return {
