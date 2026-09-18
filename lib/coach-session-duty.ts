@@ -12,6 +12,7 @@ import { getDefaultCourseCoachKeys } from '@/lib/coach-profiles'
 import { getCourseSeasons } from '@/lib/course-seasons-server'
 import { applyCourseOverrides } from '@/lib/managed-courses'
 import { supabaseAdmin } from '@/lib/supabase-server'
+import { canAccessCoachAssignment } from '@/lib/coach-attendance-access'
 
 export const COACH_DUTY_TIME_ZONE = 'Asia/Taipei' as const
 export {
@@ -156,6 +157,16 @@ export async function syncCoachSessionAssignments() {
   const ownerByCoachKey = new Map((identities ?? [])
     .filter((row) => row.owner_profile_id && enabledOwnerIds.has(row.owner_profile_id))
     .map((row) => [row.coach_key, row.owner_profile_id as string]))
+  if (courses.length) {
+    const { error } = await supabaseAdmin.rpc('sync_formal_course_coaches', {
+      p_course_ids: courses.map((course) => course.courseSeasonCourseId),
+      p_memberships: courses.flatMap((course) => course.coachKeys.flatMap((key) => {
+        const coachId = ownerByCoachKey.get(key)
+        return coachId ? [{ course_id: course.courseSeasonCourseId, coach_id: coachId }] : []
+      })),
+    })
+    if (error) throw error
+  }
   const rows = courses.flatMap((course) => course.sessionDates.flatMap((sessionDate) => course.coachKeys.flatMap((coachKey, index) => {
     const profileId = ownerByCoachKey.get(coachKey)
     if (!profileId) return []
@@ -202,13 +213,14 @@ export async function loadCoachDutyItems(options: { userId?: string; isAdmin?: b
   const offeringIds = courses.map((course) => course.courseSeasonCourseId)
   if (!offeringIds.length) return []
 
-  const [assignmentResult, checkinResult, cancellationResult, profileResult] = await Promise.all([
+  const [assignmentResult, checkinResult, cancellationResult, profileResult, membershipResult] = await Promise.all([
     supabaseAdmin.from('coach_session_assignments').select('*').in('course_season_course_id', offeringIds).order('session_date'),
     supabaseAdmin.from('coach_session_checkins').select('*'),
     supabaseAdmin.from('course_session_cancellations').select('course_season_course_id, session_date').in('course_season_course_id', offeringIds),
     supabaseAdmin.from('profiles').select('id, name, email'),
+    supabaseAdmin.from('course_coach_memberships').select('course_season_course_id, coach_id').in('course_season_course_id', offeringIds),
   ])
-  const error = [assignmentResult.error, checkinResult.error, cancellationResult.error, profileResult.error].find(Boolean)
+  const error = [assignmentResult.error, checkinResult.error, cancellationResult.error, profileResult.error, membershipResult.error].find(Boolean)
   if (error) throw error
   const profiles = new Map((profileResult.data ?? []).map((profile) => [profile.id, profile.name || profile.email || '未命名教練']))
   const checkins = new Map(((checkinResult.data ?? []) as CheckinRow[]).map((row) => [row.assignment_id, row]))
@@ -216,10 +228,12 @@ export async function loadCoachDutyItems(options: { userId?: string; isAdmin?: b
   const now = options.now ?? new Date()
 
   return ((assignmentResult.data ?? []) as AssignmentRow[])
-    .filter((row) => options.isAdmin || !options.userId || [row.scheduled_coach_id, row.actual_coach_id, row.substitute_coach_id, row.recommended_substitute_id].includes(options.userId))
+    .filter((row) => options.isAdmin || !options.userId || canAccessCoachAssignment(row, options.userId,
+      (membershipResult.data ?? []).some((membership) => membership.course_season_course_id === row.course_season_course_id && membership.coach_id === options.userId)))
     .flatMap((row): CoachDutyItem[] => {
       const course = courseById.get(row.course_season_course_id)
       if (!course) return []
+      if (!options.isAdmin && !course.sessionDates.includes(row.session_date)) return []
       const checkin = checkins.get(row.id)
       const cancelled = cancellations.has(`${row.course_season_course_id}:${row.session_date}`)
       const state = attendanceState(row, checkin, cancelled, course.startTime, now)

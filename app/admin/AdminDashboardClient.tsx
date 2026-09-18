@@ -301,7 +301,6 @@ export default function AdminDashboardClient() {
   const [message, setMessage] = useState('')
   const [updatingId, setUpdatingId] = useState('')
   const [seasonView, setSeasonView] = useState<'settings' | 'students'>('students')
-  const [selectedCoachByStudent, setSelectedCoachByStudent] = useState<Record<string, string>>({})
   const [studentQuery, setStudentQuery] = useState('')
   const [coachQuery, setCoachQuery] = useState('')
   const [productEditState, setProductEditState] = useState<ProductEditState>({ dirty: false, busy: false })
@@ -476,39 +475,7 @@ export default function AdminDashboardClient() {
 
   function renderStudentBindingControls(student: AdminStudent, compact = false) {
     return (
-      <div className={compact ? 'grid gap-2' : 'flex min-w-[280px] gap-2'}>
-        <select
-          value={selectedCoachByStudent[student.id] ?? ''}
-          onChange={(event) => setSelectedCoachByStudent((current) => ({ ...current, [student.id]: event.target.value }))}
-          aria-label={`選擇要綁定給 ${student.name} 的教練`}
-          className={`apple-input text-xs ${compact ? 'min-h-11 w-full' : 'min-w-0 flex-1 py-2'}`}
-        >
-          <option value="">選擇教練</option>
-          {data?.coachOptions.map((coach) => (
-            <option key={coach.id} value={coach.id}>{coach.name || coach.email}</option>
-          ))}
-        </select>
-        <div className={`grid gap-2 ${student.bindings[0] ? 'grid-cols-2' : 'grid-cols-1'} ${compact ? '' : 'shrink-0'}`}>
-          <button
-            type="button"
-            disabled={!selectedCoachByStudent[student.id] || updatingId === `bind-${student.id}`}
-            onClick={() => runAction(`bind-${student.id}`, { action: 'bind_student', studentId: student.id, coachId: selectedCoachByStudent[student.id] })}
-            className="min-h-11 rounded-full bg-black px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            綁定
-          </button>
-          {student.bindings[0] ? (
-            <button
-              type="button"
-              disabled={updatingId === `unbind-${student.bindings[0].id}`}
-              onClick={() => runAction(`unbind-${student.bindings[0].id}`, { action: 'unbind_student', bindingId: student.bindings[0].id })}
-              className="min-h-11 rounded-full border border-red-200 px-3 py-2 text-xs font-bold text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              解綁
-            </button>
-          ) : null}
-        </div>
-      </div>
+      <p className={`text-xs leading-5 text-apple-gray-600 ${compact ? '' : 'max-w-xs'}`}>{student.bindings.length ? '已依入帳班級自動關聯。' : '尚無已入帳班級關聯。'}如需調整任課教練，請到季度管理修改班級；臨時代班請在教練管理處理。</p>
     )
   }
 

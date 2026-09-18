@@ -3,6 +3,18 @@ export type SessionAccess = {
   sessionDates: readonly string[]
 }
 
+export function canAccessCoachAssignment(assignment: {
+  scheduled_coach_id: string
+  actual_coach_id: string | null
+  substitute_coach_id: string | null
+  recommended_substitute_id: string | null
+}, userId: string, isCurrentCourseCoach: boolean) {
+  return (isCurrentCourseCoach && assignment.scheduled_coach_id === userId)
+    || (assignment.actual_coach_id === userId && assignment.actual_coach_id !== assignment.scheduled_coach_id)
+    || assignment.substitute_coach_id === userId
+    || assignment.recommended_substitute_id === userId
+}
+
 export function allowedSessionDateSet(access: readonly SessionAccess[]) {
   return new Map(access.map((course) => [
     course.courseSeasonCourseId,

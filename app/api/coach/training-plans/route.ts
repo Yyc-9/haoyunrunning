@@ -53,7 +53,7 @@ async function verifyStudentAccess(coachId: string, studentId: string, isAdmin: 
   if (isAdmin) return null
 
   const { data: binding, error: bindingError } = await supabaseAdmin!
-    .from('coach_students')
+    .from('formal_coach_students')
     .select('id')
     .eq('coach_id', coachId)
     .eq('student_id', studentId)

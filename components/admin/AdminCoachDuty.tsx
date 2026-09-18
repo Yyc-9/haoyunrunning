@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { CheckCircle2, ChevronDown, Loader2, RefreshCw, ShieldCheck, UserRoundCheck, X } from 'lucide-react'
 import type { AcceptanceTestPhase } from '@/lib/attendance-acceptance-test'
 import { supabase } from '@/lib/supabase'
@@ -366,6 +367,7 @@ export default function AdminCoachDuty() {
       <details open className="group border-b border-black/10 bg-white">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5"><div><div className="flex flex-wrap items-center gap-2"><UserRoundCheck className="h-5 w-5" /><h2 className="text-lg font-black">教練簽到、請假與代班</h2><span className="rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-black text-orange-800">待處理 {periodItems.filter((item) => item.adminStatus === 'pending').length}</span><span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-black text-blue-800">代班待回覆 {periodItems.filter((item) => item.adminStatus === 'not_required' && item.substituteResponse === 'pending').length}</span><span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-black text-red-800">異常 {periodItems.filter((item) => ['not_checked_in', 'substitute_absent', 'missing_start_time'].includes(item.attendanceState) || (item.leaveStatus === 'approved' && !item.actualCoachId)).length}</span></div><p className="mt-1 text-sm text-apple-gray-600">原教練可直接邀請代班；受邀教練接受後立即生效，管理員保留查看與修正權限。</p></div><ChevronDown className="h-5 w-5 shrink-0 transition-transform group-open:rotate-180" /></summary>
       <div className="border-t border-black/10 p-4 sm:p-5">
+        <div className="mb-4 rounded-lg bg-blue-50 p-3"><p className="text-sm font-bold">學員出勤與跨班補課核對</p><p className="mt-1 text-xs leading-5">查看學員自主簽到、教練現場點名及補課來源。管理員可核對全部班級，但不能冒充學員自主簽到。</p><Link href="/coach/attendance" className="apple-button-outline mt-3 inline-flex min-h-11 items-center px-4 text-sm">開啟課程出勤核對</Link></div>
         {acceptanceTest && acceptanceTest.phase !== 'hidden' ? (
           <details open className="mb-4 overflow-hidden rounded-xl border border-blue-200 bg-blue-50">
             <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 p-4">

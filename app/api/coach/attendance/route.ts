@@ -98,7 +98,8 @@ async function loadAccess(request: NextRequest) {
   const activeSeasons = relevantSeasons.length ? relevantSeasons : seasons.slice(0, 1)
   const courseNames = new Map<string, string>()
   const courses = activeSeasons.flatMap((season) => {
-    const managedCourses = applyCourseOverrides(season.courseOverrides)
+    // Public listing visibility must not hide an assigned class from its coach.
+    const managedCourses = applyCourseOverrides(season.courseOverrides, { onlyConfigured: true, includeInactive: true })
     for (const course of managedCourses) courseNames.set(`${season.id}:${course.slug}`, attendanceCourseLabel(course.name))
 
     return managedCourses.flatMap((course) => {
@@ -112,8 +113,9 @@ async function loadAccess(request: NextRequest) {
         ? billingConfig.sessionDates
         : (sessionAssignments ?? [])
             .filter((assignment) => assignment.course_season_course_id === courseSeasonCourseId)
-            .filter((assignment) => assignment.actual_coach_id === user.id || (assignment.scheduled_coach_id === user.id && assignment.leave_status !== 'approved'))
+            .filter((assignment) => (assignment.actual_coach_id === user.id && (isRegularCoach || assignment.actual_coach_id !== assignment.scheduled_coach_id)) || (isRegularCoach && assignment.scheduled_coach_id === user.id && assignment.leave_status !== 'approved'))
             .map((assignment) => assignment.session_date)
+            .filter((date) => billingConfig.sessionDates.includes(date))
       if (!isAdmin && !isRegularCoach && allowedSessionDates.length === 0) return []
       if (!isAdmin && allowedSessionDates.length === 0) return []
 
@@ -171,13 +173,13 @@ export async function GET(request: NextRequest) {
   const courseAccess = new Set(access.courses.map((course) => `${course.seasonId}:${course.courseSlug}`))
   const sessionAccess = allowedSessionDateSet(access.courses)
 
-  const [enrollmentResult, attendanceResult, makeupResult, cancellationResult] = await Promise.all([
+  const [enrollmentResult, attendanceResult, makeupResult, cancellationResult, checkinResult] = await Promise.all([
     supabaseAdmin!
       .from('signup_leads')
       .select('id, season_id, course_season_course_id, course_slug, name, email, status, billing_start_session_date, prior_attendance_claimed, attendance_verification_status, created_at, payload')
       .eq('source', 'course_payment')
       .in('season_id', seasonIds)
-      .in('status', ['pending_transfer', 'pending_review', 'approved'])
+      .eq('status', 'approved')
       .order('created_at', { ascending: false }),
     supabaseAdmin!
       .from('course_attendance_records')
@@ -187,23 +189,26 @@ export async function GET(request: NextRequest) {
     supabaseAdmin!
       .from('course_makeup_requests')
       .select('id, season_id, enrollment_id, original_course_season_course_id, original_course_slug, original_session_date, target_course_season_course_id, target_course_slug, target_session_date, status, requested_at, updated_at')
-      .in('target_course_season_course_id', offeringIds)
-      .in('status', ['scheduled', 'completed', 'forfeited'])
+      .or(`target_course_season_course_id.in.(${offeringIds.join(',')}),original_course_season_course_id.in.(${offeringIds.join(',')})`)
+      .neq('status', 'cancelled')
       .order('target_session_date', { ascending: false }),
     supabaseAdmin!
       .from('course_session_cancellations')
       .select('id, course_season_course_id, session_date, reason, cancelled_by, cancelled_at, updated_at')
       .in('course_season_course_id', offeringIds)
       .order('session_date', { ascending: false }),
+    supabaseAdmin!.from('student_course_checkins').select('enrollment_id, course_season_course_id, session_date, checked_in_at').in('course_season_course_id', offeringIds),
   ])
 
-  const firstError = [enrollmentResult.error, attendanceResult.error, makeupResult.error, cancellationResult.error].find(Boolean)
+  const firstError = [enrollmentResult.error, attendanceResult.error, makeupResult.error, cancellationResult.error, checkinResult.error].find(Boolean)
   if (firstError) {
     return NextResponse.json({ error: firstError.message }, { status: 500, headers: noStoreHeaders })
   }
 
   const attendance = filterRowsBySessionAccess(attendanceResult.data ?? [], sessionAccess)
-  const makeups = filterCourseMakeupsBySessionAccess(makeupResult.data ?? [], sessionAccess)
+  const makeups = (makeupResult.data ?? []).filter((row) =>
+    filterCourseMakeupsBySessionAccess([row], sessionAccess).length > 0
+    || sessionAccess.get(row.original_course_season_course_id)?.has(row.original_session_date))
   const cancellations = filterRowsBySessionAccess(cancellationResult.data ?? [], sessionAccess)
   const makeupEnrollmentIds = new Set(makeups.map((requestRow) => requestRow.enrollment_id))
   const seen = new Set<string>()
@@ -235,6 +240,7 @@ export async function GET(request: NextRequest) {
     courses: access.courses,
     enrollments,
     attendance,
+    checkins: filterRowsBySessionAccess(checkinResult.data ?? [], sessionAccess),
     makeups,
     cancellations,
   }, { headers: noStoreHeaders })
@@ -285,68 +291,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: `已在獨立沙盒儲存 ${requested.length} 位測試學員的點名結果。`, isolatedTest: true }, { headers: noStoreHeaders })
   }
   if (body.intent === 'set_session_cancellation') {
-    if (body.cancelled) {
-      const now = new Date().toISOString()
-      const { error } = await supabaseAdmin!
-        .from('course_session_cancellations')
-        .upsert({
-          season_id: course.seasonId,
-          course_season_course_id: courseSeasonCourseId,
-          course_slug: course.courseSlug,
-          session_date: sessionDate,
-          reason: cleanText(body.cancellationReason, 300),
-          cancelled_by: access.user.id,
-          cancelled_at: now,
-          updated_at: now,
-        }, { onConflict: 'course_season_course_id,session_date' })
-      if (error) return NextResponse.json({ error: error.message }, { status: 500, headers: noStoreHeaders })
-
-      const [targetResult, originalResult, attendanceResult] = await Promise.all([
-        supabaseAdmin!
-          .from('course_makeup_requests')
-          .update({
-            target_course_season_course_id: null,
-            target_course_slug: null,
-            target_session_date: null,
-            status: 'needs_reselection',
-            updated_by: access.user.id,
-            updated_at: now,
-          })
-          .eq('target_course_season_course_id', courseSeasonCourseId)
-          .eq('target_session_date', sessionDate)
-          .eq('status', 'scheduled'),
-        supabaseAdmin!
-          .from('course_makeup_requests')
-          .update({
-            target_course_season_course_id: null,
-            target_course_slug: null,
-            target_session_date: null,
-            status: 'cancelled',
-            updated_by: access.user.id,
-            updated_at: now,
-          })
-          .eq('original_course_season_course_id', courseSeasonCourseId)
-          .eq('original_session_date', sessionDate)
-          .in('status', ['leave_requested', 'scheduled', 'needs_reselection']),
-        supabaseAdmin!
-          .from('course_attendance_records')
-          .delete()
-          .eq('course_season_course_id', courseSeasonCourseId)
-          .eq('session_date', sessionDate)
-          .eq('status', 'excused'),
-      ])
-      const relatedError = [targetResult.error, originalResult.error, attendanceResult.error].find(Boolean)
-      if (relatedError) return NextResponse.json({ error: relatedError.message }, { status: 500, headers: noStoreHeaders })
-      return NextResponse.json({ message: '本堂已標記為停課；原班學員不列為請假或扣除，受影響的補課學員可重新選擇課次。' }, { headers: noStoreHeaders })
-    }
-
-    const { error } = await supabaseAdmin!
-      .from('course_session_cancellations')
-      .delete()
-      .eq('course_season_course_id', courseSeasonCourseId)
-      .eq('session_date', sessionDate)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500, headers: noStoreHeaders })
-    return NextResponse.json({ message: '已恢復本堂課程，可重新進行點名。' }, { headers: noStoreHeaders })
+    const { error } = await supabaseAdmin!.rpc('set_course_session_cancellation', {
+      p_course_id: courseSeasonCourseId,
+      p_date: sessionDate,
+      p_cancelled: Boolean(body.cancelled),
+      p_reason: cleanText(body.cancellationReason, 300),
+      p_actor: access.user.id,
+    })
+    if (error) return NextResponse.json({ error: error.message }, { status: 409, headers: noStoreHeaders })
+    return NextResponse.json({ message: body.cancelled
+      ? '本堂已標記為停課；原班學員不列為請假或扣除，受影響的補課學員可重新選擇課次。'
+      : '已恢復本堂課程，可重新進行點名。' }, { headers: noStoreHeaders })
   }
 
   if (sessionDate > taipeiDateKey()) {
@@ -380,7 +335,7 @@ export async function POST(request: NextRequest) {
       .in('id', enrollmentIds)
       .eq('source', 'course_payment')
       .eq('season_id', course.seasonId)
-      .in('status', ['pending_transfer', 'pending_review', 'approved']),
+      .eq('status', 'approved'),
     supabaseAdmin!
       .from('course_makeup_requests')
       .select('id, enrollment_id, status')
@@ -394,13 +349,16 @@ export async function POST(request: NextRequest) {
       .eq('original_course_season_course_id', courseSeasonCourseId)
       .eq('original_session_date', sessionDate)
       .in('enrollment_id', enrollmentIds)
-      .in('status', ['leave_requested', 'scheduled', 'needs_reselection']),
+      .neq('status', 'cancelled'),
   ])
 
   const firstError = [enrollmentResult.error, makeupResult.error, originalMakeupResult.error].find(Boolean)
   if (firstError) return NextResponse.json({ error: firstError.message }, { status: 500, headers: noStoreHeaders })
 
   const enrollmentsById = new Map((enrollmentResult.data ?? []).map((enrollment) => [enrollment.id, enrollment]))
+  if ((originalMakeupResult.data ?? []).some((makeup) => requested.some((record) => record.enrollmentId === makeup.enrollment_id && record.status !== 'excused'))) {
+    return NextResponse.json({ error: '已有請假或補課安排，原班請假紀錄必須保留。若需更正，請先由管理員核對補課狀態。' }, { status: 409, headers: noStoreHeaders })
+  }
   const targetMakeupsByEnrollment = new Map((makeupResult.data ?? []).map((makeup) => [makeup.enrollment_id, makeup]))
   const invalidEnrollment = enrollmentIds.find((id) => {
     const enrollment = enrollmentsById.get(id)
@@ -447,33 +405,7 @@ export async function POST(request: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500, headers: noStoreHeaders })
   }
 
-  const requestedByEnrollment = new Map(requested.map((record) => [record.enrollmentId, record]))
-  for (const makeup of makeupResult.data ?? []) {
-    const nextAttendance = requestedByEnrollment.get(makeup.enrollment_id)?.status
-    const nextStatus = nextAttendance === 'present' ? 'completed' : nextAttendance === 'unmarked' ? 'scheduled' : 'forfeited'
-    const { error } = await supabaseAdmin!
-      .from('course_makeup_requests')
-      .update({ status: nextStatus, updated_by: access.user.id, updated_at: new Date().toISOString() })
-      .eq('id', makeup.id)
-    if (error) return NextResponse.json({ error: `點名已寫入，但補課狀態更新失敗：${error.message}` }, { status: 500, headers: noStoreHeaders })
-  }
-
-  for (const makeup of originalMakeupResult.data ?? []) {
-    const nextAttendance = requestedByEnrollment.get(makeup.enrollment_id)?.status
-    if (nextAttendance === 'excused') continue
-    const { error } = await supabaseAdmin!
-      .from('course_makeup_requests')
-      .update({
-        target_course_season_course_id: null,
-        target_course_slug: null,
-        target_session_date: null,
-        status: 'cancelled',
-        updated_by: access.user.id,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', makeup.id)
-    if (error) return NextResponse.json({ error: `點名已寫入，但請假狀態更新失敗：${error.message}` }, { status: 500, headers: noStoreHeaders })
-  }
+  // Makeup completion and reset are synchronized by the database trigger.
 
   return NextResponse.json({ message: `已儲存 ${requested.length} 位學員的點名結果。` }, { headers: noStoreHeaders })
 }

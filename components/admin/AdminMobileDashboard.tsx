@@ -96,7 +96,6 @@ export default function AdminMobileDashboard({ data, runAction, updatingId, acti
   const [selectedStudentId, setSelectedStudentId] = useState('')
   const [studentTab, setStudentTab] = useState<StudentDetailTab>('course')
   const [bindOpen, setBindOpen] = useState(false)
-  const [bindCoachId, setBindCoachId] = useState('')
   const [accountOpen, setAccountOpen] = useState(false)
   const [accountForm, setAccountForm] = useState({
     label: '',
@@ -192,7 +191,6 @@ export default function AdminMobileDashboard({ data, runAction, updatingId, acti
   }, [mobileError, mobileMessage])
 
   useEffect(() => {
-    setBindCoachId('')
   }, [selectedStudentId])
 
   function navigate(nextView: MobileView) {
@@ -224,23 +222,6 @@ export default function AdminMobileDashboard({ data, runAction, updatingId, acti
     if (success) setMobileMessage('操作已完成。')
     else setMobileError('操作未完成，請查看錯誤提示後再試一次。')
     return success
-  }
-
-  async function addBinding() {
-    if (!selectedStudent || !bindCoachId) {
-      setMobileError('請先選擇要新增綁定的教練。')
-      return
-    }
-    const success = await mobileAction(`bind-${selectedStudent.id}-${bindCoachId}`, {
-      action: 'bind_student',
-      studentId: selectedStudent.id,
-      coachId: bindCoachId,
-    })
-    if (success) setBindCoachId('')
-  }
-
-  async function removeBinding(bindingId: string) {
-    await mobileAction(`unbind-${bindingId}`, { action: 'unbind_student', bindingId })
   }
 
   async function registerCoachAccount() {
@@ -322,7 +303,7 @@ export default function AdminMobileDashboard({ data, runAction, updatingId, acti
                 return <article key={student.id} className="admin-mobile-card admin-mobile-student-card">
                   <div className="admin-mobile-cardtop"><div className="admin-mobile-identity"><span className="admin-mobile-avatar">{studentInitial(student)}</span><div><h3>{student.name}</h3><p>{student.email || '未提供信箱'}</p></div></div><span className="admin-mobile-status" data-tone={statusTone}>{student.paymentStatus === 'pending_review' ? '匯款待核對' : student.planEnabled ? '課表已開通' : '課表待處理'}</span></div>
                   <div className="admin-mobile-info"><div className="admin-mobile-info-line"><span>報名課程</span><strong>{student.program || student.paymentCourse || '尚無課程'}</strong></div><div className="admin-mobile-info-line"><span>綁定教練</span><strong>{student.boundCoachNames || '尚未綁定'}</strong></div><div className="admin-mobile-info-line"><span>付款狀態</span><strong>{statusLabels[student.paymentStatus as PaymentOrderStatus] || student.paymentStatus}</strong></div><div className="admin-mobile-info-line"><span>最近回饋</span><strong>{formatDate(student.lastFeedbackAt)}</strong></div></div>
-                  <div className="admin-mobile-student-actions"><button type="button" className="admin-mobile-button" onClick={() => openStudent(student)}>查看資料</button><button type="button" className="admin-mobile-button" onClick={() => { setSelectedStudentId(student.id); setBindCoachId(''); setBindOpen(true) }}>調整教練</button></div>
+                  <div className="admin-mobile-student-actions"><button type="button" className="admin-mobile-button" onClick={() => openStudent(student)}>查看資料</button><button type="button" className="admin-mobile-button" onClick={() => { setSelectedStudentId(student.id);  setBindOpen(true) }}>調整教練</button></div>
                 </article>
               })}
               {!filteredStudents.length ? <p className="admin-mobile-boundary">沒有符合條件的學員。</p> : null}
@@ -390,7 +371,7 @@ export default function AdminMobileDashboard({ data, runAction, updatingId, acti
 
       {moreOpen ? <div className="admin-mobile-sheet-layer" role="dialog" aria-modal="true" aria-labelledby="admin-mobile-more-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setMoreOpen(false) }}><section className="admin-mobile-sheet"><div className="admin-mobile-sheet-handle" /><div className="admin-mobile-sheet-head"><div><h2 id="admin-mobile-more-title">更多管理功能</h2><p>季度、商品、內容與收款帳戶集中在這裡。</p></div><button type="button" className="admin-mobile-iconbutton" aria-label="關閉更多管理功能" onClick={() => setMoreOpen(false)}><X className="h-5 w-5" aria-hidden="true" /></button></div><div className="admin-mobile-sheet-grid"><button type="button" className="admin-mobile-more-item" onClick={() => navigate('seasons')}><CalendarRange className="h-5 w-5" aria-hidden="true" /><strong>季度管理</strong><small>招生季度、課程與統計</small></button><button type="button" className="admin-mobile-more-item" onClick={() => navigate('products')}><Boxes className="h-5 w-5" aria-hidden="true" /><strong>商城商品</strong><small>內容、規格、庫存與上下架</small></button><button type="button" className="admin-mobile-more-item" onClick={() => navigate('content')}><PanelsTopLeft className="h-5 w-5" aria-hidden="true" /><strong>內容中心</strong><small>首頁、公開頁面與教練資料</small></button><button type="button" className="admin-mobile-more-item" onClick={() => navigate('paymentAccounts')}><Landmark className="h-5 w-5" aria-hidden="true" /><strong>收款帳戶</strong><small>通道、權重與啟用狀態</small></button></div></section></div> : null}
 
-      {bindOpen && selectedStudent ? <div className="admin-mobile-sheet-layer" role="dialog" aria-modal="true" aria-labelledby="admin-mobile-bind-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setBindOpen(false) }}><section className="admin-mobile-sheet"><div className="admin-mobile-sheet-handle" /><div className="admin-mobile-sheet-head"><div><h2 id="admin-mobile-bind-title">新增或解除綁定教練</h2><p>{selectedStudent.name} · 可同時保留多位已綁定教練，請逐筆管理。</p></div><button type="button" className="admin-mobile-iconbutton" aria-label="關閉教練綁定管理" onClick={() => setBindOpen(false)}><X className="h-5 w-5" aria-hidden="true" /></button></div><div className="admin-mobile-bindings"><div className="admin-mobile-bindings-head"><h3>目前已綁定教練</h3><span>{selectedStudent.bindings.length} 位</span></div>{selectedStudent.bindings.length ? <div className="admin-mobile-bindings-list">{selectedStudent.bindings.map((binding) => <div key={binding.id} className="admin-mobile-binding-row"><div className="min-w-0"><strong>{binding.coachName}</strong><span>{binding.coachEmail || '未提供信箱'}</span></div><button type="button" className="admin-mobile-button" data-tone="danger" disabled={updatingId === 'unbind-' + binding.id} onClick={() => void removeBinding(binding.id)}>{updatingId === 'unbind-' + binding.id ? '處理中…' : '解除目前綁定'}</button></div>)}</div> : <p className="admin-mobile-boundary">目前尚未綁定教練。</p>}</div><div className="admin-mobile-form"><label className="admin-mobile-field"><span>新增綁定教練</span><select className="admin-mobile-control" value={bindCoachId} onChange={(event) => setBindCoachId(event.target.value)}><option value="">選擇教練</option>{data.coachOptions.filter((coach) => !selectedStudent.bindings.some((binding) => binding.coachId === coach.id)).map((coach) => <option key={coach.id} value={coach.id}>{coach.name || coach.email}</option>)}</select></label><div className="admin-mobile-notice"><strong>操作說明：</strong>新增會保留目前其他綁定；解除只會取消你選定的那一位教練。</div></div><div className="admin-mobile-sheet-actions"><button type="button" className="admin-mobile-button" onClick={() => setBindOpen(false)}>關閉</button><button type="button" className="admin-mobile-button" data-tone="accent" disabled={!bindCoachId || Boolean(updatingId)} onClick={() => void addBinding()}>新增綁定</button></div></section></div> : null}
+      {bindOpen && selectedStudent ? <div className="admin-mobile-sheet-layer" role="dialog" aria-modal="true" aria-label="任課教練關聯"><section className="admin-mobile-sheet"><h2>依入帳班級自動關聯</h2><p className="mt-3">{selectedStudent.name}：{selectedStudent.bindings.map((binding) => binding.coachName).join("、") || "尚無正式教練關聯"}</p><p className="mt-3">請在季度管理調整班級任課教練；臨時代班請在教練管理處理。不再單獨新增或解除綁定。</p><button type="button" className="admin-mobile-button mt-4" onClick={() => setBindOpen(false)}>關閉</button></section></div> : null}
 
       {accountOpen ? <div className="admin-mobile-sheet-layer" role="dialog" aria-modal="true" aria-labelledby="admin-mobile-account-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setAccountOpen(false) }}><section className="admin-mobile-sheet"><div className="admin-mobile-sheet-handle" /><div className="admin-mobile-sheet-head"><div><h2 id="admin-mobile-account-title">新增收款帳戶</h2><p>建立後加入對帳帳戶池，可隨時停用。</p></div><button type="button" className="admin-mobile-iconbutton" aria-label="關閉新增收款帳戶" onClick={() => setAccountOpen(false)}><X className="h-5 w-5" aria-hidden="true" /></button></div><div className="admin-mobile-form">{([['label', '通道名稱 *', '例如 A 帳戶'], ['accountName', '戶名 *', '輸入銀行戶名'], ['bankName', '銀行名稱 *', '銀行'], ['bankCode', '銀行代碼', '000'], ['accountNumber', '收款帳號 *', '輸入完整帳號'], ['weight', '分配權重', '1']] as const).map(([field, label, placeholder]) => <label key={field} className="admin-mobile-field"><span>{label}</span><input className="admin-mobile-control" value={accountForm[field]} onChange={(event) => setAccountForm((current) => ({ ...current, [field]: field === 'weight' ? event.target.value.replace(/\D/g, '') : event.target.value }))} placeholder={placeholder} inputMode={field === 'weight' || field === 'bankCode' || field === 'accountNumber' ? 'numeric' : undefined} /></label>)}</div><div className="admin-mobile-sheet-actions"><button type="button" className="admin-mobile-button" onClick={() => setAccountOpen(false)}>取消</button><button type="button" className="admin-mobile-button" data-tone="accent" disabled={Boolean(updatingId)} onClick={() => void createPaymentAccount()}>建立帳戶</button></div></section></div> : null}
 

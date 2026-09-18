@@ -5,6 +5,7 @@ import { AlertTriangle, Ban, CalendarCheck2, Check, CircleMinus, Clock3, Loader2
 import CoachSubNav from '@/components/CoachSubNav'
 import type { CourseAttendanceStatus, CourseMakeupRequest } from '@/lib/course-attendance'
 import { supabase } from '@/lib/supabase'
+import { attendanceVerification, type StudentCheckin } from '@/lib/student-checkin'
 
 type AttendanceDraftStatus = CourseAttendanceStatus | 'unmarked'
 type AttendanceFilter = CourseAttendanceStatus | 'makeup' | 'unmarked'
@@ -61,6 +62,7 @@ type AttendancePayload = {
   courses?: AttendanceCourse[]
   enrollments?: Enrollment[]
   attendance?: AttendanceRecord[]
+  checkins?: StudentCheckin[]
   makeups?: CourseMakeupRequest[]
   cancellations?: SessionCancellation[]
   error?: string
@@ -112,6 +114,7 @@ export default function CoachAttendanceClient() {
   const [courses, setCourses] = useState<AttendanceCourse[]>([])
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([])
+  const [checkins, setCheckins] = useState<StudentCheckin[]>([])
   const [makeups, setMakeups] = useState<CourseMakeupRequest[]>([])
   const [cancellations, setCancellations] = useState<SessionCancellation[]>([])
   const [courseId, setCourseId] = useState('')
@@ -144,6 +147,7 @@ export default function CoachAttendanceClient() {
       setCourses(nextCourses)
       setEnrollments(payload.enrollments ?? [])
       setAttendance(payload.attendance ?? [])
+      setCheckins(payload.checkins ?? [])
       setMakeups(payload.makeups ?? [])
       setCancellations(payload.cancellations ?? [])
       setCourseId(nextCourseId)
@@ -288,7 +292,9 @@ export default function CoachAttendanceClient() {
             <div>
               <p className="text-xs font-bold text-apple-blue sm:text-sm">課程管理</p>
               <h1 className="mt-1 text-3xl font-black text-black sm:text-4xl">課程點名</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-apple-gray-600">本頁只記錄教練對學員出席的現場核實；教練本人到課簽到請回工作台「我的授課日程」完成。兩份紀錄彼此獨立。點名狀態為到課、請假或已扣除，補課學生會依學員安排自動加入本堂名單。</p>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-apple-gray-600">本頁對照學員自主簽到與教練現場點名，兩份證據獨立保存。補課學員會列出原班與請假日期；雙方確認後補課才完成。教練本人上班簽到仍在工作台辦理。</p>
+              <button type="button" className="apple-button-outline mt-3 min-h-11 px-4 text-sm" disabled={isLoading || isSaving || unsavedCount > 0} onClick={() => void loadAttendance(courseId)}>更新簽到與補課名單</button>
+              {unsavedCount > 0 ? <p className="mt-1 text-xs text-amber-800">請先儲存點名，再更新名單。</p> : null}
             </div>
           </header>
 
@@ -335,12 +341,18 @@ export default function CoachAttendanceClient() {
                     const row = draft[enrollment.id] ?? { status: 'unmarked' as const, note: '' }
                     const earlyAttendance = Boolean(enrollment.billing_start_session_date && sessionDate < enrollment.billing_start_session_date && row.status === 'present')
                     const verifiesClaim = enrollment.prior_attendance_claimed && enrollment.billing_start_session_date === sessionDate
+                    const makeup = makeups.find((item) => item.enrollment_id === enrollment.id && item.target_course_season_course_id === courseId && item.target_session_date === sessionDate)
+                    const selfCheckin = checkins.find((item) => item.enrollment_id === enrollment.id && item.course_season_course_id === courseId && item.session_date === sessionDate)
+                    const originalLeave = makeups.find((item) => item.enrollment_id === enrollment.id && item.original_course_season_course_id === courseId && item.original_session_date === sessionDate)
                     return (
                       <article key={enrollment.id} className="p-4">
                         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                           <div className="min-w-0">
                             <p className="truncate font-black text-black">{enrollment.name || enrollment.email}</p>
                             <p className="mt-1 truncate text-[11px] font-bold text-apple-gray-500">所屬班級：{enrollment.home_course_name}</p>
+                            {makeup ? <p className="mt-2 rounded-md bg-blue-50 p-2 text-xs font-bold text-blue-800">補課學員｜來自 {enrollment.home_course_name}｜原請假日期：{formatSessionDate(makeup.original_session_date)}</p> : null}
+                            {originalLeave ? <p className="mt-2 text-xs font-bold text-amber-800">原班請假保留｜{originalLeave.status === 'completed' ? '補課已完成' : originalLeave.target_session_date ? `已安排 ${formatSessionDate(originalLeave.target_session_date)} 補課` : '尚未安排補課'}</p> : null}
+                            <p className="mt-2 text-xs font-bold text-apple-blue">{attendanceVerification(Boolean(selfCheckin), savedByEnrollment.get(enrollment.id)?.status)}</p>
                             <p className="mt-1 truncate text-xs text-apple-gray-500">{enrollment.email}</p>
                             <p className="mt-1 text-xs font-semibold text-apple-gray-500">計費起點：{enrollment.billing_start_session_date ? formatSessionDate(enrollment.billing_start_session_date) : '未設定'}</p>
                             {enrollment.emergency_contact_name || enrollment.emergency_contact_phone ? <p className="mt-2 flex flex-wrap items-center gap-x-2 text-xs font-bold text-red-700"><span>緊急聯絡：{enrollment.emergency_contact_name || '未填姓名'}</span>{enrollment.emergency_contact_phone ? <a href={`tel:${enrollment.emergency_contact_phone}`} className="inline-flex items-center gap-1 underline underline-offset-2"><Phone className="h-3.5 w-3.5" />{enrollment.emergency_contact_phone}</a> : null}</p> : null}

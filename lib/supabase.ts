@@ -77,7 +77,7 @@ export interface TrainingFeedback {
 
 export type StudentRaceStatus = 'accepted' | 'planned' | 'completed'
 export type StudentRaceSource = 'catalog' | 'custom'
-export type StudentAccessState = 'approved' | 'pending_transfer' | 'pending_review' | 'rejected' | 'legacy_open'
+export type StudentAccessState = 'approved' | 'pending_transfer' | 'pending_review' | 'rejected' | 'legacy_open' | 'not_enrolled'
 
 export interface StudentRace {
   id: string
@@ -108,7 +108,7 @@ export interface StudentRaceInsert {
 
 export async function getMyStudentAccess() {
   if (!supabase) {
-    return { state: 'legacy_open' as StudentAccessState, canAccessTraining: true }
+    return { state: 'not_enrolled' as StudentAccessState, canAccessTraining: false }
   }
 
   const {
@@ -116,7 +116,7 @@ export async function getMyStudentAccess() {
   } = await supabase.auth.getSession()
 
   if (!session?.access_token) {
-    return { state: 'legacy_open' as StudentAccessState, canAccessTraining: true }
+    return { state: 'not_enrolled' as StudentAccessState, canAccessTraining: false }
   }
 
   const response = await fetch('/api/student/access', {
@@ -138,8 +138,8 @@ export async function getMyStudentAccess() {
   }
 
   return {
-    state: payload.state ?? 'legacy_open',
-    canAccessTraining: payload.canAccessTraining ?? true,
+    state: payload.state ?? 'not_enrolled',
+    canAccessTraining: payload.canAccessTraining ?? false,
     coachBound: payload.coachBound ?? false,
     coachName: payload.coachName ?? '',
   }

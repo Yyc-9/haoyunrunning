@@ -5,15 +5,16 @@ import {
   nearestUpcomingCourseSession,
   validateMakeupTarget,
 } from '@/lib/course-attendance'
-import { getCurrentCourseSeason } from '@/lib/course-seasons-server'
-import { getManagedCourses } from '@/lib/managed-courses-server'
+import { getCourseSeasons } from '@/lib/course-seasons-server'
+import { applyCourseOverrides } from '@/lib/managed-courses'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { getIsolatedTestAccount, updateIsolatedTestState } from '@/lib/test-account'
 
 const noStoreHeaders = { 'Cache-Control': 'no-store' }
 
 type StudentAttendanceRequest = {
-  intent?: 'request_leave' | 'schedule_makeup' | 'cancel_makeup' | 'cancel_leave'
+  intent?: 'check_in' | 'request_leave' | 'schedule_makeup' | 'cancel_makeup' | 'cancel_leave'
+  courseSeasonCourseId?: string
   enrollmentId?: string
   sessionDate?: string
   requestId?: string
@@ -35,14 +36,21 @@ async function loadStudentContext(request: NextRequest) {
     return { response: NextResponse.json({ error: '請先登入學員帳號。' }, { status: 401, headers: noStoreHeaders }) }
   }
 
-  const [season, managedCourses] = await Promise.all([
-    getCurrentCourseSeason(),
-    getManagedCourses(),
-  ])
+  const allSeasons = await getCourseSeasons()
+  const seasons = allSeasons.filter((item) => ['active', 'enrolling'].includes(item.status))
+  const requestedSeasonId = request.nextUrl.searchParams.get('seasonId')
+  const { data: paidSeasons, error: paidSeasonError } = await supabaseAdmin.from('signup_leads').select('season_id')
+    .eq('source', 'course_payment').eq('email', user.email.trim().toLowerCase()).eq('status', 'approved')
+  if (paidSeasonError) return { response: NextResponse.json({ error: paidSeasonError.message }, { status: 500, headers: noStoreHeaders }) }
+  const owns = (id: string) => paidSeasons?.some((lead) => lead.season_id === id)
+  const season = requestedSeasonId ? seasons.find((item) => item.id === requestedSeasonId)
+    : seasons.find((item) => item.status === 'active' && owns(item.id))
+      ?? seasons.find((item) => owns(item.id)) ?? seasons.find((item) => item.isCurrent) ?? seasons[0]
 
   if (!season) {
     return { response: NextResponse.json({ error: '目前沒有可使用的季度課程。' }, { status: 404, headers: noStoreHeaders }) }
   }
+  const managedCourses = applyCourseOverrides(season.courseOverrides, { onlyConfigured: true, includeInactive: true })
 
   const testAccount = await getIsolatedTestAccount(user)
   if (testAccount) {
@@ -104,7 +112,7 @@ async function loadStudentContext(request: NextRequest) {
     }]
   })
 
-  return { user, season, courses, enrollments: ownedEnrollments }
+  return { user, season, courses, enrollments: ownedEnrollments, seasons }
 }
 
 export async function GET(request: NextRequest) {
@@ -132,7 +140,7 @@ export async function GET(request: NextRequest) {
     }, { headers: noStoreHeaders })
   }
 
-  const [approvedResult, scheduledResult, cancellationResult, attendanceResult, makeupResult] = await Promise.all([
+  const [approvedResult, scheduledResult, cancellationResult, attendanceResult, makeupResult, checkinResult, timeResult] = await Promise.all([
     supabaseAdmin!
       .from('signup_leads')
       .select('course_season_course_id')
@@ -165,9 +173,11 @@ export async function GET(request: NextRequest) {
           .in('enrollment_id', enrollmentIds)
           .order('original_session_date', { ascending: true })
       : Promise.resolve({ data: [], error: null }),
+    enrollmentIds.length ? supabaseAdmin!.from('student_course_checkins').select('enrollment_id, course_season_course_id, session_date, checked_in_at').in('enrollment_id', enrollmentIds) : Promise.resolve({ data: [], error: null }),
+    offeringIds.length ? supabaseAdmin!.from('course_season_courses').select('id, start_time').in('id', offeringIds) : Promise.resolve({ data: [], error: null }),
   ])
 
-  const firstError = [approvedResult.error, scheduledResult.error, cancellationResult.error, attendanceResult.error, makeupResult.error].find(Boolean)
+  const firstError = [approvedResult.error, scheduledResult.error, cancellationResult.error, attendanceResult.error, makeupResult.error, checkinResult.error, timeResult.error].find(Boolean)
   if (firstError) {
     return NextResponse.json({ error: firstError.message }, { status: 500, headers: noStoreHeaders })
   }
@@ -187,6 +197,7 @@ export async function GET(request: NextRequest) {
   const courseNames = new Map(context.courses.map((course) => [course.courseSeasonCourseId, course.courseName]))
 
   return NextResponse.json({
+    seasons: 'seasons' in context ? (context.seasons ?? []).map((item) => ({ id: item.id, name: item.name })) : [],
     season: {
       id: context.season.id,
       name: context.season.name,
@@ -195,6 +206,7 @@ export async function GET(request: NextRequest) {
     },
     courses: context.courses.map((course) => ({
       ...course,
+      startTime: timeResult.data?.find((row) => row.id === course.courseSeasonCourseId)?.start_time ?? '',
       approvedCount: approvedCounts.get(course.courseSeasonCourseId) ?? 0,
       scheduledMakeupCounts: scheduledMakeupCounts.get(course.courseSeasonCourseId) ?? {},
     })),
@@ -208,6 +220,7 @@ export async function GET(request: NextRequest) {
       email: enrollment.email,
     })),
     attendance: attendanceResult.data ?? [],
+    checkins: checkinResult.data ?? [],
     makeups: makeupResult.data ?? [],
     cancellations: cancellationResult.data ?? [],
   }, { headers: noStoreHeaders })
@@ -236,6 +249,19 @@ export async function POST(request: NextRequest) {
   }
 
   const testAccount = 'testAccount' in context ? context.testAccount : undefined
+  if (intent === 'check_in') {
+    if (testAccount) return NextResponse.json({ error: '隔離測試帳號不會寫入正式簽到，請使用測試資料庫驗收。' }, { status: 409, headers: noStoreHeaders })
+    const courseId = cleanText(body.courseSeasonCourseId, 80)
+    const sessionDate = cleanText(body.sessionDate, 10)
+    if (!context.courses.some((course) => course.courseSeasonCourseId === courseId && course.sessionDates.includes(sessionDate))) {
+      return NextResponse.json({ error: '無效的簽到課次。' }, { status: 400, headers: noStoreHeaders })
+    }
+    const { error } = await supabaseAdmin!.rpc('check_in_student_course', {
+      p_enrollment_id: enrollment.id, p_course_id: courseId, p_session_date: sessionDate, p_actor_id: context.user.id,
+    })
+    if (error) return NextResponse.json({ error: error.message }, { status: 409, headers: noStoreHeaders })
+    return NextResponse.json({ message: '簽到已記錄，請等候教練現場核實。' }, { headers: noStoreHeaders })
+  }
   if (testAccount) {
     const now = new Date().toISOString()
     const currentMakeups = Array.isArray(testAccount.sandboxState.studentMakeups)

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, CalendarCheck2, ClipboardList, LockKeyhole, RefreshCw, UsersRound } from 'lucide-react'
 import { useAuth } from '@/app/providers'
-import CoachAccessPanel from '@/components/CoachAccessPanel'
 import CoachSubNav from '@/components/CoachSubNav'
 import CoachDutyPanel from '@/app/coach/attendance/CoachDutyPanel'
 import { paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
@@ -160,7 +159,7 @@ export default function CoachDashboardClient() {
           </div>
 
           <div className="mb-6 grid gap-5 lg:grid-cols-[360px_1fr]">
-            <CoachAccessPanel onStudentBound={loadWorkspace} />
+            <section className="rounded-lg border border-black/10 bg-white p-5"><h2 className="text-xl font-black">班級學員關聯</h2><p className="mt-3 text-sm leading-6 text-apple-gray-600">學員確認入帳後，依任課班級自動列入名單。補課學員請在「課程點名」選擇接收班級與補課日期查看；不需要手動綁定。</p></section>
 
             <section className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-6">
               <div className="flex items-center justify-between gap-3">
@@ -181,7 +180,7 @@ export default function CoachDashboardClient() {
                     )
                   })}
                 </div>
-              ) : <p className="mt-4 rounded-md border border-dashed border-black/15 p-5 text-sm leading-6 text-apple-gray-600">尚未綁定學員。請在左側輸入學員註冊信箱完成綁定。</p>}
+              ) : <p className="mt-4 rounded-md border border-dashed border-black/15 p-5 text-sm leading-6 text-apple-gray-600">目前任課班級尚無已確認入帳的學員。</p>}
             </section>
           </div>
 

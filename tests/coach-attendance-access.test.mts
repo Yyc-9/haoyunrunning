@@ -1,12 +1,33 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { readFileSync } from 'node:fs'
 
 import {
   allowedSessionDateSet,
+  canAccessCoachAssignment,
   filterCourseEnrollmentsByAccess,
   filterCourseMakeupsBySessionAccess,
   filterRowsBySessionAccess,
 } from '../lib/coach-attendance-access.ts'
+
+test('coach attendance includes assigned courses hidden from public enrollment', () => {
+  const source = readFileSync(new URL('../app/api/coach/attendance/route.ts', import.meta.url), 'utf8')
+  assert.match(source, /applyCourseOverrides\(season\.courseOverrides, \{ onlyConfigured: true, includeInactive: true \}\)/)
+})
+
+test('old regular assignment no longer grants access after a coach replacement', () => {
+  const assignment = { scheduled_coach_id: 'old', actual_coach_id: 'old', substitute_coach_id: null, recommended_substitute_id: null }
+  assert.equal(canAccessCoachAssignment(assignment, 'old', false), false)
+  assert.equal(canAccessCoachAssignment(assignment, 'old', true), true)
+  assert.equal(canAccessCoachAssignment(assignment, 'other', true), false)
+})
+
+test('substitute assignment remains accessible without granting regular course ownership', () => {
+  const assignment = { scheduled_coach_id: 'regular', actual_coach_id: 'substitute', substitute_coach_id: 'substitute', recommended_substitute_id: 'candidate' }
+  assert.equal(canAccessCoachAssignment(assignment, 'substitute', false), true)
+  assert.equal(canAccessCoachAssignment(assignment, 'candidate', false), true)
+  assert.equal(canAccessCoachAssignment(assignment, 'unrelated', false), false)
+})
 
 const access = allowedSessionDateSet([
   { courseSeasonCourseId: 'course-a', sessionDates: ['2026-09-08'] },

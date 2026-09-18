@@ -16,6 +16,7 @@ export type StudentAttendanceCourse = {
   courseName: string
   weekday: string
   classTime: string
+  startTime?: string
   location: string
   sessionDates: string[]
   capacity: number

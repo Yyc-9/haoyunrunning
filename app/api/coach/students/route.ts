@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { getIsolatedTestAccount, isolatedTestStudentFixtures } from '@/lib/test-account'
+import { syncCoachSessionAssignments } from '@/lib/coach-session-duty'
 
 const noStoreHeaders = {
   'Cache-Control': 'no-store',
@@ -43,8 +44,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: '目前帳號尚未取得教練權限。' }, { status: 403 })
   }
 
+  await syncCoachSessionAssignments()
   const { data: bindings, error: bindingsError } = await supabaseAdmin
-    .from('coach_students')
+    .from('formal_coach_students')
     .select('id, active, created_at, student_id')
     .eq('coach_id', user.id)
     .eq('active', true)

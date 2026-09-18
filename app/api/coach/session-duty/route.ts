@@ -136,6 +136,12 @@ export async function POST(request: NextRequest) {
     .eq('id', assignmentId)
     .maybeSingle()
   if (assignmentError || !assignment) return NextResponse.json({ error: assignmentError?.message || '找不到課次安排。' }, { status: 404, headers })
+  if (!auth.isAdmin) {
+    const permitted = await loadCoachDutyItems({ userId: auth.user.id, isAdmin: false })
+    if (!permitted.some((item) => item.id === assignmentId)) {
+      return NextResponse.json({ error: '這堂課已不在你的任課或代班授權範圍。' }, { status: 403, headers })
+    }
+  }
   const archiveError = await archivedSeasonResponse({ seasonId: assignment.season_id })
   if (archiveError) return archiveError
 

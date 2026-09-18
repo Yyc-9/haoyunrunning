@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { X, User, Mail, Phone, Lock, Award, Eye, EyeOff, ChevronRight, UsersRound } from 'lucide-react'
+import { X, User, Mail, Phone, Lock, Award, Eye, EyeOff, ChevronRight } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '@/app/providers'
 import { useLanguage } from '@/app/language-context'
@@ -59,7 +59,6 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
   const [successMessage, setSuccessMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [oauthSubmitting, setOauthSubmitting] = useState<'google' | 'apple' | null>(null)
-  const [coachOptions, setCoachOptions] = useState<Array<{ id: string; name: string }>>([])
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -121,25 +120,6 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
     }
   }, [isOpen])
 
-  useEffect(() => {
-    if (!isOpen || activeMode !== 'register') return
-
-    let active = true
-    fetch('/api/coaches/options', { cache: 'no-store' })
-      .then(async (response) => {
-        const payload = (await response.json().catch(() => ({}))) as {
-          coaches?: Array<{ id: string; name: string }>
-        }
-        if (active && response.ok) setCoachOptions(payload.coaches ?? [])
-      })
-      .catch(() => {
-        if (active) setCoachOptions([])
-      })
-
-    return () => {
-      active = false
-    }
-  }, [activeMode, isOpen])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -375,28 +355,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                         </div>
                       </div>
 
-                      <div>
-                        <label htmlFor="auth-coach" className="mb-2 block text-sm font-medium text-apple-gray-700">
-                          綁定教練（選填）
-                        </label>
-                        <div className="relative">
-                          <UsersRound className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-apple-gray-400" />
-                          <select
-                            name="coachId"
-                            id="auth-coach"
-                            value={formData.coachId}
-                            onChange={handleChange}
-                            className="apple-input pl-10"
-                          >
-                            <option value="">暫不選擇，之後可在學員看板綁定</option>
-                            {coachOptions.map((coach) => (
-                              <option key={coach.id} value={coach.id}>
-                                {coach.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
+                      <p className="text-sm text-apple-gray-600">教練將在課程確認入帳後，依報名班級自動關聯。</p>
                     </>
                   )}
 

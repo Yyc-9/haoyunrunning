@@ -17,14 +17,17 @@ import {
 import AcceptanceTestCheckin from '@/components/AcceptanceTestCheckin'
 import { supabase } from '@/lib/supabase'
 import { displayCourseTime } from '@/lib/course-sort'
+import { attendanceVerification, studentCheckinOpen, type StudentCheckin } from '@/lib/student-checkin'
 
 type AttendancePayload = {
   season?: { id: string; name: string; code: string; endsOn: string }
+  seasons?: Array<{ id: string; name: string }>
   courses?: StudentAttendanceCourse[]
   enrollments?: StudentAttendanceEnrollment[]
   attendance?: CourseAttendanceRecord[]
   makeups?: CourseMakeupRequest[]
   cancellations?: CourseSessionCancellation[]
+  checkins?: StudentCheckin[]
   message?: string
   error?: string
 }
@@ -59,13 +62,19 @@ export default function StudentAttendancePanel() {
   const [targetValue, setTargetValue] = useState('')
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const [seasonId, setSeasonId] = useState('')
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 30_000)
+    return () => clearInterval(timer)
+  }, [])
 
   const loadAttendance = useCallback(async () => {
     setIsLoading(true)
     setError('')
     try {
       const token = await getAccessToken()
-      const response = await fetch('/api/student/attendance', {
+      const response = await fetch(`/api/student/attendance${seasonId ? `?seasonId=${encodeURIComponent(seasonId)}` : ''}`, {
         cache: 'no-store',
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -77,7 +86,7 @@ export default function StudentAttendancePanel() {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [seasonId])
 
   useEffect(() => {
     void loadAttendance()
@@ -158,7 +167,7 @@ export default function StudentAttendancePanel() {
     setMessage('')
     try {
       const token = await getAccessToken()
-      const response = await fetch('/api/student/attendance', {
+      const response = await fetch(`/api/student/attendance?seasonId=${encodeURIComponent(payload.season?.id ?? '')}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -184,6 +193,19 @@ export default function StudentAttendancePanel() {
       : '')
   }
 
+  function checkinControl(enrollmentId: string, course: StudentAttendanceCourse, sessionDate: string) {
+    const checked = payload.checkins?.find((item) => item.enrollment_id === enrollmentId && item.course_season_course_id === course.courseSeasonCourseId && item.session_date === sessionDate)
+    const marked = payload.attendance?.find((item) => item.enrollment_id === enrollmentId && item.course_season_course_id === course.courseSeasonCourseId && item.session_date === sessionDate)
+    const cancelled = cancellations.some((item) => item.course_season_course_id === course.courseSeasonCourseId && item.session_date === sessionDate)
+    const open = !cancelled && studentCheckinOpen(sessionDate, course.startTime ?? '', now)
+    const key = `checkin:${enrollmentId}:${course.courseSeasonCourseId}:${sessionDate}`
+    return <div className="mt-3 rounded-lg border border-black/10 bg-white p-3">
+      <p className="text-xs font-bold text-apple-gray-700">{cancelled ? '本堂停課' : attendanceVerification(Boolean(checked), marked?.status)}</p>
+      <p className="mt-1 text-xs text-apple-gray-500">學員自主簽到與教練現場點名分別記錄。開課前後各 15 分鐘開放簽到。</p>
+      {!checked && open ? <button type="button" disabled={Boolean(busyKey)} className="apple-button-primary mt-3 min-h-11 w-full sm:w-auto" onClick={() => void runAction(key, { intent: 'check_in', enrollmentId, courseSeasonCourseId: course.courseSeasonCourseId, sessionDate })}>{busyKey === key ? '正在簽到…' : '我已到場，簽到'}</button> : null}
+    </div>
+  }
+
   if (isLoading && !payload.season) {
     return <section id="attendance" className="apple-card mb-6 scroll-mt-28 p-6"><div className="flex min-h-32 items-center justify-center gap-2 text-sm font-bold text-apple-gray-500"><Loader2 className="h-5 w-5 animate-spin" />正在讀取本季度點名表</div></section>
   }
@@ -194,6 +216,7 @@ export default function StudentAttendancePanel() {
         <div>
           <p className="text-sm font-semibold text-apple-blue">{payload.season?.name || '本季度'}</p>
           <h2 className="mt-1 flex items-center gap-2 text-2xl font-black text-apple-gray-900"><CalendarCheck2 className="h-6 w-6" />我的點名表</h2>
+          {(payload.seasons?.length ?? 0) > 1 ? <label className="mt-3 block text-sm font-bold">查看季度<select aria-label="學員點名季度" className="apple-input mt-1 min-h-11" value={payload.season?.id ?? ''} disabled={isLoading || Boolean(busyKey)} onChange={(event) => { setSeasonId(event.target.value); setEditingRequestId(''); setTargetValue('') }}>{payload.seasons?.map((season) => <option key={season.id} value={season.id}>{season.name}</option>)}</select></label> : null}
           <p className="mt-2 text-sm leading-6 text-apple-gray-600">查看自己的到課紀錄；只能為最近一堂課請假，補課則可選擇原課次之後、本季度內其他班級的可用課次。</p>
         </div>
       </div>
@@ -241,6 +264,11 @@ export default function StudentAttendancePanel() {
                     </div>
 
                     {row.cancellation ? <p className="mt-3 flex items-center gap-2 text-xs font-bold text-red-700"><Ban className="h-3.5 w-3.5" />{row.cancellation.reason || '本堂停課，不需要請假或扣除課次。'}</p> : null}
+                    {!row.makeup ? checkinControl(row.enrollment.id, row.course, row.sessionDate) : null}
+                    {row.makeup && ['scheduled', 'completed'].includes(row.makeup.status) && row.makeup.target_session_date ? (() => {
+                      const target = courses.find((course) => course.courseSeasonCourseId === row.makeup?.target_course_season_course_id)
+                      return target ? <div className="mt-3 rounded-lg bg-blue-50 p-3"><p className="text-sm font-bold">補課簽到 · {target.courseName} · {formatAttendanceDate(row.makeup!.target_session_date!)}</p>{checkinControl(row.enrollment.id, target, row.makeup!.target_session_date!)}</div> : null
+                    })() : null}
 
                     {row.makeup?.status === 'scheduled' && targetCourseName && row.makeup.target_session_date ? (
                       <p className="mt-3 rounded-lg bg-blue-50 p-3 text-xs font-bold leading-5 text-blue-800">補課安排：{targetCourseName}｜{formatAttendanceDate(row.makeup.target_session_date)}</p>

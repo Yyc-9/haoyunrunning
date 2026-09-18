@@ -512,7 +512,7 @@ export async function GET(request: NextRequest) {
       .select('id, role, name, email, program, goal, pb, created_at')
       .order('created_at', { ascending: false }),
     supabaseAdmin!
-      .from('coach_students')
+      .from('formal_coach_students')
       .select('id, coach_id, student_id, active, created_at')
       .eq('active', true)
       .order('created_at', { ascending: false }),
@@ -2207,70 +2207,9 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (body.action === 'bind_student') {
-    const studentId = cleanText(body.studentId)
-    const coachId = cleanText(body.coachId)
-
-    if (!studentId || !coachId) {
-      return json({ error: '請選擇學員和教練。' }, { status: 400 })
-    }
-
-    if (studentId === coachId) {
-      return json({ error: '不能把同一個帳號同時作為學員和教練綁定。' }, { status: 400 })
-    }
-
-    const { data: relatedProfiles, error: relatedProfilesError } = await supabaseAdmin!
-      .from('profiles')
-      .select('id, role')
-      .in('id', [studentId, coachId])
-
-    if (relatedProfilesError) {
-      return json({ error: relatedProfilesError.message }, { status: 500 })
-    }
-
-    const studentProfile = relatedProfiles?.find((profile) => profile.id === studentId)
-    const coachProfile = relatedProfiles?.find((profile) => profile.id === coachId)
-
-    if (!studentProfile || studentProfile.role !== 'student') {
-      return json({ error: '請選擇普通學員帳號作為綁定學員。' }, { status: 400 })
-    }
-
-    if (!coachProfile || !['coach', 'admin'].includes(coachProfile.role)) {
-      return json({ error: '請選擇已啟用教練權限的帳號。' }, { status: 400 })
-    }
-
-    const { data, error } = await supabaseAdmin!
-      .from('coach_students')
-      .upsert({ student_id: studentId, coach_id: coachId, active: true }, { onConflict: 'coach_id,student_id' })
-      .select('*')
-      .single()
-
-    if (error || !data) {
-      return json({ error: error?.message || '綁定失敗。' }, { status: 500 })
-    }
-
-    return json({ binding: data, message: '學員與教練已綁定。' })
+    return json({ error: '正式教練關聯由已入帳班級自動產生；請在季度管理調整班級任課教練。' }, { status: 410 })
   }
 
-  if (body.action === 'unbind_student') {
-    const bindingId = cleanText(body.bindingId)
-
-    if (!bindingId) {
-      return json({ error: '缺少綁定 ID。' }, { status: 400 })
-    }
-
-    const { data, error } = await supabaseAdmin!
-      .from('coach_students')
-      .update({ active: false })
-      .eq('id', bindingId)
-      .select('*')
-      .single()
-
-    if (error || !data) {
-      return json({ error: error?.message || '解綁失敗。' }, { status: 500 })
-    }
-
-    return json({ binding: data, message: '綁定關係已取消。' })
-  }
-
+  if (body.action === 'unbind_student') return json({ error: '請依實際報名、退費或班級設定調整正式資格，不能單獨解除教練關聯。' }, { status: 410 })
   return json({ error: '未知的管理員操作。' }, { status: 400 })
 }

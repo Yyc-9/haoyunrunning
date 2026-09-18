@@ -115,7 +115,7 @@ export default function ProfilePage() {
   const earnedCount = useMemo(() => achievements.filter((badge) => badge.earned).length, [achievements])
   const completion = achievements.length ? Math.round((earnedCount / achievements.length) * 100) : 0
   const displayName = profile.nickname || profile.name || user?.name || '好運會員'
-  const isStudentAccount = user?.role !== 'coach' && user?.role !== 'admin'
+  const isStudentAccount = Boolean(user)
   const race = getRaceEvent(profile.target_event)
   const raceCountdown = race && countdownNow ? getRaceCountdown(race, countdownNow) : null
   const profileFields = [profile.nickname, profile.city, profile.running_since, profile.favorite_distance, profile.pb, profile.goal, profile.bio]

@@ -93,8 +93,8 @@ export default function StudentPage() {
   const [plans, setPlans] = useState<TrainingPlan[]>([])
   const [recentFeedback, setRecentFeedback] = useState<TrainingFeedback[]>([])
   const [studentRaces, setStudentRaces] = useState<StudentRace[]>([])
-  const [studentAccessState, setStudentAccessState] = useState<StudentAccessState>('legacy_open')
-  const [canAccessTraining, setCanAccessTraining] = useState(true)
+  const [studentAccessState, setStudentAccessState] = useState<StudentAccessState>('not_enrolled')
+  const [canAccessTraining, setCanAccessTraining] = useState(false)
   const [coachBound, setCoachBound] = useState(false)
   const [boundCoachName, setBoundCoachName] = useState('')
   const [dataError, setDataError] = useState('')
@@ -700,12 +700,16 @@ export default function StudentPage() {
   }
 
   if (!canAccessTraining) {
-    const waitingText = studentAccessState === 'rejected'
+    const waitingText = studentAccessState === 'not_enrolled'
+      ? '目前沒有已確認入帳的開課中或招生中季度報名。請先選擇課程，完成匯款核對後即會建立正式班級資格。'
+      : studentAccessState === 'rejected'
       ? '你的匯款資料需要補充或重新核對，請聯絡好運跑班協助處理。'
       : studentAccessState === 'pending_transfer'
         ? '請完成匯款並回報後五碼；財務確認入帳後將自動開通課表。'
         : '你的匯款資料已回報，正在等待財務人工核對；確認入帳後將自動開通課表。'
-    const accessStatusLabel = studentAccessState === 'pending_review'
+    const accessStatusLabel = studentAccessState === 'not_enrolled'
+      ? '尚無正式課程資格'
+      : studentAccessState === 'pending_review'
       ? paymentOrderStatusLabels['zh-TW'].pending_review
       : studentAccessState === 'pending_transfer'
         ? paymentOrderStatusLabels['zh-TW'].pending_transfer

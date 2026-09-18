@@ -194,41 +194,8 @@ async function accountResponse(profile: Record<string, unknown>, coachAccount: C
 
 async function ensurePreferredCoachBinding(user: Awaited<ReturnType<typeof getAuthedUser>>) {
   if (!supabaseAdmin || !user) return null
-
-  const coachId = typeof user.user_metadata?.preferred_coach_id === 'string'
-    ? user.user_metadata.preferred_coach_id.trim()
-    : ''
-  if (!coachId) return null
-
-  const { data: existingBinding, error: existingBindingError } = await supabaseAdmin
-    .from('coach_students')
-    .select('id')
-    .eq('student_id', user.id)
-    .eq('active', true)
-    .limit(1)
-    .maybeSingle()
-  if (existingBindingError) return existingBindingError
-  if (existingBinding) return null
-
-  const { data: coach, error: coachError } = await supabaseAdmin
-    .from('profiles')
-    .select('id, role')
-    .eq('id', coachId)
-    .eq('role', 'coach')
-    .maybeSingle()
-  if (coachError) return coachError
-  if (!coach) return null
-
-  const { error: bindError } = await supabaseAdmin.from('coach_students').upsert(
-    {
-      coach_id: coach.id,
-      student_id: user.id,
-      active: true,
-    },
-    { onConflict: 'coach_id,student_id' }
-  )
-
-  return bindError
+  // Metadata must not grant course membership; the paid-enrollment view does.
+  return null as { message: string } | null
 }
 
 async function unauthorizedResponse(request: NextRequest) {
