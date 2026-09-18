@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  AlertTriangle,
   ArrowLeft,
   Boxes,
   CalendarRange,
@@ -15,6 +14,7 @@ import {
   UsersRound,
   X,
 } from 'lucide-react'
+import AdminSeasonOverview from '@/components/admin/AdminSeasonOverview'
 import AdminBankReconciliation from '@/components/admin/AdminBankReconciliation'
 import AdminCoachDuty from '@/components/admin/AdminCoachDuty'
 import AdminContentManager from '@/components/admin/AdminContentManager'
@@ -68,16 +68,6 @@ function formatDate(value: string | null | undefined) {
   }).format(date)
 }
 
-function waitLabel(value: string | null | undefined) {
-  if (!value) return '等待時間未知'
-  const timestamp = new Date(value).getTime()
-  if (!Number.isFinite(timestamp)) return '等待時間未知'
-  const hours = Math.max(0, Math.floor((Date.now() - timestamp) / 3_600_000))
-  if (hours < 1) return '剛剛提交'
-  if (hours < 24) return `等待 ${hours} 小時`
-  return `等待 ${Math.floor(hours / 24)} 天`
-}
-
 function studentInitial(student: AdminStudent) {
   return student.name.trim().slice(0, 1) || student.email.trim().slice(0, 1).toUpperCase() || '?'
 }
@@ -122,28 +112,6 @@ export default function AdminMobileDashboard({ data, runAction, updatingId, acti
   const [coachRegisterEmail, setCoachRegisterEmail] = useState('')
   const [coachStatusFilter, setCoachStatusFilter] = useState<'all' | 'enabled' | 'pending' | 'disabled'>('all')
 
-  const pendingOrders = useMemo(
-    () => data.orders.filter((order) => order.status === 'pending_review'),
-    [data.orders]
-  )
-  const pendingCourseCount = pendingOrders.filter((order) => order.orderKind === 'course').length
-  const pendingShopCount = pendingOrders.filter((order) => order.orderKind === 'shop').length
-  const longestPending = pendingOrders.reduce<AdminOrder | null>((longest, order) => {
-    if (!longest) return order
-    return new Date(order.submittedAt).getTime() < new Date(longest.submittedAt).getTime() ? order : longest
-  }, null)
-  const anomalyCount = data.overview.openAttendanceAnomalyCount ?? 0
-  const paidWithoutPlanCount = data.students.filter((student) => student.paymentStatus === 'approved' && !student.planEnabled).length
-  const withoutCoachCount = data.students.filter((student) => student.bindings.length === 0).length
-  const attentionStudentCount = data.students.filter((student) => (
-    (student.paymentStatus === 'approved' && !student.planEnabled) || student.bindings.length === 0
-  )).length
-  const recruitingSeasonIds = new Set(data.courseSeasons.filter((season) => season.status === 'enrolling').map((season) => season.id))
-  const recruitingClassCount = new Set(
-    data.courseCapacity
-      .filter((course) => recruitingSeasonIds.has(course.seasonId))
-      .map((course) => `${course.seasonId}:${course.slug}`)
-  ).size
   const selectedStudent = data.students.find((student) => student.id === selectedStudentId) ?? null
   const selectedStudentOrders = selectedStudent ? studentOrders(selectedStudent, data.orders) : []
   const availableCoachProfiles = useMemo(() => {
@@ -325,34 +293,7 @@ export default function AdminMobileDashboard({ data, runAction, updatingId, acti
       </header>
 
       <div ref={contentRef} className="admin-mobile-content">
-        {view === 'overview' ? (
-          <section className="admin-mobile-screen">
-            <div className="admin-mobile-eyeline"><span>{new Intl.DateTimeFormat('zh-TW', { month: '2-digit', day: '2-digit', weekday: 'short' }).format(new Date())}</span><span>即時資料</span></div>
-            <h1 className="admin-mobile-hero">今天先處理 {pendingOrders.length + anomalyCount + attentionStudentCount} 件事</h1>
-            <p className="admin-mobile-subtitle">依等待時間與營運影響排序，完成後會自動移到紀錄。</p>
-            <div className="admin-mobile-sectionhead"><h2>待處理</h2><span>最急的排前面</span></div>
-            <div className="admin-mobile-stack">
-              <button type="button" className="admin-mobile-task" data-tone="warning" onClick={() => navigate('reconciliation')}>
-                <div className="admin-mobile-task-grid"><span className="admin-mobile-task-icon"><Landmark className="h-5 w-5" aria-hidden="true" /></span><span><h3>待核對匯款</h3><p>課程 {pendingCourseCount} 筆 · 商城 {pendingShopCount} 筆</p></span><span className="admin-mobile-task-value">{pendingOrders.length}</span></div>
-                <div className="admin-mobile-task-note"><span>{longestPending ? `最久${waitLabel(longestPending.submittedAt)}` : '目前沒有待核對款項'}</span><strong>開始核對 →</strong></div>
-              </button>
-              <button type="button" className="admin-mobile-task" data-tone="danger" onClick={() => navigate('coaches')}>
-                <div className="admin-mobile-task-grid"><span className="admin-mobile-task-icon"><AlertTriangle className="h-5 w-5" aria-hidden="true" /></span><span><h3>教練管理工作區</h3><p>排班、簽到與教練帳號登記</p></span><span className="admin-mobile-task-value">查看</span></div>
-              </button>
-              <button type="button" className="admin-mobile-task" onClick={() => navigate('students')}>
-                <div className="admin-mobile-task-grid"><span className="admin-mobile-task-icon"><UsersRound className="h-5 w-5" aria-hidden="true" /></span><span><h3>學員待處理（去重）</h3><p>已確認付款但課表待開通 {paidWithoutPlanCount} 位 · 未綁教練 {withoutCoachCount} 位（同一學員可能同時符合）</p></span><span className="admin-mobile-task-value">{attentionStudentCount}</span></div>
-              </button>
-            </div>
-
-            <div className="admin-mobile-sectionhead"><h2>營運概況</h2><span>本季度</span></div>
-            <div className="admin-mobile-metrics">
-              <article className="admin-mobile-metric"><small>學員總數</small><strong>{data.overview.studentCount}</strong><em>目前帳號</em></article>
-              <article className="admin-mobile-metric"><small>招生班級</small><strong>{recruitingClassCount}</strong><em>招生中季度課程</em></article>
-              <article className="admin-mobile-metric"><small>已確認入帳</small><strong>{data.overview.approvedOrderCount}</strong><em>已完成核對</em></article>
-              <article className="admin-mobile-metric" data-tone="warning"><small>低庫存商品</small><strong>{data.overview.lowStockCount}</strong><em>需要補貨</em></article>
-            </div>
-          </section>
-        ) : null}
+        {view === 'overview' ? <AdminSeasonOverview data={data} /> : null}
 
         {view === 'reconciliation' ? (
           <section className="admin-mobile-screen admin-mobile-external">

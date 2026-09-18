@@ -88,6 +88,8 @@ export async function PATCH(request: NextRequest) {
   if (!assignmentId) return NextResponse.json({ error: '缺少課次安排。' }, { status: 400, headers })
   const { data: assignment, error: assignmentError } = await supabaseAdmin!.from('coach_session_assignments').select('*').eq('id', assignmentId).maybeSingle()
   if (assignmentError || !assignment) return NextResponse.json({ error: assignmentError?.message || '找不到課次安排。' }, { status: 404, headers })
+  const archiveError = await archivedSeasonResponse({ seasonId: assignment.season_id })
+  if (archiveError) return archiveError
 
   const [{ data: existingCheckin, error: checkinError }, { data: cancellation, error: cancellationError }, { data: course, error: courseError }] = await Promise.all([
     supabaseAdmin!.from('coach_session_checkins').select('*').eq('assignment_id', assignment.id).maybeSingle(),
@@ -183,3 +185,4 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: error instanceof Error ? error.message : '更新教練到課資料失敗。' }, { status: 500, headers })
   }
 }
+import { archivedSeasonResponse } from '@/lib/season-write-guard'

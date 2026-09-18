@@ -252,6 +252,10 @@ export async function POST(request: NextRequest) {
   if (!course || !course.sessionDates.includes(sessionDate)) {
     return NextResponse.json({ error: '班級或課次無效。' }, { status: 400, headers: noStoreHeaders })
   }
+  if (!('testAccount' in access && access.testAccount)) {
+    const archiveError = await archivedSeasonResponse({ seasonId: course.seasonId })
+    if (archiveError) return archiveError
+  }
   const testAccount = 'testAccount' in access ? access.testAccount : undefined
   if (testAccount) {
     if (body.intent === 'set_session_cancellation') {
@@ -473,3 +477,4 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ message: `已儲存 ${requested.length} 位學員的點名結果。` }, { headers: noStoreHeaders })
 }
+import { archivedSeasonResponse } from '@/lib/season-write-guard'

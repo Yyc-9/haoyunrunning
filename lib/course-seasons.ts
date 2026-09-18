@@ -40,6 +40,12 @@ export function preferredCourseSeasonId(seasons: readonly Pick<CourseSeason, 'id
     || b.code.localeCompare(a.code))[0]?.id ?? ''
 }
 
+export function overviewSeasonId(seasons: readonly Pick<CourseSeason, 'id' | 'status' | 'isCurrent' | 'code'>[], selectedId: string) {
+  return seasons.some((season) => season.id === selectedId) ? selectedId
+    : seasons.find((season) => season.isCurrent && season.status !== 'archived')?.id
+      ?? preferredCourseSeasonId(seasons)
+}
+
 function taipeiDateKey(date: Date) {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Taipei',

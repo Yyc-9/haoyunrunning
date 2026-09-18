@@ -1196,12 +1196,12 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                     </div>
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
-                    <select value={season.status} onChange={(event) => updateSeasonStatus(season, event.target.value as CourseSeasonStatus)} className="apple-input min-w-32" aria-label={`更新 ${season.name} 狀態`}>
+                    <select disabled={season.status === 'archived'} value={season.status} onChange={(event) => updateSeasonStatus(season, event.target.value as CourseSeasonStatus)} className="apple-input min-w-32" aria-label={`更新 ${season.name} 狀態`}>
                       {Object.entries(courseSeasonStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                     </select>
                     <button type="button" onClick={() => { setSelectedSeasonId(season.id); changeMode('courses') }} className="apple-button-outline px-4 py-2.5">管理這季課程</button>
-                    {!season.isCurrent ? <button type="button" onClick={() => activateSeason(season)} className="apple-button-primary gap-2 px-4 py-2.5"><CheckCircle2 className="h-4 w-4" />設為前台招生</button> : null}
-                    <button type="button" onClick={() => deleteSeason(season)} disabled={seasonActionPending || season.isCurrent || ['enrolling', 'active'].includes(season.status) || season.registrationCount > 0} title="僅可刪除非招生中、非進行中且無營運紀錄的季度；有紀錄請封存" aria-label={`刪除 ${season.name}`} className="inline-flex items-center justify-center gap-1 rounded-lg border border-red-200 px-4 py-2.5 text-sm font-bold text-red-700 disabled:opacity-40"><Trash2 className="h-4 w-4" />刪除季度</button>
+                    {!season.isCurrent && season.status !== 'archived' ? <button type="button" onClick={() => activateSeason(season)} className="apple-button-primary gap-2 px-4 py-2.5"><CheckCircle2 className="h-4 w-4" />設為前台招生</button> : null}
+                    <button type="button" onClick={() => deleteSeason(season)} disabled={seasonActionPending || season.isCurrent || ['enrolling', 'active', 'archived'].includes(season.status) || season.registrationCount > 0} title="僅可刪除非招生中、非進行中且無營運紀錄的季度；有紀錄請封存" aria-label={`刪除 ${season.name}`} className="inline-flex items-center justify-center gap-1 rounded-lg border border-red-200 px-4 py-2.5 text-sm font-bold text-red-700 disabled:opacity-40"><Trash2 className="h-4 w-4" />刪除季度</button>
                   </div>
                 </article>
               ))}
@@ -1211,18 +1211,18 @@ export default function AdminContentManager({ content, courses, seasons, scope =
 
         {mode === 'courses' && selectedSeason ? (
           <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
-            {panelHeader(`${selectedSeason.name}課程資料`, selectedSeason.isCurrent ? '儲存後會同步發布到首頁、訓練課程、日程表、課程詳情與報名頁。' : '這是非當前季度，儲存只會更新草稿或歷史資料，不影響前台。', '/courses')}
+            {panelHeader(`${selectedSeason.name}課程資料`, selectedSeason.isCurrent ? '儲存後會同步發布到首頁、訓練課程、日程表、課程詳情與報名頁。' : selectedSeason.status === 'archived' ? '封存季度僅供查閱，不再接受修改。' : '這是非當前季度，儲存只會更新這一季，不影響前台。', '/courses')}
             <div className="border-b border-black/10 bg-apple-gray-50 p-5">
               <div className="grid gap-4 lg:grid-cols-[minmax(180px,.7fr)_minmax(280px,1.3fr)_auto] lg:items-end">
                 <Field label="管理季度"><select value={selectedSeasonId} onChange={(e) => { if (!confirmLeaveCourse()) return; setSelectedSeasonId(e.target.value); setCourseMessage('') }} className="apple-input">{seasons.map((season) => <option key={season.id} value={season.id}>{season.name}{season.isCurrent ? '（前台招生）' : ''}</option>)}</select></Field>
                 <Field label="這一季的課程"><select value={selectedSlug} onChange={(e) => { if (!confirmLeaveCourse()) return; setSelectedSlug(e.target.value); setCourseMessage('') }} className="apple-input" disabled={!seasonCourses.length}>{seasonCourses.length ? seasonCourses.map((course) => <option key={course.slug} value={course.slug}>{course.name}</option>) : <option value="">尚未建立課程</option>}</select></Field>
-                <div className="grid grid-cols-3 gap-2">
+                <fieldset disabled={selectedSeason.status === 'archived'} className="grid grid-cols-3 gap-2 disabled:opacity-40">
                   <button type="button" onClick={() => setShowNewCourse((current) => !current)} className="apple-button-primary gap-1 px-3 py-3 text-sm"><Plus className="h-4 w-4" />新增</button>
                   <button type="button" onClick={duplicateSeasonCourse} disabled={!selectedCourse} className="apple-button-outline gap-1 px-3 py-3 text-sm disabled:opacity-40"><Copy className="h-4 w-4" />複製</button>
                   <button type="button" onClick={deleteSeasonCourse} disabled={!selectedCourse} className="inline-flex items-center justify-center gap-1 rounded-lg border border-red-200 bg-white px-3 py-3 text-sm font-bold text-red-700 disabled:opacity-40"><Trash2 className="h-4 w-4" />刪除</button>
-                </div>
+                </fieldset>
               </div>
-              {showNewCourse ? (
+              {showNewCourse && selectedSeason.status !== 'archived' ? (
                 <div className="mt-4 grid gap-3 rounded-lg border border-black/10 bg-white p-4 md:grid-cols-[minmax(0,1fr)_minmax(220px,.7fr)_auto] md:items-end">
                   <Field label="新課程名稱"><input value={newCourseName} onChange={(event) => setNewCourseName(event.target.value)} className="apple-input" maxLength={180} placeholder="例如 2026 好運跑步訓練營 X 週一台北夜跑班" /></Field>
                   <Field label="介紹版型"><select value={newCourseTemplateSlug} onChange={(event) => setNewCourseTemplateSlug(event.target.value)} className="apple-input">{courses.map((course) => <option key={course.slug} value={course.slug}>{course.name}</option>)}</select></Field>
@@ -1231,8 +1231,9 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                 </div>
               ) : null}
             </div>
+            {selectedSeason.status === 'archived' ? <p role="status" className="bg-amber-50 p-5 text-sm font-bold text-amber-900">此季度已封存，課程與報名資料僅供查閱，已停止同步與修改。</p> : null}
             {selectedCourse ? (
-            <div className="grid gap-4 p-5 md:grid-cols-2">
+            <fieldset disabled={selectedSeason.status === 'archived'} className="grid gap-4 p-5 md:grid-cols-2 disabled:opacity-70">
               <Field label="課程名稱"><input value={String(draft.name ?? '')} onChange={(e) => setDraft((current) => ({ ...current, name: e.target.value }))} className="apple-input" /></Field>
               <Field label="星期"><select value={String(draft.weekday ?? '').replace('周', '週')} onChange={(e) => setDraft((current) => ({ ...current, weekday: e.target.value }))} className="apple-input"><option value="">請選擇星期</option>{orderedWeekdays.map((weekday) => <option key={weekday} value={weekday}>{weekday}</option>)}</select></Field>
               <Field label="城市 / 地點"><input value={String(draft.location ?? '')} onChange={(e) => setDraft((current) => ({ ...current, location: e.target.value }))} className="apple-input" /></Field>
@@ -1302,7 +1303,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                 <button type="button" onClick={saveCourse} className="apple-button-primary gap-2"><Save className="h-4 w-4" />{selectedSeason.isCurrent ? '儲存並發布至課程與日程表' : '儲存這季課程'}</button>
               </div>
               {courseMessage ? <p className="md:col-span-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">{courseMessage}</p> : null}
-            </div>
+            </fieldset>
             ) : (
               <div className="p-10 text-center"><h3 className="text-lg font-black text-apple-gray-900">這一季尚未建立課程</h3><p className="mt-2 text-sm text-apple-gray-500">點擊上方「新增」，即可從介紹版型建立全新的班級。</p></div>
             )}

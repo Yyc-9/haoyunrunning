@@ -306,6 +306,8 @@ export async function PATCH(request: NextRequest) {
     if (!leadId || !verifyCourseOrderAccessToken(leadId, accessToken)) {
       return NextResponse.json({ error: '課程報名安全憑證無效，請重新建立報名記錄。' }, { status: 403 })
     }
+    const archiveError = await archivedSeasonResponse({ enrollmentId: leadId })
+    if (archiveError) return archiveError
 
     if (!/^\d{5}$/.test(transferLastFive)) {
       return NextResponse.json({ error: '銀行帳號後五碼必須是 5 位數字。' }, { status: 400 })
@@ -379,6 +381,8 @@ export async function PATCH(request: NextRequest) {
   if (existingLeadError || !existingLead) {
     return NextResponse.json({ error: existingLeadError?.message || '找不到報名資料。' }, { status: 404 })
   }
+  const archiveError = await archivedSeasonResponse({ enrollmentId: id })
+  if (archiveError) return archiveError
   if (existingLead.source === 'course_payment' && auth.profile.role !== 'admin') {
     return NextResponse.json({ error: '課程匯款只能由管理員在管理後台核對。' }, { status: 403 })
   }
@@ -430,3 +434,4 @@ export async function PATCH(request: NextRequest) {
 
   return NextResponse.json({ lead: safeCoachLead(data), emailMessage })
 }
+import { archivedSeasonResponse } from '@/lib/season-write-guard'

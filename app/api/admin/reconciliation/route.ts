@@ -549,6 +549,8 @@ export async function PATCH(request: NextRequest) {
 
     if (body.action === 'confirm') {
       if (!transactionId) return json({ error: '缺少交易資料。' }, { status: 400 })
+      const archiveError = await archivedSeasonResponse({ transactionId })
+      if (archiveError) return archiveError
       const { data, error } = await supabaseAdmin!.rpc('confirm_finance_reconciliation_transaction', {
         p_transaction_id: transactionId,
         p_actor_profile_id: auth.adminProfile.id,
@@ -571,6 +573,11 @@ export async function PATCH(request: NextRequest) {
       let confirmedCount = 0
       const errors: Array<{ transactionId: string; message: string }> = []
       for (const transaction of readyTransactions ?? []) {
+        const archiveError = await archivedSeasonResponse({ transactionId: transaction.id })
+        if (archiveError) {
+          errors.push({ transactionId: transaction.id, message: '季度已封存或無法確認季度狀態，未執行修改。' })
+          continue
+        }
         const { data, error } = await supabaseAdmin!.rpc('confirm_finance_reconciliation_transaction', {
           p_transaction_id: transaction.id,
           p_actor_profile_id: auth.adminProfile.id,
@@ -603,3 +610,4 @@ export async function PATCH(request: NextRequest) {
     )
   }
 }
+import { archivedSeasonResponse } from '@/lib/season-write-guard'

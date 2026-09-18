@@ -9,6 +9,7 @@ import { allCourses } from '@/lib/goodluck-data'
 import { coachPublicProfilesFromRows, getDefaultCourseCoachKeys, type CoachPublicProfile, type CoachPublicProfileRow } from '@/lib/coach-profiles'
 import { applyCourseSeasonToContent, nextCourseSeasonIdentity, type CourseSeasonStatus } from '@/lib/course-seasons'
 import { getCourseSeasons } from '@/lib/course-seasons-server'
+import { archivedSeasonResponse } from '@/lib/season-write-guard'
 import { defaultCourseBillingConfig, normalizeCourseBillingConfig } from '@/lib/course-pricing'
 import { applyCourseOverrides } from '@/lib/managed-courses'
 import {
@@ -1039,6 +1040,13 @@ export async function PATCH(request: NextRequest) {
 
   const body = (await request.json().catch(() => ({}))) as AdminPatchBody
 
+  const archiveError = await archivedSeasonResponse({
+    seasonId: 'seasonId' in body ? body.seasonId : undefined,
+    enrollmentId: 'orderId' in body && body.orderKind !== 'shop' ? body.orderId : undefined,
+    attendanceId: 'attendanceId' in body ? body.attendanceId : undefined,
+  })
+  if (archiveError) return archiveError
+
   if (body.action === 'save_season_course') {
     const seasonId = cleanText(body.seasonId)
     const courseSlug = cleanText(body.courseSlug)
@@ -1401,6 +1409,12 @@ export async function PATCH(request: NextRequest) {
     const { data: current } = await supabaseAdmin!.from('course_seasons').select('is_current').eq('id', seasonId).single()
     if (current?.is_current && status === 'archived') {
       return json({ error: '請先將前台招生切換到其他季度，再封存這一季。' }, { status: 409 })
+    }
+
+    if (status === 'archived') {
+      const { error: syncError } = await supabaseAdmin!.from('course_season_sync_sources')
+        .update({ active: false, updated_at: new Date().toISOString() }).eq('season_id', seasonId)
+      if (syncError) return json({ error: '無法停止季度同步，尚未封存。' }, { status: 500 })
     }
 
     const { data: season, error } = await supabaseAdmin!

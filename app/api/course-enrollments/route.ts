@@ -427,6 +427,8 @@ export async function PATCH(request: NextRequest) {
   const leadId = cleanText(body.leadId, 80)
   const transferLastFive = cleanText(body.transferLastFive, 5)
   const notes = cleanText(body.notes, 1000)
+  const archiveError = await archivedSeasonResponse({ enrollmentId: leadId })
+  if (archiveError) return archiveError
 
   if (!leadId || !/^\d{5}$/.test(transferLastFive)) {
     return NextResponse.json({ error: '請填寫正確的銀行帳號後五碼。' }, { status: 400 })
@@ -459,3 +461,4 @@ export async function PATCH(request: NextRequest) {
 
   return NextResponse.json({ enrollment: courseEnrollmentPayload(data) })
 }
+import { archivedSeasonResponse } from '@/lib/season-write-guard'

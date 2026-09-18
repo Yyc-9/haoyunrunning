@@ -172,6 +172,7 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
   const [syncScriptLoading, setSyncScriptLoading] = useState(false)
   const pageSize = 25
 
+  const selectedArchived = selected?.orderKind === 'course' && seasons.some((item) => item.id === selected.seasonId && item.status === 'archived')
   const season = seasons.find((item) => item.id === seasonId)
   const syncSource = syncSources.find((item) => item.seasonId === seasonId && item.active)
   const seasonOrders = useMemo(
@@ -529,6 +530,7 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
               <button type="button" onClick={() => setSelected(null)} className="inline-flex h-9 w-9 items-center justify-center rounded-full border" aria-label="關閉"><X className="h-4 w-4" /></button>
             </div>
             <div className="flex-1 overflow-y-auto p-5">
+              {selectedArchived ? <p role="status" className="mb-4 rounded-lg bg-amber-50 p-3 text-sm font-bold text-amber-900">此季度已封存，僅供查閱，不再修改帳單。</p> : null}
               <div className="grid gap-3 sm:grid-cols-2">{selectedSummary.map(([label, value]) => <div key={label} className="rounded-lg bg-apple-gray-100 p-3"><p className="text-xs font-bold text-apple-gray-500">{label}</p><p className="mt-1 break-words text-sm font-bold">{value || '-'}</p></div>)}</div>
               <dl className="mt-5 divide-y border-y">{selected.registrationDetails.filter((item) => item.label !== '學員身分').map((item) => <div key={item.label} className="py-3"><dt className="text-xs font-bold text-apple-gray-500">{item.label}</dt><dd className="mt-1 whitespace-pre-wrap break-words text-sm font-semibold leading-6">{item.value}</dd></div>)}{selected.notes ? <div className="py-3"><dt className="text-xs font-bold text-apple-gray-500">客戶備註</dt><dd className="mt-1 whitespace-pre-wrap text-sm font-semibold">{selected.notes}</dd></div> : null}</dl>
               {selected.orderKind === 'course' && selected.attendanceAnomalies.length ? (
@@ -539,11 +541,11 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
                       <article key={anomaly.attendanceId} className="rounded-md bg-white p-3 ring-1 ring-amber-200">
                         <p className="text-sm font-black text-amber-950">{anomaly.sessionDate} 已到課，早於計費起點 {anomaly.billingStartSessionDate}</p>
                         {anomaly.status === 'resolved' ? (
-                          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs font-bold text-emerald-700">已處理：{anomaly.outcome === 'supplement_paid' ? '補繳完成' : '免除補繳'}{anomaly.resolutionNote ? `｜${anomaly.resolutionNote}` : ''}</p><button type="button" disabled={updatingId === `attendance-${anomaly.attendanceId}`} onClick={() => resolveAttendance(anomaly, 'reopen')} className="text-left text-xs font-bold underline disabled:opacity-40">重新開啟</button></div>
+                          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs font-bold text-emerald-700">已處理：{anomaly.outcome === 'supplement_paid' ? '補繳完成' : '免除補繳'}{anomaly.resolutionNote ? `｜${anomaly.resolutionNote}` : ''}</p><button type="button" disabled={selectedArchived || updatingId === `attendance-${anomaly.attendanceId}`} onClick={() => resolveAttendance(anomaly, 'reopen')} className="text-left text-xs font-bold underline disabled:opacity-40">重新開啟</button></div>
                         ) : (
                           <div className="mt-3">
                             <input value={resolutionNote} onChange={(event) => setResolutionNote(event.target.value)} className="apple-input min-h-10 text-sm" maxLength={1000} placeholder="處理備註（選填）" />
-                            <div className="mt-2 grid grid-cols-2 gap-2"><button type="button" disabled={updatingId === `attendance-${anomaly.attendanceId}`} onClick={() => resolveAttendance(anomaly, 'supplement_paid')} className="rounded-md bg-emerald-600 px-3 py-2 text-xs font-black text-white disabled:opacity-40">已補繳</button><button type="button" disabled={updatingId === `attendance-${anomaly.attendanceId}`} onClick={() => resolveAttendance(anomaly, 'waived')} className="rounded-md border border-amber-300 bg-white px-3 py-2 text-xs font-black text-amber-900 disabled:opacity-40">免除補繳</button></div>
+                            <div className="mt-2 grid grid-cols-2 gap-2"><button type="button" disabled={selectedArchived || updatingId === `attendance-${anomaly.attendanceId}`} onClick={() => resolveAttendance(anomaly, 'supplement_paid')} className="rounded-md bg-emerald-600 px-3 py-2 text-xs font-black text-white disabled:opacity-40">已補繳</button><button type="button" disabled={selectedArchived || updatingId === `attendance-${anomaly.attendanceId}`} onClick={() => resolveAttendance(anomaly, 'waived')} className="rounded-md border border-amber-300 bg-white px-3 py-2 text-xs font-black text-amber-900 disabled:opacity-40">免除補繳</button></div>
                           </div>
                         )}
                       </article>
@@ -555,10 +557,10 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
             </div>
             <div className="grid gap-2 border-t bg-white p-4 sm:grid-cols-2">
               <p className={`rounded-lg px-3 py-2 text-xs font-bold leading-5 sm:col-span-2 ${selected.orderKind === 'shop' ? 'bg-apple-gray-100 text-apple-gray-700' : 'bg-blue-50 text-blue-800'}`}>{selected.orderKind === 'shop' ? '商城使用銀行匯款付款，入帳後再安排跑班自取；可在銀行對帳頁核對，也可於此人工確認。' : '財務可透過銀行對帳確認；超級管理員亦可核實實際入帳後，填寫管理備註並人工確認。系統保留操作人、時間及核對依據，財務之後仍可補登銀行對帳。'}</p>
-              {selected.orderKind === 'course' ? <button type="button" disabled={updatingId === selected.id || selected.status === 'approved'} onClick={confirmCourseTransfer} className="apple-button-primary gap-2 px-4 py-3 disabled:opacity-40"><CheckCircle2 className="h-4 w-4" />{selected.status === 'approved' ? '已確認入帳' : '確認入帳（管理員）'}</button> : null}
-              {selected.orderKind === 'shop' ? <button type="button" disabled={updatingId === selected.id || selected.status === 'rejected' || selected.status === 'approved'} onClick={confirmShopTransfer} className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-40"><Package className="h-4 w-4" />確認匯款並安排自取</button> : null}
-              <button type="button" disabled={updatingId === selected.id || selected.status === 'rejected' || selected.status === 'approved'} onClick={flagOrderForReview} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40"><RotateCcw className="h-4 w-4" />標記匯款資料需補充</button>
-              <button type="button" disabled={updatingId === `delete-${selected.id}` || selected.status === 'approved'} onClick={deleteOrder} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40">{updatingId === `delete-${selected.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}刪除記錄</button>
+              {selected.orderKind === 'course' ? <button type="button" disabled={selectedArchived || updatingId === selected.id || selected.status === 'approved'} onClick={confirmCourseTransfer} className="apple-button-primary gap-2 px-4 py-3 disabled:opacity-40"><CheckCircle2 className="h-4 w-4" />{selected.status === 'approved' ? '已確認入帳' : '確認入帳（管理員）'}</button> : null}
+              {selected.orderKind === 'shop' ? <button type="button" disabled={selectedArchived || updatingId === selected.id || selected.status === 'rejected' || selected.status === 'approved'} onClick={confirmShopTransfer} className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-40"><Package className="h-4 w-4" />確認匯款並安排自取</button> : null}
+              <button type="button" disabled={selectedArchived || updatingId === selected.id || selected.status === 'rejected' || selected.status === 'approved'} onClick={flagOrderForReview} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40"><RotateCcw className="h-4 w-4" />標記匯款資料需補充</button>
+              <button type="button" disabled={selectedArchived || updatingId === `delete-${selected.id}` || selected.status === 'approved'} onClick={deleteOrder} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40">{updatingId === `delete-${selected.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}刪除記錄</button>
             </div>
           </aside>
         </div>

@@ -7,6 +7,7 @@ type PendingTransferLead = {
   email: string
   preferred_course: string
   course_slug: string | null
+  season_id: string | null
   created_at: string
 }
 
@@ -33,7 +34,7 @@ export async function checkPendingTransferReminders(options: { dryRun?: boolean;
 
   const { data, error } = await supabaseAdmin
     .from('signup_leads')
-    .select('id, name, email, preferred_course, course_slug, created_at')
+    .select('id, name, email, preferred_course, course_slug, season_id, created_at')
     .eq('source', 'course_payment')
     .eq('status', 'pending_transfer')
     .not('email', 'is', null)
@@ -46,7 +47,11 @@ export async function checkPendingTransferReminders(options: { dryRun?: boolean;
     throw error
   }
 
-  const leads = (data ?? []) as PendingTransferLead[]
+  const { data: archivedSeasons, error: seasonError } = await supabaseAdmin
+    .from('course_seasons').select('id').eq('status', 'archived')
+  if (seasonError) throw seasonError
+  const archivedIds = new Set((archivedSeasons ?? []).map((season) => season.id))
+  const leads = ((data ?? []) as PendingTransferLead[]).filter((lead) => !archivedIds.has(lead.season_id))
 
   if (options.dryRun) {
     return {

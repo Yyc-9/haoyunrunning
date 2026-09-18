@@ -169,13 +169,16 @@ export async function POST(request: NextRequest) {
 
   const { data: season, error: seasonError } = await supabaseAdmin
     .from('course_seasons')
-    .select('id, code')
+    .select('id, code, status')
     .eq('id', source.season_id)
     .eq('code', seasonCode)
     .maybeSingle()
 
   if (seasonError || !season) {
     return NextResponse.json({ error: '季度連結資料不一致。' }, { status: 409 })
+  }
+  if (season.status === 'archived') {
+    return NextResponse.json({ error: '此季度已封存，已停止同步。' }, { status: 409 })
   }
 
   const masterSecret = process.env.GOOGLE_FORMS_WEBHOOK_SECRET?.trim() ?? ''

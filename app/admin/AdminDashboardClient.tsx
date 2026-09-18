@@ -27,6 +27,7 @@ import AdminProductWorkspace from '@/components/admin/AdminProductWorkspace'
 import type { AdminEditableProduct, ProductEditState } from '@/lib/admin-products'
 import AdminBankReconciliation from '@/components/admin/AdminBankReconciliation'
 import AdminCoachDuty from '@/components/admin/AdminCoachDuty'
+import AdminSeasonOverview from '@/components/admin/AdminSeasonOverview'
 import AdminMobileDashboard from '@/components/admin/AdminMobileDashboard'
 import { paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
 import { announceSiteContentUpdated } from '@/lib/site-content-sync'
@@ -348,10 +349,6 @@ export default function AdminDashboardClient() {
     return () => window.clearTimeout(timer)
   }, [data, error, message])
 
-  const pendingOrders = useMemo(
-    () => data?.orders.filter((order) => order.status === 'pending_review') ?? [],
-    [data]
-  )
   const filteredStudents = useMemo(() => {
     const text = studentQuery.trim().toLowerCase()
 
@@ -392,14 +389,6 @@ export default function AdminDashboardClient() {
   const pendingCoachAccountCount = (data?.coachAccounts ?? []).filter((account) => account.status === 'pending').length
   const activeTabDefinition = tabs.find((tab) => tab.id === activeTab) ?? tabs[0]
   const ActiveTabIcon = activeTabDefinition.icon
-  const overviewMetrics = data ? [
-    { label: '已回報，待人工核對', value: data.overview.pendingOrderCount, tone: 'attention', featured: true },
-    { label: '已確認入帳', value: data.overview.approvedOrderCount, tone: 'success', featured: true },
-    { label: '商城商品', value: data.overview.productCount, tone: 'neutral', featured: false },
-    { label: '低庫存商品', value: data.overview.lowStockCount, tone: 'warning', featured: false },
-    { label: '收款帳戶', value: data.overview.paymentAccountCount, tone: 'neutral', featured: false },
-    { label: '學員總數', value: data.overview.studentCount, tone: 'neutral', featured: false },
-  ] : []
   async function runAction(id: string, action: Record<string, unknown>) {
     setUpdatingId(id)
     setError('')
@@ -646,43 +635,7 @@ export default function AdminDashboardClient() {
             aria-labelledby={`admin-tab-${activeTab}`}
             className="admin-dashboard-workspace"
           >
-            {activeTab === 'overview' && data ? (
-            <section className="space-y-8">
-              <div className="admin-overview-metrics grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                {overviewMetrics.map((metric) => (
-                  <div
-                    key={metric.label}
-                    data-tone={metric.tone}
-                    className={`admin-metric-card apple-card p-5 ${metric.featured ? 'xl:col-span-2' : ''}`}
-                  >
-                    <p className="text-sm font-semibold text-apple-gray-500">{metric.label}</p>
-                    <p className="mt-3 text-3xl font-black tabular-nums text-apple-gray-900">{metric.value}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="admin-operational-card apple-card p-6">
-                <div className="mb-5 flex items-center gap-3">
-                  <ShieldCheck className="h-5 w-5 text-emerald-600" />
-                  <h2 className="text-xl font-black text-apple-gray-900">已回報，待人工核對</h2>
-                </div>
-                {pendingOrders.length === 0 ? (
-                  <p className="text-sm text-apple-gray-600">目前沒有已回報、待人工核對的記錄。</p>
-                ) : (
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {pendingOrders.slice(0, 4).map((order) => (
-                      <div key={order.id} className="rounded-2xl bg-apple-gray-100 p-4">
-                        <p className="font-bold text-apple-gray-900">{order.studentName}</p>
-                        <p className="mt-1 text-sm text-apple-gray-600">
-                          {order.orderKind === 'shop' ? `${order.orderNumber} · 跑班自取` : `${order.courseName || '未填寫課程'} · 後五碼 ${order.transferLastFive || '-'}`}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </section>
-          ) : null}
+            {activeTab === 'overview' && data ? <AdminSeasonOverview data={data} /> : null}
 
           {activeTab === 'students' && data ? (
             <section className="apple-card overflow-hidden">

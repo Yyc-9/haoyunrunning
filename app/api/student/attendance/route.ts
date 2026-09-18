@@ -218,6 +218,10 @@ export async function POST(request: NextRequest) {
   if ('response' in context) return context.response
 
   const body = (await request.json().catch(() => ({}))) as StudentAttendanceRequest
+  if (!('testAccount' in context && context.testAccount)) {
+    const archiveError = await archivedSeasonResponse({ seasonId: context.season.id })
+    if (archiveError) return archiveError
+  }
   const intent = cleanText(body.intent, 40)
   const enrollmentId = cleanText(body.enrollmentId, 80)
   const enrollment = context.enrollments.find((item) => item.id === enrollmentId)
@@ -435,3 +439,4 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ error: '無法辨識這次點名操作。' }, { status: 400, headers: noStoreHeaders })
 }
+import { archivedSeasonResponse } from '@/lib/season-write-guard'
