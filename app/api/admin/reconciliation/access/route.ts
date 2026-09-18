@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
 
     return json({
       configured: Boolean(credential),
-      canManagePassword: !auth.readOnly && canManageFinancePassword(auth.adminProfile.email),
+      canManagePassword: auth.adminProfile.role === 'admin' && canManageFinancePassword(auth.adminProfile.email),
       readOnly: auth.readOnly,
       lockedUntil: isLocked ? lockedUntil : null,
       passwordRequirements: '12 至 128 個字元，至少包含一個英文字母與一個數字。',
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     const auth = await authenticateFinanceRequest(request)
     if ('response' in auth) return auth.response
 
-    if (!canManageFinancePassword(auth.adminProfile.email)) {
+    if (auth.adminProfile.role !== 'admin' || !canManageFinancePassword(auth.adminProfile.email)) {
       return json({ error: '只有指定的財務主管可以變更財務密碼。' }, { status: 403 })
     }
 
@@ -130,8 +130,8 @@ export async function POST(request: NextRequest) {
   const auth = await authenticateReconciliationUser(request)
   if ('response' in auth) return auth.response
 
-  if (auth.readOnly && body.action !== 'unlock') {
-    return NextResponse.json({ error: '此帳號僅可查看銀行對帳。' }, { status: 403, headers: financeNoStoreHeaders() })
+  if (auth.adminProfile.role !== 'admin' && body.action !== 'unlock') {
+    return json({ error: '只有指定的財務主管可以設定財務密碼。' }, { status: 403 })
   }
 
   const password = cleanPassword(body.password)

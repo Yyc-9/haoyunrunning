@@ -170,7 +170,7 @@ export async function authenticateReconciliationUser(request: NextRequest): Prom
 
   // Match the authenticated, confirmed email, never editable profile metadata.
   if (isFinanceViewer(user.email) && user.email_confirmed_at) {
-    return { user, adminProfile: { id: user.id, email: user.email!, name: '', role: 'student' }, readOnly: true }
+    return { user, adminProfile: { id: user.id, email: user.email!, name: '', role: 'student' }, readOnly: false }
   }
   const adminProfile = await getAdminProfile(user)
   if (!adminProfile) {
@@ -183,9 +183,6 @@ export async function authenticateReconciliationUser(request: NextRequest): Prom
 export async function authenticateFinanceRequest(request: NextRequest): Promise<FinanceRequestAuth | { response: NextResponse }> {
   const adminAuth = await authenticateReconciliationUser(request)
   if ('response' in adminAuth) return adminAuth
-  if (adminAuth.readOnly && request.method !== 'GET') {
-    return { response: jsonError('此帳號僅可查看銀行對帳，無法變更資料。', 403) }
-  }
 
   const credential = await getFinanceCredential()
   if (!credential) {

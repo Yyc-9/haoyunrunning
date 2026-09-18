@@ -16,6 +16,7 @@ import {
   Upload,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import FinanceSeasonRoster, { type FinanceRosterRow } from './FinanceSeasonRoster'
 
 type PaymentAccount = {
   id: string
@@ -107,6 +108,10 @@ type Candidate = {
 }
 
 type ReconciliationPayload = {
+  seasons: Array<{ id: string; name: string; status: string }>
+  selectedSeasonId: string
+  roster: FinanceRosterRow[]
+  paymentAccounts: PaymentAccount[]
   batches: ReconciliationBatch[]
   selectedBatchId: string
   transactions: BankTransaction[]
@@ -171,7 +176,6 @@ async function getAdminToken() {
 
 export default function AdminBankReconciliation({ paymentAccounts, readOnly: viewOnly = false }: { paymentAccounts: PaymentAccount[]; readOnly?: boolean }) {
   const [accessStatus, setAccessStatus] = useState<AccessStatus | null>(null)
-  const readOnly = viewOnly || accessStatus?.readOnly === true
   const [financeToken, setFinanceToken] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -179,6 +183,8 @@ export default function AdminBankReconciliation({ paymentAccounts, readOnly: vie
   const [newPassword, setNewPassword] = useState('')
   const [newPasswordConfirmation, setNewPasswordConfirmation] = useState('')
   const [data, setData] = useState<ReconciliationPayload | null>(null)
+  const archived = data?.seasons?.find(season => season.id === data.selectedSeasonId)?.status === 'archived'
+  const readOnly = viewOnly || accessStatus?.readOnly === true || archived
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<FilePreview | null>(null)
   const [mapping, setMapping] = useState<ColumnMapping | null>(null)
@@ -257,9 +263,11 @@ export default function AdminBankReconciliation({ paymentAccounts, readOnly: vie
     setBatchConfirmOpen(false)
   }, [data?.selectedBatchId])
 
-  const loadData = useCallback(async (batchId = '', tokenOverride?: string) => {
-    const query = batchId ? `?batchId=${encodeURIComponent(batchId)}` : ''
-    const payload = await authorizedFetch(`/api/admin/reconciliation${query}`, undefined, tokenOverride)
+  const loadData = useCallback(async (batchId = '', tokenOverride?: string, seasonId = '') => {
+    const query = new URLSearchParams()
+    if (batchId) query.set('batchId', batchId)
+    if (seasonId) query.set('seasonId', seasonId)
+    const payload = await authorizedFetch(`/api/admin/reconciliation?${query}`, undefined, tokenOverride)
     setData(payload as unknown as ReconciliationPayload)
   }, [authorizedFetch])
 
@@ -358,6 +366,10 @@ export default function AdminBankReconciliation({ paymentAccounts, readOnly: vie
 
   async function importFile() {
     if (!file || !preview || !mapping) return
+    if (!data?.selectedSeasonId || archived) {
+      setError('請選擇尚未封存的對帳季度。')
+      return
+    }
     if (mapping.amount === null || mapping.lastFive === null) {
       setError('請先指定入帳金額與匯款帳號／後五碼欄位。')
       return
@@ -373,6 +385,7 @@ export default function AdminBankReconciliation({ paymentAccounts, readOnly: vie
       formData.append('headerRow', String(headerRow))
       formData.append('mapping', JSON.stringify(mapping))
       formData.append('bankAccountId', bankAccountId)
+      formData.append('seasonId', data.selectedSeasonId)
       const payload = await authorizedFetch('/api/admin/reconciliation', {
         method: 'POST',
         body: formData,
@@ -401,7 +414,7 @@ export default function AdminBankReconciliation({ paymentAccounts, readOnly: vie
         body: JSON.stringify(body),
       })
       setMessage(typeof payload.message === 'string' ? payload.message : '對帳操作已完成。')
-      await loadData(data?.selectedBatchId ?? '')
+      await loadData(data?.selectedBatchId ?? '', undefined, data?.selectedSeasonId ?? '')
       return true
     } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : '對帳操作失敗。')
@@ -564,6 +577,28 @@ export default function AdminBankReconciliation({ paymentAccounts, readOnly: vie
         </div>
       ) : null}
 
+      <div className="apple-card space-y-3 p-5">
+        <label className="block text-sm font-bold">對帳季度
+          <select aria-label="對帳季度" className="apple-input mt-2" value={data?.selectedSeasonId ?? ''} disabled={Boolean(busy) || !data} onChange={async event => {
+            const seasonId = event.target.value
+            setBusy('season')
+            setError('')
+            setMessage('')
+            setFile(null); setPreview(null); setMapping(null); setBatchConfirmOpen(false)
+            if (fileInputRef.current) fileInputRef.current.value = ''
+            try { await loadData('', undefined, seasonId) }
+            catch (error) { setError(error instanceof Error ? error.message : '讀取季度失敗。') }
+            finally { setBusy('') }
+          }}>
+            {!data?.selectedSeasonId && <option value="">正在讀取季度…</option>}
+            {data?.seasons?.map(season => <option key={season.id} value={season.id}>{season.name}{season.status === 'archived' ? '（已封存）' : ''}</option>)}
+          </select>
+        </label>
+        <p className="text-xs leading-5 text-apple-gray-500">{archived ? '此季度已封存，僅供查閱，不能匯入或修改對帳。' : '上傳前請確認季度。銀行明細只會比對此季度的課程報名；唯一相符也需確認入帳後才列為已繳費。'}</p>
+      </div>
+
+      {data && <FinanceSeasonRoster rows={data.roster ?? []} />}
+
       {!readOnly && accessStatus.canManagePassword ? (
         <details className="apple-card overflow-hidden">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 text-sm font-black text-apple-gray-800 sm:px-5">
@@ -692,7 +727,7 @@ export default function AdminBankReconciliation({ paymentAccounts, readOnly: vie
                       className="apple-input py-2.5 text-sm"
                     >
                       <option value="">未指定</option>
-                      {paymentAccounts.map((account) => (
+                      {(data?.paymentAccounts ?? paymentAccounts).map((account) => (
                         <option key={account.id} value={account.id}>
                           {account.bank_name} · {account.label} · ••••{account.account_number.slice(-4)}
                         </option>
@@ -729,7 +764,7 @@ export default function AdminBankReconciliation({ paymentAccounts, readOnly: vie
                 <button
                   type="button"
                   onClick={importFile}
-                  disabled={busy === 'import'}
+                  disabled={Boolean(busy) || !data?.selectedSeasonId}
                   className="apple-button-primary inline-flex w-full items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {busy === 'import' ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
@@ -763,8 +798,12 @@ export default function AdminBankReconciliation({ paymentAccounts, readOnly: vie
                     value={data.selectedBatchId}
                     onChange={(event) => {
                       setBatchConfirmOpen(false)
-                      void loadData(event.target.value)
+                      setBusy('batch')
+                      void loadData(event.target.value, undefined, data.selectedSeasonId)
+                        .catch(error => setError(error instanceof Error ? error.message : '讀取批次失敗。'))
+                        .finally(() => setBusy(''))
                     }}
+                    disabled={Boolean(busy)}
                     className="apple-input w-full appearance-none pr-10"
                   >
                     {data.batches.map((batch) => (

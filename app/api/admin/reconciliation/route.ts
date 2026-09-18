@@ -12,29 +12,9 @@ import {
 import { authenticateFinanceRequest, financeNoStoreHeaders } from '@/lib/finance-access'
 import { transitionRemittanceStatus } from '@/lib/payment-workflow'
 import { supabaseAdmin } from '@/lib/supabase-server'
+import { financeSeasonContext } from '@/lib/finance-season-context'
 
 export const runtime = 'nodejs'
-
-type CourseOrder = {
-  id: string
-  name: string
-  email: string
-  preferred_course: string
-  calculated_amount: number | null
-  transfer_last_five: string
-  status: string
-  created_at: string
-}
-
-type ShopOrder = {
-  id: string
-  order_number: string
-  customer_name: string
-  total_amount: number | null
-  transfer_last_five: string | null
-  status: string
-  created_at: string
-}
 
 type MatchableOrder = {
   kind: 'course' | 'shop'
@@ -78,47 +58,59 @@ function cleanUuid(value: unknown) {
     : ''
 }
 
-async function loadReconciliationData(requestedBatchId = '') {
+async function loadReconciliationData(requestedBatchId = '', requestedSeasonId = '') {
+  if (requestedBatchId && !requestedSeasonId) {
+    const { data: batch, error } = await supabaseAdmin!.from('finance_reconciliation_batches').select('summary').eq('id', requestedBatchId).maybeSingle()
+    if (error) throw error
+    requestedSeasonId = batch?.summary?.seasonId ?? ''
+  }
+  const context = await financeSeasonContext(requestedSeasonId)
   const { data: batches, error: batchError } = await supabaseAdmin!
     .from('finance_reconciliation_batches')
     .select('*')
+    .eq('summary->>seasonId', context.selectedSeasonId)
     .order('uploaded_at', { ascending: false })
     .limit(20)
   if (batchError) throw batchError
 
   const batchId = requestedBatchId || batches?.[0]?.id || ''
-  if (!batchId) return { batches: batches ?? [], selectedBatchId: '', transactions: [], candidates: [], audit: [] }
+  if (requestedBatchId && !batches?.some(batch => batch.id === requestedBatchId)) throw new Error('此批次不屬於選擇的季度，或不在最近 20 個批次中。')
+  if (!batchId) return { ...context, batches: batches ?? [], selectedBatchId: '', transactions: [], candidates: [], audit: [] }
 
-  const [{ data: transactions, error: transactionError }, { data: audit, error: auditError }] = await Promise.all([
-    supabaseAdmin!
-      .from('finance_bank_transactions')
-      .select('*')
-      .eq('batch_id', batchId)
-      .order('row_number', { ascending: true }),
-    supabaseAdmin!
+  const transactions: Array<{ id: string; [key: string]: unknown }> = []
+  for (let from = 0; ; from += 500) {
+    const { data: rows, error } = await supabaseAdmin!.from('finance_bank_transactions')
+      .select('*').eq('batch_id', batchId).order('row_number').order('id').range(from, from + 499)
+    if (error) throw error
+    transactions.push(...(rows ?? []))
+    if (!rows || rows.length < 500) break
+  }
+  const { data: audit, error: auditError } = await supabaseAdmin!
       .from('finance_reconciliation_audit_log')
       .select('id, batch_id, transaction_id, actor_profile_id, action, details, created_at')
       .eq('batch_id', batchId)
       .order('created_at', { ascending: false })
-      .limit(50),
-  ])
-
-  if (transactionError) throw transactionError
+      .limit(50)
   if (auditError) throw auditError
   const transactionIds = (transactions ?? []).map((row) => row.id)
   const candidates: unknown[] = []
   for (const transactionIdChunk of chunks(transactionIds)) {
+    for (let from = 0; ; from += 500) {
     const { data, error } = await supabaseAdmin!
       .from('finance_reconciliation_candidates')
       .select('*')
       .in('transaction_id', transactionIdChunk)
       .order('match_quality', { ascending: true })
-      .order('created_at', { ascending: true })
+    .order('created_at', { ascending: true })
+    .order('id').range(from, from + 499)
     if (error) throw error
     candidates.push(...(data ?? []))
+    if (!data || data.length < 500) break
+    }
   }
 
   return {
+    ...context,
     batches: batches ?? [],
     selectedBatchId: batchId,
     transactions: transactions ?? [],
@@ -171,7 +163,7 @@ export async function GET(request: NextRequest) {
   try {
     const batchId = cleanUuid(new URL(request.url).searchParams.get('batchId'))
     return json({
-      ...(await loadReconciliationData(batchId)),
+      ...(await loadReconciliationData(batchId, cleanUuid(new URL(request.url).searchParams.get('seasonId')))),
       financeTokenExpiresAt: auth.financeTokenExpiresAt,
     })
   } catch (error) {
@@ -190,6 +182,11 @@ export async function POST(request: NextRequest) {
   let importCommitted = false
   try {
     const formData = await request.formData()
+    const seasonId = cleanUuid(formData.get('seasonId'))
+    if (!seasonId) return json({ error: '請先選擇對帳季度。' }, { status: 400 })
+    const context = await financeSeasonContext(seasonId)
+    const archiveError = await archivedSeasonResponse({ seasonId })
+    if (archiveError) return archiveError
     const file = formData.get('file')
     if (!(file instanceof File)) {
       return json({ error: '請選擇銀行下載的 XLSX 或 CSV 檔案。' }, { status: 400 })
@@ -244,7 +241,8 @@ export async function POST(request: NextRequest) {
         bank_account_id: bankAccountId || null,
         bank_account_label: bankAccountLabel.slice(0, 180),
         header_row: headerRow,
-        original_row_count: transactions.length + skippedRows.length,
+          original_row_count: transactions.length + skippedRows.length,
+          summary: { seasonId },
         uploaded_by: auth.adminProfile.id,
       })
       .select('id')
@@ -274,26 +272,12 @@ export async function POST(request: NextRequest) {
       uniqueTransactions.push(transaction)
     }
 
-    const [{ data: courseRows, error: courseError }, { data: shopRows, error: shopError }] = await Promise.all([
-      supabaseAdmin!
-        .from('signup_leads')
-        .select('id, name, email, preferred_course, calculated_amount, transfer_last_five, status, created_at')
-        .eq('source', 'course_payment')
-        .in('status', ['pending_review', 'approved'])
-        .neq('transfer_last_five', '')
-        .limit(5000),
-      supabaseAdmin!
-        .from('shop_orders')
-        .select('id, order_number, customer_name, total_amount, transfer_last_five, status, created_at')
-        .in('status', ['pending_review', 'approved'])
-        .not('transfer_last_five', 'is', null)
-        .limit(5000),
-    ])
-    if (courseError) throw courseError
-    if (shopError) throw shopError
+    // Match only the selected quarter. Other quarters and shop orders cannot
+    // become candidates for this bank import.
+    const courseRows = context.roster.filter(order => ['pending_review', 'approved'].includes(order.status))
 
     const orders: MatchableOrder[] = [
-      ...((courseRows ?? []) as CourseOrder[]).map((order) => ({
+      ...courseRows.map((order) => ({
         kind: 'course' as const,
         id: order.id,
         orderNumber: `課程-${order.id.slice(0, 8).toUpperCase()}`,
@@ -301,16 +285,6 @@ export async function POST(request: NextRequest) {
         label: order.preferred_course,
         expectedAmount: Math.max(0, Math.round(Number(order.calculated_amount ?? 0))),
         lastFive: order.transfer_last_five.replace(/\D/g, '').slice(-5),
-        status: order.status,
-      })),
-      ...((shopRows ?? []) as ShopOrder[]).map((order) => ({
-        kind: 'shop' as const,
-        id: order.id,
-        orderNumber: order.order_number,
-        customerName: order.customer_name,
-        label: '商城訂單',
-        expectedAmount: Math.max(0, Math.round(Number(order.total_amount ?? 0) / 100)),
-        lastFive: (order.transfer_last_five ?? '').replace(/\D/g, '').slice(-5),
         status: order.status,
       })),
     ].filter((order) => /^\d{5}$/.test(order.lastFive))
@@ -410,6 +384,7 @@ export async function POST(request: NextRequest) {
       return counts
     }, {})
     const summary = {
+      seasonId,
       statusCounts,
       skippedRows: skippedRows.slice(0, 100),
       duplicateRows: duplicateRows.slice(0, 100),
@@ -521,6 +496,22 @@ export async function PATCH(request: NextRequest) {
   const batchId = cleanUuid(body.batchId)
 
   try {
+    let targetBatchId = body.action === 'confirm_batch' ? batchId : ''
+    if (!targetBatchId && transactionId) {
+      const { data: transaction, error } = await supabaseAdmin!.from('finance_bank_transactions')
+        .select('batch_id').eq('id', transactionId).maybeSingle()
+      if (error) throw error
+      targetBatchId = transaction?.batch_id ?? ''
+    }
+    if (!targetBatchId) return json({ error: '找不到對帳批次。' }, { status: 400 })
+    const { data: targetBatch, error: targetBatchError } = await supabaseAdmin!.from('finance_reconciliation_batches')
+      .select('summary').eq('id', targetBatchId).maybeSingle()
+    if (targetBatchError) throw targetBatchError
+    const targetSeasonId = cleanUuid(targetBatch?.summary?.seasonId)
+    if (!targetSeasonId) return json({ error: '此批次沒有季度資料，請由管理員檢查。' }, { status: 409 })
+    const archiveError = await archivedSeasonResponse({ seasonId: targetSeasonId })
+    if (archiveError) return archiveError
+
     if (body.action === 'select_candidate') {
       const candidateId = cleanUuid(body.candidateId)
       if (!transactionId || !candidateId) {

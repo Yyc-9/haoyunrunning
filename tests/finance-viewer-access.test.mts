@@ -42,23 +42,25 @@ test('only the exact confirmed finance email gets scoped access; metadata cannot
   }
   const { exports } = authFor(viewer)
   const result = await exports.authenticateReconciliationUser(new Request('https://example.com'))
-  assert.equal(result.readOnly, true)
+  assert.equal(result.readOnly, false)
   assert.equal(result.adminProfile.role, 'student')
 })
 
-test('finance viewer requires a valid account-bound token and cannot write even with it', async () => {
+test('finance staff can reconcile only with a valid account-bound finance token', async () => {
   const { exports, credential } = authFor(viewer)
   const token = exports.createFinanceAccessToken(viewer.id, credential).token
   for (const method of ['POST', 'PATCH', 'DELETE']) {
     const result = await exports.authenticateFinanceRequest(new Request('https://example.com', { method, headers: { 'x-finance-authorization': token } }))
-    assert.equal(result.response.status, 403)
+    assert.equal(result.response, undefined)
   }
   for (const supplied of ['', token + 'tampered', exports.createFinanceAccessToken('someone-else', credential).token]) {
-    const result = await exports.authenticateFinanceRequest(new Request('https://example.com', { headers: { 'x-finance-authorization': supplied } }))
-    assert.equal(result.response.status, 403)
+    for (const method of ['GET', 'POST', 'PATCH']) {
+      const result = await exports.authenticateFinanceRequest(new Request('https://example.com', { method, headers: { 'x-finance-authorization': supplied } }))
+      assert.equal(result.response.status, 403)
+    }
   }
   const result = await exports.authenticateFinanceRequest(new Request('https://example.com', { headers: { 'x-finance-authorization': token } }))
-  assert.equal(result.readOnly, true)
+  assert.equal(result.readOnly, false)
 })
 
 test('existing administrator reconciliation writes still work', async () => {
@@ -66,4 +68,27 @@ test('existing administrator reconciliation writes still work', async () => {
   const token = exports.createFinanceAccessToken('user', credential).token
   const result = await exports.authenticateFinanceRequest(new Request('https://example.com', { method: 'PATCH', headers: { 'x-finance-authorization': token } }))
   assert.equal(result.readOnly, false)
+})
+
+test('finance staff cannot create or change the shared finance password', async () => {
+  const auth = { user: viewer, adminProfile: { id: viewer.id, role: 'student', email: viewer.email }, readOnly: false }
+  const routes = {} as { POST: (request: Request) => Promise<Response> }
+  const source = readFileSync(new URL('../app/api/admin/reconciliation/access/route.ts', import.meta.url), 'utf8')
+  vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText, {
+    exports: routes, require(name: string) {
+      if (name === 'next/server') return { NextResponse: { json: (body: unknown, init: ResponseInit) => Response.json(body, init) } }
+      if (name === '@/lib/supabase-server') return { supabaseAdmin: {} }
+      if (name === '@/lib/finance-access') return {
+        authenticateReconciliationUser: async () => auth,
+        authenticateFinanceRequest: async () => auth,
+        // Even a permissive manager-email fallback must not grant staff this permission.
+        canManageFinancePassword: () => true,
+        financeNoStoreHeaders: () => ({ 'Cache-Control': 'no-store' }),
+      }
+      throw new Error(name)
+    },
+  })
+  for (const action of ['setup', 'change_password']) {
+    assert.equal((await routes.POST(new Request('https://test/access', { method: 'POST', body: JSON.stringify({ action }) }))).status, 403)
+  }
 })
