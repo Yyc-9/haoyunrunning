@@ -25,6 +25,7 @@ export interface CartContextType {
   updateQuantity: (id: string, quantity: number) => void
   clear: () => void
   isEmpty: boolean
+  isReady: boolean
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -39,12 +40,12 @@ function cleanLegacyCartName(name: string, size?: string) {
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
+  const [isReady, setIsReady] = useState(false)
 
   useEffect(() => {
-    const savedCart = window.localStorage.getItem('goodluck-cart')
-    if (!savedCart) return
-
     try {
+      const savedCart = window.localStorage.getItem('goodluck-cart')
+      if (!savedCart) return
       const parsed = JSON.parse(savedCart) as CartItem[]
       if (Array.isArray(parsed)) {
         setItems(
@@ -59,13 +60,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         )
       }
     } catch {
-      window.localStorage.removeItem('goodluck-cart')
+      // Storage may be unavailable in private browsing; the cart still works in memory.
+    } finally {
+      setIsReady(true)
     }
   }, [])
 
   useEffect(() => {
-    window.localStorage.setItem('goodluck-cart', JSON.stringify(items))
-  }, [items])
+    if (!isReady) return
+    try { window.localStorage.setItem('goodluck-cart', JSON.stringify(items)) } catch { /* Keep the in-memory cart usable. */ }
+  }, [items, isReady])
 
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
@@ -100,7 +104,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clear = useCallback(() => {
     setItems([])
-    window.localStorage.removeItem('goodluck-cart')
+    try { window.localStorage.removeItem('goodluck-cart') } catch { /* Keep the in-memory cart usable. */ }
   }, [])
 
   const value: CartContextType = {
@@ -112,6 +116,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     updateQuantity,
     clear,
     isEmpty: items.length === 0,
+    isReady,
   }
 
   return (

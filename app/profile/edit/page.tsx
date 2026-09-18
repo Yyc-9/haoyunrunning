@@ -138,9 +138,9 @@ export default function EditProfilePage() {
     }
   }
 
-  if (isLoading || isAccountLoading) return <main className="mobile-focused-main flex min-h-screen items-center justify-center bg-apple-gray-50 pt-24"><MobileContextHeader backHref="/profile" backLabel="我的" title="修改跑者資料" /><Loader2 className="h-9 w-9 animate-spin text-black" /></main>
+  if (isLoading || (isLoggedIn && isAccountLoading)) return <main className="mobile-focused-main flex min-h-screen items-center justify-center gap-3 bg-apple-gray-50 pt-24"><MobileContextHeader backHref="/profile" backLabel="我的" title="修改跑者資料" /><Loader2 aria-hidden="true" className="h-6 w-6 animate-spin text-black" /><p role="status">正在讀取跑者資料</p></main>
 
-  if (!isLoggedIn) return <main className="mobile-focused-main min-h-screen bg-apple-gray-50 px-4 pt-32 text-center"><MobileContextHeader backHref="/profile" backLabel="我的" title="修改跑者資料" /><h1 className="text-2xl font-black">請先登入</h1><Link href="/?auth=login" className="apple-button-primary mt-6">登入帳戶</Link></main>
+  if (!isLoggedIn) return <main className="mobile-focused-main min-h-screen bg-apple-gray-50 px-4 pt-32 text-center"><MobileContextHeader backHref="/profile" backLabel="我的" title="修改跑者資料" /><h1 className="text-2xl font-black">登入後修改跑者資料</h1><p className="mt-3 text-sm text-apple-gray-600">登入後會留在此頁，繼續編輯你的跑者檔案。</p><Link href="/profile/edit?auth=login" className="apple-button-primary mt-6">登入帳戶</Link></main>
 
   return (
     <main className="mobile-focused-main min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">

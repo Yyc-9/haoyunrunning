@@ -7,7 +7,6 @@ import {
   ChevronDown,
   Landmark,
   LockKeyhole,
-  MessageCircle,
   Send,
   Store,
 } from 'lucide-react'
@@ -29,7 +28,7 @@ type CreatedOrder = {
 }
 
 export default function CheckoutPage() {
-  const { items, itemCount, total, clear, removeItem } = useCart()
+  const { items, itemCount, total, clear, removeItem, isReady } = useCart()
   const { brand } = useSiteContent()
   const [form, setForm] = useState({ customerName: '', contact: '', email: '' })
   const [customerNote, setCustomerNote] = useState('')
@@ -119,6 +118,21 @@ export default function CheckoutPage() {
       setIsSubmitting(false)
     }
   }
+
+  if (!isReady) return <main className="min-h-screen px-5 pt-32 text-center"><p role="status">正在讀取購物車</p></main>
+
+  if (order || items.length === 0) return (
+    <main className="mobile-focused-main min-h-screen bg-apple-gray-50 px-5 pb-16 pt-32">
+      <MobileContextHeader backHref="/shop" backLabel="商店" title={order ? '訂單已送出' : '購物車'} />
+      <section className="mx-auto mt-6 max-w-xl rounded-2xl border border-black/10 bg-white p-7 text-center sm:mt-0 sm:p-10" role="status">
+        {order ? <CheckCircle2 aria-hidden="true" className="mx-auto h-10 w-10 text-emerald-600" /> : <Store aria-hidden="true" className="mx-auto h-10 w-10 text-apple-gray-400" />}
+        <h1 className="mt-5 text-2xl font-black">{order ? '訂單已送出，等待入帳核對' : '購物車還沒有商品'}</h1>
+        <p className="mt-3 text-sm leading-7 text-apple-gray-600">{order ? `訂單編號：${order.orderNumber}。請保留此編號；財務核對後，團隊會透過你填寫的聯絡方式確認自取安排。` : '先到商店選擇商品，再回來確認品項與金額。尚未選購商品前，不需要填寫資料或匯款。'}</p>
+        <Link href="/shop" className="apple-button-primary mt-6 w-full">{order ? '返回商店' : '前往商店'}</Link>
+        <a href={brand.instagramUrl} target="_blank" rel="noreferrer" className="mt-4 inline-flex min-h-11 items-center text-sm font-bold text-apple-blue">聯絡好運 Instagram</a>
+      </section>
+    </main>
+  )
 
   return (
     <main className="mobile-focused-main min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
@@ -224,19 +238,7 @@ export default function CheckoutPage() {
 	                <span>付款方式為銀行匯款，商品維持跑班自取；完成入帳核對後，團隊會另行通知取貨安排。</span>
               </div>
 
-              {order ? (
-                <div className="mb-4 flex items-start gap-3 rounded-lg bg-emerald-50 p-4 text-emerald-800">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
-                  <div>
-	                    <p className="font-bold">匯款資料與跑班自取訂單已送出</p>
-                    <p className="mt-1 text-sm">訂單編號：{order.orderNumber}</p>
-	                    <p className="mt-2 text-sm leading-6">財務核對入帳後，團隊會透過你填寫的聯絡方式確認自取時間與地點。</p>
-                    <a href={brand.instagramUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold underline underline-offset-4"><MessageCircle className="h-4 w-4" />需要協助請聯絡官方 Instagram</a>
-                  </div>
-                </div>
-              ) : null}
-
-              {error ? <div className="mb-4 rounded-lg bg-red-50 p-4 text-sm font-semibold leading-6 text-red-700">{error}</div> : null}
+              {error ? <div role="alert" className="mb-4 rounded-lg bg-red-50 p-4 text-sm font-semibold leading-6 text-red-700">{error}</div> : null}
 
               <button type="button" onClick={submitOrder} disabled={isSubmitting || items.length === 0 || !form.customerName.trim() || !form.contact.trim() || transferLastFive.length !== 5 || !catalog || Boolean(catalogError) || optionIssues.length > 0} className="checkout-inline-submit apple-button-primary mb-3 w-full gap-2 disabled:cursor-not-allowed disabled:opacity-60">
                 <Send className="h-4 w-4" />

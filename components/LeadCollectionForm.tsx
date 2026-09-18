@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useRef, useState } from 'react'
 import { Send } from 'lucide-react'
 
 type LeadFormLabels = {
@@ -51,6 +51,10 @@ export default function LeadCollectionForm({ source, labels, selectField }: Lead
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [isSuccess, setIsSuccess] = useState(false)
+  const feedbackRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (error || isSuccess) feedbackRef.current?.focus()
+  }, [error, isSuccess])
 
   function updateField(field: keyof typeof initialForm, value: string) {
     setForm((current) => ({ ...current, [field]: value }))
@@ -62,7 +66,7 @@ export default function LeadCollectionForm({ source, labels, selectField }: Lead
     setIsSuccess(false)
 
     if (!form.name.trim()) {
-      setError(labels.name)
+      setError(`請填寫${labels.name}。`)
       return
     }
 
@@ -102,6 +106,7 @@ export default function LeadCollectionForm({ source, labels, selectField }: Lead
           <label className="block">
             <span className="text-sm font-bold text-apple-gray-700">{labels.name}</span>
             <input
+              autoComplete="name"
               value={form.name}
               onChange={(event) => updateField('name', event.target.value)}
               className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-apple-blue"
@@ -110,6 +115,8 @@ export default function LeadCollectionForm({ source, labels, selectField }: Lead
           <label className="block">
             <span className="text-sm font-bold text-apple-gray-700">{labels.phone}</span>
             <input
+              type="tel"
+              autoComplete="tel"
               value={form.phone}
               onChange={(event) => updateField('phone', event.target.value)}
               className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-apple-blue"
@@ -119,6 +126,7 @@ export default function LeadCollectionForm({ source, labels, selectField }: Lead
             <span className="text-sm font-bold text-apple-gray-700">{labels.email}</span>
             <input
               type="email"
+              autoComplete="email"
               value={form.email}
               onChange={(event) => updateField('email', event.target.value)}
               className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-apple-blue"
@@ -190,9 +198,9 @@ export default function LeadCollectionForm({ source, labels, selectField }: Lead
         </label>
       </section>
 
-      {error ? <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">{error}</p> : null}
+      {error ? <div ref={feedbackRef} tabIndex={-1} role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">{error}</div> : null}
       {isSuccess ? (
-        <div className="rounded-2xl bg-emerald-50 px-4 py-4 text-emerald-700">
+        <div ref={feedbackRef} tabIndex={-1} role="status" className="rounded-2xl bg-emerald-50 px-4 py-4 text-emerald-700">
           <p className="font-bold">{labels.successTitle}</p>
           <p className="mt-1 text-sm">{labels.successDescription}</p>
         </div>

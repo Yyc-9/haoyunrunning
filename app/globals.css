@@ -1069,12 +1069,14 @@
   }
 
   .kinetic-page .course-filter-pill:hover {
-    transform: translate3d(0, -0.25rem, 0) scale(1.075);
-    box-shadow: 0 0.8rem 1.8rem rgb(3 18 26 / 16%), 0 0 0 0.14rem var(--kinetic-accent-soft);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgb(3 18 26 / 10%);
   }
 
   .kinetic-page .course-filter-pill[aria-pressed='true'] {
-    animation: kinetic-ring-pulse 2.8s ease-in-out infinite;
+    animation: none;
+    background: #0b2d3c;
+    color: white;
   }
 
   .kinetic-page .course-schedule-board {
@@ -2073,24 +2075,24 @@
     border-radius: 9px !important;
   }
 
-  .course-filter-deck + .space-y-3 {
+  .course-filter-deck ~ .space-y-3 {
     gap: 12px;
   }
 
-  .course-filter-deck + .space-y-3 > section {
+  .course-filter-deck ~ .space-y-3 > section {
     border-radius: 12px;
     box-shadow: none;
   }
 
-  .course-filter-deck + .space-y-3 > section > h3 {
+  .course-filter-deck ~ .space-y-3 > section > h3 {
     padding: 11px 14px;
   }
 
-  .course-filter-deck + .space-y-3 > section > div {
+  .course-filter-deck ~ .space-y-3 > section > div {
     padding: 10px;
   }
 
-  .course-filter-deck + .space-y-3 a {
+  .course-filter-deck ~ .space-y-3 a {
     min-height: 118px;
     padding: 13px;
   }
@@ -2225,20 +2227,22 @@
     padding: 12px;
   }
 
+  .mobile-activity-page .mobile-lead-form,
+  .mobile-activity-page .mobile-lead-form:hover {
+    transform: none;
+    filter: none;
+  }
+
   .mobile-lead-form {
-    padding-bottom: calc(var(--mobile-action-height) + 12px) !important;
+    padding-bottom: 24px !important;
     backdrop-filter: none;
   }
 
   .mobile-lead-form > button[type='submit'] {
-    position: fixed;
-    right: 14px;
-    bottom: calc(10px + var(--mobile-safe-bottom));
-    left: 14px;
-    z-index: 50;
-    width: auto;
+    position: static;
+    width: 100%;
     min-height: 52px;
-    margin: 0;
+    margin-top: 20px;
     border-radius: 10px;
     box-shadow: 0 -6px 20px rgb(0 0 0 / 8%);
   }

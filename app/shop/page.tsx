@@ -18,7 +18,7 @@ function formatPrice(product: ShopProduct) {
 }
 
 export default function ShopPage() {
-  const { pageMedia } = useSiteContent()
+  const { pageMedia, brand } = useSiteContent()
   const [products, setProducts] = useState<ShopProduct[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -26,24 +26,29 @@ export default function ShopPage() {
   const [category, setCategory] = useState('')
   const [sort, setSort] = useState<SortOption>('featured')
   const [isCartOpen, setIsCartOpen] = useState(false)
+  const [loadAttempt, setLoadAttempt] = useState(0)
 
   useEffect(() => {
     let isActive = true
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 15000)
+    setIsLoading(true)
+    setLoadError('')
 
-    fetch('/api/shop/products', { cache: 'no-store' })
+    fetch('/api/shop/products', { cache: 'no-store', signal: controller.signal })
       .then(async (response) => {
         const payload = (await response.json().catch(() => ({}))) as { products?: ShopProduct[] }
-        if (!response.ok) throw new Error('商品資料載入失敗。')
+        if (!response.ok || !Array.isArray(payload.products)) throw new Error('商品資料載入失敗。')
         if (isActive && payload.products) setProducts(payload.products)
       })
       .catch((error) => {
         console.error('Load shop products failed:', error)
         if (isActive) setLoadError('商品資料暫時無法載入，請稍後重新整理。')
       })
-      .finally(() => { if (isActive) setIsLoading(false) })
+      .finally(() => { window.clearTimeout(timeout); if (isActive) setIsLoading(false) })
 
-    return () => { isActive = false }
-  }, [])
+    return () => { isActive = false; window.clearTimeout(timeout); controller.abort() }
+  }, [loadAttempt])
 
   const categories = useMemo(() => Array.from(new Set(products.map((product) => product.category).filter(Boolean))), [products])
   const visibleProducts = useMemo(() => {
@@ -82,7 +87,7 @@ export default function ShopPage() {
       </section>
 
       <section className="shop-catalog container mx-auto px-4 py-8 sm:py-10" aria-label="商品列表">
-        <div className="shop-toolbar kinetic-reveal grid gap-3 border-b border-black/10 pb-6 md:grid-cols-[minmax(260px,1fr)_auto_auto] md:items-center">
+        {products.length > 0 ? <div className="shop-toolbar kinetic-reveal grid gap-3 border-b border-black/10 pb-6 md:grid-cols-[minmax(260px,1fr)_auto_auto] md:items-center">
           <label className="shop-search relative block max-w-xl">
             <span className="sr-only">搜尋商品</span>
             <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-apple-gray-400" />
@@ -102,10 +107,10 @@ export default function ShopPage() {
             </select>
             <ChevronDown aria-hidden="true" className="shop-sort-icon pointer-events-none absolute right-3 top-1/2 hidden h-4 w-4 -translate-y-1/2" />
           </div>
-        </div>
+        </div> : null}
 
         {isLoading ? (
-          <div aria-label="商品資料載入中" className="shop-product-grid grid grid-cols-2 gap-x-3 gap-y-8 pt-7 md:grid-cols-3 md:gap-x-5 lg:grid-cols-4">
+          <div role="status" aria-label="商品資料載入中" className="shop-product-grid grid grid-cols-2 gap-x-3 gap-y-8 pt-7 md:grid-cols-3 md:gap-x-5 lg:grid-cols-4">
             {Array.from({ length: 4 }, (_, index) => (
               <div key={index} className="animate-pulse">
                 <div className="shop-product-placeholder aspect-square rounded-md bg-apple-gray-100" />
@@ -116,9 +121,18 @@ export default function ShopPage() {
             ))}
           </div>
         ) : loadError ? (
-          <div className="flex min-h-80 flex-col items-center justify-center text-center">
+          <div role="alert" className="flex min-h-80 flex-col items-center justify-center text-center">
             <Package className="h-12 w-12 text-apple-gray-300" />
             <p className="mt-4 font-black text-apple-gray-900">{loadError}</p>
+            <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)} className="apple-button-primary mt-5">重新載入商品</button>
+          </div>
+        ) : products.length === 0 ? (
+          <div className="mx-auto flex max-w-xl flex-col items-center rounded-2xl border border-black/10 bg-apple-gray-50 px-6 py-10 text-center sm:py-14">
+            <Package aria-hidden="true" className="h-10 w-10 text-apple-gray-400" />
+            <h2 className="mt-5 text-xl font-black text-apple-gray-950">裝備與補給，準備中</h2>
+            <p className="mt-3 max-w-sm text-sm leading-7 text-apple-gray-600">目前尚無上架商品。想詢問跑班裝備或補給，可以直接聯絡好運 Instagram。</p>
+            <a href={brand.instagramUrl} target="_blank" rel="noreferrer" className="apple-button-primary mt-6 w-full sm:w-auto">詢問裝備與補給</a>
+            <Link href="/courses" className="mt-3 inline-flex min-h-11 items-center text-sm font-bold text-apple-blue">先看看訓練課程 <ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" /></Link>
           </div>
         ) : visibleProducts.length > 0 ? (
           <div className="shop-product-grid grid grid-cols-2 gap-x-3 gap-y-8 pt-7 md:grid-cols-3 md:gap-x-5 lg:grid-cols-4">

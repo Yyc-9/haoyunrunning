@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowRight, Minus, Package, Plus, ShoppingBag, Trash2, X } from 'lucide-react'
 import { useCart, type CartItem } from '@/app/cart-provider'
 import { useToast } from '@/app/toast-provider'
@@ -27,6 +27,7 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const reducedMotion = useReducedMotion()
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)')
@@ -132,10 +133,10 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
               onClick={() => onOpenChange(false)}
             />
             <motion.aside
-              initial={isMobile ? { x: 0, y: '100%' } : { x: '100%', y: 0 }}
+              initial={reducedMotion ? { x: 0, y: 0 } : isMobile ? { x: 0, y: '100%' } : { x: '100%', y: 0 }}
               animate={{ x: 0, y: 0 }}
-              exit={isMobile ? { x: 0, y: '100%' } : { x: '100%', y: 0 }}
-              transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+              exit={reducedMotion ? { x: 0, y: 0 } : isMobile ? { x: 0, y: '100%' } : { x: '100%', y: 0 }}
+              transition={reducedMotion ? { duration: 0 } : { type: 'spring', damping: 28, stiffness: 260 }}
               className="shop-cart-sheet absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-white shadow-2xl"
               role="dialog"
               aria-modal="true"
@@ -213,11 +214,12 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
                               >
                                 <Minus className="h-4 w-4" />
                               </button>
-                              <span className="w-10 text-center text-sm font-black">{item.quantity}</span>
+                              <span aria-live="polite" className="w-10 text-center text-sm font-black">{item.quantity}</span>
                               <button
                                 type="button"
                                 onClick={() => changeQuantity(item, item.quantity + 1)}
-                                className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-apple-gray-800 shadow-sm"
+                                disabled={remaining === 0}
+                                className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-apple-gray-800 shadow-sm disabled:cursor-not-allowed disabled:opacity-40"
                                 aria-label="增加數量"
                               >
                                 <Plus className="h-4 w-4" />

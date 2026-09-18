@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { ArrowUpRight, Clock3, MapPin } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
 import { useSiteContent } from '@/app/site-content-provider'
-import { compareCourses, displayCourseCityFilter, displayCourseLocation, displayCourseTime, getCourseCityOptions, normalizeCourseLocation, orderedWeekdays } from '@/lib/course-sort'
+import { compareCourses, courseMatchesCity, displayCourseCityFilter, displayCourseLocation, displayCourseTime, getCourseCityOptions, orderedWeekdays } from '@/lib/course-sort'
 import { formatCourseWeekday } from '@/lib/course-weekday'
 
 const weekdays = orderedWeekdays
@@ -47,8 +47,8 @@ export default function CoursesTable() {
       const saved = sessionStorage.getItem('goodluck-courses-view')
       if (saved) {
         const parsed = JSON.parse(saved) as { levelFilter?: LevelFilter; cityFilter?: string; scrollY?: number }
-        if (parsed.levelFilter) setLevelFilter(parsed.levelFilter)
-        if (parsed.cityFilter) setCityFilter(parsed.cityFilter)
+        if (parsed.levelFilter && ['all', 'beginner', 'advanced', 'elite'].includes(parsed.levelFilter)) setLevelFilter(parsed.levelFilter)
+        if (parsed.cityFilter && !/[、,，/／]/.test(parsed.cityFilter)) setCityFilter(parsed.cityFilter)
         if (typeof parsed.scrollY === 'number') window.requestAnimationFrame(() => window.scrollTo({ top: parsed.scrollY }))
       }
     } catch {
@@ -78,7 +78,7 @@ export default function CoursesTable() {
   const cities = useMemo(() => getCourseCityOptions(courses.map((course) => course.location)), [courses])
   const filteredCourses = useMemo(() => courses.filter((course) => {
     if (levelFilter !== 'all' && getCourseLevel(course.name) !== levelFilter) return false
-    if (cityFilter !== 'all' && normalizeCourseLocation(course.location) !== cityFilter) return false
+    if (!courseMatchesCity(course.location, cityFilter)) return false
     return true
   }).sort(compareCourses), [cityFilter, courses, levelFilter])
 
@@ -120,6 +120,11 @@ export default function CoursesTable() {
         </div>
       </div>
 
+      <div className="flex items-center justify-between gap-3 text-sm">
+        <p role="status" aria-live="polite" className="font-bold text-apple-gray-600">找到 {filteredCourses.length} 個班級</p>
+        {levelFilter !== 'all' || cityFilter !== 'all' ? <button type="button" onClick={() => { setLevelFilter('all'); setCityFilter('all') }} className="min-h-11 rounded-lg px-3 font-bold text-apple-blue hover:bg-apple-gray-50">清除篩選</button> : null}
+      </div>
+
       <div className="space-y-3 md:hidden">
         {weekdays.map((weekday) => {
           const weekdayCourses = filteredCourses.filter((course) => course.weekday.replace('周', '週') === weekday)
@@ -155,7 +160,7 @@ export default function CoursesTable() {
         })}
       </div>
 
-      <div className="course-schedule-board kinetic-reveal hidden overflow-x-auto rounded-lg border border-black/10 bg-white shadow-sm md:block lg:rounded-2xl">
+      <div className={`course-schedule-board kinetic-reveal hidden overflow-x-auto rounded-lg border border-black/10 bg-white shadow-sm ${filteredCourses.length ? 'md:block' : ''} lg:rounded-2xl`}>
         <div className="min-w-[940px]">
           <div className="course-schedule-head grid grid-cols-7 border-b border-black/10 bg-black text-white lg:bg-[#0b2d3c]">
             {weekdays.map((weekday) => <div key={weekday} className="flex min-h-16 items-center justify-center border-r border-white/15 px-3 text-sm font-black last:border-r-0">{weekdayText(weekday)}</div>)}
@@ -197,7 +202,7 @@ export default function CoursesTable() {
       </div>
 
       {filteredCourses.length === 0 ? (
-        <div className="rounded-lg border border-black/10 bg-apple-gray-50 p-8 text-center text-apple-gray-600">暫無符合篩選條件的課程</div>
+        <div className="rounded-xl border border-black/10 bg-apple-gray-50 p-8 text-center"><h3 className="font-black text-apple-gray-900">暫無符合篩選條件的課程</h3><p className="mt-2 text-sm leading-6 text-apple-gray-600">試試其他城市或程度，或清除篩選查看所有班級。</p></div>
       ) : null}
     </div>
   )

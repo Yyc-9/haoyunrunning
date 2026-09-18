@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { X, User, Mail, Phone, Lock, Award, Eye, EyeOff, ChevronRight, UsersRound } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '@/app/providers'
@@ -49,6 +49,10 @@ function getAuthErrorMessage(error: unknown, fallbackMessage: string, emailNotCo
 }
 
 export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const onCloseRef = useRef(onClose)
+  const reducedMotion = useReducedMotion()
+  useEffect(() => { onCloseRef.current = onClose }, [onClose])
   const [activeMode, setActiveMode] = useState<'login' | 'register'>(mode)
   const [showPassword, setShowPassword] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -92,13 +96,28 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
   }, [isOpen, mode])
 
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = 'unset'
+    if (!isOpen) return
+    const previousOverflow = document.body.style.overflow
+    const previousFocus = document.activeElement as HTMLElement | null
+    document.body.style.overflow = 'hidden'
+    const frame = window.requestAnimationFrame(() => dialogRef.current?.focus())
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); onCloseRef.current(); return }
+      if (event.key !== 'Tab') return
+      const dialog = dialogRef.current
+      const controls = dialog ? Array.from(dialog.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), [tabindex="0"]')).filter((element) => element.getClientRects().length > 0) : []
+      const first = controls[0]
+      const last = controls[controls.length - 1]
+      if (!first) { event.preventDefault(); return }
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) { event.preventDefault(); last.focus() }
+      else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialog)) { event.preventDefault(); first.focus() }
     }
+    document.addEventListener('keydown', handleKey)
     return () => {
-      document.body.style.overflow = 'unset'
+      window.cancelAnimationFrame(frame)
+      document.removeEventListener('keydown', handleKey)
+      document.body.style.overflow = previousOverflow
+      previousFocus?.focus()
     }
   }, [isOpen])
 
@@ -198,16 +217,22 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm"
+            className="fixed inset-0 z-[90] bg-black/40 backdrop-blur-sm"
           />
 
           {/* Modal */}
-          <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-4">
+          <div className="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto p-3 sm:p-4" onClick={(event) => { if (event.target === event.currentTarget) onClose() }}>
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
+              ref={dialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="auth-dialog-title"
+              tabIndex={-1}
+              initial={{ opacity: 0, scale: reducedMotion ? 1 : 0.97 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative max-h-[calc(100vh-1.5rem)] w-full max-w-md overflow-y-auto rounded-3xl bg-white"
+              exit={{ opacity: 0, scale: reducedMotion ? 1 : 0.97 }}
+              transition={{ duration: reducedMotion ? 0 : 0.18 }}
+              className="relative max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-3xl bg-white shadow-2xl outline-none"
             >
               {/* Header */}
               <div className="border-b border-apple-gray-200 p-4 sm:p-6">
@@ -217,7 +242,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                       <User className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold">
+                      <h2 id="auth-dialog-title" className="text-xl font-bold">
                         {activeMode === 'login' ? t.auth.loginTitle : t.auth.registerTitle}
                       </h2>
                       <p className="text-sm text-apple-gray-500">
@@ -231,7 +256,9 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={onClose}
-                    className="rounded-full p-2 hover:bg-apple-gray-100 transition-colors duration-200"
+                    type="button"
+                    aria-label="關閉登入視窗"
+                    className="flex h-11 w-11 items-center justify-center rounded-full hover:bg-apple-gray-100 transition-colors duration-200"
                   >
                     <X className="h-5 w-5 text-apple-gray-500" />
                   </motion.button>
@@ -243,6 +270,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                     <motion.button
                       key={mode}
                       type="button"
+                      aria-pressed={activeMode === mode}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => {
                         setActiveMode(mode)
@@ -268,7 +296,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                   {activeMode === 'register' && (
                     <>
                       <div>
-                        <label className="block text-sm font-medium text-apple-gray-700 mb-2">
+                        <label htmlFor="auth-name" className="block text-sm font-medium text-apple-gray-700 mb-2">
                           {t.auth.name}
                         </label>
                         <div className="relative">
@@ -276,6 +304,8 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                           <input
                             type="text"
                             name="name"
+                            id="auth-name"
+                            autoComplete="name"
                             value={formData.name}
                             onChange={handleChange}
                             placeholder={t.auth.namePlaceholder}
@@ -286,7 +316,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-apple-gray-700 mb-2">
+                        <label htmlFor="auth-phone" className="block text-sm font-medium text-apple-gray-700 mb-2">
                           {t.auth.phone}
                         </label>
                         <div className="relative">
@@ -294,6 +324,8 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                           <input
                             type="tel"
                             name="phone"
+                            id="auth-phone"
+                            autoComplete="tel"
                             value={formData.phone}
                             onChange={handleChange}
                             placeholder={t.auth.phonePlaceholder}
@@ -304,12 +336,13 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-apple-gray-700 mb-2">
+                        <label htmlFor="auth-gender" className="block text-sm font-medium text-apple-gray-700 mb-2">
                           {t.auth.gender}
                         </label>
                         <div className="relative">
                           <select
                             name="gender"
+                            id="auth-gender"
                             value={formData.gender}
                             onChange={handleChange}
                             className="apple-input"
@@ -325,7 +358,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-apple-gray-700 mb-2">
+                        <label htmlFor="auth-pb" className="block text-sm font-medium text-apple-gray-700 mb-2">
                           {t.auth.pb}
                         </label>
                         <div className="relative">
@@ -333,6 +366,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                           <input
                             type="text"
                             name="pb"
+                            id="auth-pb"
                             value={formData.pb}
                             onChange={handleChange}
                             placeholder={t.auth.pbPlaceholder}
@@ -342,13 +376,14 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                       </div>
 
                       <div>
-                        <label className="mb-2 block text-sm font-medium text-apple-gray-700">
+                        <label htmlFor="auth-coach" className="mb-2 block text-sm font-medium text-apple-gray-700">
                           綁定教練（選填）
                         </label>
                         <div className="relative">
                           <UsersRound className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-apple-gray-400" />
                           <select
                             name="coachId"
+                            id="auth-coach"
                             value={formData.coachId}
                             onChange={handleChange}
                             className="apple-input pl-10"
@@ -367,7 +402,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
 
                   {/* Email/Password fields (shown in both modes) */}
                   <div>
-                    <label className="block text-sm font-medium text-apple-gray-700 mb-2">
+                    <label htmlFor="auth-email" className="block text-sm font-medium text-apple-gray-700 mb-2">
                       {t.auth.email}
                     </label>
                     <div className="relative">
@@ -375,6 +410,8 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                       <input
                         type="email"
                         name="email"
+                        id="auth-email"
+                        autoComplete="email"
                         value={formData.email}
                         onChange={handleChange}
                         placeholder={t.auth.email}
@@ -385,7 +422,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-apple-gray-700 mb-2">
+                    <label htmlFor="auth-password" className="block text-sm font-medium text-apple-gray-700 mb-2">
                       {t.auth.password}
                     </label>
                     <div className="relative">
@@ -393,6 +430,8 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                       <input
                         type={showPassword ? 'text' : 'password'}
                         name="password"
+                        id="auth-password"
+                        autoComplete={activeMode === 'login' ? 'current-password' : 'new-password'}
                         value={formData.password}
                         onChange={handleChange}
                         placeholder={t.auth.passwordPlaceholder}
@@ -403,7 +442,9 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                        aria-label={showPassword ? '隱藏密碼' : '顯示密碼'}
+                        aria-pressed={showPassword}
+                        className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg"
                       >
                         {showPassword ? (
                           <EyeOff className="h-5 w-5 text-apple-gray-400" />
@@ -416,13 +457,13 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                 </div>
 
                 {errorMessage && (
-                  <div className="mt-5 rounded-2xl bg-red-50 px-4 py-3 text-sm leading-6 text-red-700">
+                  <div role="alert" className="mt-5 rounded-2xl bg-red-50 px-4 py-3 text-sm leading-6 text-red-700">
                     {errorMessage}
                   </div>
                 )}
 
                 {successMessage && (
-                  <div className="mt-5 rounded-2xl bg-green-50 px-4 py-3 text-sm leading-6 text-green-700">
+                  <div role="status" className="mt-5 rounded-2xl bg-green-50 px-4 py-3 text-sm leading-6 text-green-700">
                     {successMessage}
                   </div>
                 )}

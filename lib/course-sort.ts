@@ -42,7 +42,15 @@ export function normalizeCourseLocation(value: string) {
 }
 
 export function getCourseCityOptions(locations: readonly string[]) {
-  return [...new Set(locations.map(normalizeCourseLocation).filter(Boolean))].sort(compareCourseLocations)
+  return [...new Set(locations.flatMap(getCourseCities))].sort(compareCourseLocations)
+}
+
+export function getCourseCities(location: string) {
+  return location.split(/[、,，/／]/).map(normalizeCourseLocation).filter(Boolean)
+}
+
+export function courseMatchesCity(location: string, city: string) {
+  return city === 'all' || getCourseCities(location).includes(normalizeCourseLocation(city))
 }
 
 export function displayCourseLocation(value: string) {
