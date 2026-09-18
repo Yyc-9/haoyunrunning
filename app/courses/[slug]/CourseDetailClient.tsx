@@ -44,7 +44,7 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
 
   if (!managedCourse) {
     return (
-      <main className="mobile-focused-main kinetic-page min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+      <div className="mobile-focused-main kinetic-page min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
         <MobileContextHeader backHref="/courses" backLabel="課程" title={t.courseDetail.courseNotFoundTitle} />
         <section className="container mx-auto max-w-3xl px-4 py-20 text-center sm:px-6 lg:px-8">
           <div className="apple-card p-8 md:p-12">
@@ -63,7 +63,7 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
             </Link>
           </div>
         </section>
-      </main>
+      </div>
     )
   }
 
@@ -75,7 +75,7 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
   const courseCoaches = course.coaches ?? (course.coach ? [course.coach] : [])
 
   return (
-    <main className="mobile-focused-main kinetic-page min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-20 sm:pt-24">
+    <div className="mobile-focused-main kinetic-page min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-20 sm:pt-24">
       <MobileContextHeader backHref="/courses" backLabel="課程" title={courseText(course.title)} />
       <div className="course-detail-native-topbar sticky top-[52px] z-40 border-b border-black/10 bg-white shadow-sm sm:top-16">
         <div className="container mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4 sm:px-6 lg:px-8 md:flex-row md:items-center md:justify-between">
@@ -209,6 +209,6 @@ export default function CourseDetailClient({ course }: CourseDetailClientProps) 
         <a href={instagramUrl} target="_blank" rel="noreferrer" className="apple-button-outline gap-2"><Instagram aria-hidden="true" className="h-4 w-4" />IG 諮詢</a>
         <Link href={'/courses/' + course.slug + '/register'} className="apple-button-primary gap-2">立即報名<ChevronRight aria-hidden="true" className="h-5 w-5" /></Link>
       </div>
-    </main>
+    </div>
   )
 }

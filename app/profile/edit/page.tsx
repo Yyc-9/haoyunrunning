@@ -138,12 +138,12 @@ export default function EditProfilePage() {
     }
   }
 
-  if (isLoading || (isLoggedIn && isAccountLoading)) return <main className="mobile-focused-main flex min-h-screen items-center justify-center gap-3 bg-apple-gray-50 pt-24"><MobileContextHeader backHref="/profile" backLabel="我的" title="修改跑者資料" /><Loader2 aria-hidden="true" className="h-6 w-6 animate-spin text-black" /><p role="status">正在讀取跑者資料</p></main>
+  if (isLoading || (isLoggedIn && isAccountLoading)) return <div className="mobile-focused-main flex min-h-screen items-center justify-center gap-3 bg-apple-gray-50 pt-24"><MobileContextHeader backHref="/profile" backLabel="我的" title="修改跑者資料" /><Loader2 aria-hidden="true" className="h-6 w-6 animate-spin text-black" /><p role="status">正在讀取跑者資料</p></div>
 
-  if (!isLoggedIn) return <main className="mobile-focused-main min-h-screen bg-apple-gray-50 px-4 pt-32 text-center"><MobileContextHeader backHref="/profile" backLabel="我的" title="修改跑者資料" /><h1 className="text-2xl font-black">登入後修改跑者資料</h1><p className="mt-3 text-sm text-apple-gray-600">登入後會留在此頁，繼續編輯你的跑者檔案。</p><Link href="/profile/edit?auth=login" className="apple-button-primary mt-6">登入帳戶</Link></main>
+  if (!isLoggedIn) return <div className="mobile-focused-main min-h-screen bg-apple-gray-50 px-4 pt-32 text-center"><MobileContextHeader backHref="/profile" backLabel="我的" title="修改跑者資料" /><h1 className="text-2xl font-black">登入後修改跑者資料</h1><p className="mt-3 text-sm text-apple-gray-600">登入後會留在此頁，繼續編輯你的跑者檔案。</p><Link href="/profile/edit?auth=login" className="apple-button-primary mt-6">登入帳戶</Link></div>
 
   return (
-    <main className="mobile-focused-main min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
+    <div className="mobile-focused-main min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
       <MobileContextHeader backHref="/profile" backLabel="我的" title="修改跑者資料" />
       <div className="container mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-12">
         <Link href="/profile" className="inline-flex items-center gap-2 text-sm font-black text-apple-gray-600"><ArrowLeft className="h-4 w-4" />返回跑者名片</Link>
@@ -182,6 +182,6 @@ export default function EditProfilePage() {
           <p className="mt-4 flex items-center justify-center gap-2 text-xs text-apple-gray-400"><CheckCircle2 className="h-3.5 w-3.5" />儲存後會同步更新跑者名片與勳章條件。</p>
         </section>
       </div>
-    </main>
+    </div>
   )
 }

@@ -12,12 +12,12 @@ export default function AnniversaryPageClient() {
   const { brand, pageMedia, anniversary } = useSiteContent()
 
   return (
-    <main className="mobile-focused-main mobile-activity-page kinetic-page min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+    <div className="mobile-focused-main mobile-activity-page kinetic-page min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
       <MobileContextHeader backHref="/" backLabel="首頁" title={anniversary.title} />
       <section className="px-4 py-12 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-6xl">
-          <Link href="/" className="mobile-activity-native-back mb-8 inline-flex items-center gap-2 text-sm font-bold text-apple-gray-700 hover:text-apple-blue">
-            <ArrowLeft className="h-4 w-4" />
+          <Link href="/" className="mobile-activity-native-back -ml-3 mb-8 inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-bold text-apple-gray-700 transition-colors hover:bg-apple-gray-100 hover:text-apple-blue active:bg-apple-gray-200">
+            <ArrowLeft aria-hidden="true" className="h-4 w-4" />
             {anniversary.secondaryCta}
           </Link>
 
@@ -111,6 +111,6 @@ export default function AnniversaryPageClient() {
           </div>
         </div>
       </section>
-    </main>
+    </div>
   )
 }

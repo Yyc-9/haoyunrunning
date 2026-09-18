@@ -279,7 +279,7 @@ export default function CoachAttendanceClient() {
   }
 
   return (
-    <main className="min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
+    <div className="min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
       <section className="px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
         <div className="container mx-auto max-w-7xl">
           <CoachSubNav />
@@ -368,6 +368,6 @@ export default function CoachAttendanceClient() {
           )}
         </div>
       </section>
-    </main>
+    </div>
   )
 }

@@ -101,7 +101,7 @@ export default function CoursesTable() {
                 type="button"
                 onClick={() => setLevelFilter(filter.value)}
                 aria-pressed={levelFilter === filter.value}
-                className={`course-filter-pill min-h-10 rounded-full px-4 text-sm font-bold transition ${levelFilter === filter.value ? 'bg-black text-white lg:bg-[#0b2d3c]' : 'bg-apple-gray-100 text-apple-gray-700 hover:bg-apple-gray-200 lg:bg-white lg:ring-1 lg:ring-black/10 lg:hover:bg-[#eef3f5]'}`}
+                className={`course-filter-pill min-h-11 rounded-full px-4 text-sm font-bold transition ${levelFilter === filter.value ? 'bg-black text-white lg:bg-[#0b2d3c]' : 'bg-apple-gray-100 text-apple-gray-700 hover:bg-apple-gray-200 lg:bg-white lg:ring-1 lg:ring-black/10 lg:hover:bg-[#eef3f5]'}`}
               >
                 {filter.label}
               </button>
@@ -112,9 +112,9 @@ export default function CoursesTable() {
         <div>
           <h3 className="mb-3 text-sm font-bold text-apple-gray-600">城市</h3>
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => setCityFilter('all')} aria-pressed={cityFilter === 'all'} className={`course-filter-pill min-h-10 rounded-full px-4 text-sm font-bold transition ${cityFilter === 'all' ? 'bg-black text-white lg:bg-[#0b2d3c]' : 'bg-apple-gray-100 text-apple-gray-700 hover:bg-apple-gray-200 lg:bg-white lg:ring-1 lg:ring-black/10 lg:hover:bg-[#eef3f5]'}`}>全部城市</button>
+            <button type="button" onClick={() => setCityFilter('all')} aria-pressed={cityFilter === 'all'} className={`course-filter-pill min-h-11 rounded-full px-4 text-sm font-bold transition ${cityFilter === 'all' ? 'bg-black text-white lg:bg-[#0b2d3c]' : 'bg-apple-gray-100 text-apple-gray-700 hover:bg-apple-gray-200 lg:bg-white lg:ring-1 lg:ring-black/10 lg:hover:bg-[#eef3f5]'}`}>全部城市</button>
             {cities.map((city) => (
-              <button key={city} type="button" onClick={() => setCityFilter(city)} aria-pressed={cityFilter === city} className={`course-filter-pill min-h-10 rounded-full px-4 text-sm font-bold transition ${cityFilter === city ? 'bg-black text-white lg:bg-[#0b2d3c]' : 'bg-apple-gray-100 text-apple-gray-700 hover:bg-apple-gray-200 lg:bg-white lg:ring-1 lg:ring-black/10 lg:hover:bg-[#eef3f5]'}`}>{localeText(displayCourseCityFilter(city))}</button>
+              <button key={city} type="button" onClick={() => setCityFilter(city)} aria-pressed={cityFilter === city} className={`course-filter-pill min-h-11 rounded-full px-4 text-sm font-bold transition ${cityFilter === city ? 'bg-black text-white lg:bg-[#0b2d3c]' : 'bg-apple-gray-100 text-apple-gray-700 hover:bg-apple-gray-200 lg:bg-white lg:ring-1 lg:ring-black/10 lg:hover:bg-[#eef3f5]'}`}>{localeText(displayCourseCityFilter(city))}</button>
             ))}
           </div>
         </div>

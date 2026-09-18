@@ -427,7 +427,7 @@ export default function Navigation() {
                     }}
                     aria-expanded={isAccountOpen}
                     aria-haspopup="menu"
-                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-black/10 bg-white px-3 text-sm font-bold text-black shadow-sm transition-colors duration-200 hover:bg-apple-gray-100 sm:h-10 sm:px-4"
+                    className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-black/10 bg-white px-3 text-sm font-bold text-black shadow-sm transition-colors duration-200 hover:bg-apple-gray-100 sm:px-4"
                   >
                     {t.common.myAccount}
                     <ChevronDown className={clsx('h-3.5 w-3.5 transition-transform', isAccountOpen && 'rotate-180')} />
@@ -442,7 +442,7 @@ export default function Navigation() {
                     setIsAuthModalOpen(true)
                     setIsMenuOpen(false)
                   }}
-                  className="mobile-account-control inline-flex h-9 items-center justify-center rounded-full border border-black/10 bg-white px-3 text-sm font-bold text-apple-gray-950 shadow-sm transition-colors duration-200 hover:text-apple-blue sm:h-10 sm:px-4"
+                  className="mobile-account-control inline-flex h-11 items-center justify-center rounded-full border border-black/10 bg-white px-3 text-sm font-bold text-apple-gray-950 shadow-sm transition-colors duration-200 hover:text-apple-blue sm:px-4"
                 >
                   <LogIn className="mr-1.5 h-4 w-4" />
                   {t.common.login}
@@ -456,7 +456,7 @@ export default function Navigation() {
                   setIsAccountOpen(false)
                   setIsMenuOpen(!isMenuOpen)
                 }}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white text-apple-gray-700 shadow-sm transition-colors duration-200 hover:bg-apple-gray-100 sm:h-10 sm:w-10"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-white text-apple-gray-700 shadow-sm transition-colors duration-200 hover:bg-apple-gray-100"
                 aria-label={isMenuOpen ? '關閉選單' : '開啟選單'}
                 aria-expanded={isMenuOpen}
                 aria-controls="mobile-site-menu"

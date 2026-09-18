@@ -11,7 +11,7 @@ export default function GroupSignupPageClient() {
   const activity = activities.find(isGroupPractice)
 
   return (
-    <main className="mobile-focused-main min-h-screen bg-white pb-16 pt-24">
+    <div className="mobile-focused-main min-h-screen bg-white pb-16 pt-24">
       <MobileContextHeader backHref="/" backLabel="首頁" title="團練說明" />
       <div className="mx-auto max-w-3xl px-5 py-10 sm:px-8 sm:py-16">
         <Link href="/" className="mb-10 hidden min-h-11 items-center gap-2 text-sm font-semibold text-apple-gray-600 hover:text-apple-blue md:inline-flex">
@@ -37,6 +37,6 @@ export default function GroupSignupPageClient() {
           <p className="mt-3 text-sm leading-6 text-apple-gray-600">連結會開啟 LINE 社群邀請頁；加入後，請到記事本查看團練公告。</p>
         </section>
       </div>
-    </main>
+    </div>
   )
 }

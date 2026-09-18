@@ -119,10 +119,10 @@ export default function CheckoutPage() {
     }
   }
 
-  if (!isReady) return <main className="min-h-screen px-5 pt-32 text-center"><p role="status">正在讀取購物車</p></main>
+  if (!isReady) return <div className="min-h-screen px-5 pt-32 text-center"><p role="status">正在讀取購物車</p></div>
 
   if (order || items.length === 0) return (
-    <main className="mobile-focused-main min-h-screen bg-apple-gray-50 px-5 pb-16 pt-32">
+    <div className="mobile-focused-main min-h-screen bg-apple-gray-50 px-5 pb-16 pt-32">
       <MobileContextHeader backHref="/shop" backLabel="商店" title={order ? '訂單已送出' : '購物車'} />
       <section className="mx-auto mt-6 max-w-xl rounded-2xl border border-black/10 bg-white p-7 text-center sm:mt-0 sm:p-10" role="status">
         {order ? <CheckCircle2 aria-hidden="true" className="mx-auto h-10 w-10 text-emerald-600" /> : <Store aria-hidden="true" className="mx-auto h-10 w-10 text-apple-gray-400" />}
@@ -131,11 +131,11 @@ export default function CheckoutPage() {
         <Link href="/shop" className="apple-button-primary mt-6 w-full">{order ? '返回商店' : '前往商店'}</Link>
         <a href={brand.instagramUrl} target="_blank" rel="noreferrer" className="mt-4 inline-flex min-h-11 items-center text-sm font-bold text-apple-blue">聯絡好運 Instagram</a>
       </section>
-    </main>
+    </div>
   )
 
   return (
-    <main className="mobile-focused-main min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+    <div className="mobile-focused-main min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
       <MobileContextHeader backHref="/shop" backLabel="購物車" title="確認訂單" />
       <section className="px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
         <div className="container mx-auto max-w-7xl">
@@ -254,6 +254,6 @@ export default function CheckoutPage() {
         <div><span>小計</span><strong>{'NT$' + (total / 100).toFixed(0)}</strong></div>
         <button type="button" onClick={submitOrder} disabled={isSubmitting || items.length === 0 || !form.customerName.trim() || !form.contact.trim() || transferLastFive.length !== 5 || !catalog || Boolean(catalogError) || optionIssues.length > 0} className="apple-button-primary gap-2 disabled:cursor-not-allowed disabled:opacity-60"><Send aria-hidden="true" className="h-4 w-4" />{isSubmitting ? '正在提交...' : '提交匯款與自取訂單'}</button>
       </div>
-    </main>
+    </div>
   )
 }

@@ -472,7 +472,7 @@ export default function CoachPlannerPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+    <div className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
       <section className="px-4 py-10 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-7xl">
           <CoachSubNav />
@@ -781,6 +781,6 @@ export default function CoachPlannerPage() {
           </div>
         </div>
       </section>
-    </main>
+    </div>
   )
 }

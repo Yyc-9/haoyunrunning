@@ -9,8 +9,8 @@ export const metadata: Metadata = {
 
 export default function CoursesPage() {
   return (
-    <main className="kinetic-page pt-24 min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="kinetic-page pt-24 min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <CoursesSection />
-    </main>
+    </div>
   )
 }

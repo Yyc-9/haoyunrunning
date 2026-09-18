@@ -87,7 +87,7 @@ export default function PaymentStatusClient() {
   ), [enrollments])
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-apple-gray-50 to-white pt-24">
+    <div className="min-h-screen bg-gradient-to-b from-apple-gray-50 to-white pt-24">
       <section className="px-4 py-10 sm:px-6 sm:py-14">
         <div className="mx-auto max-w-6xl">
           <div>
@@ -173,6 +173,6 @@ export default function PaymentStatusClient() {
           )}
         </div>
       </section>
-    </main>
+    </div>
   )
 }

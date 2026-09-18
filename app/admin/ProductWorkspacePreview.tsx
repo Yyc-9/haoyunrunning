@@ -59,11 +59,11 @@ export default function ProductWorkspacePreview() {
     return true
   }
 
-  return <main className="admin-shell admin-products-mode min-h-screen bg-white pt-24">
+  return <div className="admin-shell admin-products-mode min-h-screen bg-white pt-24">
     <section className="px-4 py-10 sm:px-6 lg:px-8"><div className="admin-dashboard-grid container mx-auto max-w-[1600px]">
       <div className="admin-dashboard-header mb-4"><div className="admin-dashboard-heading"><h1 className="font-bold">管理員後台</h1></div><span className="text-xs text-[#7b5d23]">本地互動預覽 · 示例資料，不會修改正式商店</span></div>
       <nav aria-label="管理員後台導航" className="admin-dashboard-sidebar mb-8 overflow-x-auto lg:sticky lg:top-24 lg:mb-0 lg:overflow-visible"><div className="admin-sidebar-panel rounded-xl p-2"><div className="admin-sidebar-identity hidden lg:block"><p className="text-xs text-white/70">本地預覽</p><p className="mt-3 text-lg font-black text-white">營運工作台</p><p className="mt-1 text-xs text-white/65">好運跑班</p></div><div className="admin-sidebar-tabs flex gap-1 lg:flex-col">{navigation.map(({ label, icon: Icon }) => <button key={label} type="button" data-active={label === '商城商品'} aria-current={label === '商城商品' ? 'page' : undefined} className="admin-sidebar-tab flex items-center gap-2 whitespace-nowrap rounded-xl p-3 text-sm font-bold" onClick={() => setNotice(label === '商城商品' ? '' : '這次預覽僅開放商城商品，其餘工作區維持原網站功能。')}><span className="admin-sidebar-icon"><Icon className="h-4 w-4" /></span>{label}</button>)}</div><div className="admin-sidebar-footer hidden lg:block"><p className="text-xs text-white/65">超級管理員</p></div></div></nav>
       <div className="admin-dashboard-workspace">{notice ? <p role="status" className="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{notice}</p> : null}<AdminProductWorkspace products={products} runAction={runAction} uploadMedia={async (file) => { const url = URL.createObjectURL(file); mediaUrls.current.push(url); return url }} /></div>
     </div></section>
-  </main>
+  </div>
 }

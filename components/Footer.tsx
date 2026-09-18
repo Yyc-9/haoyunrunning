@@ -16,7 +16,6 @@ export default function Footer() {
       title: '參加好運',
       links: [
         { name: '訓練課程', href: '/courses' },
-        { name: '課程報名', href: '/courses' },
         { name: '團練說明', href: '/group-signup' },
       ],
     },
@@ -98,7 +97,7 @@ export default function Footer() {
                     key={index}
                     className={`site-footer-contact-item flex items-center space-x-3 ${index === 2 ? 'site-footer-contact-wide' : ''}`}
                   >
-                    <Icon className="h-4 w-4 text-white/40" />
+                    <Icon aria-hidden="true" className="h-4 w-4 text-white/40" />
                     <span className="text-sm text-white/60">
                       {item.text}
                     </span>
@@ -123,14 +122,14 @@ export default function Footer() {
                         href={link.href}
                         target="_blank"
                         rel="noreferrer"
-                        className="site-footer-link text-sm text-white/60 transition-colors duration-200 hover:text-white"
+                        className="site-footer-link inline-flex min-h-11 items-center text-sm text-white/60 transition-colors duration-200 hover:text-white active:text-white"
                       >
                         {link.name}
                       </a>
                     ) : (
                       <Link
                         href={link.href}
-                        className="site-footer-link text-sm text-white/60 transition-colors duration-200 hover:text-white"
+                        className="site-footer-link inline-flex min-h-11 items-center text-sm text-white/60 transition-colors duration-200 hover:text-white active:text-white"
                       >
                         {link.name}
                       </Link>
@@ -155,16 +154,16 @@ export default function Footer() {
           <div className="site-footer-actions flex items-center space-x-4">
             <Link
               href="/courses"
-              className="site-footer-action inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-white hover:text-black"
+              className="site-footer-action inline-flex min-h-11 items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors duration-200 hover:bg-white hover:text-black active:bg-white/20"
             >
-              <TicketCheck className="h-4 w-4" />
+              <TicketCheck aria-hidden="true" className="h-4 w-4" />
               查看課程
             </Link>
             <Link
               href="/shop"
-              className="site-footer-action inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-white hover:text-black"
+              className="site-footer-action inline-flex min-h-11 items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors duration-200 hover:bg-white hover:text-black active:bg-white/20"
             >
-              <ShoppingBag className="h-4 w-4" />
+              <ShoppingBag aria-hidden="true" className="h-4 w-4" />
               前往商店
             </Link>
             {socialMedia.map((social, index) => {
@@ -176,12 +175,12 @@ export default function Footer() {
                   href={social.href}
                   aria-label="在 Instagram 關注好運跑班"
                   title="Instagram"
-                  className={`flex h-10 w-10 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 ${social.isPrimary
+                  className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors duration-200 ${social.isPrimary
                       ? 'bg-gradient-to-br from-orange-400 to-pink-500 text-white'
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon aria-hidden="true" className="h-5 w-5" />
                 </a>
               )
             })}

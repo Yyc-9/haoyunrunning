@@ -65,7 +65,7 @@ export default function ShopPage() {
   }, [category, products, query, sort])
 
   return (
-    <main className="shop-page kinetic-page min-h-screen bg-white pt-20 sm:pt-24">
+    <div className="shop-page kinetic-page min-h-screen bg-white pt-20 sm:pt-24">
       <section className="kinetic-hero relative isolate min-h-[390px] overflow-hidden border-b border-black/10 sm:min-h-[395px]">
         <Image
           src={pageMedia.shopHero}
@@ -169,6 +169,6 @@ export default function ShopPage() {
       </section>
 
       <ShopCartDrawer products={products} open={isCartOpen} onOpenChange={setIsCartOpen} />
-    </main>
+    </div>
   )
 }

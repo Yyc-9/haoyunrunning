@@ -109,7 +109,7 @@ export default function CoachStudentsClient() {
   }, [query, students])
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+    <div className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
       <section className="px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
         <div className="container mx-auto max-w-7xl">
           <CoachSubNav />
@@ -234,6 +234,6 @@ export default function CoachStudentsClient() {
           )}
         </div>
       </section>
-    </main>
+    </div>
   )
 }

@@ -238,6 +238,9 @@ export const dictionary = {
       successTitle: '已收到你的參加意向',
       successDescription: '謝謝填寫。你可以同時關注或私訊 Instagram；後續如有活動時間、地點或流程變動，我們會再聯絡。',
       contactHint: '請至少填寫電話、Email 或 Instagram 其中一種聯絡方式。',
+      contactRequirement: '姓名必填；电话、Email、Instagram 请至少填写一项，方便后续联系。',
+      required: '（必填）',
+      optionalField: '（選填）',
       optional: '可先不選',
     },
     payment: {
@@ -705,6 +708,9 @@ export const dictionary = {
       successTitle: '已收到你的參加意向',
       successDescription: '谢谢填寫。你可以同时关注或私訊 Instagram；後續如有活動时间、地點或流程变动，我們會再聯絡。',
       contactHint: '請至少填寫電話、Email 或 Instagram 其中一種聯絡方式。',
+      contactRequirement: '姓名必填；電話、Email、Instagram 請至少填寫一項，方便後續聯絡。',
+      required: '（必填）',
+      optionalField: '（选填）',
       optional: '可先不选',
     },
     payment: {
@@ -1172,6 +1178,9 @@ export const dictionary = {
       successTitle: 'Your interest has been received',
       successDescription: 'Thanks for filling this out. You can also follow or message us on Instagram; if timing, location, or event details change, we will contact you.',
       contactHint: 'Please provide at least one contact method: phone, email, or Instagram.',
+      contactRequirement: 'Name is required. Provide at least one contact method: phone, email, or Instagram.',
+      required: '(Required)',
+      optionalField: '(Optional)',
       optional: 'Optional for now',
     },
     payment: {

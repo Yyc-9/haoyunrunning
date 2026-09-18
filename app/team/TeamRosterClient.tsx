@@ -181,7 +181,7 @@ export default function TeamRosterClient() {
       : dialog
 
   return (
-    <main className="kinetic-page min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
+    <div className="kinetic-page min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
       <section className="kinetic-hero relative isolate flex min-h-[390px] overflow-hidden border-b border-black/10 text-white sm:min-h-[480px]">
         <Image
           src={pageMedia.teamHero}
@@ -305,7 +305,7 @@ export default function TeamRosterClient() {
                           <Link
                             key={assignment.slug}
                             href={`/courses/${assignment.slug}`}
-                            className="group/class inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-900 ring-1 ring-emerald-900/10 transition-[transform,background-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:bg-emerald-100 hover:shadow-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/25 active:translate-y-0 active:scale-[0.98]"
+                            className="group/class inline-flex min-h-11 items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-900 ring-1 ring-emerald-900/10 transition-[transform,background-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:bg-emerald-100 hover:shadow-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/25 active:translate-y-0 active:scale-[0.98]"
                             aria-label={`查看${assignment.name}課程`}
                           >
                             {assignment.name}
@@ -397,6 +397,6 @@ export default function TeamRosterClient() {
           </section>
         </div>
       ) : null}
-    </main>
+    </div>
   )
 }

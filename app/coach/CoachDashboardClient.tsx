@@ -103,12 +103,12 @@ export default function CoachDashboardClient() {
   const coachName = coachProfile?.displayName || '教練'
 
   if (isAuthLoading) {
-    return <main className="flex min-h-screen items-center justify-center bg-apple-gray-50 pt-24"><RefreshCw className="h-7 w-7 animate-spin text-apple-gray-400" /></main>
+    return <div className="flex min-h-screen items-center justify-center bg-apple-gray-50 pt-24"><RefreshCw className="h-7 w-7 animate-spin text-apple-gray-400" /></div>
   }
 
   if (!hasCoachAccess) {
     return (
-      <main className="min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
+      <div className="min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
         <section className="container mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-20">
           <div className="rounded-lg border border-black/10 bg-white p-6 text-center shadow-sm sm:p-10">
             <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-black text-white">
@@ -123,12 +123,12 @@ export default function CoachDashboardClient() {
             </Link>
           </div>
         </section>
-      </main>
+      </div>
     )
   }
 
   return (
-    <main className="min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
+    <div className="min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
       <section className="px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
         <div className="container mx-auto max-w-7xl">
           <CoachSubNav />
@@ -205,6 +205,6 @@ export default function CoachDashboardClient() {
           </div>
         </div>
       </section>
-    </main>
+    </div>
   )
 }

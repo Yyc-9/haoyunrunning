@@ -1643,7 +1643,7 @@
 
   .site-footer-link {
     display: flex;
-    min-height: 30px;
+    min-height: 44px;
     align-items: center;
     font-size: 0.73rem;
     line-height: 1.35;
@@ -2351,6 +2351,7 @@
 @media (min-width: 768px) {
   .team-coach-desktop-open {
     display: flex;
+    min-height: 44px;
     align-items: center;
     justify-content: space-between;
     gap: 12px;

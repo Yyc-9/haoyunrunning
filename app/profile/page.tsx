@@ -125,24 +125,24 @@ export default function ProfilePage() {
     : accountLinks
 
   if (isLoading) {
-    return <main className="flex min-h-screen items-center justify-center bg-apple-gray-50 pt-24"><div className="text-center"><div className="mx-auto h-11 w-11 animate-spin rounded-full border-2 border-apple-gray-200 border-t-black" /><p className="mt-4 text-sm font-semibold text-apple-gray-600">正在讀取帳戶...</p></div></main>
+    return <div className="flex min-h-screen items-center justify-center bg-apple-gray-50 pt-24"><div className="text-center"><div className="mx-auto h-11 w-11 animate-spin rounded-full border-2 border-apple-gray-200 border-t-black" /><p className="mt-4 text-sm font-semibold text-apple-gray-600">正在讀取帳戶...</p></div></div>
   }
 
   if (!isLoggedIn || !user) {
     return (
-      <main className="min-h-screen bg-apple-gray-50 pt-24">
+      <div className="min-h-screen bg-apple-gray-50 pt-24">
         <section className="container mx-auto max-w-4xl px-4 py-12 sm:py-20">
           <div className="grid overflow-hidden rounded-lg border border-black/10 bg-white shadow-sm md:grid-cols-[1.15fr_0.85fr]">
             <div className="p-6 sm:p-10"><p className="text-sm font-bold text-apple-blue">我的帳戶</p><h1 className="mt-3 text-3xl font-black leading-tight text-black sm:text-5xl">登入後建立你的跑者檔案</h1><p className="mt-4 text-sm leading-7 text-apple-gray-600 sm:text-base">記錄跑步目標、個人最佳與榮耀徽章。</p><Link href="/?auth=login" className="apple-button-primary mt-7 inline-flex gap-2 px-6 py-3">登入帳戶<ArrowRight className="h-4 w-4" /></Link></div>
             <div className="flex items-center justify-center bg-black p-8 text-white"><div className="max-w-xs text-center"><CircleUserRound className="mx-auto h-12 w-12 text-white/85" /><h2 className="mt-4 text-xl font-black">一個帳戶，記錄每次進步</h2></div></div>
           </div>
         </section>
-      </main>
+      </div>
     )
   }
 
   return (
-    <main className="min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
+    <div className="min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
       <div className="container mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-12">
         {error ? <p role="alert" className="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p> : null}
 
@@ -277,6 +277,6 @@ export default function ProfilePage() {
 
         <a href="https://www.instagram.com/nurture.running.team/" target="_blank" rel="noreferrer" className="mb-4 inline-flex items-center gap-2 text-sm font-bold text-apple-gray-600"><Instagram className="h-4 w-4" />聯絡好運跑班</a>
       </div>
-    </main>
+    </div>
   )
 }

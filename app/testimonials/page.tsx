@@ -9,7 +9,7 @@ export default function TestimonialsPage() {
   const { pageMedia, testimonials } = useSiteContent()
   const youtubeEmbedUrl = getYouTubeEmbedUrl(testimonials.videoUrl)
   return (
-    <main className="mobile-brand-page kinetic-page bg-white pt-24">
+    <div className="mobile-brand-page kinetic-page bg-white pt-24">
       <section className="kinetic-hero relative min-h-[34rem] overflow-hidden bg-black sm:min-h-[40rem]">
         <Image
           src={pageMedia.testimonialsHero}
@@ -108,6 +108,6 @@ export default function TestimonialsPage() {
           </div>
       </section>
 
-    </main>
+    </div>
   )
 }

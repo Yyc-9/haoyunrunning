@@ -127,13 +127,13 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
 
   if (!course) {
     return (
-      <main className="mobile-focused-main min-h-screen bg-apple-gray-50 px-4 pt-32">
+      <div className="mobile-focused-main min-h-screen bg-apple-gray-50 px-4 pt-32">
         <MobileContextHeader backHref="/courses" backLabel="課程" title="課程報名" />
         <div className="mx-auto max-w-xl rounded-lg border border-black/10 bg-white p-8 text-center">
           <h1 className="text-2xl font-black">找不到這個課程</h1>
           <Link href="/courses" className="apple-button-primary mt-6">返回課程列表</Link>
         </div>
-      </main>
+      </div>
     )
   }
 
@@ -143,11 +143,11 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
   const canSubmitTransfer = enrollment && ['pending_transfer', 'rejected'].includes(enrollment.status)
 
   return (
-    <main className="mobile-focused-main min-h-screen bg-apple-gray-50 pt-20">
+    <div className="mobile-focused-main min-h-screen bg-apple-gray-50 pt-20">
       <MobileContextHeader backHref={'/courses/' + course.slug} backLabel="課程" title={formatCourseWeekday(course.name) + '報名'} />
       <header className="registration-native-header border-b border-black/10 bg-white px-4 py-8 sm:px-6">
         <div className="mx-auto max-w-5xl">
-          <Link href={`/courses/${course.slug}`} className="text-sm font-bold text-apple-blue">返回課程詳情</Link>
+          <Link href={`/courses/${course.slug}`} className="-ml-3 inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-bold text-apple-blue transition-colors hover:bg-blue-50 active:bg-blue-100">返回課程詳情</Link>
           <div className="mt-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
               <p className="text-sm font-bold leading-6 text-apple-gray-500">{formatCourseWeekday(course.weekday)} · {displayCourseTime(course.classTime)} · {displayCourseLocation(course.location)}{course.meetingPoint ? ` · ${course.meetingPoint}` : ''} · {course.period}</p>
@@ -178,9 +178,9 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
           ) : !isLoggedIn ? (
             <div className="px-6 py-12 text-center sm:px-10">
               <ShieldCheck className="mx-auto h-10 w-10 text-apple-blue" />
-              <h2 className="mt-5 text-2xl font-black">登入後填寫網站報名表</h2>
-              <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-apple-gray-600">網站會使用登入信箱建立報名記錄，避免重複報名並讓你隨時查看匯款核對狀態。</p>
-              <Link href={`/courses/${course.slug}/register?auth=login`} className="apple-button-primary mt-6 w-full sm:w-fit">登入並開始填寫</Link>
+              <h2 className="mt-5 text-2xl font-black">登入或註冊後填寫報名表</h2>
+              <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-apple-gray-600">已有帳戶可直接登入；第一次使用可在下一個視窗切換到註冊。網站會使用登入信箱建立報名記錄，避免重複報名，並讓你隨時查看匯款核對狀態。</p>
+              <Link href={`/courses/${course.slug}/register?auth=login`} className="apple-button-primary mt-6 w-full sm:w-fit">登入或註冊後開始填寫</Link>
             </div>
           ) : enrollment ? (
             <div className="px-6 py-10 sm:px-10 sm:py-12">
@@ -221,7 +221,7 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
                 <ShieldCheck className="h-5 w-5 text-apple-blue" />
                 <h2 className="font-black text-apple-gray-950">我的報名狀態</h2>
               </div>
-              <button type="button" title="更新狀態" onClick={loadRegistration} className="rounded-lg p-2 text-apple-gray-500 hover:bg-apple-gray-100 hover:text-black">
+              <button type="button" aria-label="更新報名狀態" title="更新報名狀態" onClick={loadRegistration} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-apple-gray-500 transition-colors hover:bg-apple-gray-100 hover:text-black active:bg-apple-gray-200">
                 <RefreshCw className="h-4 w-4" />
               </button>
             </div>
@@ -230,8 +230,8 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
               <div className="mt-5 flex items-center gap-2 text-sm text-apple-gray-600"><Loader2 className="h-4 w-4 animate-spin" />正在同步狀態</div>
             ) : !isLoggedIn ? (
               <div className="mt-5">
-                <p className="text-sm leading-6 text-apple-gray-600">請先登入，再於網站內填寫報名與匯款資料。</p>
-                <Link href={`/courses/${course.slug}/register?auth=login`} className="apple-button-primary mt-4 w-full">登入查看狀態</Link>
+                <p className="text-sm leading-6 text-apple-gray-600">請先登入；第一次使用可在登入視窗切換到註冊，再於網站內填寫報名與匯款資料。</p>
+                <Link href={`/courses/${course.slug}/register?auth=login`} className="apple-button-primary mt-4 w-full">登入或註冊查看狀態</Link>
               </div>
             ) : !enrollment ? (
               <div className="mt-5">
@@ -277,10 +277,10 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
             </section>
           ) : null}
 
-          {success ? <p className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-800">{success}</p> : null}
-          {error ? <p className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">{error}</p> : null}
+          {success ? <p role="status" aria-live="polite" className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-800">{success}</p> : null}
+          {error ? <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">{error}</p> : null}
         </aside>
       </div>
-    </main>
+    </div>
   )
 }

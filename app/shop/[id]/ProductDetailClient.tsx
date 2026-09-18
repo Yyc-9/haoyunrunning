@@ -85,17 +85,17 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
   }, [activeMediaIndex, media.length])
 
   if (isLoading) {
-    return <main className="mobile-focused-main flex min-h-[60vh] items-center justify-center pt-20 sm:pt-24"><MobileContextHeader backHref="/shop" backLabel="商店" title="商品詳情" /><Loader2 className="h-7 w-7 animate-spin text-apple-gray-500" aria-label="載入商品" /></main>
+    return <div className="mobile-focused-main flex min-h-[60vh] items-center justify-center pt-20 sm:pt-24"><MobileContextHeader backHref="/shop" backLabel="商店" title="商品詳情" /><Loader2 className="h-7 w-7 animate-spin text-apple-gray-500" aria-label="載入商品" /></div>
   }
 
   if (!product) {
     return (
-      <main className="mobile-focused-main container mx-auto flex min-h-[60vh] flex-col items-center justify-center px-4 pt-20 text-center sm:pt-24">
+      <div className="mobile-focused-main container mx-auto flex min-h-[60vh] flex-col items-center justify-center px-4 pt-20 text-center sm:pt-24">
         <MobileContextHeader backHref="/shop" backLabel="商店" title="商品詳情" />
         <Package className="h-12 w-12 text-apple-gray-300" />
         <h1 className="mt-4 text-2xl font-black text-apple-gray-950">找不到這件商品</h1>
         <Link href="/shop" className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-apple-gray-700 underline underline-offset-4"><ArrowLeft className="h-4 w-4" />返回好運商店</Link>
-      </main>
+      </div>
     )
   }
 
@@ -143,7 +143,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
   }
 
   return (
-    <main className="mobile-focused-main kinetic-page min-h-screen bg-white pt-20 sm:pt-24">
+    <div className="mobile-focused-main kinetic-page min-h-screen bg-white pt-20 sm:pt-24">
       <MobileContextHeader backHref="/shop" backLabel="商店" title={product.name} right={<button type="button" onClick={() => setIsCartOpen(true)} className="mobile-context-cart" aria-label="開啟購物車"><span className="mobile-context-cart-icon"><ShoppingBag aria-hidden="true" />{cartItemCount > 0 ? <span className="mobile-context-cart-badge">{cartItemCount}</span> : null}</span></button>} />
       <div className="container mx-auto px-4 py-5 sm:py-7">
         <nav aria-label="麵包屑" className="product-detail-breadcrumb flex items-center gap-2 overflow-hidden text-xs font-semibold text-apple-gray-500">
@@ -283,6 +283,6 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
       </div>
 
       <ShopCartDrawer products={products} open={isCartOpen} onOpenChange={setIsCartOpen} />
-    </main>
+    </div>
   )
 }

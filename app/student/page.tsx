@@ -586,7 +586,7 @@ export default function StudentPage() {
 
   if (isCoach) {
     return (
-      <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+      <div className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
         <section className="px-4 py-10 sm:px-6 lg:px-8">
           <div className="container mx-auto max-w-7xl">
             <div className="mb-8 grid gap-6 lg:grid-cols-[1fr_360px] lg:items-end">
@@ -645,13 +645,13 @@ export default function StudentPage() {
             </div>
           </div>
         </section>
-      </main>
+      </div>
     )
   }
 
   if (!isLoggedIn || !user) {
     return (
-      <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+      <div className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
         <section className="px-4 py-12 sm:px-6 lg:px-8">
           <div className="container mx-auto max-w-4xl">
             <div className="apple-card overflow-hidden p-0">
@@ -695,7 +695,7 @@ export default function StudentPage() {
             </div>
           </div>
         </section>
-      </main>
+      </div>
     )
   }
 
@@ -712,7 +712,7 @@ export default function StudentPage() {
         : paymentOrderStatusLabels['zh-TW'].rejected
 
     return (
-      <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+      <div className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
         <section className="px-4 py-12 sm:px-6 lg:px-8">
           <div className="container mx-auto max-w-4xl">
             <div className="apple-card p-8 md:p-10">
@@ -754,12 +754,12 @@ export default function StudentPage() {
             </div>
           </div>
         </section>
-      </main>
+      </div>
     )
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+    <div className="min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
       <section className="px-4 py-10 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-7xl">
           <div className="mb-8 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
@@ -1535,6 +1535,6 @@ export default function StudentPage() {
           </div>
         </div>
       )}
-    </main>
+    </div>
   )
 }

@@ -19,6 +19,9 @@ type LeadFormLabels = {
   successTitle: string
   successDescription: string
   contactHint: string
+  contactRequirement: string
+  required: string
+  optionalField: string
   optional: string
 }
 
@@ -102,10 +105,12 @@ export default function LeadCollectionForm({ source, labels, selectField }: Lead
     <form onSubmit={handleSubmit} className="mobile-lead-form apple-card space-y-5 p-6 md:p-8">
       <section className="space-y-4">
         <h2 className="text-lg font-black text-apple-gray-900">{labels.contactSection}</h2>
+        <p id="lead-contact-requirement" className="text-sm leading-6 text-apple-gray-600">{labels.contactRequirement}</p>
         <div className="grid gap-5 md:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-bold text-apple-gray-700">{labels.name}</span>
+            <span className="text-sm font-bold text-apple-gray-700">{labels.name} <span className="text-xs font-semibold text-apple-gray-500">{labels.required}</span></span>
             <input
+              aria-required="true"
               autoComplete="name"
               value={form.name}
               onChange={(event) => updateField('name', event.target.value)}
@@ -115,6 +120,7 @@ export default function LeadCollectionForm({ source, labels, selectField }: Lead
           <label className="block">
             <span className="text-sm font-bold text-apple-gray-700">{labels.phone}</span>
             <input
+              aria-describedby="lead-contact-requirement"
               type="tel"
               autoComplete="tel"
               value={form.phone}
@@ -125,6 +131,7 @@ export default function LeadCollectionForm({ source, labels, selectField }: Lead
           <label className="block">
             <span className="text-sm font-bold text-apple-gray-700">{labels.email}</span>
             <input
+              aria-describedby="lead-contact-requirement"
               type="email"
               autoComplete="email"
               value={form.email}
@@ -135,6 +142,7 @@ export default function LeadCollectionForm({ source, labels, selectField }: Lead
           <label className="block">
             <span className="text-sm font-bold text-apple-gray-700">{labels.instagram}</span>
             <input
+              aria-describedby="lead-contact-requirement"
               value={form.instagram}
               onChange={(event) => updateField('instagram', event.target.value)}
               className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-apple-blue"
@@ -165,7 +173,7 @@ export default function LeadCollectionForm({ source, labels, selectField }: Lead
 
         <div className="grid gap-5 md:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-bold text-apple-gray-700">{labels.runningExperience}</span>
+            <span className="text-sm font-bold text-apple-gray-700">{labels.runningExperience} <span className="text-xs font-semibold text-apple-gray-500">{labels.optionalField}</span></span>
             <textarea
               value={form.runningExperience}
               onChange={(event) => updateField('runningExperience', event.target.value)}
@@ -174,7 +182,7 @@ export default function LeadCollectionForm({ source, labels, selectField }: Lead
             />
           </label>
           <label className="block">
-            <span className="text-sm font-bold text-apple-gray-700">{labels.goal}</span>
+            <span className="text-sm font-bold text-apple-gray-700">{labels.goal} <span className="text-xs font-semibold text-apple-gray-500">{labels.optionalField}</span></span>
             <textarea
               value={form.goal}
               onChange={(event) => updateField('goal', event.target.value)}
@@ -188,7 +196,7 @@ export default function LeadCollectionForm({ source, labels, selectField }: Lead
       <section className="space-y-4">
         <h2 className="text-lg font-black text-apple-gray-900">{labels.notesSection}</h2>
         <label className="block">
-          <span className="text-sm font-bold text-apple-gray-700">{labels.notes}</span>
+          <span className="text-sm font-bold text-apple-gray-700">{labels.notes} <span className="text-xs font-semibold text-apple-gray-500">{labels.optionalField}</span></span>
           <textarea
             value={form.notes}
             onChange={(event) => updateField('notes', event.target.value)}
