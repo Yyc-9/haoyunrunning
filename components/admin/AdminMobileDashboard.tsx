@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
+import WeekdayLogo from '@/components/WeekdayLogo'
 import {
   ArrowLeft,
   Boxes,
@@ -282,17 +284,19 @@ export default function AdminMobileDashboard({ data, runAction, updatingId, acti
   return (
     <section ref={dashboardRef} className="admin-mobile-dashboard" aria-label="手機管理員後台">
       <header className="admin-mobile-topbar">
-        <div className="admin-mobile-brandmark" aria-label="好運跑班">好運</div>
-        <div className="admin-mobile-topcopy">
-          <strong>{currentTitle}</strong>
-          <small>{actionError ? '同步異常，請查看提示' : '正式資料已連線'}</small>
-        </div>
+        <Link href="/" className="admin-mobile-brand" aria-label="好運跑班，返回首頁" onClick={(event) => {
+          if (view === 'products' && (productEditState.busy || (productEditState.dirty && !window.confirm('商品仍有未儲存變更，確定要放棄並返回首頁嗎？')))) event.preventDefault()
+        }}>
+          <span className="admin-mobile-brandmark"><WeekdayLogo brandName={data.siteContent.brand.brandName} /></span>
+          <span className="admin-mobile-topcopy"><strong>{data.siteContent.brand.brandName}</strong><small>{currentTitle}</small></span>
+        </Link>
         <button type="button" className="admin-mobile-iconbutton" aria-label="開啟更多管理功能" onClick={() => setMoreOpen(true)}>
           <Menu className="h-5 w-5" aria-hidden="true" />
         </button>
       </header>
 
       <div ref={contentRef} className="admin-mobile-content">
+        <p className="admin-mobile-connection" role="status" data-error={Boolean(actionError)}>{actionError ? '同步異常，請查看提示' : '正式資料已連線'}</p>
         {view === 'overview' ? <AdminSeasonOverview data={data} /> : null}
 
         {view === 'reconciliation' ? (
@@ -376,10 +380,12 @@ export default function AdminMobileDashboard({ data, runAction, updatingId, acti
       </div>
 
       <nav className="admin-mobile-bottomnav" aria-label="管理員主要導航">
+        <div className="mobile-bottom-nav-inner">
         {([['overview', '總覽', LayoutDashboard], ['reconciliation', '對帳', Landmark], ['students', '學員', UsersRound], ['coaches', '教練', UserCog], ['more', '更多', Menu]] as const).map(([id, label, Icon]) => {
           const active = navActive === id
-          return <button type="button" key={id} className="admin-mobile-navbutton" data-active={active} aria-current={active ? 'page' : undefined} onClick={() => id === 'more' ? setMoreOpen(true) : navigate(id as MobileView)}><span><Icon className="h-5 w-5" aria-hidden="true" /></span><span>{label}</span></button>
+          return <button type="button" key={id} className={`admin-mobile-navbutton mobile-bottom-nav-item${active ? ' is-active' : ''}`} data-active={active} aria-current={active ? 'page' : undefined} onClick={() => id === 'more' ? setMoreOpen(true) : navigate(id as MobileView)}><span className="mobile-bottom-nav-icon"><Icon aria-hidden="true" /></span><span>{label}</span></button>
         })}
+        </div>
       </nav>
 
       {moreOpen ? <div className="admin-mobile-sheet-layer" role="dialog" aria-modal="true" aria-labelledby="admin-mobile-more-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setMoreOpen(false) }}><section className="admin-mobile-sheet"><div className="admin-mobile-sheet-handle" /><div className="admin-mobile-sheet-head"><div><h2 id="admin-mobile-more-title">更多管理功能</h2><p>季度、商品、內容與收款帳戶集中在這裡。</p></div><button type="button" className="admin-mobile-iconbutton" aria-label="關閉更多管理功能" onClick={() => setMoreOpen(false)}><X className="h-5 w-5" aria-hidden="true" /></button></div><div className="admin-mobile-sheet-grid"><button type="button" className="admin-mobile-more-item" onClick={() => navigate('seasons')}><CalendarRange className="h-5 w-5" aria-hidden="true" /><strong>季度管理</strong><small>招生季度、課程與統計</small></button><button type="button" className="admin-mobile-more-item" onClick={() => navigate('products')}><Boxes className="h-5 w-5" aria-hidden="true" /><strong>商城商品</strong><small>內容、規格、庫存與上下架</small></button><button type="button" className="admin-mobile-more-item" onClick={() => navigate('content')}><PanelsTopLeft className="h-5 w-5" aria-hidden="true" /><strong>內容中心</strong><small>首頁、公開頁面與教練資料</small></button><button type="button" className="admin-mobile-more-item" onClick={() => navigate('paymentAccounts')}><Landmark className="h-5 w-5" aria-hidden="true" /><strong>收款帳戶</strong><small>通道、權重與啟用狀態</small></button></div></section></div> : null}
