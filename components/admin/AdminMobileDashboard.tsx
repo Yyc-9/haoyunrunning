@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import WeekdayLogo from '@/components/WeekdayLogo'
+import NotificationBell from '@/components/NotificationBell'
 import {
   ArrowLeft,
   Boxes,
@@ -271,9 +272,10 @@ export default function AdminMobileDashboard({ data, runAction, updatingId, acti
           <span className="admin-mobile-brandmark"><WeekdayLogo brandName={data.siteContent.brand.brandName} /></span>
           <span className="admin-mobile-topcopy"><strong>{data.siteContent.brand.brandName}</strong><small>{currentTitle}</small></span>
         </Link>
+        <div className="flex items-center gap-2"><NotificationBell mobile />
         <button type="button" className="admin-mobile-iconbutton" aria-label="開啟更多管理功能" onClick={() => setMoreOpen(true)}>
           <Menu className="h-5 w-5" aria-hidden="true" />
-        </button>
+        </button></div>
       </header>
 
       <div ref={contentRef} className="admin-mobile-content">

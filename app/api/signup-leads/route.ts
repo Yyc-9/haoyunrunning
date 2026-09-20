@@ -300,7 +300,7 @@ export async function PATCH(request: NextRequest) {
       })
       .eq('id', leadId)
       .eq('source', 'course_payment')
-      .in('status', ['pending_transfer', 'pending_review'])
+      .eq('status', 'pending_transfer')
       .select('id, source, status, transfer_last_five, payment_submitted_at')
       .single()
 
@@ -362,6 +362,9 @@ export async function PATCH(request: NextRequest) {
   }
   if (existingLead.source === 'course_payment' && status === 'approved') {
     return NextResponse.json({ error: '課程匯款必須由銀行對帳確認，不能直接改為已確認入帳。' }, { status: 409 })
+  }
+  if (existingLead.source === 'course_payment') {
+    return NextResponse.json({ error: '課程報名請使用「補件通知與紀錄」處理，避免覆蓋已完成的核對。' }, { status: 409 })
   }
 
   const updatePayload: { status: string; notes?: string; reviewed_at?: string; review_note?: string } = { status }

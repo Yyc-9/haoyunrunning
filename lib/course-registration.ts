@@ -44,7 +44,7 @@ export function courseEnrollmentPayload(row: Record<string, unknown>): MyCourseE
     priorAttendanceClaimed: row.prior_attendance_claimed === true,
     attendanceVerificationStatus: String(row.attendance_verification_status ?? 'not_required'),
     transferLastFive: String(row.transfer_last_five ?? ''),
-    reviewNote: String(row.review_note ?? ''),
+    reviewNote: status === 'rejected' ? String(row.student_review_message || '匯款資料需補充，請查看報名通知。') : '',
     createdAt: String(row.created_at ?? ''),
     paymentSubmittedAt: row.payment_submitted_at ? String(row.payment_submitted_at) : null,
   }

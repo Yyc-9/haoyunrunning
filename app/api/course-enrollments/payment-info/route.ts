@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentCourseSeason } from '@/lib/course-seasons-server'
 import { verifyCourseQuoteToken } from '@/lib/course-pricing-token'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
+import { isUuid } from '@/lib/enrollment-notification-policy'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,15 +26,26 @@ export async function POST(request: NextRequest) {
     courseSlug?: string
     quoteToken?: string
     format?: string
+    enrollmentId?: string
   }
   const courseSlug = cleanText(body.courseSlug, 120)
   const quoteToken = cleanText(body.quoteToken, 12_000)
+  const email = user.email.trim().toLowerCase()
+  if (body.enrollmentId) {
+    if (!isUuid(body.enrollmentId) || !user.email_confirmed_at) return NextResponse.json({ error: '請登入原報名帳號後查看收款資訊。' }, { status: 403 })
+    const { data: lead, error } = await supabaseAdmin.from('signup_leads').select('season_id')
+      .eq('id', body.enrollmentId).eq('email', email).eq('source', 'course_payment').maybeSingle()
+    if (error) return NextResponse.json({ error: '匯款資料權限核對失敗。' }, { status: 503 })
+    if (!lead?.season_id) return NextResponse.json({ error: '找不到可存取的報名。' }, { status: 404 })
+    const { data: season, error: seasonError } = await supabaseAdmin.from('course_seasons').select('status').eq('id', lead.season_id).maybeSingle()
+    if (seasonError) return NextResponse.json({ error: '季度核對暫時無法完成。' }, { status: 503 })
+    if (!season || season.status === 'archived') return NextResponse.json({ error: '此季度已封存，請聯絡跑班確認款項。' }, { status: 409 })
+  } else {
   const season = await getCurrentCourseSeason({ forEnrollment: true })
   if (!season || !season.courseOfferingIds[courseSlug]) {
     return NextResponse.json({ error: '目前無法提供這個課程的匯款資料。' }, { status: 404 })
   }
 
-  const email = user.email.trim().toLowerCase()
   const quote = quoteToken ? verifyCourseQuoteToken(quoteToken) : null
   const hasValidQuote = Boolean(
     quote
@@ -64,6 +76,7 @@ export async function POST(request: NextRequest) {
 
   if (!hasValidQuote && !hasEnrollment) {
     return NextResponse.json({ error: '完成課程資料與費用確認後，才可查看匯款資料。' }, { status: 403 })
+  }
   }
 
   try {

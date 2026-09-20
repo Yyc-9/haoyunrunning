@@ -13,6 +13,7 @@ import { languages } from '@/lib/dictionary'
 import AuthModal from '@/components/AuthModal'
 import WeekdayLogo from '@/components/WeekdayLogo'
 import MobileBottomNav from '@/components/MobileBottomNav'
+import NotificationBell from '@/components/NotificationBell'
 import { supabase } from '@/lib/supabase'
 import { isFinanceViewer } from '@/lib/finance-viewers'
 
@@ -355,6 +356,7 @@ export default function Navigation() {
 
             {/* Auth Buttons */}
             <div className="hidden items-center space-x-3 justify-self-end xl:flex">
+              <NotificationBell />
               {languageSwitcher}
               {isLoading ? (
                 <div className="h-9 w-28 animate-pulse rounded-full bg-white/70 ring-1 ring-black/10" />
@@ -417,6 +419,7 @@ export default function Navigation() {
 
             {/* Compact Auth + Menu */}
             <div className="mobile-compact-controls flex items-center gap-2 justify-self-end xl:hidden">
+              <NotificationBell mobile />
               {isLoading ? (
                 <div className="mobile-account-control h-10 w-20 animate-pulse rounded-full bg-apple-gray-100 ring-1 ring-black/10" />
               ) : isLoggedIn ? (

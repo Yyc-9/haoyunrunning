@@ -1789,28 +1789,7 @@ export async function PATCH(request: NextRequest) {
       return json({ error: '這裡只能將課程報名標記為「匯款資料需補充」。' }, { status: 400 })
     }
 
-    const finalReviewNote = reviewNote || '匯款資料有異常，請補充資料或由財務重新核對。'
-
-    const courseReviewResult = await supabaseAdmin!
-      .from('signup_leads')
-      .update({
-        status: 'rejected',
-        reviewed_at: new Date().toISOString(),
-        review_note: finalReviewNote,
-      })
-      .eq('id', orderId)
-      .eq('source', 'course_payment')
-      .neq('status', 'approved')
-      .select('*')
-      .single()
-
-    const order = courseReviewResult.data as SignupLeadRow | null
-    const error = courseReviewResult.error
-
-    if (error || !order) {
-      return json({ error: error?.message || '訂單更新失敗。' }, { status: 500 })
-    }
-    return json({ order, message: finalReviewNote })
+    return json({ error: '請從「補件通知與紀錄」填寫給學生的說明，內部備註不會寄給學生。' }, { status: 409 })
   }
 
   if (body.action === 'delete_product') {

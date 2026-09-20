@@ -439,6 +439,7 @@ export async function POST(request: NextRequest) {
         .update({
           status: transitionRemittanceStatus('pending_review', 'flag_exception'),
           review_note: '銀行對帳發現金額不符或後五碼重複，請由財務人工處理。',
+          student_review_message: null,
           reviewed_at: new Date().toISOString(),
         })
         .in('id', issueCourseIds)

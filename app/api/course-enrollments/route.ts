@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
   const [enrollmentResult, legacyResult] = await Promise.all([
     supabaseAdmin
       .from('signup_leads')
-      .select('id, course_slug, preferred_course, status, amount_text, billing_start_session_date, prior_attendance_claimed, attendance_verification_status, transfer_last_five, review_note, created_at, payment_submitted_at')
+      .select('id, course_slug, preferred_course, status, amount_text, billing_start_session_date, prior_attendance_claimed, attendance_verification_status, transfer_last_five, student_review_message, created_at, payment_submitted_at')
       .eq('source', 'course_payment')
       .eq('season_id', currentSeason.id)
       .eq('course_slug', courseSlug)
@@ -223,12 +223,12 @@ export async function POST(request: NextRequest) {
 
   const { data: activeLead, error: activeLeadError } = await supabaseAdmin
     .from('signup_leads')
-    .select('id, course_slug, preferred_course, status, amount_text, billing_start_session_date, prior_attendance_claimed, attendance_verification_status, transfer_last_five, review_note, created_at, payment_submitted_at')
+    .select('id, course_slug, preferred_course, status, amount_text, billing_start_session_date, prior_attendance_claimed, attendance_verification_status, transfer_last_five, student_review_message, created_at, payment_submitted_at')
     .eq('source', 'course_payment')
     .eq('season_id', currentSeason.id)
     .eq('course_slug', courseSlug)
     .eq('email', email)
-    .in('status', ['pending_transfer', 'pending_review', 'approved'])
+    .in('status', ['pending_transfer', 'pending_review', 'rejected', 'approved'])
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -396,7 +396,7 @@ export async function POST(request: NextRequest) {
           },
         },
       })
-      .select('id, course_slug, preferred_course, status, amount_text, billing_start_session_date, prior_attendance_claimed, attendance_verification_status, transfer_last_five, review_note, created_at, payment_submitted_at')
+      .select('id, course_slug, preferred_course, status, amount_text, billing_start_session_date, prior_attendance_claimed, attendance_verification_status, transfer_last_five, student_review_message, created_at, payment_submitted_at')
       .single()
 
     if (error || !data) {
@@ -448,8 +448,8 @@ export async function PATCH(request: NextRequest) {
     .eq('id', leadId)
     .eq('source', 'course_payment')
     .eq('email', user.email.trim().toLowerCase())
-    .in('status', ['pending_transfer', 'pending_review', 'rejected'])
-    .select('id, course_slug, preferred_course, status, amount_text, billing_start_session_date, prior_attendance_claimed, attendance_verification_status, transfer_last_five, review_note, created_at, payment_submitted_at')
+    .eq('status', 'pending_transfer')
+    .select('id, course_slug, preferred_course, status, amount_text, billing_start_session_date, prior_attendance_claimed, attendance_verification_status, transfer_last_five, student_review_message, created_at, payment_submitted_at')
     .maybeSingle()
 
   if (error) {

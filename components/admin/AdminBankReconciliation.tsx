@@ -16,6 +16,7 @@ import {
   Upload,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import Link from 'next/link'
 import FinanceSeasonRoster, { type FinanceRosterRow } from './FinanceSeasonRoster'
 
 type PaymentAccount = {
@@ -598,6 +599,9 @@ export default function AdminBankReconciliation({ paymentAccounts, readOnly: vie
       </div>
 
       {data && <FinanceSeasonRoster rows={data.roster ?? []} />}
+      <Link href="/notifications?view=staff" className="apple-card flex min-h-16 items-center justify-between gap-4 p-5 text-sm font-bold hover:bg-apple-gray-100">
+        <span>報名通知與核對待辦<span className="mt-1 block text-xs font-normal text-apple-gray-500">查看新報名、請學生補充資料或回報匯款</span></span><span aria-hidden="true">→</span>
+      </Link>
 
       {!readOnly && accessStatus.canManagePassword ? (
         <details className="apple-card overflow-hidden">

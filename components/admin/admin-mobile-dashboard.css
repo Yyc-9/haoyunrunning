@@ -35,7 +35,7 @@ body.admin-mobile-sheet-open { overflow: hidden; }
   position: relative;
   z-index: 20;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 44px;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   min-height: 60px;
   padding: 6px 16px;

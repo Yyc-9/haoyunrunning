@@ -140,7 +140,7 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
   const capacity = availability?.capacity ?? COURSE_CAPACITY
   const remaining = availability?.remaining ?? capacity
   const isFull = availability?.full === true
-  const canSubmitTransfer = enrollment && ['pending_transfer', 'rejected'].includes(enrollment.status)
+  const canSubmitTransfer = enrollment?.status === 'pending_transfer'
 
   return (
     <div className="mobile-focused-main min-h-screen bg-apple-gray-50 pt-20">
@@ -255,6 +255,7 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
             )}
           </section>
 
+          {enrollment?.status === 'rejected' ? <section className="rounded-lg border border-amber-200 bg-amber-50 p-5"><h2 className="font-black">請補充報名資料</h2><p className="my-3 text-sm leading-6">查看財務說明並補交資料，會沿用這筆報名。</p><Link href={`/notifications?enrollment=${enrollment.id}`} className="apple-button-primary">查看說明並補充資料</Link></section> : null}
           {canSubmitTransfer ? (
             <section className="rounded-lg border border-black/10 bg-white p-5">
               <div className="flex items-center gap-2"><WalletCards className="h-5 w-5" /><h2 className="font-black">完成匯款後回報</h2></div>

@@ -6,10 +6,12 @@ import PaymentInfoCard, { type PaymentInfo } from '@/components/PaymentInfoCard'
 import { supabase } from '@/lib/supabase'
 
 export default function ProtectedCoursePaymentInfo({
-  courseSlug,
+  courseSlug = '',
+  enrollmentId = '',
   quoteToken = '',
 }: {
-  courseSlug: string
+  courseSlug?: string
+  enrollmentId?: string
   quoteToken?: string
 }) {
   const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null)
@@ -33,7 +35,7 @@ export default function ProtectedCoursePaymentInfo({
             Authorization: `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ courseSlug, quoteToken, format: 'json' }),
+          body: JSON.stringify({ courseSlug, quoteToken, enrollmentId, format: 'json' }),
         })
         if (!response.ok) {
           const payload = (await response.json().catch(() => ({}))) as { error?: string }
@@ -51,7 +53,7 @@ export default function ProtectedCoursePaymentInfo({
     return () => {
       active = false
     }
-  }, [courseSlug, quoteToken])
+  }, [courseSlug, quoteToken, enrollmentId])
 
   if (error) {
     return (

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import NotificationBell from '@/components/NotificationBell'
 
 type MobileContextHeaderProps = {
   backHref: string
@@ -17,7 +18,7 @@ export default function MobileContextHeader({ backHref, backLabel, title, right 
         <span>{backLabel}</span>
       </Link>
       <p className="mobile-context-title">{title}</p>
-      {right ?? <span className="mobile-context-spacer" aria-hidden="true" />}
+      {right ?? <div className="mobile-context-spacer flex justify-end"><NotificationBell mobile /></div>}
     </header>
   )
 }

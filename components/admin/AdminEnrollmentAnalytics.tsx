@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { AlertTriangle, BarChart3, CalendarRange, CheckCircle2, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, FileSpreadsheet, Loader2, Package, RotateCcw, Search, Trash2, X } from 'lucide-react'
 import { preferredCourseSeasonId, type CourseSeason } from '@/lib/course-seasons'
 import { paymentOrderStatusDescriptions, paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
@@ -272,7 +273,7 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
   }
 
   async function flagOrderForReview() {
-    if (!selected) return
+    if (!selected || selected.orderKind !== 'shop') return
     const saved = await runAction(selected.id, {
       action: 'review_order',
       orderId: selected.id,
@@ -556,7 +557,7 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
               <p className={`rounded-lg px-3 py-2 text-xs font-bold leading-5 sm:col-span-2 ${selected.orderKind === 'shop' ? 'bg-apple-gray-100 text-apple-gray-700' : 'bg-blue-50 text-blue-800'}`}>{selected.orderKind === 'shop' ? '商城使用銀行匯款付款，入帳後再安排跑班自取；可在銀行對帳頁核對，也可於此人工確認。' : '財務可透過銀行對帳確認；超級管理員亦可核實實際入帳後，填寫管理備註並人工確認。系統保留操作人、時間及核對依據，財務之後仍可補登銀行對帳。'}</p>
               {selected.orderKind === 'course' ? <button type="button" disabled={selectedArchived || updatingId === selected.id || selected.status === 'approved'} onClick={confirmCourseTransfer} className="apple-button-primary gap-2 px-4 py-3 disabled:opacity-40"><CheckCircle2 className="h-4 w-4" />{selected.status === 'approved' ? '已確認入帳' : '確認入帳（管理員）'}</button> : null}
               {selected.orderKind === 'shop' ? <button type="button" disabled={selectedArchived || updatingId === selected.id || selected.status === 'rejected' || selected.status === 'approved'} onClick={confirmShopTransfer} className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-40"><Package className="h-4 w-4" />確認匯款並安排自取</button> : null}
-              <button type="button" disabled={selectedArchived || updatingId === selected.id || selected.status === 'rejected' || selected.status === 'approved'} onClick={flagOrderForReview} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40"><RotateCcw className="h-4 w-4" />標記匯款資料需補充</button>
+              {selected.orderKind === 'course' ? <Link href={`/notifications?enrollment=${selected.id}&view=staff`} className="inline-flex items-center justify-center gap-2 rounded-lg border border-black/10 px-4 py-3 text-sm font-bold"><RotateCcw className="h-4 w-4" />補件通知與紀錄</Link> : <button type="button" disabled={selectedArchived || updatingId === selected.id || selected.status === 'rejected' || selected.status === 'approved'} onClick={flagOrderForReview} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40"><RotateCcw className="h-4 w-4" />標記匯款資料需補充</button>}
               <button type="button" disabled={selectedArchived || updatingId === `delete-${selected.id}` || selected.status === 'approved'} onClick={deleteOrder} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40">{updatingId === `delete-${selected.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}刪除記錄</button>
             </div>
           </aside>

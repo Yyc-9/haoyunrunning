@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('signup_leads')
-    .select('id, course_slug, preferred_course, status, amount_text, billing_start_session_date, prior_attendance_claimed, attendance_verification_status, transfer_last_five, review_note, created_at, payment_submitted_at')
+    .select('id, course_slug, preferred_course, status, amount_text, billing_start_session_date, prior_attendance_claimed, attendance_verification_status, transfer_last_five, student_review_message, created_at, payment_submitted_at')
     .eq('source', 'course_payment')
     .eq('email', user.email.trim().toLowerCase())
     .order('created_at', { ascending: false })
