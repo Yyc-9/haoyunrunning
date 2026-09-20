@@ -17,7 +17,7 @@ try {
   await page.evaluate(async () => {
     const host = document.createElement('section')
     host.id = 'language-regression'
-    host.innerHTML = '<span id="first"></span><span id="second"></span><img id="image"><input id="input"><span translate="no" id="untouched">查看完整課表</span>'
+    host.innerHTML = '<span id="first"></span><span id="second"></span><img id="image"><input id="input"><span translate="no" id="untouched">查看完整課表</span><select id="select"><optgroup id="group" label="亞洲"><option value="半馬">半馬</option></optgroup></select>'
     document.body.append(host)
     // Distinct observer batches arrive before the next animation frame.
     document.querySelector('#first').textContent = '查看完整課表'
@@ -37,6 +37,8 @@ try {
     untouched: document.querySelector('#untouched').textContent,
     title: document.title,
     font: getComputedStyle(document.body).fontFamily,
+    group: document.querySelector('#group').label,
+    optionValue: document.querySelector('#select').value,
   }))
   assert.equal(result.alt, 'View Full Schedule')
   assert.equal(result.placeholder, 'View Full Schedule')
@@ -44,6 +46,10 @@ try {
   assert.equal(result.untouched, '查看完整課表')
   assert.equal(result.title, 'Nurture Running Shop')
   assert.match(result.font, /Segoe UI/)
+  assert.equal(result.group, 'Asia')
+  assert.equal(result.optionValue, '半馬')
+  await page.evaluate(() => { document.querySelector('#group').label = '歐洲' })
+  await page.waitForFunction(() => document.querySelector('#group').label === 'Europe')
   await page.evaluate(() => {
     const title = document.createElement('title')
     title.textContent = '查看完整課表'

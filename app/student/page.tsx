@@ -73,11 +73,11 @@ const worldRaceCatalog: RaceCatalogItem[] = [
   { id: 'taipei-marathon', raceName: 'Taipei Marathon', location: 'Taipei', country: 'Taiwan', raceDate: '2026-12-20', distance: 'Marathon / Half Marathon' },
 ]
 
-function formatRaceDate(date: string | null) {
+function formatRaceDate(date: string | null, language: string) {
   if (!date) return '日期待確認'
   return new Date(
     date + 'T00:00:00'
-  ).toLocaleDateString('zh-CN', {
+  ).toLocaleDateString(language, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -148,7 +148,7 @@ export default function StudentPage() {
   const displayName = user?.name || '好運跑者'
   const currentWeek = latestPlan?.week_number
   const currentProgram = user?.role === 'coach' ? '教練帳號' : '好運跑班學員'
-  const currentGoal = user?.pb ? `目前 PB：${user.pb}` : '等待教練同步目標'
+  const currentGoal = user?.pb ? `${language === 'en' ? 'Current PB: ' : '目前 PB：'}${user.pb}` : '等待教練同步目標'
   const isCoach = user?.role === 'coach' || user?.role === 'admin'
   const coachStatusText = boundCoachName || (coachBound || latestPlan ? '已綁定' : '待綁定')
   const selectedCatalogRace = worldRaceCatalog.find((race) => race.id === selectedRaceId) ?? worldRaceCatalog[0]
@@ -181,7 +181,7 @@ export default function StudentPage() {
     .reverse()
     .map((item) => ({
       id: item.id,
-      label: new Date(item.created_at).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }),
+      label: new Date(item.created_at).toLocaleDateString(language, { month: 'numeric', day: 'numeric' }),
       load: Math.round((item.distance_km ?? 0) * (item.rpe ?? 0)),
       distance: item.distance_km ?? 0,
       rpe: item.rpe,
@@ -788,7 +788,7 @@ export default function StudentPage() {
                 {formatTodayLabel(todayInfo.todayIso, language)}
               </p>
               <p className="mt-2 text-xs font-semibold text-apple-gray-500">
-                {currentWeek ? `第 ${currentWeek} 周 · ` : ''}
+                {currentWeek ? (language === 'en' ? `Week ${currentWeek} · ` : `第 ${currentWeek} 周 · `) : ''}
                 {currentGoal}
               </p>
             </div>
@@ -896,7 +896,7 @@ export default function StudentPage() {
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   {[
-                    { label: '近期里程', value: totalDistance > 0 ? `${totalDistance.toFixed(1)} km` : '先提交訓練回饋', note: `最近 ${recentFeedback.length} 次回饋` },
+                    { label: '近期里程', value: totalDistance > 0 ? `${totalDistance.toFixed(1)} km` : '先提交訓練回饋', note: language === 'en' ? `Last ${recentFeedback.length} feedback entries` : `最近 ${recentFeedback.length} 次回饋` },
                     { label: '平均心率', value: averageHeartRate ? `${averageHeartRate}` : '回饋時可填寫', note: '來自已填寫記錄' },
                     { label: '課表完成', value: plans.length > 0 ? `${completedPlanCount}/${plans.length}` : '待同步', note: '按訓練回饋匹配課表' },
                     { label: '強度指數', value: intensityScore ? `${intensityScore}` : '提交 RPE 後生成', note: '由 RPE 換算' },
@@ -973,7 +973,7 @@ export default function StudentPage() {
                         <p className="text-sm font-bold text-apple-gray-900">最近一次回饋</p>
                         <p className="mt-1 text-sm leading-6 text-apple-gray-600">
                           {latestFeedback
-                            ? `${new Date(latestFeedback.created_at).toLocaleString('zh-CN', {
+                            ? `${new Date(latestFeedback.created_at).toLocaleString(language, {
                                 month: 'numeric',
                                 day: 'numeric',
                                 hour: '2-digit',
@@ -1094,7 +1094,7 @@ export default function StudentPage() {
                                 <MapPin className="h-3.5 w-3.5" />
                                 {race.location}{race.country ? ', ' + race.country : ''}
                               </span>
-                              <span>{formatRaceDate(race.race_date)}</span>
+                              <span>{formatRaceDate(race.race_date, language)}</span>
                               <span>{race.distance || '距離待確認'}</span>
                             </p>
                           </div>
@@ -1165,7 +1165,7 @@ export default function StudentPage() {
                     </div>
                   ) : (
                     <div className="mt-4 rounded-2xl bg-white p-4 text-sm leading-6 text-apple-gray-600">
-                      {selectedCatalogRace.location}, {selectedCatalogRace.country} · {formatRaceDate(selectedCatalogRace.raceDate)} · {selectedCatalogRace.distance}
+                      {selectedCatalogRace.location}, {selectedCatalogRace.country} · {formatRaceDate(selectedCatalogRace.raceDate, language)} · {selectedCatalogRace.distance}
                     </div>
                   )}
 
@@ -1195,7 +1195,7 @@ export default function StudentPage() {
                               type="button"
                               onClick={() => scrollPlanTrack(group.week, 'left')}
                               className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-black/10 bg-white text-apple-gray-700 transition hover:bg-apple-gray-100"
-                              aria-label={`向左查看第 ${group.week} 週課表`}
+                              aria-label={language === 'en' ? `Scroll week ${group.week} plan left` : `向左查看第 ${group.week} 週課表`}
                             >
                               <ChevronLeft className="h-4 w-4" />
                             </button>
@@ -1203,7 +1203,7 @@ export default function StudentPage() {
                               type="button"
                               onClick={() => scrollPlanTrack(group.week, 'right')}
                               className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-black/10 bg-white text-apple-gray-700 transition hover:bg-apple-gray-100"
-                              aria-label={`向右查看第 ${group.week} 週課表`}
+                              aria-label={language === 'en' ? `Scroll week ${group.week} plan right` : `向右查看第 ${group.week} 週課表`}
                             >
                               <ChevronRight className="h-4 w-4" />
                             </button>
@@ -1329,10 +1329,10 @@ export default function StudentPage() {
                       onChange={(event) => updateField('sleepQuality', event.target.value)}
                       className="apple-input"
                     >
-                      <option>很好</option>
-                      <option>普通</option>
-                      <option>偏差</option>
-                      <option>很差</option>
+                      <option value="很好">很好</option>
+                      <option value="普通">普通</option>
+                      <option value="偏差">偏差</option>
+                      <option value="很差">很差</option>
                     </select>
                   </label>
                   <label className="block">
@@ -1342,10 +1342,10 @@ export default function StudentPage() {
                       onChange={(event) => updateField('fatigueLevel', event.target.value)}
                       className="apple-input"
                     >
-                      <option>輕鬆</option>
-                      <option>普通</option>
-                      <option>偏疲勞</option>
-                      <option>非常疲勞</option>
+                      <option value="輕鬆">輕鬆</option>
+                      <option value="普通">普通</option>
+                      <option value="偏疲勞">偏疲勞</option>
+                      <option value="非常疲勞">非常疲勞</option>
                     </select>
                   </label>
                   <label className="block">
@@ -1355,10 +1355,10 @@ export default function StudentPage() {
                       onChange={(event) => updateField('completedOriginalPlan', event.target.value)}
                       className="apple-input"
                     >
-                      <option>完成原計畫</option>
-                      <option>部分完成</option>
-                      <option>改為輕鬆跑</option>
-                      <option>未完成 / 休息</option>
+                      <option value="完成原計畫">完成原計畫</option>
+                      <option value="部分完成">部分完成</option>
+                      <option value="改為輕鬆跑">改為輕鬆跑</option>
+                      <option value="未完成 / 休息">未完成 / 休息</option>
                     </select>
                   </label>
                   <label className="block">

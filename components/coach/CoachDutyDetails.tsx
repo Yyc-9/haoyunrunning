@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useLanguage } from '@/app/language-context'
 import {
   CalendarClock,
   CheckCircle2,
@@ -72,8 +73,8 @@ const roleLabels: Record<string, string> = {
   substitute: '代班教練',
 }
 
-export function formatDutyDate(value: string) {
-  return new Intl.DateTimeFormat('zh-TW', {
+export function formatDutyDate(value: string, language = 'zh-TW') {
+  return new Intl.DateTimeFormat(language, {
     timeZone: 'Asia/Taipei',
     year: 'numeric',
     month: 'long',
@@ -89,21 +90,28 @@ export function formatDutyTime(value: string) {
   if (Number.isNaN(date.getTime())) return value
   return new Intl.DateTimeFormat('zh-TW', {
     timeZone: 'Asia/Taipei',
+    hourCycle: 'h23',
     hour: '2-digit',
     minute: '2-digit',
   }).format(date)
 }
 
-function checkInLabel(item: DutyItem) {
+function checkInLabel(item: DutyItem, language: string) {
   if (item.checkedInAt) return item.punctuality === 'late' ? '已完成遲到簽到' : '已完成準時簽到'
   if (item.canCheckIn) return item.managedByAdmin ? '確認教練到課' : '本人到課簽到'
   if (item.attendanceState === 'missing_start_time') return '尚未設定簽到時間'
   if (['not_checked_in', 'substitute_absent'].includes(item.attendanceState)) return '簽到時間已結束'
-  if (item.checkInOpensAt) return `將於 ${formatDutyTime(item.checkInOpensAt)} 開放簽到`
+  if (item.checkInOpensAt) return language === 'en' ? `Check-in opens at ${formatDutyTime(item.checkInOpensAt)}` : `將於 ${formatDutyTime(item.checkInOpensAt)} 開放簽到`
   return '簽到尚未開放'
 }
 
-function leaveSummary(item: DutyItem) {
+function leaveSummary(item: DutyItem, language: string) {
+  if (language === 'en') {
+    if (item.substituteResponse === 'accepted') return `Coach on leave | ${item.substituteCoachName} accepted the substitution${item.adminStatus === 'pending' ? '; awaiting administrator confirmation' : '; assignment confirmed'}`
+    if (item.substituteResponse === 'rejected') return `${item.substituteCoachName || 'The substitute coach'} declined. You can invite another coach.`
+    if (item.substituteCoachName) return `Leave request sent | Awaiting a reply from ${item.substituteCoachName}`
+    return `Leave: ${item.leaveStatus === 'approved' ? 'Approved' : item.leaveStatus === 'rejected' ? 'Declined' : 'Processing'} | Awaiting administrator substitution arrangement`
+  }
   if (item.substituteResponse === 'accepted' && item.adminStatus === 'pending') return `原教練已請假｜代班 ${item.substituteCoachName} 已接受，等待管理員確認`
   if (item.substituteResponse === 'accepted') return `原教練已請假｜代班 ${item.substituteCoachName} 已接受並生效`
   if (item.substituteResponse === 'rejected') return `代班 ${item.substituteCoachName || '教練'} 已拒絕，可重新邀請其他教練`
@@ -146,6 +154,7 @@ export default function CoachDutyDetails({
   onClose,
   onSelectItem,
 }: CoachDutyDetailsProps) {
+  const { language } = useLanguage()
   const meta = stateMeta[item.attendanceState] ?? stateMeta.upcoming
   const actionKey = `${item.id}:${activeTask}`
   const isSaving = savingKey === item.id || savingKey === actionKey
@@ -167,7 +176,7 @@ export default function CoachDutyDetails({
         <div className="min-w-0">
           <p className="text-xs font-black uppercase tracking-wide text-apple-blue">授課安排</p>
           <h3 className="mt-1 text-xl font-black text-black">{item.courseName}</h3>
-          <p className="mt-1 text-sm font-bold text-apple-gray-600">{formatDutyDate(item.sessionDate)}</p>
+          <p className="mt-1 text-sm font-bold text-apple-gray-600">{formatDutyDate(item.sessionDate, language)}</p>
         </div>
         <button type="button" onClick={onClose} aria-label="關閉課程詳情" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-apple-blue">
           <X className="h-5 w-5" aria-hidden="true" />
@@ -243,7 +252,7 @@ export default function CoachDutyDetails({
             }`}
           >
             {isSaving ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : <UserRoundCheck className="h-5 w-5" aria-hidden="true" />}
-            {checkInLabel(item)}
+            {checkInLabel(item, language)}
           </button>
           {!item.checkedInAt && item.attendanceState === 'not_checked_in' ? <p className="mt-2 text-sm font-semibold leading-5 text-amber-800">尚未簽到不等於未到課；目前標記為待確認。</p> : null}
         </div>
@@ -301,7 +310,7 @@ export default function CoachDutyDetails({
       {item.leaveStatus !== 'none' ? (
         <p className="mt-4 flex items-start gap-2 rounded-xl bg-orange-50 p-3 text-sm font-bold leading-6 text-orange-900">
           <CalendarClock className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-          <span>{leaveSummary(item)}</span>
+          <span>{leaveSummary(item, language)}</span>
         </p>
       ) : null}
     </div>

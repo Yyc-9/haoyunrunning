@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useLanguage } from '@/app/language-context'
 import { CalendarDays, Mail, MessageSquareText, Search, UsersRound } from 'lucide-react'
 import CoachSubNav from '@/components/CoachSubNav'
 import CoachRegistrationDetails from '@/components/coach/CoachRegistrationDetails'
@@ -68,6 +69,7 @@ async function fetchCoachStudents() {
 }
 
 export default function CoachStudentsClient() {
+  const { language } = useLanguage()
   const [students, setStudents] = useState<BoundStudentRow[]>([])
   const [query, setQuery] = useState('')
   const [isLoading, setIsLoading] = useState(true)
@@ -201,7 +203,7 @@ export default function CoachStudentsClient() {
                             <div key={feedback.id} className="rounded-xl bg-white p-3 text-sm text-apple-gray-700">
                               <div className="mb-1 flex items-center justify-between gap-3">
                                 <span className="font-semibold text-apple-gray-900">
-                                  {new Date(feedback.created_at).toLocaleDateString('zh-CN')}
+                                  {new Date(feedback.created_at).toLocaleDateString(language)}
                                 </span>
                                 <span className="rounded-full bg-apple-gray-100 px-2 py-0.5 text-xs font-semibold">
                                   RPE {feedback.rpe ?? '-'}

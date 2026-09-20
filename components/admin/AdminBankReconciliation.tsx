@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useLanguage } from '@/app/language-context'
 import {
   AlertTriangle,
   Check,
@@ -159,9 +160,9 @@ function formatMoney(value: number) {
   }).format(value)
 }
 
-function formatDate(value: string | null | undefined, includeTime = true) {
+function formatDate(value: string | null | undefined, includeTime = true, language = 'zh-TW') {
   if (!value) return '未提供'
-  return new Intl.DateTimeFormat('zh-TW', {
+  return new Intl.DateTimeFormat(language, {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -176,6 +177,7 @@ async function getAdminToken() {
 }
 
 export default function AdminBankReconciliation({ paymentAccounts, readOnly: viewOnly = false }: { paymentAccounts: PaymentAccount[]; readOnly?: boolean }) {
+  const { language } = useLanguage()
   const [accessStatus, setAccessStatus] = useState<AccessStatus | null>(null)
   const [financeToken, setFinanceToken] = useState('')
   const [password, setPassword] = useState('')
@@ -528,7 +530,7 @@ export default function AdminBankReconciliation({ paymentAccounts, readOnly: vie
                   className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3.5 text-sm font-black text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {busy === 'password' ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
-                  {isLocked ? `鎖定至 ${formatDate(accessStatus.lockedUntil)}` : isSetup ? '建立並解鎖' : '解鎖對帳區'}
+                  {isLocked ? (language === 'en' ? `Locked until ${formatDate(accessStatus.lockedUntil, true, language)}` : `鎖定至 ${formatDate(accessStatus.lockedUntil, true, language)}`) : isSetup ? '建立並解鎖' : '解鎖對帳區'}
                 </button>
               </div>
             )}
@@ -671,13 +673,18 @@ export default function AdminBankReconciliation({ paymentAccounts, readOnly: vie
             <input
               ref={fileInputRef}
               type="file"
+              aria-label="選擇銀行明細檔案"
               accept=".xlsx,.csv"
               onChange={(event) => {
                 const nextFile = event.target.files?.[0]
                 if (nextFile) previewFile(nextFile)
               }}
-              className="block w-full text-sm text-apple-gray-600 file:mr-3 file:rounded-xl file:border-0 file:bg-black file:px-4 file:py-2.5 file:text-sm file:font-bold file:text-white hover:file:bg-apple-gray-800"
+              className="sr-only"
             />
+            <div className="flex flex-wrap items-center gap-3">
+              <button type="button" disabled={Boolean(busy)} onClick={() => fileInputRef.current?.click()} className="min-h-11 rounded-xl bg-black px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">選擇檔案</button>
+              {file ? <span className="min-w-0 break-all text-sm text-apple-gray-600" translate="no">{file.name}</span> : <span className="text-sm text-apple-gray-500">尚未選擇檔案</span>}
+            </div>
             <p className="rounded-xl bg-apple-gray-50 p-3 text-xs leading-5 text-apple-gray-500">
               原始銀行檔案只在本次匯入時解析，不會保留在網站；系統僅保存對帳所需欄位、後五碼與檔案指紋。
             </p>
@@ -812,7 +819,7 @@ export default function AdminBankReconciliation({ paymentAccounts, readOnly: vie
                   >
                     {data.batches.map((batch) => (
                       <option key={batch.id} value={batch.id}>
-                        {formatDate(batch.uploaded_at)} · {batch.file_name}
+                        {formatDate(batch.uploaded_at, true, language)} · {batch.file_name}
                       </option>
                     ))}
                   </select>
@@ -954,6 +961,7 @@ function TransactionRow({
   desktop?: boolean
   readOnly?: boolean
 }) {
+  const { language } = useLanguage()
   const selected = candidates.find((candidate) => candidate.selected)
   const canConfirm = ['matched', 'already_confirmed', 'manual_match'].includes(transaction.match_status) && Boolean(selected)
   const complete = ['confirmed', 'ignored', 'duplicate'].includes(transaction.match_status)
@@ -987,7 +995,7 @@ function TransactionRow({
         }
       }}
       className="apple-input min-w-0 py-2 text-xs disabled:opacity-60"
-      aria-label={`選擇第 ${transaction.row_number} 列的對應訂單`}
+      aria-label={language === 'en' ? `Select the matching order for row ${transaction.row_number}` : `選擇第 ${transaction.row_number} 列的對應訂單`}
     >
       <option value="">選擇對應訂單</option>
       {candidates.map((candidate) => (
@@ -1036,7 +1044,7 @@ function TransactionRow({
         <p>學員／買家：{selected?.customer_name || transaction.source_name || '未提供'}</p>
         <p>課程／商品訂單：{selected?.order_label || selected?.order_number || '尚未選擇對應訂單'}</p>
         <p>回報金額：{selected ? formatMoney(selected.expected_amount) : '未提供'} · 銀行實際入帳：{formatMoney(transaction.amount)}</p>
-        <p>轉出後五碼：{transaction.source_last_five || '未提供'} · 入帳時間：{transaction.transaction_date ? formatDate(transaction.transaction_date) : transaction.transaction_time || '未提供'}</p>
+        <p>轉出後五碼：{transaction.source_last_five || '未提供'} · 入帳時間：{transaction.transaction_date ? formatDate(transaction.transaction_date, true, language) : transaction.transaction_time || '未提供'}</p>
       </div>
       <p className="mt-2 rounded-xl bg-white/70 p-2 text-xs leading-5 text-amber-800">{transaction.match_reason || '請確認金額、後五碼與訂單資料一致。'}</p>
       <div className="mt-3 grid grid-cols-2 gap-2">
@@ -1050,8 +1058,8 @@ function TransactionRow({
     return (
       <tr>
         <td className="px-4 py-4 align-top">
-          <p className="font-bold text-apple-gray-900">{transaction.transaction_date ? formatDate(transaction.transaction_date, false) : `檔案第 ${transaction.row_number} 列`}</p>
-          <p className="mt-1 truncate text-xs text-apple-gray-400" title={transaction.bank_reference}>{transaction.bank_reference || `第 ${transaction.row_number} 列`}</p>
+          <p className="font-bold text-apple-gray-900">{transaction.transaction_date ? formatDate(transaction.transaction_date, false, language) : (language === 'en' ? `File row ${transaction.row_number}` : `檔案第 ${transaction.row_number} 列`)}</p>
+          <p className="mt-1 truncate text-xs text-apple-gray-400" title={transaction.bank_reference}>{transaction.bank_reference || (language === 'en' ? `Row ${transaction.row_number}` : `第 ${transaction.row_number} 列`)}</p>
         </td>
         <td className="px-4 py-4 align-top">
           <p className="font-black text-apple-gray-900">{formatMoney(transaction.amount)}</p>
@@ -1075,7 +1083,7 @@ function TransactionRow({
     <article className="p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-bold text-apple-gray-400">{transaction.transaction_date ? formatDate(transaction.transaction_date, false) : `檔案第 ${transaction.row_number} 列`}</p>
+          <p className="text-xs font-bold text-apple-gray-400">{transaction.transaction_date ? formatDate(transaction.transaction_date, false, language) : (language === 'en' ? `File row ${transaction.row_number}` : `檔案第 ${transaction.row_number} 列`)}</p>
           <p className="mt-1 text-xl font-black text-apple-gray-900">{formatMoney(transaction.amount)}</p>
         </div>
         <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ${status.tone}`}>{status.label}</span>

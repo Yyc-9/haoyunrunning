@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useLanguage } from '@/app/language-context'
 import {
   BellRing,
   CalendarDays,
@@ -41,8 +42,8 @@ function taipeiDateKey(value: string | Date) {
   return part('year') + '-' + part('month') + '-' + part('day')
 }
 
-function monthLabel(year: number, month: number) {
-  return new Intl.DateTimeFormat('zh-TW', { year: 'numeric', month: 'long', timeZone: 'Asia/Taipei' })
+function monthLabel(year: number, month: number, language: string) {
+  return new Intl.DateTimeFormat(language, { year: 'numeric', month: 'long', timeZone: 'Asia/Taipei' })
     .format(new Date(Date.UTC(year, month - 1, 15)))
 }
 
@@ -52,6 +53,7 @@ function shortServerTime(value: string) {
   if (Number.isNaN(date.getTime())) return value
   return new Intl.DateTimeFormat('zh-TW', {
     timeZone: 'Asia/Taipei',
+    hourCycle: 'h23',
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
@@ -72,6 +74,7 @@ type DutyPayload = {
 }
 
 export default function CoachDutyPanel() {
+  const { language } = useLanguage()
   const [items, setItems] = useState<DutyItem[]>([])
   const [coaches, setCoaches] = useState<CoachOption[]>([])
   const [serverTime, setServerTime] = useState('')
@@ -285,10 +288,12 @@ export default function CoachDutyPanel() {
   }
 
   const scheduleHeading = todayItems.length ? '今日課程' : '下一堂課'
-  const scheduleSubheading = todayItems.length
+  const scheduleSubheading = language === 'en'
+    ? (todayItems.length ? `${todayItems.length} classes | Times follow the server record` : nextItems.length ? `Next session: ${formatDutyDate(nextItems[0].sessionDate, language)} | Times follow the server record` : 'No teaching sessions currently need a check-in or action.')
+    : todayItems.length
     ? String(todayItems.length) + ' 堂課｜時間以伺服器資料為準'
     : nextItems.length
-      ? '最近一堂：' + formatDutyDate(nextItems[0].sessionDate) + '｜時間以伺服器資料為準'
+      ? '最近一堂：' + formatDutyDate(nextItems[0].sessionDate, language) + '｜時間以伺服器資料為準'
       : '目前沒有需要簽到或處理的授課課次。'
 
   return (
@@ -397,7 +402,7 @@ export default function CoachDutyPanel() {
                   <article key={item.id} className="rounded-xl border border-sky-200 bg-white p-3">
                     <button type="button" onClick={(event) => openDetails(item, 'substitute', event.currentTarget)} className="block min-h-11 w-full text-left">
                       <p className="text-base font-black text-black">{item.courseName}</p>
-                      <p className="mt-1 text-sm font-semibold leading-5 text-apple-gray-600">{formatDutyDate(item.sessionDate)} · {formatDutyTime(item.startTime) || '未設定時間'} · {item.location || '地點待確認'}</p>
+                      <p className="mt-1 text-sm font-semibold leading-5 text-apple-gray-600">{formatDutyDate(item.sessionDate, language)} · {formatDutyTime(item.startTime) || '未設定時間'} · {item.location || '地點待確認'}</p>
                       <p className="mt-1 text-sm font-bold text-sky-900">邀請人：{item.scheduledCoachName}</p>
                     </button>
                     <div className="mt-3 grid grid-cols-2 gap-2">
@@ -423,7 +428,7 @@ export default function CoachDutyPanel() {
             <div className="flex items-center justify-between gap-2 sm:justify-end">
               <button type="button" onClick={goToday} className="min-h-11 rounded-xl border border-black/10 px-3 py-2 text-sm font-black">今天</button>
               <button type="button" onClick={() => moveMonth(-1)} aria-label="上個月" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-black/10"><ChevronLeft className="h-5 w-5" aria-hidden="true" /></button>
-              <span className="min-w-[120px] text-center text-base font-black text-black">{viewYear && viewMonth ? monthLabel(viewYear, viewMonth) : '日曆載入中'}</span>
+              <span className="min-w-[120px] text-center text-base font-black text-black">{viewYear && viewMonth ? monthLabel(viewYear, viewMonth, language) : '日曆載入中'}</span>
               <button type="button" onClick={() => moveMonth(1)} aria-label="下個月" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-black/10"><ChevronRight className="h-5 w-5" aria-hidden="true" /></button>
             </div>
           </div>
@@ -443,7 +448,7 @@ export default function CoachDutyPanel() {
                             type="button"
                             aria-haspopup="dialog"
                             aria-expanded={selected}
-                            aria-label={formatDutyDate(day.key) + '，' + events.length + ' 堂授課日程'}
+                            aria-label={language === 'en' ? `${formatDutyDate(day.key, language)}, ${events.length} teaching sessions` : formatDutyDate(day.key, language) + '，' + events.length + ' 堂授課日程'}
                             onClick={(event) => {
                               if (selected) {
                                 closeSelected()

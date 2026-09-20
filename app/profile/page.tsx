@@ -9,6 +9,7 @@ import {
   Sparkles, Target, TicketCheck, Trophy, UserRound, UsersRound,
 } from 'lucide-react'
 import { useAuth } from '@/app/providers'
+import { useLanguage } from '@/app/language-context'
 import StudentAttendancePanel from '@/components/StudentAttendancePanel'
 import {
   emptyProfile, getRaceCountdown, getRaceEvent, getTargetEventLabel, type AccountProfile, type Achievement,
@@ -55,12 +56,13 @@ const rarityTone = {
   legendary: 'border-amber-300 bg-amber-50 text-amber-950',
 } as const
 
-function getRunningLabel(value: string) {
+function getRunningLabel(value: string, language: string) {
   if (!value) return '待補充'
-  return /^\d{4}$/.test(value) ? `${value} 年開始` : value
+  return /^\d{4}$/.test(value) ? (language === 'en' ? `Since ${value}` : `${value} 年開始`) : value
 }
 
 export default function ProfilePage() {
+  const { language } = useLanguage()
   const { isLoggedIn, isLoading, user } = useAuth()
   const [profile, setProfile] = useState<AccountProfile>(emptyProfile)
   const [achievements, setAchievements] = useState<Achievement[]>([])
@@ -117,7 +119,7 @@ export default function ProfilePage() {
   const displayName = profile.nickname || profile.name || user?.name || '好運會員'
   const isStudentAccount = Boolean(user)
   const race = getRaceEvent(profile.target_event)
-  const raceCountdown = race && countdownNow ? getRaceCountdown(race, countdownNow) : null
+  const raceCountdown = race && countdownNow ? getRaceCountdown(race, countdownNow, language) : null
   const profileFields = [profile.nickname, profile.city, profile.running_since, profile.favorite_distance, profile.pb, profile.goal, profile.bio]
   const profileCompletion = Math.round((profileFields.filter(Boolean).length / profileFields.length) * 100)
   const commonAccountLinks = user?.role === 'coach' || user?.role === 'admin'
@@ -158,7 +160,7 @@ export default function ProfilePage() {
               <p className="mt-4 line-clamp-2 max-w-2xl text-xs leading-5 text-white/70 sm:mt-5 sm:text-base sm:leading-7">{profile.bio || '寫下你的跑步故事，讓這張跑者名片更像你。'}</p>
               <div className="mt-4 grid grid-cols-3 gap-2 sm:mt-6 sm:max-w-2xl sm:gap-3">
                 {[
-                  ['跑齡', getRunningLabel(profile.running_since)],
+                  ['跑齡', getRunningLabel(profile.running_since, language)],
                   ['偏好', profile.favorite_distance || '待補充'],
                   ['PB', profile.pb.replace('｜', ' ') || '待補充'],
                 ].map(([label, value]) => <div key={label} className="min-w-0 rounded-md bg-white/10 p-2.5 sm:p-3"><p className="text-[9px] font-bold text-white/45 sm:text-xs">{label}</p><p className="mt-1 truncate text-[11px] font-black sm:text-sm">{value}</p></div>)}

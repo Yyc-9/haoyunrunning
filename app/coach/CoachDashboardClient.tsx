@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, CalendarCheck2, ClipboardList, LockKeyhole, RefreshCw, UsersRound } from 'lucide-react'
 import { useAuth } from '@/app/providers'
+import { useLanguage } from '@/app/language-context'
 import CoachSubNav from '@/components/CoachSubNav'
 import CoachDutyPanel from '@/app/coach/attendance/CoachDutyPanel'
 import { paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
@@ -65,11 +66,12 @@ async function fetchCoachWorkspace() {
   return { students: studentsPayload.students ?? [], signups: signupsPayload.leads ?? [], profile: profilePayload.profile ?? null }
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat('zh-TW', { month: 'numeric', day: 'numeric' }).format(new Date(value))
+function formatDate(value: string, language: string) {
+  return new Intl.DateTimeFormat(language, { month: 'numeric', day: 'numeric' }).format(new Date(value))
 }
 
 export default function CoachDashboardClient() {
+  const { language } = useLanguage()
   const { user, isLoading: isAuthLoading } = useAuth()
   const [students, setStudents] = useState<BoundStudentRow[]>([])
   const [groupSignups, setGroupSignups] = useState<GroupSignup[]>([])
@@ -135,7 +137,7 @@ export default function CoachDashboardClient() {
           <header className="mb-3 border-b border-black/10 pb-3 sm:mb-8 sm:pb-8">
             <div className="min-w-0">
               <p className="text-xs font-bold text-apple-blue sm:text-sm">教練工作台</p>
-              <h1 className="mt-1 truncate text-2xl font-black text-black sm:text-4xl">{greeting}，{coachName}</h1>
+              <h1 className="mt-1 truncate text-2xl font-black text-black sm:text-4xl">{greeting}{language === 'en' ? ', ' : '，'}{coachName}</h1>
               <p className="mt-2 hidden text-sm leading-6 text-apple-gray-600 sm:block">今天有 {students.length} 位名下學員，{pendingSignups} 項團練報名待跟進。</p>
             </div>
           </header>
@@ -193,7 +195,7 @@ export default function CoachDashboardClient() {
               <div className="mt-4 space-y-2">
                 {groupSignups.slice(0, 6).map((signup) => (
                   <Link key={signup.id} href="/coach/signups" className="flex items-center justify-between gap-3 rounded-md bg-apple-gray-100 p-3">
-                    <span className="min-w-0"><span className="block truncate text-sm font-black text-black">{signup.name}</span><span className="mt-0.5 block truncate text-xs text-apple-gray-500">{signup.preferred_course || `同行 ${signup.companion_count || '1'} 人`} · {formatDate(signup.created_at)}</span></span>
+                    <span className="min-w-0"><span className="block truncate text-sm font-black text-black">{signup.name}</span><span className="mt-0.5 block truncate text-xs text-apple-gray-500">{signup.preferred_course || (language === 'en' ? `Party of ${signup.companion_count || '1'}` : `同行 ${signup.companion_count || '1'} 人`)} · {formatDate(signup.created_at, language)}</span></span>
                     <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-apple-gray-600">{statusLabels[signup.status]}</span>
                   </Link>
                 ))}

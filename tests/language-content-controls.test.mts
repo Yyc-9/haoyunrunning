@@ -94,6 +94,22 @@ test('英文課程名稱、城市清單、停課日期與圖片說明保留完�
   assert.equal(toEnglishWebsiteText('好運跑班｜認識跑步，跑向更穩定的自己'), 'Nurture Running Team | Discover running. Become a more consistent runner.')
 })
 
+test('學員選項、徽章與賽事標籤均有英文，倒數與點名日期採用所選語言', async () => {
+  const { toEnglishWebsiteText } = await import('../lib/english-website.ts')
+  const { cityOptions, countryCodes, runningExperienceOptions, favoriteDistanceOptions, pbCategoryOptions, goalOptions, raceEvents, raceRegionOptions, getRaceCountdown } = await import('../lib/runner-profile.ts')
+  const { publicAchievementCatalog } = await import('../lib/achievement-catalog.ts')
+  const { formatAttendanceDate } = await import('../lib/course-attendance.ts')
+  const labels = [...cityOptions, ...countryCodes.map(x => x.label), ...runningExperienceOptions, ...favoriteDistanceOptions, ...pbCategoryOptions, ...goalOptions, ...raceRegionOptions, ...raceEvents.flatMap(x => [x.name, x.city]), ...publicAchievementCatalog.flatMap(x => [x.name, x.description, x.unlockHint, x.category])]
+  for (const label of labels) assert.doesNotMatch(toEnglishWebsiteText(label), /[\u3400-\u9fff]/u, label)
+  assert.equal(toEnglishWebsiteText('2027 東京馬拉松 · 2027/03/07 · 日本東京'), '2027 Tokyo Marathon · 2027/03/07 · Tokyo, Japan')
+  assert.doesNotMatch(formatAttendanceDate('2026-09-21', 'en'), /[\u3400-\u9fff]/u)
+  assert.match(formatAttendanceDate('2026-09-21'), /週一/u)
+  const race = raceEvents.find(x => x.id === 'tokyo-marathon-2027')!
+  assert.equal(getRaceCountdown(race, new Date('2027-03-05T16:00:00Z'), 'en').label, '1d 00:00:00')
+  assert.equal(getRaceCountdown(race, new Date('2027-03-06T16:00:00Z'), 'en').label, 'Race day')
+  assert.equal(getRaceCountdown(race, new Date('2027-03-07T16:00:00Z'), 'en').label, 'Race finished')
+})
+
 test('英文切回繁體或簡體時會從原始中文重新轉換', async () => {
   const {
     createLocalizationMemory,
@@ -115,6 +131,13 @@ test('英文切回繁體或簡體時會從原始中文重新轉換', async () =>
     localizeRememberedValue(textNode, 'text', englishAgain, 'zh-CN', memory),
     '跑者的成长路径',
   )
+})
+
+test('財務動態訊息保留交易筆數與需人工處理的差異', async () => {
+  const { toEnglishWebsiteText } = await import('../lib/english-website.ts')
+  assert.equal(toEnglishWebsiteText('已匯入 12 筆交易，系統已完成初步比對，並標記 2 筆匯款資料需補充。'), 'Imported 12 transactions and completed initial matching. 2 transfer records need more information.')
+  assert.equal(toEnglishWebsiteText('已完成 10 筆；另有 2 筆需人工處理。'), 'Completed 10 transactions; 2 need manual review.')
+  assert.equal(toEnglishWebsiteText('已完成 12 筆唯一相符交易的對帳。'), 'Reconciled 12 uniquely matched transactions.')
 })
 
 test('城市篩選簡稱可從英文切回繁體及簡體', async () => {

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, CheckCircle2, ExternalLink, Loader2, Save, Search } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/app/providers'
+import { useLanguage } from '@/app/language-context'
 import {
   cityOptions, countryCodes, emptyProfile, favoriteDistanceOptions, formatPb, formatPhone,
   getRaceCountdown, getRaceEvent, getUpcomingRaceEvents, goalOptions, parsePb, parsePhone,
@@ -20,6 +21,7 @@ function FieldLabel({ children, required = false }: { children: React.ReactNode;
 }
 
 export default function EditProfilePage() {
+  const { language } = useLanguage()
   const router = useRouter()
   const { isLoggedIn, isLoading, refreshUser } = useAuth()
   const [profile, setProfile] = useState<AccountProfile>(emptyProfile)
@@ -40,7 +42,7 @@ export default function EditProfilePage() {
 
   const upcomingRaces = useMemo(() => getUpcomingRaceEvents(), [])
   const selectedRace = getRaceEvent(raceChoice)
-  const selectedRaceCountdown = selectedRace && countdownNow ? getRaceCountdown(selectedRace, countdownNow) : null
+  const selectedRaceCountdown = selectedRace && countdownNow ? getRaceCountdown(selectedRace, countdownNow, language) : null
 
   const loadAccount = useCallback(async () => {
     if (!supabase || !isLoggedIn) return
@@ -156,7 +158,7 @@ export default function EditProfilePage() {
             <label><FieldLabel required>真實姓名</FieldLabel><input autoComplete="name" value={profile.name} onChange={(event) => updateField('name', event.target.value)} className="apple-input min-h-12" /></label>
             <label><FieldLabel>暱稱</FieldLabel><input value={profile.nickname} onChange={(event) => updateField('nickname', event.target.value)} className="apple-input min-h-12" placeholder="跑友怎麼稱呼你？" /></label>
 
-            <div className="md:col-span-2"><FieldLabel>手機電話</FieldLabel><div className="grid grid-cols-[135px_1fr] gap-2"><select value={phoneCode} onChange={(event) => setPhoneCode(event.target.value)} className="apple-input min-h-12 px-3">{countryCodes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select><input type="tel" inputMode="numeric" autoComplete="tel-national" value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value.replace(/\D/g, ''))} className="apple-input min-h-12" placeholder="912345678" /></div></div>
+            <div className="md:col-span-2"><FieldLabel>手機電話</FieldLabel><div className={language === 'en' ? 'grid grid-cols-1 gap-2 sm:grid-cols-[180px_minmax(0,1fr)]' : 'grid grid-cols-[135px_1fr] gap-2'}><select value={phoneCode} onChange={(event) => setPhoneCode(event.target.value)} className="apple-input min-h-12 px-3">{countryCodes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select><input type="tel" inputMode="numeric" autoComplete="tel-national" value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value.replace(/\D/g, ''))} className="apple-input min-h-12" placeholder="912345678" /></div></div>
 
             <div><FieldLabel>所在城市</FieldLabel><select value={cityChoice} onChange={(event) => setCityChoice(event.target.value)} className="apple-input min-h-12"><option value="">請選擇</option>{cityOptions.map((city) => <option key={city} value={city}>{city}</option>)}<option value="other">其他城市</option></select>{cityChoice === 'other' ? <input value={customCity} onChange={(event) => setCustomCity(event.target.value)} className="apple-input mt-2 min-h-12" placeholder="輸入城市" /> : null}</div>
             <label><FieldLabel>跑步年限</FieldLabel><select value={profile.running_since} onChange={(event) => updateField('running_since', event.target.value)} className="apple-input min-h-12"><option value="">請選擇</option>{runningExperienceOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>

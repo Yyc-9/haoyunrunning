@@ -53,14 +53,14 @@ function convertVisibleText(
 
   const scope = root instanceof Element ? root : document
   const elements = [
-    ...(root instanceof HTMLElement && root.matches('[placeholder], [aria-label], [title], [alt]')
+    ...(root instanceof HTMLElement && root.matches('[placeholder], [aria-label], [title], [alt], optgroup[label]')
       ? [root]
       : []),
-    ...scope.querySelectorAll<HTMLElement>('[placeholder], [aria-label], [title], [alt]'),
+    ...scope.querySelectorAll<HTMLElement>('[placeholder], [aria-label], [title], [alt], optgroup[label]'),
   ]
   elements.forEach((element) => {
     if (element.closest('[translate="no"], [data-no-localize]')) return
-    ;['placeholder', 'aria-label', 'title', 'alt'].forEach((attribute) => {
+    ;['placeholder', 'aria-label', 'title', 'alt', 'label'].forEach((attribute) => {
       const value = element.getAttribute(attribute)
       if (!value) return
       const nextValue = localizeRememberedValue(
@@ -140,7 +140,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       subtree: true,
       characterData: true,
       attributes: true,
-      attributeFilter: ['placeholder', 'aria-label', 'title', 'alt'],
+      attributeFilter: ['placeholder', 'aria-label', 'title', 'alt', 'label'],
     })
     // Next.js may replace the title element during navigation.
     const titleObserver = new MutationObserver(mutations => {

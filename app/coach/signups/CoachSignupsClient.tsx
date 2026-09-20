@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useLanguage } from '@/app/language-context'
 import { Download, Filter, Inbox, Phone, Search } from 'lucide-react'
 import CoachSubNav from '@/components/CoachSubNav'
 import CoachRegistrationDetails from '@/components/coach/CoachRegistrationDetails'
@@ -43,8 +44,8 @@ const statusTone: Record<SignupLead['status'], string> = {
   rejected: 'bg-red-50 text-red-700',
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat('zh-TW', {
+function formatDate(value: string, language: string) {
+  return new Intl.DateTimeFormat(language, {
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
@@ -115,6 +116,7 @@ async function updateLeadStatus(id: string, status: SignupLead['status'], review
 }
 
 export default function CoachSignupsClient() {
+  const { language } = useLanguage()
   const [leads, setLeads] = useState<SignupLead[]>([])
   const [source, setSource] = useState<'all' | SignupLead['source']>('course_payment')
   const [status, setStatus] = useState<'all' | SignupLead['status']>('all')
@@ -363,7 +365,7 @@ export default function CoachSignupsClient() {
                             {statusLabels[lead.status]}
                           </span>
                           <span className="text-xs font-semibold text-apple-gray-500">
-                            {formatDate(lead.created_at)}
+                            {formatDate(lead.created_at, language)}
                           </span>
                         </div>
                         <h2 className="text-2xl font-black text-apple-gray-900">{lead.name}</h2>

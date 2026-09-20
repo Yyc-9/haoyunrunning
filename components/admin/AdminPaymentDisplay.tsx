@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useLanguage } from '@/app/language-context'
 import { useAdminUnsavedChanges } from '@/lib/admin-unsaved-changes'
 import { supabase } from '@/lib/supabase'
 import type { PaymentDisplay } from '@/lib/payment-display'
@@ -9,6 +10,7 @@ import PaymentInfoCard from '@/components/PaymentInfoCard'
 type State = { info: PaymentDisplay; config: PaymentDisplay; version: string | null }
 
 export default function AdminPaymentDisplay() {
+  const { language } = useLanguage()
   const [saved, setSaved] = useState<State | null>(null)
   const [draft, setDraft] = useState<PaymentDisplay | null>(null)
   const [busy, setBusy] = useState(false)
@@ -61,6 +63,6 @@ export default function AdminPaymentDisplay() {
     <div className="mt-4"><p className="mb-2 text-sm font-bold">發布預覽{dirty ? '・尚未儲存' : ''}</p><PaymentInfoCard info={draft.useLegacyQr && saved ? saved.info : draft} /></div>
     <label className="mt-4 flex items-start gap-2 text-sm"><input type="checkbox" checked={confirmed} disabled={busy} onChange={(event) => setConfirmed(event.target.checked)} />我已核對銀行、帳號及二維碼，確認可供學員及買家匯款。</label>
     <button type="button" disabled={busy || !confirmed} onClick={() => void request(true)} className="apple-button-primary mt-4 px-5 py-3 disabled:opacity-50">{busy ? '處理中…' : '儲存並發布匯款資料'}</button></> : null}
-    <button type="button" disabled={busy} className="apple-button-outline mt-4 px-4 py-3" onClick={() => { if (!dirty || window.confirm('重新讀取會捨棄未儲存的收款資料，確定繼續？')) void request() }}>重新讀取</button>
+    <button type="button" disabled={busy} className="apple-button-outline mt-4 px-4 py-3" onClick={() => { if (!dirty || window.confirm(language === 'en' ? 'Reloading will discard unsaved payment details. Continue?' : '重新讀取會捨棄未儲存的收款資料，確定繼續？')) void request() }}>重新讀取</button>
   </section>
 }

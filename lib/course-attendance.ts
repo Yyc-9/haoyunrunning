@@ -168,8 +168,8 @@ export function validateMakeupTarget(input: {
   return { valid: true }
 }
 
-export function formatAttendanceDate(date: string) {
-  return new Intl.DateTimeFormat('zh-TW', {
+export function formatAttendanceDate(date: string, language = 'zh-TW') {
+  return new Intl.DateTimeFormat(language, {
     timeZone: 'Asia/Taipei',
     month: 'numeric',
     day: 'numeric',

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useLanguage } from '@/app/language-context'
 
 const navigationEvent = 'admin-before-workspace-change'
 export function confirmAdminWorkspaceChange() {
@@ -8,14 +9,15 @@ export function confirmAdminWorkspaceChange() {
 }
 
 export function useAdminUnsavedChanges(dirty: boolean) {
+  const { language } = useLanguage()
   useEffect(() => {
     if (!dirty) return
     const unload = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
     const navigate = (event: Event) => {
-      if (!event.defaultPrevented && !window.confirm('有尚未儲存的修改，確定放棄並離開工作區？')) event.preventDefault()
+      if (!event.defaultPrevented && !window.confirm(language === 'en' ? 'You have unsaved changes. Discard them and leave this workspace?' : '有尚未儲存的修改，確定放棄並離開工作區？')) event.preventDefault()
     }
     window.addEventListener('beforeunload', unload)
     window.addEventListener(navigationEvent, navigate)
     return () => { window.removeEventListener('beforeunload', unload); window.removeEventListener(navigationEvent, navigate) }
-  }, [dirty])
+  }, [dirty, language])
 }

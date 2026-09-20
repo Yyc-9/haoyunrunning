@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useLanguage } from '@/app/language-context'
 import { Ban, CalendarCheck2, Check, Clock3, Loader2, RotateCcw, X } from 'lucide-react'
 import {
   courseSessionStart,
@@ -55,6 +56,7 @@ async function getAccessToken() {
 }
 
 export default function StudentAttendancePanel() {
+  const { language } = useLanguage()
   const [payload, setPayload] = useState<AttendancePayload>({})
   const [isLoading, setIsLoading] = useState(true)
   const [busyKey, setBusyKey] = useState('')
@@ -154,7 +156,7 @@ export default function StudentAttendancePanel() {
         ) return []
         return [{
           value: `${course.courseSeasonCourseId}|${sessionDate}`,
-          label: `${course.courseName}｜${formatAttendanceDate(sessionDate)}｜${displayCourseTime(course.classTime)}`,
+          label: `${course.courseName}｜${formatAttendanceDate(sessionDate, language)}｜${displayCourseTime(course.classTime)}`,
           startsAt: courseSessionStart(sessionDate, course.classTime).getTime(),
         }]
       })
@@ -257,7 +259,7 @@ export default function StudentAttendancePanel() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
                       <div className="min-w-0">
-                        <p className="font-black text-apple-gray-950">{formatAttendanceDate(row.sessionDate)} · {displayCourseTime(row.course.classTime)}</p>
+                        <p className="font-black text-apple-gray-950">{formatAttendanceDate(row.sessionDate, language)} · {displayCourseTime(row.course.classTime)}</p>
                         <p className="mt-1 text-xs font-semibold text-apple-gray-500">所屬班級：{row.course.courseName}</p>
                       </div>
                       <span className={`w-fit rounded-full px-3 py-1 text-xs font-black ${statusTone}`}>{status}</span>
@@ -267,13 +269,13 @@ export default function StudentAttendancePanel() {
                     {!row.makeup ? checkinControl(row.enrollment.id, row.course, row.sessionDate) : null}
                     {row.makeup && ['scheduled', 'completed'].includes(row.makeup.status) && row.makeup.target_session_date ? (() => {
                       const target = courses.find((course) => course.courseSeasonCourseId === row.makeup?.target_course_season_course_id)
-                      return target ? <div className="mt-3 rounded-lg bg-blue-50 p-3"><p className="text-sm font-bold">補課簽到 · {target.courseName} · {formatAttendanceDate(row.makeup!.target_session_date!)}</p>{checkinControl(row.enrollment.id, target, row.makeup!.target_session_date!)}</div> : null
+                      return target ? <div className="mt-3 rounded-lg bg-blue-50 p-3"><p className="text-sm font-bold">補課簽到 · {target.courseName} · {formatAttendanceDate(row.makeup!.target_session_date!, language)}</p>{checkinControl(row.enrollment.id, target, row.makeup!.target_session_date!)}</div> : null
                     })() : null}
 
                     {row.makeup?.status === 'scheduled' && targetCourseName && row.makeup.target_session_date ? (
-                      <p className="mt-3 rounded-lg bg-blue-50 p-3 text-xs font-bold leading-5 text-blue-800">補課安排：{targetCourseName}｜{formatAttendanceDate(row.makeup.target_session_date)}</p>
+                      <p className="mt-3 rounded-lg bg-blue-50 p-3 text-xs font-bold leading-5 text-blue-800">補課安排：{targetCourseName}｜{formatAttendanceDate(row.makeup.target_session_date, language)}</p>
                     ) : row.makeup?.status === 'completed' && targetCourseName && row.makeup.target_session_date ? (
-                      <p className="mt-3 rounded-lg bg-emerald-50 p-3 text-xs font-bold leading-5 text-emerald-800">補課已完成：{targetCourseName}｜{formatAttendanceDate(row.makeup.target_session_date)}</p>
+                      <p className="mt-3 rounded-lg bg-emerald-50 p-3 text-xs font-bold leading-5 text-emerald-800">補課已完成：{targetCourseName}｜{formatAttendanceDate(row.makeup.target_session_date, language)}</p>
                     ) : row.makeup?.status === 'forfeited' ? (
                       <p className="mt-3 rounded-lg bg-apple-gray-100 p-3 text-xs font-bold leading-5 text-apple-gray-600">本次補課資格已結束。</p>
                     ) : row.makeup?.status === 'needs_reselection' ? (

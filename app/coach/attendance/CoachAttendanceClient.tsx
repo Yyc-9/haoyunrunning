@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useLanguage } from '@/app/language-context'
 import { AlertTriangle, Ban, CalendarCheck2, Check, CircleMinus, Clock3, Loader2, Phone, RotateCcw, Save, UsersRound } from 'lucide-react'
 import CoachSubNav from '@/components/CoachSubNav'
 import type { CourseAttendanceStatus, CourseMakeupRequest } from '@/lib/course-attendance'
@@ -88,9 +89,9 @@ function taipeiDateKey() {
   return `${values.year}-${values.month}-${values.day}`
 }
 
-function formatSessionDate(date: string) {
+function formatSessionDate(date: string, language: string) {
   if (!date) return '尚未選擇課次'
-  return new Intl.DateTimeFormat('zh-TW', {
+  return new Intl.DateTimeFormat(language, {
     timeZone: 'Asia/Taipei',
     month: 'numeric',
     day: 'numeric',
@@ -111,6 +112,7 @@ async function getAccessToken() {
 }
 
 export default function CoachAttendanceClient() {
+  const { language } = useLanguage()
   const [courses, setCourses] = useState<AttendanceCourse[]>([])
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([])
@@ -252,8 +254,8 @@ export default function CoachAttendanceClient() {
 
   async function setSessionCancellation(cancelled: boolean) {
     if (!courseId || !sessionDate) return
-    if (cancelled && !window.confirm(`確定將 ${formatSessionDate(sessionDate)} 標記為停課？`)) return
-    if (!cancelled && !window.confirm(`確定恢復 ${formatSessionDate(sessionDate)} 的課程？`)) return
+    if (cancelled && !window.confirm(language === 'en' ? `Cancel the session on ${formatSessionDate(sessionDate, language)}?` : `確定將 ${formatSessionDate(sessionDate, language)} 標記為停課？`)) return
+    if (!cancelled && !window.confirm(language === 'en' ? `Restore the session on ${formatSessionDate(sessionDate, language)}?` : `確定恢復 ${formatSessionDate(sessionDate, language)} 的課程？`)) return
 
     setIsSaving(true)
     setError('')
@@ -309,7 +311,7 @@ export default function CoachAttendanceClient() {
             <>
               <section className="grid gap-3 rounded-lg border border-black/10 bg-white p-4 shadow-sm md:grid-cols-2">
                 <label><span className="mb-2 block text-xs font-bold text-apple-gray-500">班級</span><select value={courseId} onChange={(event) => selectCourse(event.target.value)} className="apple-input">{courses.map((course) => <option key={course.courseSeasonCourseId} value={course.courseSeasonCourseId}>{course.weekday}｜{course.location}｜{course.courseName}</option>)}</select></label>
-                <label><span className="mb-2 block text-xs font-bold text-apple-gray-500">點名課次</span><select value={sessionDate} onChange={(event) => { setSessionDate(event.target.value); setActiveFilter('unmarked'); setMessage('') }} className="apple-input">{selectedCourse?.sessionDates.map((date) => <option key={date} value={date}>第 {selectedCourse.sessionDates.indexOf(date) + 1} 堂｜{formatSessionDate(date)}{date > taipeiDateKey() ? '｜未開始' : ''}</option>)}</select></label>
+                <label><span className="mb-2 block text-xs font-bold text-apple-gray-500">點名課次</span><select value={sessionDate} onChange={(event) => { setSessionDate(event.target.value); setActiveFilter('unmarked'); setMessage('') }} className="apple-input">{selectedCourse?.sessionDates.map((date) => <option key={date} value={date}>第 {selectedCourse.sessionDates.indexOf(date) + 1} 堂｜{formatSessionDate(date, language)}{date > taipeiDateKey() ? '｜未開始' : ''}</option>)}</select></label>
                 <div className="md:col-span-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold text-apple-gray-500"><span>{selectedCourse?.seasonName}</span><span>{selectedCourse?.meetingPoint || selectedCourse?.location}</span><span>名單 {roster.length} 人</span></div>
               </section>
 
@@ -335,7 +337,7 @@ export default function CoachAttendanceClient() {
               </div>
 
               <section className="overflow-hidden rounded-lg border border-black/10 bg-white shadow-sm">
-                <div className="flex items-center justify-between border-b border-black/10 px-4 py-3"><h2 className="flex items-center gap-2 font-black"><UsersRound className="h-4 w-4" />學員名單</h2><span className="text-xs font-bold text-apple-gray-500">{formatSessionDate(sessionDate)} · {visibleRoster.length} 人</span></div>
+                <div className="flex items-center justify-between border-b border-black/10 px-4 py-3"><h2 className="flex items-center gap-2 font-black"><UsersRound className="h-4 w-4" />學員名單</h2><span className="text-xs font-bold text-apple-gray-500">{formatSessionDate(sessionDate, language)} · {visibleRoster.length} 人</span></div>
                 <div className="divide-y divide-black/5">
                   {visibleRoster.map((enrollment) => {
                     const row = draft[enrollment.id] ?? { status: 'unmarked' as const, note: '' }
@@ -350,11 +352,11 @@ export default function CoachAttendanceClient() {
                           <div className="min-w-0">
                             <p className="truncate font-black text-black">{enrollment.name || enrollment.email}</p>
                             <p className="mt-1 truncate text-[11px] font-bold text-apple-gray-500">所屬班級：{enrollment.home_course_name}</p>
-                            {makeup ? <p className="mt-2 rounded-md bg-blue-50 p-2 text-xs font-bold text-blue-800">補課學員｜來自 {enrollment.home_course_name}｜原請假日期：{formatSessionDate(makeup.original_session_date)}</p> : null}
-                            {originalLeave ? <p className="mt-2 text-xs font-bold text-amber-800">原班請假保留｜{originalLeave.status === 'completed' ? '補課已完成' : originalLeave.target_session_date ? `已安排 ${formatSessionDate(originalLeave.target_session_date)} 補課` : '尚未安排補課'}</p> : null}
+                            {makeup ? <p className="mt-2 rounded-md bg-blue-50 p-2 text-xs font-bold text-blue-800">補課學員｜來自 {enrollment.home_course_name}｜原請假日期：{formatSessionDate(makeup.original_session_date, language)}</p> : null}
+                            {originalLeave ? <p className="mt-2 text-xs font-bold text-amber-800">原班請假保留｜{originalLeave.status === 'completed' ? '補課已完成' : originalLeave.target_session_date ? `已安排 ${formatSessionDate(originalLeave.target_session_date, language)} 補課` : '尚未安排補課'}</p> : null}
                             <p className="mt-2 text-xs font-bold text-apple-blue">{attendanceVerification(Boolean(selfCheckin), savedByEnrollment.get(enrollment.id)?.status)}</p>
                             <p className="mt-1 truncate text-xs text-apple-gray-500">{enrollment.email}</p>
-                            <p className="mt-1 text-xs font-semibold text-apple-gray-500">計費起點：{enrollment.billing_start_session_date ? formatSessionDate(enrollment.billing_start_session_date) : '未設定'}</p>
+                            <p className="mt-1 text-xs font-semibold text-apple-gray-500">計費起點：{enrollment.billing_start_session_date ? formatSessionDate(enrollment.billing_start_session_date, language) : '未設定'}</p>
                             {enrollment.emergency_contact_name || enrollment.emergency_contact_phone ? <p className="mt-2 flex flex-wrap items-center gap-x-2 text-xs font-bold text-red-700"><span>緊急聯絡：{enrollment.emergency_contact_name || '未填姓名'}</span>{enrollment.emergency_contact_phone ? <a href={`tel:${enrollment.emergency_contact_phone}`} className="inline-flex items-center gap-1 underline underline-offset-2"><Phone className="h-3.5 w-3.5" />{enrollment.emergency_contact_phone}</a> : null}</p> : null}
                           </div>
                           <div className="grid grid-cols-3 gap-1.5 lg:w-[300px]">

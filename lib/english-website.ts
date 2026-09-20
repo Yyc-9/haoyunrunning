@@ -5,6 +5,9 @@ import { policyEnglishCopy } from '@/lib/english-policy-copy'
 import { coachEnglishCopy } from '@/lib/english-coach-copy'
 import { achievementEnglishCopy } from '@/lib/english-achievement-copy'
 import { registrationEnglishCopy } from '@/lib/english-registration-copy'
+import { studentEnglishCopy } from '@/lib/english-student-copy'
+import { coachWorkspaceEnglishCopy } from '@/lib/english-coach-workspace-copy'
+import { financeEnglishCopy } from '@/lib/english-finance-copy'
 
 type TextPair = readonly [string, string]
 
@@ -146,7 +149,7 @@ collectDictionaryPairs(dictionary['zh-TW'], dictionary.en, dictionaryPairs)
 
 const normalizeCopy = (value: string) => value.replace(/\s+/gu, ' ').trim()
 const englishCopy = new Map(
-  [...dictionaryPairs, ...managedContentPairs, ...Object.entries(publicEnglishCopy), ...Object.entries(notificationEnglishCopy), ...Object.entries(policyEnglishCopy), ...Object.entries(coachEnglishCopy), ...Object.entries(achievementEnglishCopy), ...Object.entries(registrationEnglishCopy)]
+  [...dictionaryPairs, ...managedContentPairs, ...Object.entries(publicEnglishCopy), ...Object.entries(notificationEnglishCopy), ...Object.entries(policyEnglishCopy), ...Object.entries(coachEnglishCopy), ...Object.entries(achievementEnglishCopy), ...Object.entries(registrationEnglishCopy), ...Object.entries(studentEnglishCopy), ...Object.entries(coachWorkspaceEnglishCopy), ...Object.entries(financeEnglishCopy)]
     .filter(([source, translation]) => source && translation)
     .map(([source, translation]) => [normalizeCopy(source), translation]),
 )
@@ -166,6 +169,12 @@ export function toEnglishWebsiteText(value: string): string {
   const exact = englishCopy.get(source) ?? cityFilterTranslations.get(source)
   const preserveSpace = (translation: string) => `${value.match(/^\s*/u)?.[0] ?? ''}${translation}${value.match(/\s*$/u)?.[0] ?? ''}`
   if (exact) return preserveSpace(exact)
+  const imported = source.match(/^已匯入 (\d+) 筆交易，系統已完成初步比對(?:，並標記 (\d+) 筆匯款資料需補充)?。$/u)
+  if (imported) return preserveSpace(`Imported ${imported[1]} transactions and completed initial matching.${imported[2] ? ` ${imported[2]} transfer records need more information.` : ''}`)
+  const reconciled = source.match(/^已完成 (\d+) 筆唯一相符交易的對帳。$/u)
+  if (reconciled) return preserveSpace(`Reconciled ${reconciled[1]} uniquely matched transactions.`)
+  const partiallyReconciled = source.match(/^已完成 (\d+) 筆；另有 (\d+) 筆需人工處理。$/u)
+  if (partiallyReconciled) return preserveSpace(`Completed ${partiallyReconciled[1]} transactions; ${partiallyReconciled[2]} need manual review.`)
   const unread = source.match(/^通知，(\d+) 則未讀$/u)
   if (unread) return preserveSpace(`Notifications, ${unread[1]} unread`)
   const products = source.match(/^目前共 (\d+) 件商品$/u)
@@ -173,6 +182,7 @@ export function toEnglishWebsiteText(value: string): string {
   const places = source.match(/^剩餘名額 (\d+) 人$/u)
   if (places) return preserveSpace(`${places[1]} places available`)
   const wrappers: [RegExp, (text: string) => string][] = [
+    [/^(.+)授課安排$/u, text => `${text} teaching schedule`],
     [/^查看(.+)的擅長、經歷與證照$/u, text => `View ${text}: expertise, experience, and qualifications`],
     [/^查看(.+)的完整介紹$/u, text => `View the full profile of ${text}`],
     [/^查看(.+)課程$/u, text => `View ${text}`],
@@ -213,11 +223,11 @@ export function toEnglishWebsiteText(value: string): string {
     if (!/[\u3400-\u9fff]/u.test(translated)) return preserveSpace(`Preview ${translated}`)
   }
   // Lists of known locations and branded page titles can be composed safely.
-  for (const separator of ['、', '｜', ' - ']) {
+  for (const separator of ['、', '｜', ' - ', ' · ']) {
     if (!source.includes(separator)) continue
     const parts = source.split(separator).map(part => toEnglishWebsiteText(part.trim()))
     if (parts.every(part => !/[\u3400-\u9fff]/u.test(part))) {
-      return preserveSpace(parts.join(separator === '、' ? ', ' : ' | '))
+      return preserveSpace(parts.join(separator === '、' ? ', ' : separator === ' · ' ? ' · ' : ' | '))
     }
   }
   return value
