@@ -17,6 +17,8 @@ import { adminContentEnglishCopy } from '@/lib/english-admin-content-copy'
 import { systemEnglishCopy } from '@/lib/english-system-copy'
 import { coachActionEnglishCopy } from '@/lib/english-coach-action-copy'
 import { studentActionEnglishCopy } from '@/lib/english-student-action-copy'
+import { adminActionEnglishCopy } from '@/lib/english-admin-action-copy'
+import { legacyEnrollmentEnglishCopy } from '@/lib/english-legacy-enrollment-copy'
 
 type TextPair = readonly [string, string]
 
@@ -167,6 +169,8 @@ const englishCopy = new Map(
     .concat(Object.entries(systemEnglishCopy))
     .concat(Object.entries(coachActionEnglishCopy))
     .concat(Object.entries(studentActionEnglishCopy))
+    .concat(Object.entries(adminActionEnglishCopy))
+    .concat(Object.entries(legacyEnrollmentEnglishCopy))
     .filter(([source, translation]) => source && translation)
     .map(([source, translation]) => [normalizeCopy(source), translation]),
 )
@@ -186,6 +190,20 @@ export function toEnglishWebsiteText(value: string): string {
   const exact = englishCopy.get(source) ?? cityFilterTranslations.get(source)
   const preserveSpace = (translation: string) => `${value.match(/^\s*/u)?.[0] ?? ''}${translation}${value.match(/\s*$/u)?.[0] ?? ''}`
   if (exact) return preserveSpace(exact)
+  const seasonName = source.match(/^(\d{4})\s*第([一二三四])季$/u)
+  if (seasonName) return preserveSpace(`${seasonName[1]} Q${'一二三四'.indexOf(seasonName[2]) + 1}`)
+  const seasonCreated = source.match(/^(.+) 已建立為草稿，(?:第三季|來源季度)資料仍完整保留。$/u)
+  if (seasonCreated) return preserveSpace(`${toEnglishWebsiteText(seasonCreated[1])} created as a draft. All source-season records are retained.`)
+  const courseCopy = source.match(/^(.+)（複本）$/u)
+  if (courseCopy) return preserveSpace(`${toEnglishWebsiteText(courseCopy[1])} (copy)`)
+  const seasonExists = source.match(/^(.+) 已經存在，請直接切換管理。$/u)
+  if (seasonExists) return preserveSpace(`${toEnglishWebsiteText(seasonExists[1])} already exists. Select it to manage it.`)
+  const courseCreated = source.match(/^已新增「(.+)」；完成日期、教練與計價後再開啟對外顯示。$/u)
+  if (courseCreated) return preserveSpace(`${toEnglishWebsiteText(courseCreated[1])} added. Set dates, coaches and pricing before publishing it.`)
+  const incompleteCourses = source.match(/^還有 (\d+) 門對外課程未完成實際收費課次，不能切換前台招生。$/u)
+  if (incompleteCourses) return preserveSpace(`${incompleteCourses[1]} public ${incompleteCourses[1] === '1' ? 'course has' : 'courses have'} incomplete billable sessions. Public enrollment cannot switch yet.`)
+  const productDeleted = source.match(/^商品「(.+)」已刪除；既有訂單記錄與刪除紀錄仍會保留。$/u)
+  if (productDeleted) return preserveSpace(`${toEnglishWebsiteText(productDeleted[1])} deleted. Existing orders and the deletion history are retained.`)
   const stockError = source.match(/^(庫存不足|商品尚未設定售價)：([A-Za-z0-9_-]+)$/u)
   if (stockError) return preserveSpace(`${stockError[1] === '庫存不足' ? 'Not enough stock' : 'Price not configured'}: ${stockError[2]}`)
   const specificationField = source.match(/^規格 (\d+) (名稱|可選項目)$/u)

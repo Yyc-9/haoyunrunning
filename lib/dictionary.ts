@@ -224,6 +224,7 @@ export const dictionary = {
     },
     leadForm: {
       contactSection: '聯絡方式',
+      nameRequired: '請填寫姓名。',
       intentionSection: '參加意向',
       notesSection: '備註',
       name: '姓名',
@@ -694,6 +695,7 @@ export const dictionary = {
     },
     leadForm: {
       contactSection: '聯絡方式',
+      nameRequired: '請填寫姓名。',
       intentionSection: '參加意向',
       notesSection: '备注',
       name: '姓名',
@@ -1164,6 +1166,7 @@ export const dictionary = {
     },
     leadForm: {
       contactSection: 'Contact',
+      nameRequired: 'Enter your name.',
       intentionSection: 'Participation interest',
       notesSection: 'Notes',
       name: 'Name',

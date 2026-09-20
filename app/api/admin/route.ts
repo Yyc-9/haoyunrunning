@@ -1379,7 +1379,7 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    return json({ season: newSeason, message: `${identity.name} 已建立為草稿，第三季資料仍完整保留。` })
+    return json({ season: newSeason, message: `${identity.name} 已建立為草稿，來源季度資料仍完整保留。` })
   }
 
   if (body.action === 'activate_course_season') {

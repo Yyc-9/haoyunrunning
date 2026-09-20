@@ -8,6 +8,7 @@ type LeadFormLabels = {
   intentionSection: string
   notesSection: string
   name: string
+  nameRequired: string
   phone: string
   email: string
   instagram: string
@@ -69,7 +70,7 @@ export default function LeadCollectionForm({ source, labels, selectField }: Lead
     setIsSuccess(false)
 
     if (!form.name.trim()) {
-      setError(`請填寫${labels.name}。`)
+      setError(labels.nameRequired)
       return
     }
 
@@ -114,7 +115,7 @@ export default function LeadCollectionForm({ source, labels, selectField }: Lead
               autoComplete="name"
               value={form.name}
               onChange={(event) => updateField('name', event.target.value)}
-              className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-apple-blue"
+              className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-base md:text-sm outline-none transition focus:border-apple-blue"
             />
           </label>
           <label className="block">
@@ -125,7 +126,7 @@ export default function LeadCollectionForm({ source, labels, selectField }: Lead
               autoComplete="tel"
               value={form.phone}
               onChange={(event) => updateField('phone', event.target.value)}
-              className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-apple-blue"
+              className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-base md:text-sm outline-none transition focus:border-apple-blue"
             />
           </label>
           <label className="block">
@@ -136,7 +137,7 @@ export default function LeadCollectionForm({ source, labels, selectField }: Lead
               autoComplete="email"
               value={form.email}
               onChange={(event) => updateField('email', event.target.value)}
-              className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-apple-blue"
+              className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-base md:text-sm outline-none transition focus:border-apple-blue"
             />
           </label>
           <label className="block">
@@ -145,7 +146,7 @@ export default function LeadCollectionForm({ source, labels, selectField }: Lead
               aria-describedby="lead-contact-requirement"
               value={form.instagram}
               onChange={(event) => updateField('instagram', event.target.value)}
-              className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-apple-blue"
+              className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-base md:text-sm outline-none transition focus:border-apple-blue"
             />
           </label>
         </div>
@@ -159,7 +160,7 @@ export default function LeadCollectionForm({ source, labels, selectField }: Lead
             <select
               value={form[selectField.name]}
               onChange={(event) => updateField(selectField.name, event.target.value)}
-              className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-apple-gray-800 outline-none transition focus:border-apple-blue"
+              className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-base md:text-sm text-apple-gray-800 outline-none transition focus:border-apple-blue"
             >
               <option value="">{labels.optional}</option>
               {selectField.options.map((option) => (
@@ -178,7 +179,7 @@ export default function LeadCollectionForm({ source, labels, selectField }: Lead
               value={form.runningExperience}
               onChange={(event) => updateField('runningExperience', event.target.value)}
               rows={4}
-              className="mt-2 w-full resize-none rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-apple-blue"
+              className="mt-2 w-full resize-none rounded-2xl border border-black/10 bg-white px-4 py-3 text-base md:text-sm outline-none transition focus:border-apple-blue"
             />
           </label>
           <label className="block">
@@ -187,7 +188,7 @@ export default function LeadCollectionForm({ source, labels, selectField }: Lead
               value={form.goal}
               onChange={(event) => updateField('goal', event.target.value)}
               rows={4}
-              className="mt-2 w-full resize-none rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-apple-blue"
+              className="mt-2 w-full resize-none rounded-2xl border border-black/10 bg-white px-4 py-3 text-base md:text-sm outline-none transition focus:border-apple-blue"
             />
           </label>
         </div>
@@ -201,7 +202,7 @@ export default function LeadCollectionForm({ source, labels, selectField }: Lead
             value={form.notes}
             onChange={(event) => updateField('notes', event.target.value)}
             rows={4}
-            className="mt-2 w-full resize-none rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-apple-blue"
+            className="mt-2 w-full resize-none rounded-2xl border border-black/10 bg-white px-4 py-3 text-base md:text-sm outline-none transition focus:border-apple-blue"
           />
         </label>
       </section>

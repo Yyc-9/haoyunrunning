@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { defaultShopProducts } from '../lib/shop-products.ts'
 import { applyContentAction, contentChecks, prepareContentFixture } from './audit-english-content-flows.mjs'
+import { adminSeasonActions, applyAdminSeasonAction } from './audit-english-admin-season-actions.mjs'
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const base = process.env.LANGUAGE_AUDIT_ORIGIN || 'http://127.0.0.1:3202'
 if (!/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(base)) throw Error('Local preview required')
@@ -10,7 +11,8 @@ if (!process.env.LANGUAGE_CONTENT_FILE || !process.env.LANGUAGE_AUTH_STORAGE_KEY
 const { content } = JSON.parse(await readFile(process.env.LANGUAGE_CONTENT_FILE, 'utf8'))
 const productOnly = process.env.LANGUAGE_ADMIN_PRODUCTS === '1'
 const contentOnly = process.env.LANGUAGE_ADMIN_CONTENT === '1'
-const output = contentOnly ? '/private/tmp/haoyun-english-admin-content' : productOnly ? '/private/tmp/haoyun-english-admin-products' : '/private/tmp/haoyun-english-admin'
+const actionOnly = process.env.LANGUAGE_ADMIN_ACTIONS === '1'
+const output = actionOnly ? '/private/tmp/haoyun-english-admin-actions' : contentOnly ? '/private/tmp/haoyun-english-admin-content' : productOnly ? '/private/tmp/haoyun-english-admin-products' : '/private/tmp/haoyun-english-admin'
 await mkdir(output, { recursive: true })
 const id = '1ed770c5-3666-4f30-bae1-1f6e08bcd9d4', now = new Date().toISOString(), slug = 'zhubei-night-run-monday'
 const course = { slug, name: '竹北夜跑班', weekday: '星期一', location: '竹北', period: '2026 Q4', classTime: '19:00–20:30', meetingPoint: 'QA Park', feeNote: '', campaignLabel: '2026 Q4', slogan: '', targetAudience: '', focus: '', benefits: [], trainingItems: [], suitableFor: [], enrollmentNote: '', signupUrl: '', coachKeys: ['qa-coach'] }
@@ -21,7 +23,7 @@ const records = [], errors = [], unexpected = [], writes = []
 const browser = await chromium.launch({ channel: 'chrome', headless: true })
 async function open(width) {
   const data = structuredClone(payload)
-  if (contentOnly) prepareContentFixture(data)
+  if (contentOnly || actionOnly) prepareContentFixture(data)
   if (productOnly) {
     data.products = structuredClone(defaultShopProducts)
     data.products[0].variants[0].detailImages = ['/goodluck-running-vest.jpg', '/goodluck-running-vest-black.jpg']
@@ -51,6 +53,12 @@ async function open(width) {
     if (url.pathname === '/api/admin') {
       if (method === 'GET') return reply(data)
       const body = req.postDataJSON()
+      if (actionOnly) {
+        const response = data.qaActionResponse
+        assert.ok(response, 'Every simulated administrator action must have an explicit response')
+        if (!response.error) applyAdminSeasonAction(data, body)
+        return reply(response, response.error ? 409 : 200)
+      }
       if (contentOnly) applyContentAction(data, body)
       if (['create_product','update_product'].includes(body.action)) {
         const product = { ...body, id: body.productId || 'qa-created', sizes: body.sizes.split('、').filter(Boolean), tags: body.tags.split('、').filter(Boolean), highlights: [], usageNotes: [], priceLabel: '', rating: 5, reviews: 0 }
@@ -147,6 +155,7 @@ try {
     const { ctx, page, data } = await open(width)
     await page.goto(base + '/admin')
     await page.getByRole('heading', { name: 'Season overview', exact: true }).waitFor()
+    if (actionOnly) { await adminSeasonActions({ page, width, data, record }); await ctx.close(); continue }
     if (productOnly) { await productChecks(page, width); await ctx.close(); continue }
     if (contentOnly) { await contentChecks({ page, width, data, record }); await ctx.close(); continue }
     await record(page, width + '-overview')
