@@ -228,3 +228,14 @@ test('商城商品頁保留單一簡介，尺碼下方顯示獨立規格', async
   assert.match(form, /後台不顯示預覽/)
   assert.match(form, /只顯示保存結果/)
 })
+
+
+test('開班提醒清空後不會回復預設文案，未設定則保留舊課程預設', async () => {
+  const { normalizeCourseOverrides } = await import('../lib/site-content.ts')
+  const { applyCourseOverrides } = await import('../lib/managed-courses.ts')
+  const base = applyCourseOverrides({})[0]
+  const cleared = normalizeCourseOverrides({ [base.slug]: { enrollmentNote: '' } })
+  assert.equal(applyCourseOverrides(cleared).find((item) => item.slug === base.slug)!.enrollmentNote, '')
+  const omitted = normalizeCourseOverrides({ [base.slug]: {} })
+  assert.equal(applyCourseOverrides(omitted).find((item) => item.slug === base.slug)!.enrollmentNote, base.enrollmentNote)
+})

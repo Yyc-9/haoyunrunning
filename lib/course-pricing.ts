@@ -120,11 +120,11 @@ export function normalizeCourseBillingConfig(value: unknown, fallback: CourseBil
   return {
     scheduleReady,
     sessionDates: scheduleReady ? sessionDates : [],
-    returningFullPrice: positiveInteger(source.returningFullPrice, fallback.returningFullPrice),
-    newFullPrice: positiveInteger(source.newFullPrice, fallback.newFullPrice),
-    returningLateRate: positiveInteger(source.returningLateRate, fallback.returningLateRate),
-    referredLateRate: positiveInteger(source.referredLateRate, fallback.referredLateRate),
-    standardLateRate: positiveInteger(source.standardLateRate, fallback.standardLateRate),
+    returningFullPrice: positiveInteger(source.returningFullPrice, fallback.returningFullPrice, 0),
+    newFullPrice: positiveInteger(source.newFullPrice, fallback.newFullPrice, 0),
+    returningLateRate: positiveInteger(source.returningLateRate, fallback.returningLateRate, 0),
+    referredLateRate: positiveInteger(source.referredLateRate, fallback.referredLateRate, 0),
+    standardLateRate: positiveInteger(source.standardLateRate, fallback.standardLateRate, 0),
     regularUntilSessionNumber: positiveInteger(source.regularUntilSessionNumber, fallback.regularUntilSessionNumber, 1, 20),
     priceLockHours: positiveInteger(source.priceLockHours, fallback.priceLockHours, 1, 168),
   }

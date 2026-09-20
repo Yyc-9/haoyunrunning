@@ -1,5 +1,4 @@
-import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { getPaymentDisplay, paymentDisplayImage } from '@/lib/payment-display-server'
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentCourseSeason } from '@/lib/course-seasons-server'
 import { verifyCourseQuoteToken } from '@/lib/course-pricing-token'
@@ -81,21 +80,15 @@ export async function POST(request: NextRequest) {
 
   try {
     if (body.format === 'json') {
-      const qr = await readFile(join(process.cwd(), 'private/course-registration/payment-qr.png'))
-      return NextResponse.json({
-        bankName: '中國信託',
-        bankCode: '822',
-        accountNumber: '0000554540468221',
-        qrCodeUrl: `data:image/png;base64,${qr.toString('base64')}`,
-      }, { headers: { 'Cache-Control': 'private, no-store, max-age=0' } })
+      return NextResponse.json((await getPaymentDisplay()).info, { headers: { 'Cache-Control': 'private, no-store, max-age=0' } })
     }
-    const image = await readFile(join(process.cwd(), 'private/course-registration/payment-info.jpg'))
-    return new NextResponse(new Uint8Array(image), {
+    const image = await paymentDisplayImage()
+    return new NextResponse(image.bytes, {
       status: 200,
       headers: {
         'Cache-Control': 'private, no-store, max-age=0',
-        'Content-Disposition': 'inline; filename="payment-info.jpg"',
-        'Content-Type': 'image/jpeg',
+        'Content-Disposition': `inline; filename="${image.filename}"`,
+        'Content-Type': image.contentType,
         'X-Content-Type-Options': 'nosniff',
       },
     })

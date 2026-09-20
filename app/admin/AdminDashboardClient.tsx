@@ -1,5 +1,9 @@
 'use client'
 
+import { confirmAdminWorkspaceChange } from '@/lib/admin-unsaved-changes'
+
+import AdminPaymentDisplay from '@/components/admin/AdminPaymentDisplay'
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
@@ -325,11 +329,13 @@ export default function AdminDashboardClient() {
     try {
       const nextData = await fetchAdminDashboard()
       if (requestId === dashboardRequestId.current) setData(nextData)
+      return true
     } catch (loadError) {
       if (requestId !== dashboardRequestId.current) return
       if (!background) setData(null)
       else setMessage('')
-      setError(loadError instanceof Error ? loadError.message : '讀取管理員後台失敗。')
+      setError(background ? '變更已儲存，但重新讀取失敗。請重新整理確認最新資料，不必重複提交。' : loadError instanceof Error ? loadError.message : '讀取管理員後台失敗。')
+      return false
     } finally {
       if (!background && requestId === dashboardRequestId.current) setIsLoading(false)
     }
@@ -388,7 +394,10 @@ export default function AdminDashboardClient() {
   const pendingCoachAccountCount = (data?.coachAccounts ?? []).filter((account) => account.status === 'pending').length
   const activeTabDefinition = tabs.find((tab) => tab.id === activeTab) ?? tabs[0]
   const ActiveTabIcon = activeTabDefinition.icon
+  const actionBusy = useRef(false)
   async function runAction(id: string, action: Record<string, unknown>) {
+    if (actionBusy.current) return false
+    actionBusy.current = true
     setUpdatingId(id)
     setError('')
     setMessage('')
@@ -398,7 +407,7 @@ export default function AdminDashboardClient() {
       // An older background response must not overwrite the just-saved course name.
       dashboardRequestId.current += 1
       setMessage(result.message || '操作已完成。')
-      if (action.action === 'save_site_content' && result.siteContent && result.courses) {
+      if (['save_site_content', 'save_site_contents'].includes(String(action.action)) && result.siteContent && result.courses) {
         setData((current) => current ? {
           ...current,
           siteContent: result.siteContent!,
@@ -426,14 +435,15 @@ export default function AdminDashboardClient() {
         } : current)
         announceSiteContentUpdated()
       } else {
-        if (action.action === 'save_coach_public_profile') announceSiteContentUpdated()
-        await loadDashboard(true)
+        if (['save_coach_public_profile', 'activate_course_season', 'update_course_season_status', 'delete_season_course', 'create_season_course', 'duplicate_season_course'].includes(String(action.action))) announceSiteContentUpdated()
+        if (!await loadDashboard(true)) return false
       }
       return true
     } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : '操作失敗。')
       return false
     } finally {
+      actionBusy.current = false
       setUpdatingId('')
     }
   }
@@ -556,6 +566,7 @@ export default function AdminDashboardClient() {
                       type="button"
                       onClick={() => {
                         if (tab.id === activeTab) return
+                        if (!confirmAdminWorkspaceChange()) return
                         if (activeTab === 'products' && productEditState.busy) return
                         if (activeTab === 'products' && productEditState.dirty && !window.confirm('商品有未儲存的變更。確定放棄並切換工作區？')) return
                         setProductEditState({ dirty: false, busy: false })
@@ -906,7 +917,7 @@ export default function AdminDashboardClient() {
 	          ) : null}
 
           {activeTab === 'paymentAccounts' && data ? (
-	            <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+	            <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]"><div className="lg:col-span-2"><AdminPaymentDisplay /></div>
 	              <div className="apple-card p-5">
 	                <h2 className="text-xl font-black text-apple-gray-900">新增收款帳戶</h2>
 	                <p className="mt-1 text-sm leading-6 text-apple-gray-600">帳戶池供管理員整理銀行對帳通道；商城買家會在結帳頁看到目前的好運官方匯款資料，不會看到內部帳戶分配結果。</p>

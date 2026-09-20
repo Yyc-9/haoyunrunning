@@ -62,7 +62,7 @@ export function applyCourseOverrides(
       const slogan = override.slogan || course.slogan
       const benefits = override.benefits?.length ? override.benefits : course.benefits
       const suitableFor = override.suitableFor?.length ? override.suitableFor : course.suitableFor
-      const enrollmentNote = override.enrollmentNote || course.enrollmentNote
+      const enrollmentNote = override.enrollmentNote ?? course.enrollmentNote
       const targetAudience = override.targetAudience && !isLegacyCourseTargetAudience(override.targetAudience)
         ? override.targetAudience
         : course.targetAudience

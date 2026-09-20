@@ -666,7 +666,7 @@ export function normalizeCourseOverrides(value: unknown): Record<string, CourseO
       benefits: benefits.length ? benefits : undefined,
       trainingItems: Array.isArray(override.trainingItems) ? cleanStringList(override.trainingItems, 3, 240) : undefined,
       suitableFor: suitableFor.length ? suitableFor : undefined,
-      enrollmentNote: cleanString(override.enrollmentNote, 300),
+      enrollmentNote: typeof override.enrollmentNote === 'string' ? cleanString(override.enrollmentNote, 300) : undefined,
       signupUrl: signupUrl && isSafePublicUrl(signupUrl) ? signupUrl : '',
       coachKeys,
     }

@@ -1,5 +1,7 @@
 'use client'
 
+import { courseBillingInputError } from '@/lib/admin-course-validation'
+
 import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -29,6 +31,8 @@ import {
   Undo2,
   UsersRound,
 } from 'lucide-react'
+import { useAdminUnsavedChanges } from '@/lib/admin-unsaved-changes'
+import { reconcileAdminDraft } from '@/lib/admin-draft'
 import { APP_TIME_ZONE_LABEL } from '@/lib/app-time'
 import { supabase } from '@/lib/supabase'
 import { courseSeasonCampaignLabel, courseSeasonStatusLabels, preferredCourseSeasonId, type CourseSeason, type CourseSeasonStatus } from '@/lib/course-seasons'
@@ -307,7 +311,7 @@ function courseDraft(course: CourseSummary, override?: CourseOverride): CourseOv
     benefits: override?.benefits?.length ? override.benefits : course.benefits,
     trainingItems: override?.trainingItems ?? course.trainingItems,
     suitableFor: override?.suitableFor?.length ? override.suitableFor : course.suitableFor,
-    enrollmentNote: override?.enrollmentNote || course.enrollmentNote,
+    enrollmentNote: override?.enrollmentNote ?? course.enrollmentNote,
     signupUrl: override?.signupUrl || course.signupUrl,
     coachKeys: override?.coachKeys?.length ? override.coachKeys : course.coachKeys,
   }
@@ -374,20 +378,20 @@ export default function AdminContentManager({ content, courses, seasons, scope =
   useEffect(() => {
     const previous = previousContentRef.current
     previousContentRef.current = content
-    setSlides(content.heroSlides)
-    setActivities(content.activities)
-    setBrand(content.brand)
-    setHome(content.home)
-    setAbout(content.about)
-    setCoursesPage(content.coursesPage)
-    setTestimonials(content.testimonials)
+    setSlides((current) => reconcileAdminDraft(current, previous.heroSlides, content.heroSlides))
+    setActivities((current) => reconcileAdminDraft(current, previous.activities, content.activities))
+    setBrand((current) => reconcileAdminDraft(current, previous.brand, content.brand))
+    setHome((current) => reconcileAdminDraft(current, previous.home, content.home))
+    setAbout((current) => reconcileAdminDraft(current, previous.about, content.about))
+    setCoursesPage((current) => reconcileAdminDraft(current, previous.coursesPage, content.coursesPage))
+    setTestimonials((current) => reconcileAdminDraft(current, previous.testimonials, content.testimonials))
     setTeam((current) => JSON.stringify(current) === JSON.stringify(previous.team) ? content.team : current)
-    setAchievements(content.achievements)
-    setAnniversary(content.anniversary)
+    setAchievements((current) => reconcileAdminDraft(current, previous.achievements, content.achievements))
+    setAnniversary((current) => reconcileAdminDraft(current, previous.anniversary, content.anniversary))
     setCoachDrafts((current) => Object.fromEntries(Object.entries(content.coachProfiles).map(([key, profile]) => [key,
       current[key] && JSON.stringify(current[key]) !== JSON.stringify(previous.coachProfiles[key]) ? current[key] : profile,
     ])))
-    setPageMedia(content.pageMedia)
+    setPageMedia((current) => reconcileAdminDraft(current, previous.pageMedia, content.pageMedia))
   }, [content])
 
   useEffect(() => {
@@ -423,7 +427,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
       benefits: override.benefits?.length ? override.benefits : base.benefits,
       trainingItems: override.trainingItems ?? base.trainingItems,
       suitableFor: override.suitableFor?.length ? override.suitableFor : base.suitableFor,
-      enrollmentNote: override.enrollmentNote || base.enrollmentNote,
+      enrollmentNote: override.enrollmentNote ?? base.enrollmentNote,
       signupUrl: override.signupUrl || `/courses/${slug}/register`,
       coachKeys: override.coachKeys?.length ? override.coachKeys : base.coachKeys,
     }]
@@ -449,6 +453,10 @@ export default function AdminContentManager({ content, courses, seasons, scope =
     setDraftBilling((current) => reconcileCourseField(current, previous?.billing, nextBilling, !switched))
     courseSnapshotRef.current = { key, draft: nextDraft, capacity: nextCapacity, billing: nextBilling }
   }, [courseOverrides, seasonBillingConfigs, seasonCapacities, selectedCourse, selectedSeason])
+
+  const contentDirty = JSON.stringify([slides, activities, brand, home, about, coursesPage, testimonials, team, achievements, anniversary, coachDrafts, pageMedia]) !== JSON.stringify([content.heroSlides, content.activities, content.brand, content.home, content.about, content.coursesPage, content.testimonials, content.team, content.achievements, content.anniversary, content.coachProfiles, content.pageMedia])
+  const courseDirty = Boolean(selectedCourse && selectedSeason && (JSON.stringify(draft) !== JSON.stringify(courseDraft(selectedCourse, courseOverrides[selectedCourse.slug])) || draftCapacity !== (seasonCapacities[selectedSeason.id]?.[selectedCourse.slug] ?? 40) || JSON.stringify(draftBilling) !== JSON.stringify(seasonBillingConfigs[selectedSeason.id]?.[selectedCourse.slug] ?? defaultCourseBillingConfig(selectedCourse, selectedSeason.code))))
+  useAdminUnsavedChanges(scope === 'content' ? contentDirty : courseDirty)
 
   const allModes = [
     { id: 'overview' as const, label: '內容總覽', description: '查看可管理區域', destination: '全站', icon: LayoutGrid },
@@ -569,7 +577,8 @@ export default function AdminContentManager({ content, courses, seasons, scope =
       setLocalError('前台招生季度必須先完成實際收費課次設定。')
       return
     }
-    const nextOverrides = { ...courseOverrides, [selectedCourse.slug]: draft }
+    const billingError = courseBillingInputError(draftBilling)
+    if (billingError) { setLocalError(billingError); return }
     const saved = await runAction(`course-${selectedSeason.id}-${selectedCourse.slug}`, {
       action: 'save_season_course',
       seasonId: selectedSeason.id,
@@ -579,15 +588,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
       billingConfig: draftBilling,
     })
     if (!saved) return
-    setSeasonOverrides((current) => ({ ...current, [selectedSeason.id]: nextOverrides }))
-    setSeasonCapacities((current) => ({
-      ...current,
-      [selectedSeason.id]: { ...(current[selectedSeason.id] ?? {}), [selectedCourse.slug]: draftCapacity },
-    }))
-    setSeasonBillingConfigs((current) => ({
-      ...current,
-      [selectedSeason.id]: { ...(current[selectedSeason.id] ?? {}), [selectedCourse.slug]: draftBilling },
-    }))
+    courseSnapshotRef.current = { key: `${selectedSeason.id}:${selectedCourse.slug}`, draft, capacity: draftCapacity, billing: draftBilling }
     setCourseMessage(selectedSeason.isCurrent
       ? '已發布至訓練課程、訓練日程表、課程詳情與報名頁。'
       : `已儲存至 ${selectedSeason.name}，目前仍是草稿，不會影響前台。`)
@@ -681,12 +682,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
   )
 
   const multiSaveButton = (id: string, entries: Array<{ section: string; value: unknown }>, label = '儲存並發布') => (
-    <button type="button" onClick={async () => {
-      for (const [index, entry] of entries.entries()) {
-        const saved = await runAction(`${id}-${index}`, { action: 'save_site_content', section: entry.section, value: entry.value })
-        if (!saved) break
-      }
-    }} className="apple-button-primary gap-2 px-6 py-3">
+    <button type="button" onClick={() => runAction(id, { action: 'save_site_contents', entries })} className="apple-button-primary gap-2 px-6 py-3">
       <Save className="h-4 w-4" />{label}
     </button>
   )
@@ -749,6 +745,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
           else onBack?.()
         }}><Undo2 className="h-4 w-4" />{mode === 'courses' ? '返回季度列表' : '返回學員與統計'}</button> : null}
         <p className="sr-only" aria-live="polite">目前顯示：{activeMode?.label}</p>
+        {contentDirty && scope === 'content' ? <p className="mb-4 text-sm font-semibold text-amber-800">有尚未儲存的內容；切換內容區塊會保留草稿，離開工作區前請先儲存。</p> : null}
         {localError ? <p className="mb-5 rounded-lg bg-red-50 px-5 py-4 text-sm font-semibold text-red-600">{localError}</p> : null}
 
         {mode === 'overview' ? (
@@ -1267,6 +1264,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                   <Field label="舊生插班每堂"><input type="number" min={0} step={50} value={draftBilling.returningLateRate} onChange={(e) => setDraftBilling((current) => ({ ...current, returningLateRate: Number(e.target.value) }))} className="apple-input" /></Field>
                   <Field label="有推薦人插班每堂"><input type="number" min={0} step={50} value={draftBilling.referredLateRate} onChange={(e) => setDraftBilling((current) => ({ ...current, referredLateRate: Number(e.target.value) }))} className="apple-input" /></Field>
                   <Field label="無推薦人插班每堂"><input type="number" min={0} step={50} value={draftBilling.standardLateRate} onChange={(e) => setDraftBilling((current) => ({ ...current, standardLateRate: Number(e.target.value) }))} className="apple-input" /></Field>
+                  <Field label="全期收費截止堂次"><input type="number" min={1} max={20} value={draftBilling.regularUntilSessionNumber} onChange={(e) => setDraftBilling((current) => ({ ...current, regularUntilSessionNumber: Number(e.target.value) }))} className="apple-input" /><p className="mt-1 text-xs text-apple-gray-500">從此堂次（含）之前開始上課採整季價格，之後依插班每堂價格計費。</p></Field>
                   <Field label="報價保留時數"><input type="number" min={1} max={168} value={draftBilling.priceLockHours} onChange={(e) => setDraftBilling((current) => ({ ...current, priceLockHours: Number(e.target.value) }))} className="apple-input" /></Field>
                   <label className="flex items-center gap-3 text-sm font-bold"><input type="checkbox" checked={draftBilling.scheduleReady} onChange={(e) => setDraftBilling((current) => ({ ...current, scheduleReady: e.target.checked }))} className="h-4 w-4" />啟用本班自動計價</label>
                 </div>

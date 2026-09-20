@@ -1,3 +1,4 @@
+import { courseBillingInputError } from '@/lib/admin-course-validation'
 import { randomUUID } from 'node:crypto'
 import { revalidateTag } from 'next/cache'
 import { NextRequest, NextResponse } from 'next/server'
@@ -261,6 +262,7 @@ type AdminPatchBody =
   | { action?: 'create_product'; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; variants?: Array<{ id?: string; name?: string; image?: string; detailImages?: string[] }>; summary?: string; description?: string; gallery?: string[]; highlights?: string; specifications?: Array<{ label?: string; value?: string }>; usageNotes?: string; externalUrl?: string }
   | { action?: 'delete_product'; productId?: string }
   | { action?: 'save_site_content'; section?: string; value?: unknown }
+  | { action?: 'save_site_contents'; entries?: Array<{ section?: string; value?: unknown }> }
   | { action?: 'save_coach_public_profile'; coachKey?: string; value?: unknown }
   | { action?: 'save_season_course'; seasonId?: string; courseSlug?: string; value?: unknown; capacity?: number; billingConfig?: unknown }
   | { action?: 'create_season_course'; seasonId?: string; templateSlug?: string; name?: string }
@@ -1095,6 +1097,8 @@ export async function PATCH(request: NextRequest) {
     }
     const baseCourse = allCourses.find((course) => course.slug === courseSlug)
       ?? allCourses.find((course) => course.slug === normalized.templateSlug)
+    const billingError = courseBillingInputError(body.billingConfig)
+    if (billingError) return json({ error: billingError }, { status: 400 })
     const billingConfig = normalizeCourseBillingConfig(
       body.billingConfig,
       defaultCourseBillingConfig({
@@ -2014,67 +2018,73 @@ export async function PATCH(request: NextRequest) {
     return json({ profile, message: '團隊陣容資料已更新並發布。' })
   }
 
-  if (body.action === 'save_site_content') {
-    const section = cleanText(body.section)
-    let value: unknown
+  if (body.action === 'save_site_content' || body.action === 'save_site_contents') {
+    const entries = 'entries' in body ? body.entries : 'section' in body ? [{ section: body.section, value: body.value }] : undefined
+    if (!Array.isArray(entries) || !entries.length || entries.length > 14 || entries.some((entry) => !entry || typeof entry !== 'object') || new Set(entries.map((entry) => entry.section)).size !== entries.length) return json({ error: '內容區塊清單無效。' }, { status: 400 })
+    const rows: Array<{ key: string; value: unknown; updated_by: string }> = []
+    for (const entry of entries) {
+      const section = cleanText(entry.section)
+      let value: unknown
 
-    if (section === 'hero_slides') {
-      const normalized = normalizeHeroSlides(body.value)
-      if (!Array.isArray(body.value) || normalized.length !== body.value.length) {
-        return json({ error: '輪播圖片資料不完整，請重新選擇圖片。' }, { status: 400 })
+      if (section === 'hero_slides') {
+        const normalized = normalizeHeroSlides(entry.value)
+        if (!Array.isArray(entry.value) || normalized.length !== entry.value.length) {
+          return json({ error: '輪播圖片資料不完整，請重新選擇圖片。' }, { status: 400 })
+        }
+        value = normalized
+      } else if (section === 'home_activities') {
+        const normalized = normalizeActivities(entry.value)
+        if (!Array.isArray(entry.value) || normalized.length !== entry.value.length) {
+          return json({ error: '請填寫每一則活動的名稱與說明；連結可留空，填寫時請使用有效的網址。' }, { status: 400 })
+        }
+        value = normalized
+      } else if (section === 'seasonal_update') {
+        const normalized = normalizeSeasonalUpdate(entry.value)
+        if (normalized.active && (!normalized.title || !normalized.summary)) {
+          return json({ error: '顯示季度資訊前，請先填寫標題與摘要。' }, { status: 400 })
+        }
+        value = normalized
+      } else if (section === 'course_overrides') {
+        const validSlugs = new Set(allCourses.map((course) => course.slug))
+        value = Object.fromEntries(
+          Object.entries(normalizeCourseOverrides(entry.value)).filter(([slug]) => validSlugs.has(slug))
+        )
+      } else if (section === 'brand_content') {
+        value = normalizeBrandContent(entry.value)
+      } else if (section === 'home_content') {
+        value = normalizeHomeContent(entry.value)
+      } else if (section === 'about_content') {
+        value = normalizeAboutContent(entry.value)
+      } else if (section === 'courses_page_content') {
+        value = normalizeCoursesPageContent(entry.value)
+      } else if (section === 'testimonials_content') {
+        value = normalizeTestimonialsContent(entry.value)
+      } else if (section === 'team_content') {
+        value = normalizeTeamContent(entry.value)
+      } else if (section === 'achievements_content') {
+        value = normalizeAchievementsContent(entry.value)
+      } else if (section === 'anniversary_content') {
+        value = normalizeAnniversaryContent(entry.value)
+      } else if (section === 'page_media') {
+        value = normalizePageMedia(entry.value)
+      } else {
+        return json({ error: '網站內容區塊無效。' }, { status: 400 })
       }
-      value = normalized
-    } else if (section === 'home_activities') {
-      const normalized = normalizeActivities(body.value)
-      if (!Array.isArray(body.value) || normalized.length !== body.value.length) {
-        return json({ error: '請填寫每一則活動的名稱與說明；連結可留空，填寫時請使用有效的網址。' }, { status: 400 })
-      }
-      value = normalized
-    } else if (section === 'seasonal_update') {
-      const normalized = normalizeSeasonalUpdate(body.value)
-      if (normalized.active && (!normalized.title || !normalized.summary)) {
-        return json({ error: '顯示季度資訊前，請先填寫標題與摘要。' }, { status: 400 })
-      }
-      value = normalized
-    } else if (section === 'course_overrides') {
-      const validSlugs = new Set(allCourses.map((course) => course.slug))
-      value = Object.fromEntries(
-        Object.entries(normalizeCourseOverrides(body.value)).filter(([slug]) => validSlugs.has(slug))
-      )
-    } else if (section === 'brand_content') {
-      value = normalizeBrandContent(body.value)
-    } else if (section === 'home_content') {
-      value = normalizeHomeContent(body.value)
-    } else if (section === 'about_content') {
-      value = normalizeAboutContent(body.value)
-    } else if (section === 'courses_page_content') {
-      value = normalizeCoursesPageContent(body.value)
-    } else if (section === 'testimonials_content') {
-      value = normalizeTestimonialsContent(body.value)
-    } else if (section === 'team_content') {
-      value = normalizeTeamContent(body.value)
-    } else if (section === 'achievements_content') {
-      value = normalizeAchievementsContent(body.value)
-    } else if (section === 'anniversary_content') {
-      value = normalizeAnniversaryContent(body.value)
-    } else if (section === 'page_media') {
-      value = normalizePageMedia(body.value)
-    } else {
-      return json({ error: '網站內容區塊無效。' }, { status: 400 })
+
+      rows.push({ key: section, value, updated_by: auth.user.id })
     }
 
     const { data: content, error } = await supabaseAdmin!
       .from('site_content')
-      .upsert({ key: section, value, updated_by: auth.user.id }, { onConflict: 'key' })
+      .upsert(rows, { onConflict: 'key' })
       .select('key, value, updated_at')
-      .single()
 
     if (error || !content) {
       return json({ error: error?.message || '網站內容儲存失敗。' }, { status: 500 })
     }
 
     revalidateTag('site-content')
-    if (section === 'hero_slides') revalidateTag('home-hero-slides')
+    if (rows.some((row) => row.key === 'hero_slides')) revalidateTag('home-hero-slides')
 
     const { data: contentRows, error: contentRowsError } = await supabaseAdmin!
       .from('site_content')

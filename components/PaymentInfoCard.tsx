@@ -31,7 +31,7 @@ export default function PaymentInfoCard({ info }: { info: PaymentInfo }) {
       <p className="payment-info-subtitle">匯款資料</p>
       <div className="payment-info-body">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={info.qrCodeUrl} alt="原匯款資料卡二維碼" className="payment-info-qr" />
+        {info.qrCodeUrl ? <img src={info.qrCodeUrl} alt="匯款二維碼" className="payment-info-qr" /> : null}
         <dl className="payment-info-fields">
           {[
             ['銀行機構', info.bankName],

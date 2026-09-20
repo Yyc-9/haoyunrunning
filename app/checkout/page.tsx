@@ -1,5 +1,7 @@
 'use client'
 
+import ShopPaymentInfo from '@/components/ShopPaymentInfo'
+
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
@@ -187,8 +189,7 @@ export default function CheckoutPage() {
                       <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
                     </summary>
                     <div className="border-t border-black/10 p-2">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/api/shop/payment-info" alt="好運跑班銀行匯款帳戶" className="h-auto w-full rounded-lg" />
+                      <ShopPaymentInfo />
                     </div>
                   </details>
                   <div className="mt-3 flex items-start gap-2 rounded-lg bg-white/75 px-3 py-2.5 text-xs font-semibold leading-5 text-apple-gray-600">
