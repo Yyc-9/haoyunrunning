@@ -13,6 +13,7 @@ import { adminEnrollmentEnglishCopy } from '@/lib/english-admin-enrollment-copy'
 import { adminDutyEnglishCopy } from '@/lib/english-admin-duty-copy'
 import { shopEnglishCopy } from '@/lib/english-shop-copy'
 import { adminProductEnglishCopy } from '@/lib/english-admin-product-copy'
+import { adminContentEnglishCopy } from '@/lib/english-admin-content-copy'
 
 type TextPair = readonly [string, string]
 
@@ -159,6 +160,7 @@ const englishCopy = new Map(
     .concat(Object.entries(adminDutyEnglishCopy))
     .concat(Object.entries(shopEnglishCopy))
     .concat(Object.entries(adminProductEnglishCopy))
+    .concat(Object.entries(adminContentEnglishCopy))
     .filter(([source, translation]) => source && translation)
     .map(([source, translation]) => [normalizeCopy(source), translation]),
 )

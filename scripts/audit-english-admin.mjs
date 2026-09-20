@@ -2,13 +2,15 @@
 import assert from 'node:assert/strict'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { defaultShopProducts } from '../lib/shop-products.ts'
+import { applyContentAction, contentChecks, prepareContentFixture } from './audit-english-content-flows.mjs'
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const base = process.env.LANGUAGE_AUDIT_ORIGIN || 'http://127.0.0.1:3202'
 if (!/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(base)) throw Error('Local preview required')
 if (!process.env.LANGUAGE_CONTENT_FILE || !process.env.LANGUAGE_AUTH_STORAGE_KEY) throw Error('Provide public content and auth storage key')
 const { content } = JSON.parse(await readFile(process.env.LANGUAGE_CONTENT_FILE, 'utf8'))
 const productOnly = process.env.LANGUAGE_ADMIN_PRODUCTS === '1'
-const output = productOnly ? '/private/tmp/haoyun-english-admin-products' : '/private/tmp/haoyun-english-admin'
+const contentOnly = process.env.LANGUAGE_ADMIN_CONTENT === '1'
+const output = contentOnly ? '/private/tmp/haoyun-english-admin-content' : productOnly ? '/private/tmp/haoyun-english-admin-products' : '/private/tmp/haoyun-english-admin'
 await mkdir(output, { recursive: true })
 const id = '1ed770c5-3666-4f30-bae1-1f6e08bcd9d4', now = new Date().toISOString(), slug = 'zhubei-night-run-monday'
 const course = { slug, name: '竹北夜跑班', weekday: '星期一', location: '竹北', period: '2026 Q4', classTime: '19:00–20:30', meetingPoint: 'QA Park', feeNote: '', campaignLabel: '2026 Q4', slogan: '', targetAudience: '', focus: '', benefits: [], trainingItems: [], suitableFor: [], enrollmentNote: '', signupUrl: '', coachKeys: ['qa-coach'] }
@@ -19,6 +21,7 @@ const records = [], errors = [], unexpected = [], writes = []
 const browser = await chromium.launch({ channel: 'chrome', headless: true })
 async function open(width) {
   const data = structuredClone(payload)
+  if (contentOnly) prepareContentFixture(data)
   if (productOnly) {
     data.products = structuredClone(defaultShopProducts)
     data.products[0].variants[0].detailImages = ['/goodluck-running-vest.jpg', '/goodluck-running-vest-black.jpg']
@@ -48,6 +51,7 @@ async function open(width) {
     if (url.pathname === '/api/admin') {
       if (method === 'GET') return reply(data)
       const body = req.postDataJSON()
+      if (contentOnly) applyContentAction(data, body)
       if (['create_product','update_product'].includes(body.action)) {
         const product = { ...body, id: body.productId || 'qa-created', sizes: body.sizes.split('、').filter(Boolean), tags: body.tags.split('、').filter(Boolean), highlights: [], usageNotes: [], priceLabel: '', rating: 5, reviews: 0 }
         assert.ok(Number.isFinite(product.price)); assert.ok(Number.isInteger(product.stockQuantity))
@@ -60,7 +64,7 @@ async function open(width) {
       return reply({ message: '操作已完成。' })
     }
     if (url.pathname === '/api/admin/google-sheets-script') return reply({ script: '// Synthetic preview only\nfunction setupGoodLuckRosterSync() {}' })
-    if (url.pathname === '/api/admin/upload') { assert.equal(method, 'POST'); assert.match(req.headers()['content-type'], /multipart\/form-data/); return reply({ url: '/goodluck-running-vest-black.jpg' }) }
+    if (url.pathname === '/api/admin/upload') { assert.equal(method, 'POST'); if (data.qaVideoFailure) return reply({ error: '無法建立影片上傳憑證。' }, 503); assert.match(req.headers()['content-type'], /multipart\/form-data/); if (data.qaImageFailure) return reply({ error: '圖片上傳失敗。' }, 503); return reply({ url: '/goodluck-running-vest-black.jpg' }) }
     if (url.pathname === '/api/admin/coach-duty') {
       if (method === 'PATCH') { const body = req.postDataJSON(); if (body.action === 'manual_correction') { assert.equal(body.reason, 'Synthetic correction'); duty.attendanceState = body.attendanceState }; return reply({ message: '資料已更新。' }) }
       return reply({ items: [duty], coaches: [{ id: 'qa-coach', name: 'Coach QA', email: 'coach@example.invalid' }, { id: 'qa-substitute', name: 'Substitute QA', email: 'substitute@example.invalid' }], audits: [{ assignment_id: duty.id, action: 'manual_correction', reason: '保留原始稽核備註', actor_profile_id: id, created_at: now }], acceptanceTest: null })
@@ -70,10 +74,12 @@ async function open(width) {
     unexpected.push(url.pathname); return reply({ error: 'Unmocked API blocked' }, 503)
   })
   const page = await ctx.newPage(); page.on('pageerror', e => errors.push(e.message))
-  return { ctx, page }
+  return { ctx, page, data }
 }
 async function record(page, name) {
   await page.waitForTimeout(450)
+  // Complete finite entrance animations before inspecting or capturing text.
+  await page.evaluate(() => Promise.all(document.getAnimations().filter(a => a.playState === 'running' && Number.isFinite(a.effect?.getTiming().iterations)).map(a => a.finished.catch(() => {}))))
   assert.equal(await page.locator('html').getAttribute('lang'), 'en')
   assert.doesNotMatch(await page.title(), /[\u3400-\u9fff]/u)
   const state = await page.evaluate(() => {
@@ -81,10 +87,12 @@ async function record(page, name) {
     const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
     while (w.nextNode()) { const p = w.currentNode.parentElement, s = w.currentNode.nodeValue.trim(); if (p && !p.closest('script,style,textarea,[translate="no"]') && (visible(p) || p.closest('select') && visible(p.closest('select'))) && han.test(s)) missing.push(s) }
     for (const e of document.querySelectorAll('[aria-label],[placeholder],[title],[alt]')) if (visible(e)) for (const a of ['aria-label','placeholder','title','alt']) if (han.test(e.getAttribute(a) || '')) missing.push(a + ': ' + e.getAttribute(a))
-    return { missing: [...new Set(missing)], overflow: document.documentElement.scrollWidth > innerWidth, font: getComputedStyle(document.body).fontFamily }
+    const panel = document.querySelector('#admin-content-panel')
+    return { missing: [...new Set(missing)], overflow: document.documentElement.scrollWidth > innerWidth, font: getComputedStyle(document.body).fontFamily, ...(panel ? { panelVisible: visible(panel) } : {}) }
   })
   records.push({ name, ...state }); await writeFile(output + '/report.json', JSON.stringify({ records, errors, unexpected, writes }, null, 2)); console.log(`${name}: ${state.missing.length} untranslated; overflow=${state.overflow}`)
-  await page.screenshot({ path: output + '/' + name + '.png', fullPage: true })
+  if (state.panelVisible !== undefined) assert.equal(state.panelVisible, true, 'Content panel must be visible during the audit')
+  await page.screenshot({ path: output + '/' + name + '.png', fullPage: true, animations: 'disabled' })
 }
 async function productChecks(page, width) {
   if (width > 768) await page.locator('#admin-tab-products').click()
@@ -136,10 +144,11 @@ async function productChecks(page, width) {
 }
 try {
   for (const width of [1440,375]) {
-    const { ctx, page } = await open(width)
+    const { ctx, page, data } = await open(width)
     await page.goto(base + '/admin')
     await page.getByRole('heading', { name: 'Season overview', exact: true }).waitFor()
     if (productOnly) { await productChecks(page, width); await ctx.close(); continue }
+    if (contentOnly) { await contentChecks({ page, width, data, record }); await ctx.close(); continue }
     await record(page, width + '-overview')
     const nav = page.getByRole('navigation', { name: 'Main administrator navigation' })
     for (const [tab, label] of [['students','Student'],['coaches','Coach'],['seasons','Seasons'],['products','Products'],['content','Site content'],['reconciliation','Reconciliation'],['paymentAccounts','Payment accounts']]) {

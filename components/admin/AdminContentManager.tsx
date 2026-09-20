@@ -1,6 +1,8 @@
 'use client'
 
 import { courseBillingInputError } from '@/lib/admin-course-validation'
+import { useLanguage } from '@/app/language-context'
+import { toEnglishWebsiteText } from '@/lib/english-website'
 
 import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -178,6 +180,7 @@ function ImageField({
   onChange: (url: string) => void
   onError: (message: string) => void
 }) {
+  const { language } = useLanguage()
   const [uploading, setUploading] = useState(false)
   async function upload(file?: File) {
     if (!file) return
@@ -196,7 +199,7 @@ function ImageField({
     <div className="border-b border-black/10 py-5 first:pt-0 last:border-0 last:pb-0">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         {preview ? <div className="flex shrink-0 flex-col items-center gap-2 sm:w-44">{preview}<span className="text-xs text-apple-gray-500">課程顯示預覽</span></div> : <div className="relative h-28 w-full shrink-0 overflow-hidden rounded-lg bg-apple-gray-100 sm:w-44">
-          {value ? <Image src={value} alt={`${label}預覽`} fill sizes="176px" className="object-cover" style={objectPosition ? { objectPosition } : undefined} /> : <ImageIcon className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 text-apple-gray-400" />}
+          {value ? <Image src={value} alt={language === 'en' ? `${toEnglishWebsiteText(label)} preview` : `${label}預覽`} fill sizes="176px" className="object-cover" style={objectPosition ? { objectPosition } : undefined} /> : <ImageIcon className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 text-apple-gray-400" />}
         </div>}
         <div className="min-w-0 flex-1">
           <p className="font-bold text-apple-gray-900">{label}</p>
@@ -223,6 +226,7 @@ function ImageField({
 }
 
 function VideoField({ label, value, onChange, onError }: { label: string; value: string; onChange: (url: string) => void; onError: (message: string) => void }) {
+  const { language } = useLanguage()
   const [uploading, setUploading] = useState(false)
   const youtubeEmbedUrl = getYouTubeEmbedUrl(value)
 
@@ -246,7 +250,7 @@ function VideoField({ label, value, onChange, onError }: { label: string; value:
           {youtubeEmbedUrl ? (
             <iframe
               src={youtubeEmbedUrl}
-              title={`${label}預覽`}
+              title={language === 'en' ? `${toEnglishWebsiteText(label)} preview` : `${label}預覽`}
               loading="lazy"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
@@ -318,6 +322,9 @@ function courseDraft(course: CourseSummary, override?: CourseOverride): CourseOv
 }
 
 export default function AdminContentManager({ content, courses, seasons, scope = 'content', onBack, runAction }: AdminContentManagerProps) {
+  const { language } = useLanguage()
+  const english = language === 'en'
+  const displayText = (value: string) => english ? toEnglishWebsiteText(value) : value
   const [mode, setMode] = useState<ContentMode>(scope === 'seasons' ? 'seasons' : 'overview')
   const [slides, setSlides] = useState(content.heroSlides)
   const [activities, setActivities] = useState<HomeActivity[]>(content.activities)
@@ -505,12 +512,12 @@ export default function AdminContentManager({ content, courses, seasons, scope =
       || draftCapacity !== (seasonCapacities[selectedSeason.id]?.[selectedCourse.slug] ?? 40)
       || JSON.stringify(draftBilling) !== JSON.stringify(seasonBillingConfigs[selectedSeason.id]?.[selectedCourse.slug] ?? defaultCourseBillingConfig(selectedCourse, selectedSeason.code))
       || (showNewCourse && Boolean(newCourseName.trim()))
-    return !dirty || window.confirm('有尚未儲存的課程修改，確定放棄並返回／切換嗎？')
+    return !dirty || window.confirm(english ? 'This class has unsaved changes. Discard them and go back or switch?' : '有尚未儲存的課程修改，確定放棄並返回／切換嗎？')
   }
 
   async function deleteSeason(season: CourseSeason) {
     if (seasonActionBusy.current) return
-    if (!window.confirm(`確定刪除「${season.name}」及其課程設定？此操作無法復原。有報名、點名、請假或補課等紀錄的季度不能刪除，請改用封存。`)) return
+    if (!window.confirm(english ? `Delete ${displayText(season.name)} and its class settings? This cannot be undone. Seasons with registration, attendance, leave or makeup records must be archived instead.` : `確定刪除「${season.name}」及其課程設定？此操作無法復原。有報名、點名、請假或補課等紀錄的季度不能刪除，請改用封存。`)) return
     seasonActionBusy.current = true
     setSeasonActionPending(true)
     try {
@@ -534,6 +541,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
       setSlides((current) => [...current, url].slice(0, 8))
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : '圖片上傳失敗。')
+      throw error
     } finally {
       setIsUploading(false)
     }
@@ -591,7 +599,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
     courseSnapshotRef.current = { key: `${selectedSeason.id}:${selectedCourse.slug}`, draft, capacity: draftCapacity, billing: draftBilling }
     setCourseMessage(selectedSeason.isCurrent
       ? '已發布至訓練課程、訓練日程表、課程詳情與報名頁。'
-      : `已儲存至 ${selectedSeason.name}，目前仍是草稿，不會影響前台。`)
+      : english ? `Saved to ${displayText(selectedSeason.name)} as a draft. The public site is unchanged.` : `已儲存至 ${selectedSeason.name}，目前仍是草稿，不會影響前台。`)
   }
 
   async function createNextSeason() {
@@ -636,7 +644,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
 
   async function deleteSeasonCourse() {
     if (!selectedSeason || !selectedCourse) return
-    if (!window.confirm(`確定移除「${selectedCourse.name}」？只有完全沒有報名、點名、停課或補課資料的課程可以刪除。`)) return
+    if (!window.confirm(english ? `Remove ${displayText(selectedCourse.name)}? Only classes with no registration, attendance, cancellation or makeup records can be deleted.` : `確定移除「${selectedCourse.name}」？只有完全沒有報名、點名、停課或補課資料的課程可以刪除。`)) return
     const deleted = await runAction(`delete-course-${selectedSeason.id}-${selectedCourse.slug}`, {
       action: 'delete_season_course',
       seasonId: selectedSeason.id,
@@ -667,7 +675,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
   }
 
   async function activateSeason(season: CourseSeason) {
-    if (!window.confirm(`確定將 ${season.name} 設為前台招生季度？課程、日程表與報名頁會一起切換。`)) return
+    if (!window.confirm(english ? `Publish ${displayText(season.name)} for enrollment? Classes, schedules and registration pages will switch together.` : `確定將 ${season.name} 設為前台招生季度？課程、日程表與報名頁會一起切換。`)) return
     await runAction(`activate-season-${season.id}`, { action: 'activate_course_season', seasonId: season.id })
   }
 
@@ -739,7 +747,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
               <div className="space-y-2">
                 {group.items.map((item) => {
                   const Icon = item.icon
-                  return <button key={item.id} type="button" aria-pressed={mode === item.id} aria-controls="admin-content-panel" onClick={() => changeMode(item.id)} className={`flex min-h-[68px] w-full items-center gap-3 rounded-lg px-3 py-3 text-left ring-1 ring-inset transition-colors ${mode === item.id ? 'bg-black text-white ring-black' : 'bg-white text-apple-gray-700 ring-black/10 hover:bg-apple-gray-100'}`}><Icon className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1"><span className="block text-sm font-bold">{item.label}</span><span className={`block h-8 overflow-hidden text-xs ${mode === item.id ? 'text-white/60' : 'text-apple-gray-500'}`}>{item.description}</span></span></button>
+                  return <button key={item.id} type="button" aria-pressed={mode === item.id} aria-controls="admin-content-panel" onClick={() => changeMode(item.id)} className={`flex min-h-[68px] w-full items-center gap-3 rounded-lg px-3 py-3 text-left ring-1 ring-inset transition-colors ${mode === item.id ? 'bg-black text-white ring-black' : 'bg-white text-apple-gray-700 ring-black/10 hover:bg-apple-gray-100'}`}><Icon className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1"><span className="block text-sm font-bold">{item.label}</span><span className={`block text-xs leading-5 ${mode === item.id ? 'text-white/60' : 'text-apple-gray-500'}`}>{item.description}</span></span></button>
                 })}
               </div>
             </section>
@@ -776,7 +784,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
           <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
             {panelHeader('首頁輪播圖片', '最多 8 張，可調整順序或刪除。建議使用橫式高解析度照片。', '/')}
             <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
-              {slides.map((slide, index) => <article key={`${slide}-${index}`} className="overflow-hidden rounded-lg border border-black/10"><div className="relative aspect-video bg-apple-gray-100"><Image src={slide} alt={`首頁輪播 ${index + 1}`} fill sizes="360px" className="object-cover" /></div><div className="flex items-center justify-between p-3"><span className="text-xs font-bold text-apple-gray-500">第 {index + 1} 張</span><div className="flex gap-1"><button title="向前移動" type="button" disabled={index === 0} onClick={() => moveSlide(index, -1)} className="p-2 disabled:opacity-30"><ArrowUp className="h-4 w-4" /></button><button title="向後移動" type="button" disabled={index === slides.length - 1} onClick={() => moveSlide(index, 1)} className="p-2 disabled:opacity-30"><ArrowDown className="h-4 w-4" /></button><button title="刪除圖片" type="button" disabled={slides.length <= 1} onClick={() => setSlides((current) => current.filter((_, i) => i !== index))} className="p-2 text-red-500 disabled:opacity-30"><Trash2 className="h-4 w-4" /></button></div></div></article>)}
+              {slides.map((slide, index) => <article key={`${slide}-${index}`} className="overflow-hidden rounded-lg border border-black/10"><div className="relative aspect-video bg-apple-gray-100"><Image src={slide} alt={english ? `Homepage slide ${index + 1}` : `首頁輪播 ${index + 1}`} fill sizes="360px" className="object-cover" /></div><div className="flex items-center justify-between p-3"><span className="text-xs font-bold text-apple-gray-500">{english ? `Image ${index + 1}` : `第 ${index + 1} 張`}</span><div className="flex gap-1"><button title="向前移動" type="button" disabled={index === 0} onClick={() => moveSlide(index, -1)} className="p-2 disabled:opacity-30"><ArrowUp className="h-4 w-4" /></button><button title="向後移動" type="button" disabled={index === slides.length - 1} onClick={() => moveSlide(index, 1)} className="p-2 disabled:opacity-30"><ArrowDown className="h-4 w-4" /></button><button title="刪除圖片" type="button" disabled={slides.length <= 1} onClick={() => setSlides((current) => current.filter((_, i) => i !== index))} className="p-2 text-red-500 disabled:opacity-30"><Trash2 className="h-4 w-4" /></button></div></div></article>)}
               <CroppableImageInput
                 className="flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-black/20 bg-apple-gray-50 text-sm font-bold text-apple-gray-600"
                 disabled={isUploading || slides.length >= 8}
@@ -893,9 +901,9 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                     <details key={profile.coachKey} className="group" onDragOver={(event) => { event.preventDefault() }} onDrop={(event) => { event.preventDefault(); if (draggedCoach) moveCoach(draggedCoach, profile.coachKey); setDraggedCoach(null) }}>
                       <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 hover:bg-apple-gray-50">
                         <span className="flex shrink-0 items-center" onClick={(event) => event.preventDefault()}>
-                          <button type="button" draggable aria-label={`拖動${profile.displayName}排序`} onDragStart={(event) => { setDraggedCoach(profile.coachKey); event.dataTransfer.setData('text/plain', profile.coachKey); event.dataTransfer.effectAllowed = 'move' }} onDragEnd={() => setDraggedCoach(null)} className="flex h-11 w-8 cursor-grab items-center justify-center"><GripVertical className="h-5 w-5" /></button>
-                          <button type="button" disabled={index === 0} aria-label={`上移${profile.displayName}`} onClick={() => moveCoach(profile.coachKey, orderedCoachKeys[index - 1])} className="flex h-11 w-11 items-center justify-center disabled:opacity-25"><ArrowUp className="h-4 w-4" /></button>
-                          <button type="button" disabled={index === orderedCoachKeys.length - 1} aria-label={`下移${profile.displayName}`} onClick={() => moveCoach(profile.coachKey, orderedCoachKeys[index + 1])} className="flex h-11 w-11 items-center justify-center disabled:opacity-25"><ArrowDown className="h-4 w-4" /></button>
+                          <button type="button" draggable aria-label={english ? `Drag to reorder ${displayText(profile.displayName)}` : `拖動${profile.displayName}排序`} onDragStart={(event) => { setDraggedCoach(profile.coachKey); event.dataTransfer.setData('text/plain', profile.coachKey); event.dataTransfer.effectAllowed = 'move' }} onDragEnd={() => setDraggedCoach(null)} className="flex h-11 w-8 cursor-grab items-center justify-center"><GripVertical className="h-5 w-5" /></button>
+                          <button type="button" disabled={index === 0} aria-label={english ? `Move ${displayText(profile.displayName)} up` : `上移${profile.displayName}`} onClick={() => moveCoach(profile.coachKey, orderedCoachKeys[index - 1])} className="flex h-11 w-11 items-center justify-center disabled:opacity-25"><ArrowUp className="h-4 w-4" /></button>
+                          <button type="button" disabled={index === orderedCoachKeys.length - 1} aria-label={english ? `Move ${displayText(profile.displayName)} down` : `下移${profile.displayName}`} onClick={() => moveCoach(profile.coachKey, orderedCoachKeys[index + 1])} className="flex h-11 w-11 items-center justify-center disabled:opacity-25"><ArrowDown className="h-4 w-4" /></button>
                         </span>
                         <div className="min-w-0 flex-1 text-left">
                           <p className="truncate font-black text-apple-gray-900">{profile.displayName}</p>
@@ -945,10 +953,10 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                           <Field label="帶訓風格"><textarea rows={5} value={profile.style} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], style: event.target.value } }))} className="apple-input resize-y" /></Field>
                           <Field label="代表經歷（每行一項）"><textarea rows={6} value={profile.achievements.join('\n')} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], achievements: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean) } }))} className="apple-input resize-y" /></Field>
                           <Field label="教練證照（每行一項）"><textarea rows={6} value={profile.certifications.join('\n')} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], certifications: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean) } }))} className="apple-input resize-y" /></Field>
-                          <Field label={`照片水平焦點 ${profile.fullBodyFocusX}%`}>
+                          <Field label={english ? `Photo horizontal focus ${profile.fullBodyFocusX}%` : `照片水平焦點 ${profile.fullBodyFocusX}%`}>
                             <input type="range" min={0} max={100} value={profile.fullBodyFocusX} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], fullBodyFocusX: Number(event.target.value) } }))} className="w-full accent-black" />
                           </Field>
-                          <Field label={`照片垂直焦點 ${profile.fullBodyFocusY}%`}>
+                          <Field label={english ? `Photo vertical focus ${profile.fullBodyFocusY}%` : `照片垂直焦點 ${profile.fullBodyFocusY}%`}>
                             <input type="range" min={0} max={100} value={profile.fullBodyFocusY} onChange={(event) => setCoachDrafts((current) => ({ ...current, [profile.coachKey]: { ...current[profile.coachKey], fullBodyFocusY: Number(event.target.value) } }))} className="w-full accent-black" />
                           </Field>
                           <label className="flex items-center gap-3 text-sm font-bold md:col-span-2">
@@ -1124,7 +1132,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                 <div className="space-y-4">
                   {achievements.badges.map((badge, index) => (
                     <div key={badge.slug} className="rounded-xl border border-black/10 bg-apple-gray-50 p-4">
-                      <ImageField label={`${index + 1}. ${badge.standard}圖片`} value={badge.image} folder="pages" aspectRatio={2 / 3} aspectLabel="2:3" onChange={(image) => setAchievements((current) => ({ ...current, badges: current.badges.map((item, itemIndex) => itemIndex === index ? { ...item, image } : item) }))} onError={setLocalError} />
+                      <ImageField label={english ? `${index + 1}. ${displayText(badge.standard)} image` : `${index + 1}. ${badge.standard}圖片`} value={badge.image} folder="pages" aspectRatio={2 / 3} aspectLabel="2:3" onChange={(image) => setAchievements((current) => ({ ...current, badges: current.badges.map((item, itemIndex) => itemIndex === index ? { ...item, image } : item) }))} onError={setLocalError} />
                       <div className="grid gap-3 md:grid-cols-2">
                         <input value={badge.standard} onChange={(event) => setAchievements((current) => ({ ...current, badges: current.badges.map((item, itemIndex) => itemIndex === index ? { ...item, standard: event.target.value } : item) }))} className="apple-input" placeholder="達標標準" />
                         <input value={badge.name} onChange={(event) => setAchievements((current) => ({ ...current, badges: current.badges.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item) }))} className="apple-input" placeholder="徽章名稱" />
@@ -1149,8 +1157,8 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                   <Field label="申請步驟（每行一項）" wide><textarea rows={6} value={achievements.howToSteps.join('\n')} onChange={(event) => setAchievements((current) => ({ ...current, howToSteps: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean).slice(0, 5) }))} className="apple-input resize-y" /></Field>
                   <Field label="申請補充說明" wide><textarea rows={4} value={achievements.howToNote} onChange={(event) => setAchievements((current) => ({ ...current, howToNote: event.target.value }))} className="apple-input resize-y" /></Field>
                 </div>
-                <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-                  {achievements.milestones.map((item, index) => <ImageField key={index} label={`紀念卡 ${index + 1}`} value={item.image} folder="pages" aspectRatio={3 / 4} aspectLabel="3:4" onChange={(image) => setAchievements((current) => ({ ...current, milestones: current.milestones.map((entry, itemIndex) => itemIndex === index ? { ...entry, image } : entry) }))} onError={setLocalError} />)}
+                <div className="mt-5 grid gap-4 xl:grid-cols-2">
+                  {achievements.milestones.map((item, index) => <ImageField key={index} label={english ? `Milestone card ${index + 1}` : `紀念卡 ${index + 1}`} value={item.image} folder="pages" aspectRatio={3 / 4} aspectLabel="3:4" onChange={(image) => setAchievements((current) => ({ ...current, milestones: current.milestones.map((entry, itemIndex) => itemIndex === index ? { ...entry, image } : entry) }))} onError={setLocalError} />)}
                 </div>
               </section>
             </div>
@@ -1201,12 +1209,12 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                     </div>
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
-                    <select disabled={season.status === 'archived'} value={season.status} onChange={(event) => updateSeasonStatus(season, event.target.value as CourseSeasonStatus)} className="apple-input min-w-32" aria-label={`更新 ${season.name} 狀態`}>
+                    <select disabled={season.status === 'archived'} value={season.status} onChange={(event) => updateSeasonStatus(season, event.target.value as CourseSeasonStatus)} className="apple-input min-w-32" aria-label={english ? `Update ${displayText(season.name)} status` : `更新 ${season.name} 狀態`}>
                       {Object.entries(courseSeasonStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                     </select>
                     <button type="button" onClick={() => { setSelectedSeasonId(season.id); changeMode('courses') }} className="apple-button-outline px-4 py-2.5">管理這季課程</button>
                     {!season.isCurrent && season.status !== 'archived' ? <button type="button" onClick={() => activateSeason(season)} className="apple-button-primary gap-2 px-4 py-2.5"><CheckCircle2 className="h-4 w-4" />設為前台招生</button> : null}
-                    <button type="button" onClick={() => deleteSeason(season)} disabled={seasonActionPending || season.isCurrent || ['enrolling', 'active', 'archived'].includes(season.status) || season.registrationCount > 0} title="僅可刪除非招生中、非進行中且無營運紀錄的季度；有紀錄請封存" aria-label={`刪除 ${season.name}`} className="inline-flex items-center justify-center gap-1 rounded-lg border border-red-200 px-4 py-2.5 text-sm font-bold text-red-700 disabled:opacity-40"><Trash2 className="h-4 w-4" />刪除季度</button>
+                    <button type="button" onClick={() => deleteSeason(season)} disabled={seasonActionPending || season.isCurrent || ['enrolling', 'active', 'archived'].includes(season.status) || season.registrationCount > 0} title="僅可刪除非招生中、非進行中且無營運紀錄的季度；有紀錄請封存" aria-label={english ? `Delete ${displayText(season.name)}` : `刪除 ${season.name}`} className="inline-flex items-center justify-center gap-1 rounded-lg border border-red-200 px-4 py-2.5 text-sm font-bold text-red-700 disabled:opacity-40"><Trash2 className="h-4 w-4" />刪除季度</button>
                   </div>
                 </article>
               ))}
@@ -1216,7 +1224,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
 
         {mode === 'courses' && selectedSeason ? (
           <div className="overflow-hidden rounded-lg border border-black/10 bg-white">
-            {panelHeader(`${selectedSeason.name}課程資料`, selectedSeason.isCurrent ? '儲存後會同步發布到首頁、訓練課程、日程表、課程詳情與報名頁。' : selectedSeason.status === 'archived' ? '封存季度僅供查閱，不再接受修改。' : '這是非當前季度，儲存只會更新這一季，不影響前台。', '/courses')}
+            {panelHeader(english ? `${displayText(selectedSeason.name)} classes` : `${selectedSeason.name}課程資料`, selectedSeason.isCurrent ? '儲存後會同步發布到首頁、訓練課程、日程表、課程詳情與報名頁。' : selectedSeason.status === 'archived' ? '封存季度僅供查閱，不再接受修改。' : '這是非當前季度，儲存只會更新這一季，不影響前台。', '/courses')}
             <div className="border-b border-black/10 bg-apple-gray-50 p-5">
               <div className="grid gap-4 lg:grid-cols-[minmax(180px,.7fr)_minmax(280px,1.3fr)_auto] lg:items-end">
                 <Field label="管理季度"><select value={selectedSeasonId} onChange={(e) => { if (!confirmLeaveCourse()) return; setSelectedSeasonId(e.target.value); setCourseMessage('') }} className="apple-input">{seasons.map((season) => <option key={season.id} value={season.id}>{season.name}{season.isCurrent ? '（前台招生）' : ''}</option>)}</select></Field>
@@ -1244,7 +1252,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
               <Field label="城市 / 地點"><input value={String(draft.location ?? '')} onChange={(e) => setDraft((current) => ({ ...current, location: e.target.value }))} className="apple-input" /></Field>
               <Field label="課程週期"><input value={String(draft.period ?? '')} onChange={(e) => setDraft((current) => ({ ...current, period: e.target.value }))} className="apple-input" placeholder="例如 7/14 - 9/29" /></Field>
               <Field label="上課時間"><input value={String(draft.classTime ?? '')} onChange={(e) => setDraft((current) => ({ ...current, classTime: e.target.value }))} className="apple-input" placeholder="例如 19:27（1.5-2 小時）" /></Field>
-              <Field label="簽到判定開始時間"><input type="time" value={String(draft.startTime ?? '')} onChange={(e) => setDraft((current) => ({ ...current, startTime: e.target.value, timeZone: 'Asia/Taipei' }))} className="apple-input" /><span className="mt-1 block text-xs font-semibold text-apple-gray-500">固定使用台灣時間（{APP_TIME_ZONE_LABEL}），供教練本人到課簽到判定。</span></Field>
+              <Field label="簽到判定開始時間"><input type="time" value={String(draft.startTime ?? '')} onChange={(e) => setDraft((current) => ({ ...current, startTime: e.target.value, timeZone: 'Asia/Taipei' }))} className="apple-input" /><span className="mt-1 block text-xs font-semibold text-apple-gray-500">{english ? `Coach check-in uses Taiwan time (${APP_TIME_ZONE_LABEL}).` : `固定使用台灣時間（${APP_TIME_ZONE_LABEL}），供教練本人到課簽到判定。`}</span></Field>
               <Field label="集合地點" wide><input value={String(draft.meetingPoint ?? '')} onChange={(e) => setDraft((current) => ({ ...current, meetingPoint: e.target.value }))} className="apple-input" /></Field>
               <Field label="費用說明"><input value={String(draft.feeNote ?? '')} onChange={(e) => setDraft((current) => ({ ...current, feeNote: e.target.value }))} className="apple-input" /></Field>
               <Field label="班級名額"><input type="number" min={1} max={500} value={draftCapacity} onChange={(e) => setDraftCapacity(Number(e.target.value))} className="apple-input" /></Field>
