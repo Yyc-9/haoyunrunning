@@ -27,6 +27,8 @@ import {
   type DirectCourseRegistration,
 } from '@/lib/course-registration-form'
 import { supabase } from '@/lib/supabase'
+import { useLanguage } from '@/app/language-context'
+import type { Language } from '@/lib/dictionary'
 import {
   COURSE_TERMS_VERSION,
   INVOICE_NOTICE_VERSION,
@@ -76,8 +78,8 @@ const initialForm: DirectCourseRegistration = {
   finalConsent: false,
 }
 
-function formatSessionDate(date: string) {
-  return new Intl.DateTimeFormat('zh-TW', {
+function formatSessionDate(date: string, language: Language) {
+  return new Intl.DateTimeFormat(language, {
     timeZone: 'Asia/Taipei',
     month: 'long',
     day: 'numeric',
@@ -85,8 +87,8 @@ function formatSessionDate(date: string) {
   }).format(new Date(`${date}T12:00:00+08:00`))
 }
 
-function formatQuoteExpiry(date: string) {
-  return new Intl.DateTimeFormat('zh-TW', {
+function formatQuoteExpiry(date: string, language: Language) {
+  return new Intl.DateTimeFormat(language, {
     timeZone: 'Asia/Taipei',
     month: 'numeric',
     day: 'numeric',
@@ -96,24 +98,25 @@ function formatQuoteExpiry(date: string) {
 }
 
 function PricingQuoteSummary({ quote }: { quote: CourseRegistrationQuote }) {
+  const { language } = useLanguage()
   return (
     <div>
       <p className="text-3xl font-black text-apple-gray-950">{quote.amountText}</p>
       <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold">
         <span className="rounded-full bg-apple-gray-100 px-3 py-1.5 text-apple-gray-700">{quote.studentType === 'returning' ? '舊生' : '新生'}</span>
         <span className="rounded-full bg-blue-50 px-3 py-1.5 text-blue-800">{quote.enrollmentTiming === 'regular' ? '本期完整報名' : '插班報名'}</span>
-        <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-800">第 {quote.billingStartSessionNumber} 堂起，共 {quote.chargedSessionCount} 堂</span>
+        <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-800">{language === 'en' ? `From session ${quote.billingStartSessionNumber} · ${quote.chargedSessionCount} sessions` : `第 ${quote.billingStartSessionNumber} 堂起，共 ${quote.chargedSessionCount} 堂`}</span>
       </div>
       <p className="mt-4 text-sm font-semibold leading-6 text-apple-gray-700">
-        自 {formatSessionDate(quote.billingStartSessionDate)} 起計費；
+        {language === 'en' ? <>Billing starts on {formatSessionDate(quote.billingStartSessionDate, language)}. {quote.enrollmentTiming === 'regular' ? `${quote.totalSessionCount} sessions at the full-season price.` : `${quote.chargedSessionCount} remaining sessions at NT$${quote.unitRate ?? ''} each.`}</> : <>自 {formatSessionDate(quote.billingStartSessionDate, language)} 起計費；
         {quote.enrollmentTiming === 'regular'
           ? `本期共 ${quote.totalSessionCount} 堂，採整季價格。`
-          : `剩餘 ${quote.chargedSessionCount} 堂 × 每堂 ${quote.unitRate ? `NT$${quote.unitRate}` : ''}。`}
+          : `剩餘 ${quote.chargedSessionCount} 堂 × 每堂 ${quote.unitRate ? `NT$${quote.unitRate}` : ''}。`}</>}
       </p>
       {quote.priorAttendanceClaimed ? <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold leading-6 text-amber-900">你已申報最近一堂有到課並補繳費用；教練完成該堂點名後，系統會自動核對到課紀錄。</p> : null}
       {quote.referrerStatus === 'verified' ? <p className="mt-2 text-sm font-bold text-emerald-700">推薦資格已核對，插班費率為每堂 NT$450。</p> : null}
       {quote.referrerStatus === 'not_verified' ? <p className="mt-2 text-sm font-semibold text-apple-gray-600">目前無法核對推薦資格，插班費率依每堂 NT$500 計算。</p> : null}
-      <p className="mt-3 text-xs leading-5 text-apple-gray-500">此金額保留至 {formatQuoteExpiry(quote.lockedUntil)}。選定的起始課次是本期計費承諾；之後若該堂請假，不會自動順延計費日期。</p>
+      <p className="mt-3 text-xs leading-5 text-apple-gray-500">此金額保留至 {formatQuoteExpiry(quote.lockedUntil, language)}。選定的起始課次是本期計費承諾；之後若該堂請假，不會自動順延計費日期。</p>
     </div>
   )
 }
@@ -128,6 +131,7 @@ function FieldLabel({ children, optional = false }: { children: React.ReactNode;
 }
 
 export default function DirectCourseRegistrationForm({ course, userEmail, legacyStudent, pricingOptions, onSubmitted }: DirectCourseRegistrationFormProps) {
+  const { language } = useLanguage()
   const [step, setStep] = useState(0)
   const [form, setForm] = useState<DirectCourseRegistration>(() => ({
     ...initialForm,
@@ -419,7 +423,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
                         onClick={() => selectBillingStartSession(option.date, false)}
                         className={`min-h-20 rounded-lg border p-3 text-left transition ${selected ? 'border-blue-500 bg-blue-50 text-blue-950' : 'border-black/10 bg-white text-apple-gray-800 hover:bg-apple-gray-50'}`}
                       >
-                        <span className="block text-sm font-black">第 {option.sessionNumber} 堂 · {formatSessionDate(option.date)}</span>
+                        <span className="block text-sm font-black">第 {option.sessionNumber} 堂 · {formatSessionDate(option.date, language)}</span>
                         <span className="mt-1 block text-xs font-semibold opacity-70">從本堂起計 {option.remainingSessionCount} 堂</span>
                       </button>
                     )
@@ -432,13 +436,13 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
                       className={`min-h-20 rounded-lg border p-3 text-left transition sm:col-span-2 ${form.priorAttendanceClaimed ? 'border-amber-500 bg-amber-50 text-amber-950' : 'border-amber-200 bg-white text-amber-950 hover:bg-amber-50'}`}
                     >
                       <span className="block text-sm font-black">我已參加最近一堂，現在補繳</span>
-                      <span className="mt-1 block text-xs font-semibold leading-5 opacity-75">第 {pricingOptions.priorAttendanceSession.sessionNumber} 堂 · {formatSessionDate(pricingOptions.priorAttendanceSession.date)}；教練點名後由系統自動核對。</span>
+                      <span className="mt-1 block text-xs font-semibold leading-5 opacity-75">第 {pricingOptions.priorAttendanceSession.sessionNumber} 堂 · {formatSessionDate(pricingOptions.priorAttendanceSession.date, language)}；教練點名後由系統自動核對。</span>
                     </button>
                   ) : null}
                 </div>
               ) : pricingOptions.automaticStartSessionDate ? (
                 <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-950">
-                  <p className="text-sm font-black">第 1 堂 · {formatSessionDate(pricingOptions.automaticStartSessionDate)}</p>
+                  <p className="text-sm font-black">第 1 堂 · {formatSessionDate(pricingOptions.automaticStartSessionDate, language)}</p>
                   <p className="mt-1 text-xs font-semibold opacity-75">採本期完整課程價格。</p>
                 </div>
               ) : null}
@@ -525,7 +529,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
 
             <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
               <input type="checkbox" checked={form.finalConsent} onChange={(event) => update('finalConsent', event.target.checked)} className="mt-1 h-5 w-5 shrink-0 accent-emerald-700" />
-              <span className="text-sm font-black leading-6 text-emerald-900">我願意參與 {course.period} 好運訓練營 X {formatCourseWeekday(course.weekday)}{displayCourseLocation(course.location)}課程，並確認以上資料正確。</span>
+              <span className="text-sm font-black leading-6 text-emerald-900">{language === 'en' ? `I agree to join the Nurture Running Camp (${course.period}, ${course.weekday}, ${displayCourseLocation(course.location)}) and confirm that the information above is correct.` : <>我願意參與 {course.period} 好運訓練營 X {formatCourseWeekday(course.weekday)}{displayCourseLocation(course.location)}課程，並確認以上資料正確。</>}</span>
             </label>
           </div>
         ) : null}

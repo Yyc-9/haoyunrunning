@@ -241,7 +241,7 @@ export default function Navigation() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.16 }}
-            className="absolute right-0 mt-2 w-36 overflow-hidden rounded-2xl border border-apple-gray-200 bg-white shadow-xl"
+            className="absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl border border-apple-gray-200 bg-white shadow-xl"
           >
             {languages.map((item) => (
               <button
@@ -258,8 +258,8 @@ export default function Navigation() {
                     : 'text-apple-gray-700 hover:bg-apple-gray-100'
                 )}
               >
-                <span>{item.name}</span>
-                <span className="text-xs font-bold">{item.label}</span>
+                <span>{language === 'en' ? item.englishName : item.name}</span>
+                <span className="text-xs font-bold">{language === 'en' ? item.englishLabel : item.label}</span>
               </button>
             ))}
           </motion.div>
@@ -286,7 +286,7 @@ export default function Navigation() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div
             className={clsx(
-              'relative flex min-w-0 items-center justify-between rounded-full border px-3 text-apple-gray-950 shadow-lg backdrop-blur-2xl transition-all duration-300 sm:px-6',
+              'relative flex min-w-0 items-center justify-between gap-3 rounded-full border px-3 text-apple-gray-950 shadow-lg backdrop-blur-2xl transition-all duration-300 sm:px-6',
               isScrolled
                 ? 'border-transparent bg-transparent py-0 shadow-none'
                 : 'border-black/10 bg-white/94 py-2 shadow-[0_18px_60px_rgba(0,0,0,0.18)] ring-1 ring-white/70 sm:py-3'
@@ -296,16 +296,16 @@ export default function Navigation() {
             <motion.div
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="flex min-w-0 items-center space-x-2 justify-self-start"
+              className="flex min-w-0 items-center space-x-2 justify-self-start xl:shrink-0"
             >
               <div className="relative h-9 w-9 overflow-hidden rounded-full border border-black/10 bg-white shadow-sm sm:h-10 sm:w-10">
                 <WeekdayLogo brandName={brand.brandName} />
               </div>
-              <span className="max-w-[8rem] truncate text-base font-bold tracking-tight text-apple-gray-950 sm:max-w-none sm:text-xl">{brand.brandName}</span>
+              <span className={clsx('font-bold tracking-tight text-apple-gray-950', language === 'en' ? 'max-w-[10.5rem] whitespace-normal text-sm leading-tight sm:max-w-[9rem] sm:text-base' : 'max-w-[8rem] truncate text-base sm:max-w-none sm:text-xl')}>{brand.brandName}</span>
             </motion.div>
 
             {/* Desktop Navigation */}
-            <div className="absolute left-1/2 hidden -translate-x-1/2 items-center justify-center gap-4 xl:flex 2xl:gap-6">
+            <div className="hidden min-w-0 flex-1 items-center justify-center gap-3 xl:flex 2xl:gap-5">
               {navItems.map((item) => {
                 const isExternal = item.href.startsWith('http')
                 const isHashLink = item.href.startsWith('#')
@@ -355,7 +355,7 @@ export default function Navigation() {
             </div>
 
             {/* Auth Buttons */}
-            <div className="hidden items-center space-x-3 justify-self-end xl:flex">
+            <div className="hidden shrink-0 items-center space-x-3 justify-self-end xl:flex">
               <NotificationBell />
               {languageSwitcher}
               {isLoading ? (
@@ -535,7 +535,7 @@ export default function Navigation() {
                               : 'text-apple-gray-600 hover:text-apple-gray-900'
                           )}
                         >
-                          {item.label}
+                          {language === 'en' ? item.englishLabel : item.label}
                         </button>
                       ))}
                     </div>

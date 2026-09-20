@@ -1,4 +1,10 @@
 import { dictionary, type Language } from '@/lib/dictionary'
+import { publicEnglishCopy } from '@/lib/english-public-copy'
+import { notificationEnglishCopy } from '@/lib/english-notification-copy'
+import { policyEnglishCopy } from '@/lib/english-policy-copy'
+import { coachEnglishCopy } from '@/lib/english-coach-copy'
+import { achievementEnglishCopy } from '@/lib/english-achievement-copy'
+import { registrationEnglishCopy } from '@/lib/english-registration-copy'
 
 type TextPair = readonly [string, string]
 
@@ -138,9 +144,12 @@ const managedContentPairs: TextPair[] = [
 const dictionaryPairs: TextPair[] = []
 collectDictionaryPairs(dictionary['zh-TW'], dictionary.en, dictionaryPairs)
 
-const englishPairs = [...managedContentPairs, ...dictionaryPairs]
-  .filter(([traditional, english]) => traditional && english)
-  .sort((a, b) => b[0].length - a[0].length)
+const normalizeCopy = (value: string) => value.replace(/\s+/gu, ' ').trim()
+const englishCopy = new Map(
+  [...dictionaryPairs, ...managedContentPairs, ...Object.entries(publicEnglishCopy), ...Object.entries(notificationEnglishCopy), ...Object.entries(policyEnglishCopy), ...Object.entries(coachEnglishCopy), ...Object.entries(achievementEnglishCopy), ...Object.entries(registrationEnglishCopy)]
+    .filter(([source, translation]) => source && translation)
+    .map(([source, translation]) => [normalizeCopy(source), translation]),
+)
 
 // Match compact city labels exactly so longer names and addresses stay intact.
 const cityFilterTranslations = new Map([
@@ -151,11 +160,67 @@ const cityFilterTranslations = new Map([
   ['苗栗', 'Miaoli'],
 ])
 
-export function toEnglishWebsiteText(value: string) {
+export function toEnglishWebsiteText(value: string): string {
   if (/^(?:https?:\/\/|\/[^/]|mailto:|tel:)/u.test(value)) return value
-  const cityFilterTranslation = cityFilterTranslations.get(value)
-  if (cityFilterTranslation) return cityFilterTranslation
-  return englishPairs.reduce((text, [traditional, english]) => text.replaceAll(traditional, english), value)
+  const source = normalizeCopy(value)
+  const exact = englishCopy.get(source) ?? cityFilterTranslations.get(source)
+  const preserveSpace = (translation: string) => `${value.match(/^\s*/u)?.[0] ?? ''}${translation}${value.match(/\s*$/u)?.[0] ?? ''}`
+  if (exact) return preserveSpace(exact)
+  const unread = source.match(/^通知，(\d+) 則未讀$/u)
+  if (unread) return preserveSpace(`Notifications, ${unread[1]} unread`)
+  const products = source.match(/^目前共 (\d+) 件商品$/u)
+  if (products) return preserveSpace(`${products[1]} products available`)
+  const places = source.match(/^剩餘名額 (\d+) 人$/u)
+  if (places) return preserveSpace(`${places[1]} places available`)
+  const wrappers: [RegExp, (text: string) => string][] = [
+    [/^查看(.+)的擅長、經歷與證照$/u, text => `View ${text}: expertise, experience, and qualifications`],
+    [/^查看(.+)的完整介紹$/u, text => `View the full profile of ${text}`],
+    [/^查看(.+)課程$/u, text => `View ${text}`],
+    [/^(.+)教練照片$/u, text => `Portrait of ${text}`],
+    [/^(.+)課程頭像$/u, text => `Class coach portrait: ${text}`],
+    [/^(.+)報名$/u, text => `Register for ${text}`],
+    [/^選擇(.+)$/u, text => `Select ${text}`],
+    [/^(.+)徽章$/u, text => `${text} badge`],
+    [/^(.+)達標紀念卡$/u, text => `${text} achievement card`],
+    [/^複製(.+)$/u, text => `Copy ${text.toLowerCase()}`],
+  ]
+  for (const [pattern, format] of wrappers) {
+    const match = source.match(pattern)
+    if (!match) continue
+    const translated = toEnglishWebsiteText(match[1])
+    if (!/[\u3400-\u9fff]/u.test(translated)) return preserveSpace(format(translated))
+  }
+
+  // Translate complete, known formats only. Replacing dictionary words inside an
+  // unknown sentence used to turn 是 into Yes and 一起 into 一From.
+  const camp = source.match(/^(\d{4})好運跑步訓練營\s*[X×]\s*((?:週|星期)[一二三四五六日])(.+)$/u)
+  if (camp) {
+    const day = englishCopy.get(camp[2])
+    const course = englishCopy.get(camp[3])
+    if (day && course) return preserveSpace(`${camp[1]} Nurture Running Camp · ${day} ${course}`)
+  }
+  const duration = source.match(/^(\d{2}:\d{2})[（(]([\d.]+-[\d.]+) 小時[）)]$/u)
+  if (duration) return preserveSpace(`${duration[1]} (${duration[2]} hours)`)
+  const ability = source.match(/^已能完成 ([\d.-]+)KM$/u)
+  if (ability) return preserveSpace(`Able to run ${ability[1]} km`)
+  const closures = source.match(/^([\d/ -]+)\s*\(([\d/、]+)停課[一二三四五六七八九十\d]+次\)$/u)
+  if (closures) return preserveSpace(`${closures[1].trim()} (no class on ${closures[2].replaceAll('、', ', ')})`)
+  const image = source.match(/^好運跑班訓練紀錄\s*(\d+)$/u)
+  if (image) return preserveSpace(`Nurture Running Team training photo ${image[1]}`)
+  const preview = source.match(/^快速預覽[：:]?\s*(.+)$/u)
+  if (preview) {
+    const translated = toEnglishWebsiteText(preview[1])
+    if (!/[\u3400-\u9fff]/u.test(translated)) return preserveSpace(`Preview ${translated}`)
+  }
+  // Lists of known locations and branded page titles can be composed safely.
+  for (const separator of ['、', '｜', ' - ']) {
+    if (!source.includes(separator)) continue
+    const parts = source.split(separator).map(part => toEnglishWebsiteText(part.trim()))
+    if (parts.every(part => !/[\u3400-\u9fff]/u.test(part))) {
+      return preserveSpace(parts.join(separator === '、' ? ', ' : ' | '))
+    }
+  }
+  return value
 }
 
 export function localizeWebsiteValue<T>(value: T, language: Language): T {

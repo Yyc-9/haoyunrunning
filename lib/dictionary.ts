@@ -1,7 +1,7 @@
 export const languages = [
-  { code: 'zh-TW', label: '繁', name: '繁體中文' },
-  { code: 'zh-CN', label: '\u7b80', name: '\u7b80\u4f53\u4e2d\u6587' },
-  { code: 'en', label: 'EN', name: 'English' },
+  { code: 'zh-TW', label: '繁', name: '繁體中文', englishName: 'Traditional Chinese', englishLabel: 'TC' },
+  { code: 'zh-CN', label: '\u7b80', name: '\u7b80\u4f53\u4e2d\u6587', englishName: 'Simplified Chinese', englishLabel: 'SC' },
+  { code: 'en', label: 'EN', name: 'English', englishName: 'English', englishLabel: 'EN' },
 ] as const
 
 export type Language = 'zh-TW' | 'zh-CN' | 'en'
@@ -951,7 +951,7 @@ export const dictionary = {
   },
   en: {
     common: {
-      brand: 'Good Luck Running',
+      brand: 'Nurture Running Team',
       tagline: 'Train smart. Run with luck.',
       joinNow: 'Join Now',
       login: 'Log In',
@@ -1000,7 +1000,7 @@ export const dictionary = {
       ],
     },
     features: {
-      title: 'Why Choose Good Luck Running?',
+      title: 'Why Choose Nurture Running Team?',
       subtitle: 'We provide a complete running training ecosystem to help you reach your goals safely and efficiently.',
       items: [
         { title: 'Personalized Training Plans', description: 'Science-based plans tailored to your goals, level, and progress' },
@@ -1022,7 +1022,7 @@ export const dictionary = {
       title: 'Current Signup Entrances',
       description: 'Activity and group training links are collected here for quick signup.',
       activities: [
-        { title: 'Good Luck Running 4th Anniversary', description: 'Share your 4th anniversary activity interest so we can estimate attendance and keep in touch.', action: 'Share activity interest' },
+        { title: 'Nurture Running Team 4th Anniversary', description: 'Share your 4th anniversary activity interest so we can estimate attendance and keep in touch.', action: 'Share activity interest' },
         { title: 'Group Training Signup', description: 'Saturday open group training interest form, so coaches can estimate attendance.', action: 'Share group interest' },
       ],
     },
@@ -1130,7 +1130,7 @@ export const dictionary = {
     },
     anniversary: {
       label: '4th anniversary',
-      title: 'Good Luck Running 4th Anniversary',
+      title: 'Nurture Running Team 4th Anniversary',
       status: 'Collecting participation interest',
       subtitle: 'This page only collects interest for the 4th anniversary activity, so we can estimate attendance and keep in touch. Your answers are used for preparation only.',
       noticeTitle: 'Current status',
@@ -1194,7 +1194,7 @@ export const dictionary = {
       emailLabel: 'Email',
       emailPlaceholder: 'Enter registration email',
       amountTitle: 'Amount Note',
-      amountDescription: 'The website does not calculate or collect payment yet. Please confirm course fees, availability, and payment amount with Good Luck Running on Instagram first.',
+      amountDescription: 'The website does not calculate or collect payment yet. Please confirm course fees, availability, and payment amount with Nurture Running Team on Instagram first.',
       optionsTitle: 'Payment Options',
       instagramCta: 'Contact on Instagram',
       submitLabel: 'Confirm Signup and View Bank Details',
@@ -1208,7 +1208,7 @@ export const dictionary = {
         accountNumber: 'Account Number',
         amountNote: 'Amount Note',
         paymentMemo: 'Payment Memo',
-        footer: 'After transferring, keep a screenshot or the last five digits and send it to Good Luck Running on Instagram for matching.',
+        footer: 'After transferring, keep a screenshot or the last five digits and send it to Nurture Running Team on Instagram for matching.',
       },
       transferForm: {
         amountLabel: 'Transfer Amount',
@@ -1328,7 +1328,7 @@ export const dictionary = {
       loginTitle: 'Log In',
       registerTitle: 'Create Account',
       loginSubtitle: 'Log in with your email',
-      registerSubtitle: 'Join Good Luck Running and start your journey',
+      registerSubtitle: 'Join Nurture Running Team and start your journey',
       loginTab: 'Log In',
       registerTab: 'Sign Up',
       name: 'Name',

@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { CheckCircle2, ExternalLink, Loader2, RefreshCw, ShieldCheck, WalletCards } from 'lucide-react'
 import { useAuth } from '@/app/providers'
+import { useLanguage } from '@/app/language-context'
+import type { Language } from '@/lib/dictionary'
 import { useSiteContent } from '@/app/site-content-provider'
 import ProtectedCoursePaymentInfo from '@/components/ProtectedCoursePaymentInfo'
 import { COURSE_CAPACITY, type CourseAvailability, type LegacyStudentStatus, type MyCourseEnrollment } from '@/lib/course-registration'
@@ -30,9 +32,9 @@ const statusTone = {
   rejected: 'border-red-200 bg-red-50 text-red-800',
 } as const
 
-function formatEnrollmentDate(date: string) {
+function formatEnrollmentDate(date: string, language: Language) {
   if (!date) return ''
-  return new Intl.DateTimeFormat('zh-TW', {
+  return new Intl.DateTimeFormat(language, {
     timeZone: 'Asia/Taipei',
     year: 'numeric',
     month: 'long',
@@ -42,6 +44,7 @@ function formatEnrollmentDate(date: string) {
 }
 
 export default function CourseRegistrationClient({ slug }: { slug: string }) {
+  const { language } = useLanguage()
   const { courses } = useSiteContent()
   const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth()
   const course = useMemo(() => courses.find((item) => item.slug === slug), [courses, slug])
@@ -247,7 +250,7 @@ export default function CourseRegistrationClient({ slug }: { slug: string }) {
                 <dl className="mt-4 space-y-3 text-sm">
                   <div><dt className="text-apple-gray-500">報名課程</dt><dd className="mt-1 font-bold text-apple-gray-900">{formatCourseWeekday(enrollment.courseName)}</dd></div>
                   <div><dt className="text-apple-gray-500">應付金額</dt><dd className="mt-1 font-bold text-apple-gray-900">{enrollment.amountText || '依表單說明'}</dd></div>
-                  {enrollment.billingStartSessionDate ? <div><dt className="text-apple-gray-500">本期計費起始</dt><dd className="mt-1 font-bold text-apple-gray-900">{formatEnrollmentDate(enrollment.billingStartSessionDate)}</dd></div> : null}
+                  {enrollment.billingStartSessionDate ? <div><dt className="text-apple-gray-500">本期計費起始</dt><dd className="mt-1 font-bold text-apple-gray-900">{formatEnrollmentDate(enrollment.billingStartSessionDate, language)}</dd></div> : null}
                   {enrollment.priorAttendanceClaimed ? <div><dt className="text-apple-gray-500">最近一堂到課申報</dt><dd className="mt-1 font-bold text-apple-gray-900">{enrollment.attendanceVerificationStatus === 'verified' ? '已確認到課' : enrollment.attendanceVerificationStatus === 'rejected' ? '未通過核對' : '待管理員核對'}</dd></div> : null}
                   {enrollment.reviewNote ? <div><dt className="text-apple-gray-500">核對說明</dt><dd className="mt-1 font-bold text-apple-gray-900">{enrollment.reviewNote}</dd></div> : null}
                 </dl>

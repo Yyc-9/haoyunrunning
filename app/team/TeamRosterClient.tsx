@@ -7,18 +7,21 @@ import { ArrowUpRight, ChevronLeft, ChevronRight, ListFilter, Route, UserRound, 
 import { useReducedMotion } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSiteContent } from '@/app/site-content-provider'
+import { useLanguage } from '@/app/language-context'
 import { getDefaultCourseCoachKeys } from '@/lib/coach-profiles'
 import { formatCourseWeekday } from '@/lib/course-weekday'
 
 function compactCourseName(name: string) {
   return name
-    .replace(/^2026\s*/, '')
+    .replace(/^\d{4}\s*/, '')
     .replace(/^好運跑步訓練營\s*X\s*/, '')
+    .replace(/^Nurture Running Camp\s*·\s*/, '')
     .trim()
 }
 
 function getCoachShortName(name: string) {
   const shortName = name
+    .replace(/^(?:Head Coach|Assistant Coach|Coach)\s+/u, '')
     .replace(/^\s*總教練\s*/, '')
     .replace(/\s*(?:總教練|主教練|教練|助教)\s*$/, '')
     .trim()
@@ -26,6 +29,7 @@ function getCoachShortName(name: string) {
 }
 
 export default function TeamRosterClient() {
+  const { language } = useLanguage()
   const { coachProfiles, courseOverrides, courses, team, pageMedia } = useSiteContent()
 
   const assignments = useMemo(() => {
@@ -211,7 +215,7 @@ export default function TeamRosterClient() {
               <h2 className="mt-2 text-2xl font-black text-apple-gray-950 sm:text-3xl">{team.rosterTitle}</h2>
             </div>
             <span className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-black text-apple-gray-600 ring-1 ring-black/10">
-              {coaches.length} 位
+              {language === 'en' ? `${coaches.length} coaches` : `${coaches.length} 位`}
             </span>
           </div>
 
@@ -222,7 +226,7 @@ export default function TeamRosterClient() {
                 直接選擇教練
               </p>
               <p className="team-coach-index-count shrink-0 text-xs font-black text-apple-gray-500">
-                第 {coaches.length ? activeCoachIndex + 1 : 0} / {coaches.length} 位
+                {language === 'en' ? `${coaches.length ? activeCoachIndex + 1 : 0} / ${coaches.length}` : `第 ${coaches.length ? activeCoachIndex + 1 : 0} / ${coaches.length} 位`}
               </p>
             </div>
             <div className="team-coach-index-grid mt-3" role="group" aria-label="教練姓名">
@@ -346,7 +350,7 @@ export default function TeamRosterClient() {
           <div className="team-coach-controls md:hidden" aria-label="教練卡片控制">
             <p className="team-coach-control-status" aria-live="polite">
               <span>左右滑動</span>
-              <span>第 {coaches.length ? activeCoachIndex + 1 : 0} / {coaches.length} 位</span>
+              <span>{language === 'en' ? `${coaches.length ? activeCoachIndex + 1 : 0} / ${coaches.length}` : `第 ${coaches.length ? activeCoachIndex + 1 : 0} / ${coaches.length} 位`}</span>
             </p>
           </div>
         </div>

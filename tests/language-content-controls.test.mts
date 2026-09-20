@@ -76,6 +76,24 @@ test('英文入口涵蓋內容中心的學員見證與常見問題', async () =>
   )
 })
 
+test('英文以完整文案匹配，不把未知句子的單字替換成混排內容', async () => {
+  const { toEnglishWebsiteText } = await import('../lib/english-website.ts')
+  assert.equal(toEnglishWebsiteText('這是尚未加入詞庫的一起跑步句子'), '這是尚未加入詞庫的一起跑步句子')
+  assert.equal(toEnglishWebsiteText('一起帶領'), 'Together, we guide')
+  assert.equal(toEnglishWebsiteText('週日紫色Logo'), 'Nurture Running Team purple logo')
+  assert.equal(toEnglishWebsiteText('  查看完整課表\n'), '  View Full Schedule\n')
+})
+
+test('英文課程名稱、城市清單、停課日期與圖片說明保留完整資訊', async () => {
+  const { toEnglishWebsiteText } = await import('../lib/english-website.ts')
+  assert.equal(toEnglishWebsiteText('2026好運跑步訓練營 X 週四新莊初階班'), '2026 Nurture Running Camp · Thursday Xinzhuang Beginner Class')
+  assert.equal(toEnglishWebsiteText('台北市、新北市'), 'Taipei City, New Taipei City')
+  assert.equal(toEnglishWebsiteText('10/3-12/26 (10/10、10/24、12/26停課三次)'), '10/3-12/26 (no class on 10/10, 10/24, 12/26)')
+  assert.equal(toEnglishWebsiteText('05:37（1.5-2 小時）'), '05:37 (1.5-2 hours)')
+  assert.equal(toEnglishWebsiteText('好運跑班訓練紀錄 3'), 'Nurture Running Team training photo 3')
+  assert.equal(toEnglishWebsiteText('好運跑班｜認識跑步，跑向更穩定的自己'), 'Nurture Running Team | Discover running. Become a more consistent runner.')
+})
+
 test('英文切回繁體或簡體時會從原始中文重新轉換', async () => {
   const {
     createLocalizationMemory,

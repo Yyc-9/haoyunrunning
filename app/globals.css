@@ -443,6 +443,19 @@
   color: #e3d9ef;
 }
 
+html[lang="en"] .home-hero-copy h1 {
+  font-size: clamp(2.45rem, 5.6vw, 5rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  font-weight: 800;
+}
+
+@media (max-width: 767px) {
+  html[lang="en"] .home-hero-copy h1 {
+    font-size: clamp(2.2rem, 9vw, 3.2rem);
+  }
+}
+
 .home-hero-pointer-instruction {
   display: flex;
   align-items: center;
@@ -2438,6 +2451,13 @@
     background: #111827;
     color: #fff;
     box-shadow: none;
+  }
+
+  html[lang="en"] .team-coach-index-button {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+    font-weight: 700;
   }
 
   .team-coach-index-button:focus-visible,
