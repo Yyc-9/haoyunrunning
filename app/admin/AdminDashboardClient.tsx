@@ -485,9 +485,9 @@ export default function AdminDashboardClient() {
     }
   }
 
-  function renderStudentBindingControls(student: AdminStudent, compact = false) {
+  function renderStudentBindingControls(student: AdminStudent) {
     return (
-      <p className={`text-xs leading-5 text-apple-gray-600 ${compact ? '' : 'max-w-xs'}`}>{student.bindings.length ? '已依入帳班級自動關聯。' : '尚無已入帳班級關聯。'}如需調整任課教練，請到季度管理修改班級；臨時代班請在教練管理處理。</p>
+      <p className="whitespace-normal break-words text-xs leading-5 text-apple-gray-600">{student.bindings.length ? '已依入帳班級自動關聯。' : '尚無已入帳班級關聯。'}</p>
     )
   }
 
@@ -644,6 +644,9 @@ export default function AdminDashboardClient() {
                   </div>
                 </div>
               </div>
+              <p className="border-b border-black/10 px-5 py-3 text-sm leading-6 text-apple-gray-600">
+                如需調整任課教練，請到季度管理修改班級；臨時代班請在教練管理處理。
+              </p>
               <div className="divide-y divide-black/10 md:hidden">
                 {filteredStudents.map((student) => (
                   <article key={student.id} className="space-y-5 p-5">
@@ -686,14 +689,14 @@ export default function AdminDashboardClient() {
 
                     <div>
                       <p className="mb-2 text-xs font-bold text-apple-gray-500">綁定操作</p>
-                      {renderStudentBindingControls(student, true)}
+                      {renderStudentBindingControls(student)}
                     </div>
                   </article>
                 ))}
               </div>
 
-              <div className="hidden overflow-x-auto md:block">
-                <table className="w-full min-w-[1560px] table-fixed text-left text-sm">
+              <div className="hidden overflow-x-auto md:block" role="region" aria-label="學員管理表格" tabIndex={0}>
+                <table className="w-full min-w-[1520px] table-fixed text-left text-sm">
                   <colgroup>
                     <col className="w-[120px]" />
                     <col className="w-[210px]" />
@@ -701,9 +704,9 @@ export default function AdminDashboardClient() {
                     <col className="w-[210px]" />
                     <col className="w-[170px]" />
                     <col className="w-[120px]" />
-                    <col className="w-[130px]" />
-                    <col className="w-[140px]" />
-                    <col className="w-[300px]" />
+                    <col className="w-[160px]" />
+                    <col className="w-[180px]" />
+                    <col className="w-[190px]" />
                   </colgroup>
                   <thead className="bg-apple-gray-100 text-apple-gray-600">
                     <tr>
@@ -714,8 +717,8 @@ export default function AdminDashboardClient() {
                   </thead>
                   <tbody className="divide-y divide-black/10">
                     {filteredStudents.map((student) => (
-                      <tr key={student.id}>
-                        <td className="whitespace-nowrap px-4 py-4 font-bold text-apple-gray-900">{student.name}</td>
+                      <tr key={student.id} className="align-top">
+                        <td className="break-words px-4 py-4 leading-6 font-bold text-apple-gray-900">{student.name}</td>
                         <td className="truncate px-4 py-4 text-apple-gray-600" title={student.email || undefined}>{student.email || '-'}</td>
                         <td className="px-4 py-4 leading-6 text-apple-gray-700">{student.boundCoachNames || '尚未綁定'}</td>
                         <td className="px-4 py-4 leading-6 text-apple-gray-600">{student.program || student.paymentCourse || '-'}</td>
@@ -729,8 +732,8 @@ export default function AdminDashboardClient() {
                             {student.planEnabled ? '已開通' : '未開通'}
                           </span>
                         </td>
-                        <td className="whitespace-nowrap px-4 py-4 tabular-nums text-apple-gray-600">{formatDate(student.lastFeedbackAt, language)}</td>
-                        <td className="whitespace-nowrap px-4 py-4 tabular-nums text-apple-gray-600">{formatDate(student.createdAt, language)}</td>
+                        <td className="whitespace-normal break-words px-4 py-4 leading-6 tabular-nums text-apple-gray-600">{formatDate(student.lastFeedbackAt, language)}</td>
+                        <td className="whitespace-normal break-words px-4 py-4 leading-6 tabular-nums text-apple-gray-600">{formatDate(student.createdAt, language)}</td>
                         <td className="px-4 py-4">
                           {renderStudentBindingControls(student)}
                         </td>
