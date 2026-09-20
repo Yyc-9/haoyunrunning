@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 
 export async function auditAccountMenus({ account, record, scenario, base, output }) {
   for (const width of [1440, 375]) {
-    for (const role of ['student', 'coach', 'admin']) {
+    for (const role of ['student', 'coach', 'admin', 'finance']) {
       const page = await account(role, width)
       await page.goto(base, { waitUntil: 'domcontentloaded' })
       const root = width > 768 ? page.locator('[data-account-menu-root]').filter({ visible: true }) : page.locator('#mobile-site-menu')
@@ -10,12 +10,22 @@ export async function auditAccountMenus({ account, record, scenario, base, outpu
       else await page.getByRole('button', { name: 'Open menu', exact: true }).click()
       await root.locator('a[href="/profile"]').first().waitFor()
       assert.equal(await root.locator('a[href="/admin"]').count(), role === 'admin' ? 1 : 0)
-      assert.equal(await root.locator('a[href="/coach"]').count(), role === 'student' ? 0 : 1)
+      assert.equal(await root.locator('a[href="/coach"]').count(), ['coach', 'admin'].includes(role) ? 1 : 0)
+      assert.equal(await root.locator('a[href="/finance"]').count(), role === 'finance' ? 1 : 0)
       await record(page, `${width}-${role}-account-menu`)
       const menu = width > 768 ? root.locator(':scope > div') : root
       await menu.screenshot({ path: `${output}/${width}-${role}-menu.png`, animations: 'disabled' })
       await page.keyboard.press('Escape')
       await root.locator('a[href="/profile"]').first().waitFor({ state: 'hidden' })
+      await page.goto(base + '/profile', { waitUntil: 'domcontentloaded' })
+      await page.getByRole('heading', { name: 'Language QA', exact: true }).waitFor()
+      const financeCard = page.getByRole('region', { name: 'Finance workspace access', exact: true })
+      assert.equal(await financeCard.count(), role === 'finance' ? 1 : 0)
+      if (role === 'finance') {
+        await financeCard.getByRole('link', { name: 'Open bank reconciliation', exact: true }).waitFor()
+        await financeCard.screenshot({ path: `${output}/${width}-finance-profile.png`, animations: 'disabled' })
+      }
+      await record(page, `${width}-${role}-profile-access`)
       await page.close()
     }
     const page = await account('student', width)

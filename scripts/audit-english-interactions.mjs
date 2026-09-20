@@ -10,6 +10,9 @@ const actionOnly = process.env.LANGUAGE_ENROLLMENT_ACTIONS === '1'
 const legacyOnly = process.env.LANGUAGE_LEGACY_ENROLLMENT === '1'
 const coursesOnly = process.env.LANGUAGE_PUBLIC_COURSES === '1'
 const menusOnly = process.env.LANGUAGE_ACCOUNT_MENUS === '1'
+// Read the existing allowlist solely for an intercepted, local finance-viewer fixture.
+const financeEmail = menusOnly ? (await readFile(new URL('../lib/finance-viewers.ts', import.meta.url), 'utf8')).match(/=== '([^']+@[^']+)'/)?.[1] : null
+if (menusOnly && !financeEmail) throw Error('Finance-viewer fixture requires the current allowlist')
 const output = menusOnly ? '/private/tmp/haoyun-english-account-menus' : coursesOnly ? '/private/tmp/haoyun-english-public-courses' : legacyOnly ? '/private/tmp/haoyun-english-legacy-enrollment' : actionOnly ? '/private/tmp/haoyun-english-enrollment-actions' : '/private/tmp/haoyun-english-interactions'
 await mkdir(output, { recursive: true })
 const records = [], errors = [], contexts = []
@@ -22,7 +25,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true })
 async function account(role, width = 1440) {
   const ctx = await browser.newContext({ viewport: { width, height: 1000 }, serviceWorkers: 'block' })
   contexts.push(ctx)
-  const user = { id: role === 'admin' ? nid : id, email: `${role}@example.invalid`, role: 'authenticated', aud: 'authenticated', email_confirmed_at: '2026-01-01', user_metadata: { name: 'Language QA' } }
+  const user = { id: role === 'admin' ? nid : id, email: role === 'finance' ? financeEmail : `${role}@example.invalid`, role: 'authenticated', aud: 'authenticated', email_confirmed_at: '2026-01-01', user_metadata: { name: 'Language QA' } }
   const expiry = Math.floor(Date.now() / 1000) + 3600
   const token = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url') + '.' + Buffer.from(JSON.stringify({ sub: user.id, exp: expiry, role: 'authenticated' })).toString('base64url') + '.synthetic'
   await ctx.addInitScript(({ user, token, expiry, key }) => {
@@ -41,7 +44,7 @@ async function account(role, width = 1440) {
       return reply(override.body, override.status ?? 200)
     }
     if (u.pathname === '/api/site-content') return reply({ content, source: 'database' })
-    if (u.pathname === '/api/account/me') return reply({ profile: { ...user, name: user.user_metadata.name, role } })
+    if (u.pathname === '/api/account/me') return reply({ profile: { ...user, name: user.user_metadata.name, role: role === 'finance' ? 'student' : role } })
     if (u.pathname === '/api/course-enrollments/payment-info') return reply({ bankName: 'QA Bank', bankCode: '000', accountNumber: '00000000', qrCodeUrl: '' })
     if (u.pathname === '/api/course-enrollments') {
       if (method === 'GET') return reply({ availability: { courseSlug: 'zhubei-night-run-monday', capacity: 40, paidCount: 0, pendingReviewCount: 0, remaining: 40, full: false }, pricingOptions: { today: '2026-09-20', courseStarted: false, selectionRequired: false, automaticStartSessionDate: '2026-10-05', availableStartSessions: [], priorAttendanceSession: null }, legacyStudent: { matched: false, name: '' }, enrollment: null })

@@ -1,5 +1,9 @@
 // Finance interface copy; bank records and user-entered notes are not rewritten.
 export const financeEnglishCopy: Record<string, string> = {
+  '財務工作區入口': 'Finance workspace access',
+  '財務工作區': 'Finance workspace',
+  '上傳銀行明細、核對本季報名與繳費狀態。進入後請輸入財務密碼。': 'Upload bank records and review this season’s registrations and payments. Enter the finance password to continue.',
+  '進入財務對帳': 'Open bank reconciliation',
   '郵件服務尚未設定，已完成對帳但未發送郵件。': 'Payment was reconciled, but no email was sent because the email service is not configured.',
   '對帳已完成，但郵件發送失敗，請稍後檢查郵件服務設定。': 'Payment was reconciled, but the email could not be sent. Check the email service settings.',
   '對帳已完成，並已發送報名確認郵件。': 'Payment was reconciled and the registration confirmation email was sent.',
