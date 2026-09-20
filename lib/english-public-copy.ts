@@ -1,6 +1,15 @@
 // Complete English copy for published public content and its visible UI fragments.
 // Keep source sentences intact: short dictionary words are not translation rules.
 export const publicEnglishCopy: Record<string, string> = {
+  '登入嘗試太頻繁，請稍後再試。': 'Too many sign-in attempts. Try again later.',
+  '登入服務暫時無法完成驗證，請稍後再試。': 'The sign-in service cannot verify your account right now. Try again later.',
+  '請填寫信箱和密碼。': 'Enter your email address and password.',
+  '註冊嘗試太頻繁，請稍後再試。': 'Too many registration attempts. Try again later.',
+  '帳戶暫時無法建立，請稍後再試。': 'Your account could not be created right now. Try again later.',
+  '請輸入有效的電子信箱。': 'Enter a valid email address.',
+  '密碼請使用 10 至 128 個字元。': 'Use a password between 10 and 128 characters.',
+  '請完整填寫姓名與聯絡電話。': 'Enter your name and contact phone number.',
+  '帳戶服務暫時無法使用，請稍後再試。': 'The account service is temporarily unavailable. Try again later.',
   '上一位教練': 'Previous coach',
   '下一位教練': 'Next coach',
   '品牌理念': 'Our philosophy',

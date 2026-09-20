@@ -190,6 +190,8 @@ export function toEnglishWebsiteText(value: string): string {
   const exact = englishCopy.get(source) ?? cityFilterTranslations.get(source)
   const preserveSpace = (translation: string) => `${value.match(/^\s*/u)?.[0] ?? ''}${translation}${value.match(/\s*$/u)?.[0] ?? ''}`
   if (exact) return preserveSpace(exact)
+  const imageLimit = source.match(/^圖片大小必須小於 (\d+) MB。$/u)
+  if (imageLimit) return preserveSpace(`Images must be smaller than ${imageLimit[1]} MB.`)
   const seasonName = source.match(/^(\d{4})\s*第([一二三四])季$/u)
   if (seasonName) return preserveSpace(`${seasonName[1]} Q${'一二三四'.indexOf(seasonName[2]) + 1}`)
   const seasonCreated = source.match(/^(.+) 已建立為草稿，(?:第三季|來源季度)資料仍完整保留。$/u)

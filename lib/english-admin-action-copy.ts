@@ -1,5 +1,11 @@
 // Complete API messages and fixed export labels used by administration workflows.
 export const adminActionEnglishCopy: Record<string, string> = {
+  '只有超級管理員可以取得表單串接程式。': 'Only super administrators can retrieve the form integration script.',
+  'Google 表單串接憑證尚未設定。': 'Google Forms integration credentials are not configured.',
+  '只有超級管理員可以取得表格同步程式。': 'Only super administrators can retrieve the spreadsheet synchronization script.',
+  'Google 表格同步憑證尚未設定。': 'Google Sheets synchronization credentials are not configured.',
+  '這一季尚未連結 Google 表格。': 'This season is not linked to a Google spreadsheet.',
+  '找不到同步季度。': 'The season to synchronize could not be found.',
   '只有管理員可以管理教練到課紀錄。': 'Only administrators can manage coach attendance records.',
   '未命名帳號': 'Unnamed account',
   '讀取教練到課管理資料失敗。': 'Unable to load coach attendance management data.',

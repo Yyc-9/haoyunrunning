@@ -1,4 +1,13 @@
 export const adminProductEnglishCopy: Record<string, string> = {
+  '只有超級管理員可以上傳網站影片。': 'Only super administrators can upload website videos.',
+  '影片僅支援 MP4、WebM 或 MOV。': 'Videos must be in MP4, WebM or MOV format.',
+  '影片只能上傳至商城商品或網站頁面。': 'Videos can only be uploaded for shop products or website pages.',
+  '影片大小必須小於 50 MB。': 'Videos must be smaller than 50 MB.',
+  '影片上傳憑證已建立。': 'Video upload credentials created.',
+  '只有超級管理員可以上傳網站媒體。': 'Only super administrators can upload website media.',
+  '請選擇要上傳的圖片。': 'Choose an image to upload.',
+  '圖片僅支援 JPG、PNG 或 WebP。': 'Images must be in JPG, PNG or WebP format.',
+  '圖片已上傳。': 'Image uploaded.',
   '請填寫商品名稱、分類並上傳主圖。': 'Enter a product name and category, and upload a main image.',
   '媒體服務尚未設定。': 'Media service is not configured.',
   '無法建立影片上傳憑證。': 'Unable to create a video upload token.',
