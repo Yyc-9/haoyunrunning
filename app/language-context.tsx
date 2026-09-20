@@ -29,7 +29,7 @@ function convertVisibleText(
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
       const parent = node.parentElement
-      if (!parent || ['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT'].includes(parent.tagName)) {
+      if (!parent || ['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT'].includes(parent.tagName) || parent.closest('[translate="no"], [data-no-localize]')) {
         return NodeFilter.FILTER_REJECT
       }
       return node.nodeValue?.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT
@@ -53,13 +53,14 @@ function convertVisibleText(
 
   const scope = root instanceof Element ? root : document
   const elements = [
-    ...(root instanceof HTMLElement && root.matches('[placeholder], [aria-label], [title]')
+    ...(root instanceof HTMLElement && root.matches('[placeholder], [aria-label], [title], [alt]')
       ? [root]
       : []),
-    ...scope.querySelectorAll<HTMLElement>('[placeholder], [aria-label], [title]'),
+    ...scope.querySelectorAll<HTMLElement>('[placeholder], [aria-label], [title], [alt]'),
   ]
   elements.forEach((element) => {
-    ;['placeholder', 'aria-label', 'title'].forEach((attribute) => {
+    if (element.closest('[translate="no"], [data-no-localize]')) return
+    ;['placeholder', 'aria-label', 'title', 'alt'].forEach((attribute) => {
       const value = element.getAttribute(attribute)
       if (!value) return
       const nextValue = localizeRememberedValue(
@@ -106,21 +107,32 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         convertVisibleText(document.body, language, localizationMemory, converterRef.current)
       })
     }
-    let frame = window.requestAnimationFrame(() => {
-      convertVisibleText(document.body, language, localizationMemory, converterRef.current)
-    })
-
-    const observer = new MutationObserver((mutations) => {
-      window.cancelAnimationFrame(frame)
+    // Keep every pending subtree. Cancelling a frame for each mutation used to
+    // discard earlier batches and could even cancel the initial body translation.
+    const pending = new Set<Element>([document.body])
+    let frame: number | undefined
+    const schedule = () => {
+      if (frame !== undefined) return
       frame = window.requestAnimationFrame(() => {
-        mutations.forEach((mutation) => {
-          if (mutation.target instanceof Element) {
-            convertVisibleText(mutation.target, language, localizationMemory, converterRef.current)
-          } else if (mutation.target.parentElement) {
-            convertVisibleText(mutation.target.parentElement, language, localizationMemory, converterRef.current)
+        frame = undefined
+        const roots = [...pending]
+        pending.clear()
+        for (const root of roots) {
+          if (root.isConnected && !roots.some(other => other !== root && other.contains(root))) {
+            convertVisibleText(root, language, localizationMemory, converterRef.current)
           }
-        })
+        }
+        const nextTitle = localizeRememberedValue(document, 'title', document.title, language, localizationMemory, converterRef.current)
+        if (document.title !== nextTitle) document.title = nextTitle
       })
+    }
+    schedule()
+    const observer = new MutationObserver(mutations => {
+      for (const mutation of mutations) {
+        const element = mutation.target instanceof Element ? mutation.target : mutation.target.parentElement
+        if (element) pending.add(element)
+      }
+      schedule()
     })
 
     observer.observe(document.body, {
@@ -128,13 +140,22 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       subtree: true,
       characterData: true,
       attributes: true,
-      attributeFilter: ['placeholder', 'aria-label', 'title'],
+      attributeFilter: ['placeholder', 'aria-label', 'title', 'alt'],
     })
+    // Next.js may replace the title element during navigation.
+    const titleObserver = new MutationObserver(mutations => {
+      if (mutations.some(mutation =>
+        (mutation.target instanceof Element ? mutation.target : mutation.target.parentElement)?.closest('title') ||
+        [...mutation.addedNodes].some(node => node instanceof Element && (node.matches('title') || node.querySelector('title')))
+      )) schedule()
+    })
+    titleObserver.observe(document.head, { childList: true, characterData: true, subtree: true })
 
     return () => {
       cancelled = true
-      window.cancelAnimationFrame(frame)
+      if (frame !== undefined) window.cancelAnimationFrame(frame)
       observer.disconnect()
+      titleObserver.disconnect()
     }
   }, [language, localizationMemory])
 
