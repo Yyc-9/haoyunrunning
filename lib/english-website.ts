@@ -8,6 +8,9 @@ import { registrationEnglishCopy } from '@/lib/english-registration-copy'
 import { studentEnglishCopy } from '@/lib/english-student-copy'
 import { coachWorkspaceEnglishCopy } from '@/lib/english-coach-workspace-copy'
 import { financeEnglishCopy } from '@/lib/english-finance-copy'
+import { adminEnglishCopy } from '@/lib/english-admin-copy'
+import { adminEnrollmentEnglishCopy } from '@/lib/english-admin-enrollment-copy'
+import { adminDutyEnglishCopy } from '@/lib/english-admin-duty-copy'
 
 type TextPair = readonly [string, string]
 
@@ -149,7 +152,9 @@ collectDictionaryPairs(dictionary['zh-TW'], dictionary.en, dictionaryPairs)
 
 const normalizeCopy = (value: string) => value.replace(/\s+/gu, ' ').trim()
 const englishCopy = new Map(
-  [...dictionaryPairs, ...managedContentPairs, ...Object.entries(publicEnglishCopy), ...Object.entries(notificationEnglishCopy), ...Object.entries(policyEnglishCopy), ...Object.entries(coachEnglishCopy), ...Object.entries(achievementEnglishCopy), ...Object.entries(registrationEnglishCopy), ...Object.entries(studentEnglishCopy), ...Object.entries(coachWorkspaceEnglishCopy), ...Object.entries(financeEnglishCopy)]
+  [...dictionaryPairs, ...managedContentPairs, ...Object.entries(publicEnglishCopy), ...Object.entries(notificationEnglishCopy), ...Object.entries(policyEnglishCopy), ...Object.entries(coachEnglishCopy), ...Object.entries(achievementEnglishCopy), ...Object.entries(registrationEnglishCopy), ...Object.entries(studentEnglishCopy), ...Object.entries(coachWorkspaceEnglishCopy), ...Object.entries(financeEnglishCopy), ...Object.entries(adminEnglishCopy)]
+    .concat(Object.entries(adminEnrollmentEnglishCopy))
+    .concat(Object.entries(adminDutyEnglishCopy))
     .filter(([source, translation]) => source && translation)
     .map(([source, translation]) => [normalizeCopy(source), translation]),
 )

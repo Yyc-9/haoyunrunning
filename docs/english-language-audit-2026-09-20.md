@@ -12,6 +12,9 @@ The whole-site audit is still in progress. Passing the checks below does not mea
 - Coach workspace, registration details, attendance, teaching check-in, leave forms, and calendar have English copy and localized dates. Native cancellation confirmations follow the selected language.
 - Finance access, transaction matching, file mapping, confirmations, and read-only states have English copy. The upload button uses website text instead of browser-native text.
 - Option-group labels participate in language switching without changing the selected option values. Unsaved-change confirmations follow the selected language.
+- Administrator navigation, season overview, student/coach account management, and payment-account forms now have English interface copy and locale-aware dates.
+- Enrollment review includes English statistics, sync notices, registration/order details, billing exceptions, and native payment/delete confirmations. CSV headers and filenames follow the selected language; authored notes and identifying values remain intact.
+- Administrator coach-duty details, leave review, substitute assignment, emergency coverage, and manual attendance correction have English labels, dates, and validation messages. Authored leave reasons and audit notes remain unchanged.
 
 ## Evidence
 
@@ -23,6 +26,7 @@ The role scripts run against a local preview with synthetic accounts. Every busi
 | `audit-english-coach.mjs` | 28 states: workspace, check-in and leave forms, populated and empty rosters, expanded registration details, attendance save, cancellation/restoration, mobile calendar, and planner initial states |
 | `audit-english-finance.mjs` | 18 states: locked/unlocked access, incorrect password, matching results, batch confirmation, CSV column preview, password setup, temporary lock, archived season, read-only access, empty batches, and unauthorized account |
 | `verify-language-dom.mjs` | Mutation batches, translated attributes and option-group labels, unchanged option/input values, opt-out text, document titles, and English font stack |
+| `audit-english-admin.mjs` | 53 checks: desktop/mobile workspaces, coach-duty details and action dialogs, required reasons, attendance correction, registration and shop-order details, payment validation/confirmation, billing resolution, synchronization dialog, CSV headers, mobile student tabs/coach assignment and payment-account validation |
 | Unit tests | 158 tests passed, including all runner-profile option labels, badge labels, localized dates/countdowns, and finance count messages |
 | Static checks | TypeScript, ESLint, Traditional Chinese check, and production build passed |
 
@@ -30,9 +34,12 @@ Strict mode for the role scripts fails on untranslated visible interface text, o
 
 The earlier public release `930abe5` passed 46 local routes plus a four-route read-only check on the production domain. Those public checks do not prove the new role changes are deployed.
 
+The student, coach, and finance checkpoint `935cbe9` was subsequently pushed and its production deployment reached Ready with the formal domain assigned; the homepage returned HTTP 200. The newer administrator changes above remain local until separately released. Their isolated production build, TypeScript, ESLint, Traditional Chinese checks, and 159 unit tests passed. The existing 31-state registration/notification/public-coach interaction audit also passed again. A CSV regression verifies translated fixed headers while retaining authored Chinese notes and leading zeroes in phone numbers and transfer codes.
+
 ## Still required before whole-site completion
 
-- Administrator overview, student/coach administration, season management, analytics, product editing, content editing, and payment-account editing: cover all forms, dialogs, validations, and confirmation states.
+- Administrator content and season editors, product editing and image cropping: cover all forms, dialogs, validations, and confirmation states. Current navigation/overview coverage does not prove the nested editors.
+- Extend administrator coverage to alternative coach-duty states, archived/empty/error states, coach account mutations, payment-account publication and account creation results. Current audit covers populated workspaces, primary review dialogs, native confirmations, and selected validations/actions.
 - Product details, cart, checkout, and payment status using synthetic products and orders; the public shop currently has no products to exercise these states with.
 - Coach planner editing/saving and alternate leave/substitution states; current coach coverage includes the initial planner state, not every editor action.
 - Additional registration cases, API validation failures, and remaining native file controls.

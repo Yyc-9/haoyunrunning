@@ -17,6 +17,19 @@ registerHooks({
   },
 })
 
+test('英文名單匯出的固定欄名完整，原始備註與電話保持不變', async () => {
+  const { courseRosterTable, rosterCsv } = await import('../lib/enrollment-export.ts')
+  const { toEnglishWebsiteText } = await import('../lib/english-website.ts')
+  const note = '請保留學員原始中文備註'
+  const table = courseRosterTable([{ id: 'qa', seasonName: '2026 Q4', orderNumber: 'QA', studentName: 'QA Student', email: 'qa@example.invalid', courseName: 'QA Class', amountText: 'NT$3,600', transferLastFive: '00123', submittedAt: '2026-09-20', notes: note, reviewNote: note, registrationDetails: [{ label: '手機電話', value: '0900000000' }] }], () => 'Payment confirmed')
+  const headings = table.headers.map(toEnglishWebsiteText)
+  assert.deepEqual(headings.filter(heading => /[\u3400-\u9fff]/u.test(heading)), [])
+  const csv = rosterCsv(headings, table.rows)
+  assert.ok(csv.includes(note))
+  assert.ok(csv.includes("'0900000000"))
+  assert.ok(csv.includes("'00123"))
+})
+
 test('公告可不填連結，外部連結仍驗證且預設按鈕文字', async () => {
   const { normalizeActivities } = await import('../lib/site-content.ts')
   const base = { title: '公告', description: '第一段\n\n第二段' }

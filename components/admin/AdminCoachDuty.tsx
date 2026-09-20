@@ -1,5 +1,7 @@
 'use client'
 
+import { useLanguage } from '@/app/language-context'
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { CheckCircle2, ChevronDown, Loader2, RefreshCw, ShieldCheck, UserRoundCheck, X } from 'lucide-react'
@@ -95,8 +97,8 @@ function taipeiDateKey() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
 }
 
-function formatDate(value: string, withTime = false) {
-  return new Intl.DateTimeFormat('zh-TW', { timeZone: 'Asia/Taipei', month: '2-digit', day: '2-digit', weekday: withTime ? undefined : 'short', hour: withTime ? '2-digit' : undefined, minute: withTime ? '2-digit' : undefined }).format(new Date(withTime ? value : `${value}T12:00:00+08:00`))
+function formatDutyDate(value: string, withTime: boolean, language: string) {
+  return new Intl.DateTimeFormat(language, { timeZone: 'Asia/Taipei', month: '2-digit', day: '2-digit', weekday: withTime ? undefined : 'short', hour: withTime ? '2-digit' : undefined, minute: withTime ? '2-digit' : undefined }).format(new Date(withTime ? value : `${value}T12:00:00+08:00`))
 }
 
 async function accessToken() {
@@ -106,6 +108,8 @@ async function accessToken() {
 }
 
 export default function AdminCoachDuty() {
+  const { language } = useLanguage()
+  const formatDate = (value: string, withTime = false) => formatDutyDate(value, withTime, language)
   const currentPeriod = taipeiYearMonth()
   const [items, setItems] = useState<DutyItem[]>([])
   const [coaches, setCoaches] = useState<CoachOption[]>([])
@@ -413,11 +417,11 @@ export default function AdminCoachDuty() {
         <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-[120px_130px_1fr_1fr_170px_150px]">
           <select value={yearFilter} onChange={(event) => setYearFilter(event.target.value)} className="apple-input" aria-label="年份篩選">
             <option value="all">全部年份</option>
-            {yearOptions.map((year) => <option key={year} value={year}>{year} 年</option>)}
+            {yearOptions.map((year) => <option key={year} value={year}>{language === 'en' ? year : `${year} 年`}</option>)}
           </select>
           <select value={monthFilter} onChange={(event) => setMonthFilter(event.target.value)} className="apple-input" aria-label="月份篩選">
             <option value="all">全部月份</option>
-            {Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, '0')).map((month) => <option key={month} value={month}>{Number(month)} 月</option>)}
+            {Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, '0')).map((month) => <option key={month} value={month}>{language === 'en' ? new Intl.DateTimeFormat('en', { month: 'long', timeZone: 'UTC' }).format(new Date(Date.UTC(2026, Number(month) - 1, 1))) : `${Number(month)} 月`}</option>)}
           </select>
           <select value={courseFilter} onChange={(event) => setCourseFilter(event.target.value)} className="apple-input"><option value="all">全部課程</option>{courseOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select>
           <select value={coachFilter} onChange={(event) => setCoachFilter(event.target.value)} className="apple-input"><option value="all">全部教練</option>{coaches.map((coach) => <option key={coach.id} value={coach.id}>{coach.name}</option>)}</select>
@@ -436,8 +440,8 @@ export default function AdminCoachDuty() {
               && item.substituteResponse === 'accepted'
               && item.actualCoachId === item.substituteCoachId
             return <details key={item.id} className={`rounded-lg border ${anomaly ? 'border-red-200 bg-red-50/40' : 'border-black/10 bg-white'}`}><summary className="grid cursor-pointer list-none gap-2 p-3 text-sm md:grid-cols-[140px_minmax(0,1.3fr)_minmax(0,1.35fr)_minmax(0,1fr)_140px_130px] md:items-center"><span className="font-black">{formatDate(item.sessionDate)} {item.startTime || '未設定'}</span><span className="truncate font-bold">{item.courseName}</span><span className="break-words leading-5">原定：{scheduledCoachNames.join('、')}</span><span className="truncate">實際：{item.actualCoachName || '待安排'}</span><span className={`font-black ${anomaly ? 'text-red-700' : 'text-apple-gray-700'}`}>{attendanceLabel[item.attendanceState] || item.attendanceState}</span><span className="text-xs font-bold text-violet-700">{item.salaryStatusLabel}</span></summary><div className="border-t border-black/10 p-4">
-              <div className="grid gap-2 text-xs font-semibold text-apple-gray-600 sm:grid-cols-2 lg:grid-cols-4"><p>本筆原定教練：{item.scheduledCoachName}</p><p>角色：{item.coachRole === 'substitute' ? '代班教練' : item.coachRole === 'head_coach' ? '主教練' : item.coachRole === 'assistant' ? '助教' : '教練'}</p><p>排班：{isDirectSubstituteActive ? '代班已接受並生效' : isDirectInvitation && item.substituteResponse === 'pending' ? '原教練已邀請，待代班回覆' : isDirectInvitation && item.substituteResponse === 'rejected' ? '代班已拒絕，待重新邀請' : item.leaveStatus === 'requested' ? '請假待核對' : item.leaveStatus === 'approved' ? '請假已核准' : item.leaveStatus === 'rejected' ? '請假已拒絕' : '原定排班'}</p><p>代班：{item.substituteCoachName ? `${item.substituteCoachName}（${item.substituteResponse === 'accepted' ? '已接受' : item.substituteResponse === 'rejected' ? '已拒絕' : '待回覆'}）` : '未安排'}</p><p>簽到：{item.checkedInAt ? `${formatDate(item.checkedInAt, true)}${item.manualCorrection ? '（人工修正）' : ''}` : '尚無記錄'}</p></div>
-              {item.leaveReason ? <p className="mt-3 rounded-lg bg-amber-50 p-3 text-xs font-bold text-amber-800">請假原因：{item.leaveReason}{item.recommendedSubstituteName ? `｜原教練邀請：${item.recommendedSubstituteName}` : ''}</p> : null}
+              <div className="grid gap-2 text-xs font-semibold text-apple-gray-600 sm:grid-cols-2 lg:grid-cols-4"><p>本筆原定教練：{item.scheduledCoachName}</p><p>角色：{item.coachRole === 'substitute' ? '代班教練' : item.coachRole === 'head_coach' ? '主教練' : item.coachRole === 'assistant' ? '助教' : '教練'}</p><p>排班：{isDirectSubstituteActive ? '代班已接受並生效' : isDirectInvitation && item.substituteResponse === 'pending' ? '原教練已邀請，待代班回覆' : isDirectInvitation && item.substituteResponse === 'rejected' ? '代班已拒絕，待重新邀請' : item.leaveStatus === 'requested' ? '請假待核對' : item.leaveStatus === 'approved' ? '請假已核准' : item.leaveStatus === 'rejected' ? '請假已拒絕' : '原定排班'}</p><p>代班：{item.substituteCoachName ? (language === 'en' ? `${item.substituteCoachName} (${item.substituteResponse === 'accepted' ? 'Accepted' : item.substituteResponse === 'rejected' ? 'Declined' : 'Awaiting reply'})` : `${item.substituteCoachName}（${item.substituteResponse === 'accepted' ? '已接受' : item.substituteResponse === 'rejected' ? '已拒絕' : '待回覆'}）`) : '未安排'}</p><p>簽到：{item.checkedInAt ? `${formatDate(item.checkedInAt, true)}${item.manualCorrection ? (language === 'en' ? ' (Manually corrected)' : '（人工修正）') : ''}` : '尚無記錄'}</p></div>
+              {item.leaveReason ? <p className="mt-3 rounded-lg bg-amber-50 p-3 text-xs font-bold text-amber-800">請假原因：<span translate="no">{item.leaveReason}</span>{item.recommendedSubstituteName ? <span>{language === 'en' ? ' | Invited by original coach: ' : '｜原教練邀請：'}<span translate="no">{item.recommendedSubstituteName}</span></span> : null}</p> : null}
               <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 {item.leaveStatus === 'requested' && !isDirectInvitation ? <><button type="button" disabled={saving === item.id} onClick={() => openActionForm({ kind: 'leave_review', item, decision: 'approved', required: false })} className="min-h-11 rounded-lg bg-black px-3 py-2.5 text-xs font-bold text-white">核准請假</button><button type="button" disabled={saving === item.id} onClick={() => openActionForm({ kind: 'leave_review', item, decision: 'rejected', required: true })} className="min-h-11 rounded-lg border border-red-200 bg-white px-3 py-2.5 text-xs font-bold text-red-700">拒絕請假</button></> : null}
                 {item.leaveStatus === 'approved' || item.leaveStatus === 'requested' ? <><select value={substituteByItem[item.id] ?? item.substituteCoachId} onChange={(event) => setSubstituteByItem((current) => ({ ...current, [item.id]: event.target.value }))} className="apple-input min-h-11 py-2 text-xs"><option value="">選擇代班教練</option>{coaches.filter((coach) => coach.id !== item.scheduledCoachId).map((coach) => <option key={coach.id} value={coach.id}>{coach.name}</option>)}</select><button type="button" disabled={!substituteByItem[item.id] && !item.substituteCoachId} onClick={() => openActionForm({ kind: 'assign_substitute', item, required: courseHasStarted(item) })} className="min-h-11 rounded-lg border border-black/10 bg-white px-3 py-2.5 text-xs font-bold">指定／更換代班</button></> : null}
@@ -445,7 +449,7 @@ export default function AdminCoachDuty() {
                 {item.substituteCoachId && item.substituteResponse !== 'accepted' ? <button type="button" onClick={() => openActionForm({ kind: 'confirm_substitute', item, emergency: true, required: true })} className="min-h-11 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs font-bold text-amber-800">緊急確認代班</button> : null}
                 <button type="button" onClick={() => openCorrection(item)} className="rounded-lg border border-black/10 bg-white px-3 py-2.5 text-xs font-bold">人工修正出勤</button>
               </div>
-              {latestAudit ? <p className="mt-3 text-[11px] font-semibold text-apple-gray-500">最近稽核：{auditLabel(latestAudit.action)} · {formatDate(latestAudit.created_at, true)}{latestAudit.reason ? ` · ${latestAudit.reason}` : ''}</p> : null}
+              {latestAudit ? <p className="mt-3 text-[11px] font-semibold text-apple-gray-500">最近稽核：{auditLabel(latestAudit.action)} · {formatDate(latestAudit.created_at, true)}{latestAudit.reason ? <span translate="no">{` · ${latestAudit.reason}`}</span> : null}</p> : null}
             </div></details>
           })}
           {!loading && !filtered.length ? <p className="rounded-lg border border-dashed border-black/15 p-8 text-center text-sm font-semibold text-apple-gray-500">目前沒有符合篩選條件的課次。</p> : null}

@@ -5,6 +5,7 @@ import { confirmAdminWorkspaceChange } from '@/lib/admin-unsaved-changes'
 import AdminPaymentDisplay from '@/components/admin/AdminPaymentDisplay'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useLanguage } from '@/app/language-context'
 import Link from 'next/link'
 import {
   AlertTriangle,
@@ -223,10 +224,10 @@ const tabs: Array<{ id: AdminTab; label: string; description: string; icon: type
   { id: 'paymentAccounts', label: '收款帳戶', description: '維護課程匯款所使用的官方帳戶。', icon: Landmark },
 ]
 
-function formatDate(value: string | null | undefined) {
+function formatDate(value: string | null | undefined, language: string) {
   if (!value) return '暫無資料'
 
-  return new Intl.DateTimeFormat('zh-TW', {
+  return new Intl.DateTimeFormat(language, {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -297,6 +298,7 @@ async function adminAction(body: Record<string, unknown>) {
 }
 
 export default function AdminDashboardClient() {
+  const { language } = useLanguage()
   const [activeTab, setActiveTab] = useState<AdminTab>('overview')
   const [data, setData] = useState<AdminDashboardPayload | null>(null)
   const dashboardRequestId = useRef(0)
@@ -568,7 +570,7 @@ export default function AdminDashboardClient() {
                         if (tab.id === activeTab) return
                         if (!confirmAdminWorkspaceChange()) return
                         if (activeTab === 'products' && productEditState.busy) return
-                        if (activeTab === 'products' && productEditState.dirty && !window.confirm('商品有未儲存的變更。確定放棄並切換工作區？')) return
+                        if (activeTab === 'products' && productEditState.dirty && !window.confirm(language === 'en' ? 'This product has unsaved changes. Discard them and switch workspaces?' : '商品有未儲存的變更。確定放棄並切換工作區？')) return
                         setProductEditState({ dirty: false, busy: false })
                         setActiveTab(tab.id)
                       }}
@@ -674,11 +676,11 @@ export default function AdminDashboardClient() {
                       </div>
                       <div>
                         <dt className="text-xs font-bold text-apple-gray-500">最近回饋</dt>
-                        <dd className="mt-1 tabular-nums text-apple-gray-700">{formatDate(student.lastFeedbackAt)}</dd>
+                        <dd className="mt-1 tabular-nums text-apple-gray-700">{formatDate(student.lastFeedbackAt, language)}</dd>
                       </div>
                       <div>
                         <dt className="text-xs font-bold text-apple-gray-500">建立時間</dt>
-                        <dd className="mt-1 tabular-nums text-apple-gray-700">{formatDate(student.createdAt)}</dd>
+                        <dd className="mt-1 tabular-nums text-apple-gray-700">{formatDate(student.createdAt, language)}</dd>
                       </div>
                     </dl>
 
@@ -727,8 +729,8 @@ export default function AdminDashboardClient() {
                             {student.planEnabled ? '已開通' : '未開通'}
                           </span>
                         </td>
-                        <td className="whitespace-nowrap px-4 py-4 tabular-nums text-apple-gray-600">{formatDate(student.lastFeedbackAt)}</td>
-                        <td className="whitespace-nowrap px-4 py-4 tabular-nums text-apple-gray-600">{formatDate(student.createdAt)}</td>
+                        <td className="whitespace-nowrap px-4 py-4 tabular-nums text-apple-gray-600">{formatDate(student.lastFeedbackAt, language)}</td>
+                        <td className="whitespace-nowrap px-4 py-4 tabular-nums text-apple-gray-600">{formatDate(student.createdAt, language)}</td>
                         <td className="px-4 py-4">
                           {renderStudentBindingControls(student)}
                         </td>
@@ -845,7 +847,7 @@ export default function AdminDashboardClient() {
                         </div>
                         <div className="grid grid-cols-2 gap-3 rounded-xl bg-apple-gray-50 p-3 text-sm">
                           <div><p className="text-xs font-bold text-apple-gray-400">綁定學員</p><p className="mt-1 font-black text-apple-gray-900">{account.boundStudentCount} 位</p></div>
-                          <div><p className="text-xs font-bold text-apple-gray-400">建立時間</p><p className="mt-1 text-xs font-semibold leading-5 text-apple-gray-700">{formatDate(account.createdAt)}</p></div>
+                          <div><p className="text-xs font-bold text-apple-gray-400">建立時間</p><p className="mt-1 text-xs font-semibold leading-5 text-apple-gray-700">{formatDate(account.createdAt, language)}</p></div>
                           <div className="col-span-2"><p className="text-xs font-bold text-apple-gray-400">負責課程</p><p className="mt-1 break-words font-semibold leading-5 text-apple-gray-700">{account.courses || '暫無資料'}</p></div>
                         </div>
                         <label className="block min-w-0">
@@ -855,7 +857,7 @@ export default function AdminDashboardClient() {
                             disabled={account.status !== 'enabled' || !account.profileId || isLegacy || updatingId === 'coach-profile-' + account.profileId}
                             onChange={(event) => runAction('coach-profile-' + account.profileId, { action: 'link_coach_public_profile', userId: account.profileId, coachKey: event.target.value })}
                             className="apple-input w-full min-w-0 py-2.5 text-sm disabled:opacity-50"
-                            aria-label={'設定 ' + account.name + ' 的公開教練身份'}
+                            aria-label={language === 'en' ? `Set the public coach profile for ${account.name}` : '設定 ' + account.name + ' 的公開教練身份'}
                           >
                             <option value="">尚未連結</option>
                             {data.coachPublicProfiles.map((profile) => <option key={profile.coachKey} value={profile.coachKey}>{profile.displayName}{profile.ownerProfileId && profile.ownerProfileId !== account.profileId ? '（已連結其他帳號）' : ''}</option>)}
@@ -977,7 +979,7 @@ export default function AdminDashboardClient() {
 	                              {account.bank_name}{account.bank_code ? ` (${account.bank_code})` : ''} · {account.account_name}
 	                            </p>
 	                            <p className="mt-1 break-all text-sm font-bold text-apple-gray-900">{account.account_number}</p>
-	                            <p className="mt-1 text-xs text-apple-gray-500">最近分配：{formatDate(account.last_assigned_at)}</p>
+	                            <p className="mt-1 text-xs text-apple-gray-500">最近分配：{formatDate(account.last_assigned_at, language)}</p>
 	                          </div>
 	                          <button
 	                            type="button"

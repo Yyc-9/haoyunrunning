@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useLanguage } from '@/app/language-context'
+import { toEnglishWebsiteText } from '@/lib/english-website'
 import Link from 'next/link'
 import { AlertTriangle, BarChart3, CalendarRange, CheckCircle2, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, FileSpreadsheet, Loader2, Package, RotateCcw, Search, Trash2, X } from 'lucide-react'
 import { preferredCourseSeasonId, type CourseSeason } from '@/lib/course-seasons'
@@ -132,10 +134,10 @@ function knownAmount(value: string) {
   return match ? Number(match[1]) : null
 }
 
-function formatDate(value: string) {
+function formatDate(value: string, language: string) {
   const timestamp = new Date(value)
   if (!value || Number.isNaN(timestamp.getTime())) return '-'
-  return new Intl.DateTimeFormat('zh-TW', {
+  return new Intl.DateTimeFormat(language, {
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
@@ -150,6 +152,8 @@ function resultNumber(result: Record<string, unknown>, key: string) {
 }
 
 export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seasons, syncSources, runAction, updatingId }: Props) {
+  const { language } = useLanguage()
+  const english = language === 'en'
   const [selectedSeasonId, setSeasonId] = useState<string | null>(null)
   const seasonId = seasons.some((season) => season.id === selectedSeasonId)
     ? selectedSeasonId!
@@ -262,12 +266,13 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
       order.reviewNote ?? '',
       order.submittedAt,
     ])
-    const table = listKind === 'course' ? courseRosterTable(filtered, statusLabel) : { headers, rows }
-    const csv = rosterCsv(table.headers, table.rows)
+    const table = listKind === 'course' ? courseRosterTable(filtered, (order) => english ? toEnglishWebsiteText(statusLabel(order)) : statusLabel(order)) : { headers, rows }
+    // Translate interface headers, never free-text values or identifying information.
+    const csv = rosterCsv(english ? table.headers.map(toEnglishWebsiteText) : table.headers, table.rows)
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
     const link = document.createElement('a')
     link.href = url
-    link.download = listKind === 'course' ? `${season?.name || '季度'}-學員名單.csv` : '好運商城訂單.csv'
+    link.download = english ? (listKind === 'course' ? `${season?.name || 'Season'}-student-roster.csv` : 'Nurture-shop-orders.csv') : listKind === 'course' ? `${season?.name || '季度'}-學員名單.csv` : '好運商城訂單.csv'
     link.click()
     URL.revokeObjectURL(url)
   }
@@ -299,10 +304,10 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
   async function confirmCourseTransfer() {
     if (!selected || selected.orderKind !== 'course' || selected.status === 'approved') return
     if (!reviewNote.trim()) {
-      window.alert('請在管理備註填寫核對依據，例如入帳日期、實收金額與銀行交易參考號。')
+      window.alert(english ? toEnglishWebsiteText('請在管理備註填寫核對依據，例如入帳日期、實收金額與銀行交易參考號。') : '請在管理備註填寫核對依據，例如入帳日期、實收金額與銀行交易參考號。')
       return
     }
-    if (!window.confirm(`確認「${selected.studentName}」的 ${selected.amountText} 已實際入帳？此操作會確認報名並占用班級名額，請勿僅憑匯款通知確認。`)) return
+    if (!window.confirm(english ? `Confirm receipt of ${selected.amountText} from ${selected.studentName}? This confirms the registration and reserves a class place. Verify actual receipt; a transfer notification alone is not sufficient.` : `確認「${selected.studentName}」的 ${selected.amountText} 已實際入帳？此操作會確認報名並占用班級名額，請勿僅憑匯款通知確認。`)) return
     const saved = await runAction(selected.id, {
       action: 'review_order', orderId: selected.id, orderKind: 'course',
       status: 'approved', confirmReceipt: true, reviewNote: reviewNote.trim(),
@@ -313,9 +318,9 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
   async function deleteOrder() {
     if (!selected || selected.status === 'approved') return
     const inventoryMessage = selected.orderKind === 'shop' && selected.inventoryReserved
-      ? ' 系統會同時歸還這筆訂單預留的商品庫存。'
+      ? (english ? ' Reserved stock will also be released.' : ' 系統會同時歸還這筆訂單預留的商品庫存。')
       : ''
-    if (!window.confirm(`確定刪除「${selected.studentName}」的${selected.orderKind === 'shop' ? '商城訂單' : '課程報名'}？${inventoryMessage} 此操作無法復原。`)) return
+    if (!window.confirm(english ? `Delete the ${selected.orderKind === 'shop' ? 'shop order' : 'class registration'} for ${selected.studentName}?${inventoryMessage} This cannot be undone.` : `確定刪除「${selected.studentName}」的${selected.orderKind === 'shop' ? '商城訂單' : '課程報名'}？${inventoryMessage} 此操作無法復原。`)) return
     const deleted = await runAction(`delete-${selected.id}`, {
       action: 'delete_order',
       orderId: selected.id,
@@ -369,7 +374,7 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
           ['匯款後五碼', selected.transferLastFive ? `•••${selected.transferLastFive}` : '-'],
           ['取貨方式', '跑班自取'],
           ['狀態', shopStatusLabels[selected.status]],
-          ['提交時間', formatDate(selected.submittedAt)],
+          ['提交時間', formatDate(selected.submittedAt, language)],
           ['庫存', selected.inventoryReserved ? '已預留' : '未預留'],
         ]
       : [
@@ -378,7 +383,7 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
           ['金額', selected.amountText],
           ['匯款後五碼', selected.transferLastFive],
           ['狀態', courseStatusLabels[selected.status]],
-          ['報名時間', formatDate(selected.submittedAt)],
+          ['報名時間', formatDate(selected.submittedAt, language)],
         ]
     : []
 
@@ -406,12 +411,12 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
                   </span>
                 </div>
                 <p className="mt-1 text-xs font-semibold leading-5 text-apple-gray-500">
-                  {syncSource.lastSyncedAt ? `最近同步 ${formatDate(syncSource.lastSyncedAt)}` : '等待第一次自動同步'}
-                  {syncSource.lastSyncedAt ? `｜表格 ${resultNumber(syncSource.lastResult, 'records')} 筆｜新增 ${resultNumber(syncSource.lastResult, 'inserted')}｜換班 ${resultNumber(syncSource.lastResult, 'moved')}｜更新 ${resultNumber(syncSource.lastResult, 'updated')}` : ''}
+                  {syncSource.lastSyncedAt ? `${english ? 'Last synchronized ' : '最近同步 '}${formatDate(syncSource.lastSyncedAt, language)}` : '等待第一次自動同步'}
+                  {syncSource.lastSyncedAt ? (english ? ` | ${resultNumber(syncSource.lastResult, 'records')} records | ${resultNumber(syncSource.lastResult, 'inserted')} added | ${resultNumber(syncSource.lastResult, 'moved')} class changes | ${resultNumber(syncSource.lastResult, 'updated')} updated` : `｜表格 ${resultNumber(syncSource.lastResult, 'records')} 筆｜新增 ${resultNumber(syncSource.lastResult, 'inserted')}｜換班 ${resultNumber(syncSource.lastResult, 'moved')}｜更新 ${resultNumber(syncSource.lastResult, 'updated')}`) : ''}
                 </p>
                 {syncSource.lastError ? <p className="mt-1 text-xs font-bold text-red-700">{syncSource.lastError}</p> : null}
-                {resultNumber(syncSource.lastResult, 'missing') > 0 ? <p className="mt-1 text-xs font-bold text-amber-700">網站另有 {resultNumber(syncSource.lastResult, 'missing')} 筆表格中未找到的舊資料，系統已保留並等待人工確認。</p> : null}
-                {resultNumber(syncSource.lastResult, 'duplicateGroups') > 0 ? <p className="mt-1 text-xs font-bold text-amber-700">表格中有 {resultNumber(syncSource.lastResult, 'duplicateGroups')} 組同班、同信箱及同姓名的重複資料，共 {resultNumber(syncSource.lastResult, 'duplicateRecords')} 筆，請在學員名單確認後再決定是否刪除。</p> : null}
+                {resultNumber(syncSource.lastResult, 'missing') > 0 ? <p className="mt-1 text-xs font-bold text-amber-700">{english ? `${resultNumber(syncSource.lastResult, 'missing')} existing website records were not found in the spreadsheet. They have been retained for manual review.` : `網站另有 ${resultNumber(syncSource.lastResult, 'missing')} 筆表格中未找到的舊資料，系統已保留並等待人工確認。`}</p> : null}
+                {resultNumber(syncSource.lastResult, 'duplicateGroups') > 0 ? <p className="mt-1 text-xs font-bold text-amber-700">{english ? `${resultNumber(syncSource.lastResult, 'duplicateGroups')} duplicate groups share the same class, email, and name (${resultNumber(syncSource.lastResult, 'duplicateRecords')} records). Review the roster before deciding whether to delete them.` : `表格中有 ${resultNumber(syncSource.lastResult, 'duplicateGroups')} 組同班、同信箱及同姓名的重複資料，共 ${resultNumber(syncSource.lastResult, 'duplicateRecords')} 筆，請在學員名單確認後再決定是否刪除。`}</p> : null}
               </div>
             </div>
             <div className="grid shrink-0 grid-cols-2 gap-2">
@@ -435,10 +440,10 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          ['報名記錄', summary.records, `去重學員 ${summary.people} 人`],
-          ['已確認入帳', summary.approved, `班額使用率 ${summary.occupancy}%`],
-          ['新生 / 舊生', `${summary.newCount} / ${summary.returningCount}`, `新生占 ${summary.records ? Math.round(summary.newCount / summary.records * 1000) / 10 : 0}%`],
-          ['已知報名金額', `NT$ ${summary.revenue.toLocaleString('zh-TW')}`, summary.unknownAmounts ? `${summary.unknownAmounts} 筆插班金額另計` : '所有金額已計入'],
+          ['報名記錄', summary.records, english ? `${summary.people} unique students` : `去重學員 ${summary.people} 人`],
+          ['已確認入帳', summary.approved, english ? `Capacity used: ${summary.occupancy}%` : `班額使用率 ${summary.occupancy}%`],
+          ['新生 / 舊生', `${summary.newCount} / ${summary.returningCount}`, `${english ? 'New students: ' : '新生占 '}${summary.records ? Math.round(summary.newCount / summary.records * 1000) / 10 : 0}%`],
+          ['已知報名金額', `NT$ ${summary.revenue.toLocaleString(language)}`, summary.unknownAmounts ? (english ? `${summary.unknownAmounts} mid-season amounts calculated separately` : `${summary.unknownAmounts} 筆插班金額另計`) : '所有金額已計入'],
         ].map(([label, value, note]) => (
           <div key={label} className="rounded-lg border border-black/10 bg-white p-4 shadow-sm">
             <p className="text-xs font-bold text-apple-gray-500">{label}</p><p className="mt-2 text-2xl font-black text-apple-gray-950">{value}</p><p className="mt-1 text-xs font-semibold text-apple-gray-500">{note}</p>
@@ -448,7 +453,7 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
 
       {summary.openAttendanceAnomalies > 0 ? (
         <button type="button" onClick={() => { setListKind('course'); setAttendanceFilter('open') }} className="flex w-full items-center justify-between gap-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-left text-amber-950">
-          <span className="flex min-w-0 items-start gap-3"><AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" /><span><span className="block font-black">{summary.openAttendanceAnomalies} 筆計費起點異常待處理</span><span className="mt-1 block text-xs font-semibold leading-5 opacity-75">教練已點名到課，但到課日期早於學員選擇的計費起點。</span></span></span>
+          <span className="flex min-w-0 items-start gap-3"><AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" /><span><span className="block font-black">{english ? `${summary.openAttendanceAnomalies} billing start exceptions to review` : `${summary.openAttendanceAnomalies} 筆計費起點異常待處理`}</span><span className="mt-1 block text-xs font-semibold leading-5 opacity-75">教練已點名到課，但到課日期早於學員選擇的計費起點。</span></span></span>
           <ChevronRight className="h-5 w-5 shrink-0" />
         </button>
       ) : null}
@@ -486,12 +491,12 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
           {listKind === 'course' ? <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as typeof typeFilter)} className="apple-input"><option value="all">全部身分</option><option value="new">新生</option><option value="returning">舊生</option></select> : null}
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} className="apple-input"><option value="all">全部狀態</option>{Object.entries(listKind === 'course' ? courseStatusLabels : shopStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
           {listKind === 'course' ? <select value={attendanceFilter} onChange={(event) => setAttendanceFilter(event.target.value as typeof attendanceFilter)} className="apple-input"><option value="all">全部點名核對</option><option value="open">計費異常待處理</option></select> : null}
-          <button type="button" onClick={exportRoster} title={`匯出目前篩選的 ${filtered.length} 筆完整資料（含所有分頁）`} disabled={!filtered.length} className="apple-button-outline gap-2 px-4 py-2.5 text-sm disabled:opacity-40"><Download className="h-4 w-4" />匯出完整資料</button>
+          <button type="button" onClick={exportRoster} title={english ? `Export all ${filtered.length} filtered records across all pages` : `匯出目前篩選的 ${filtered.length} 筆完整資料（含所有分頁）`} disabled={!filtered.length} className="apple-button-outline gap-2 px-4 py-2.5 text-sm disabled:opacity-40"><Download className="h-4 w-4" />匯出完整資料</button>
         </div>
         <div className="admin-enrollment-desktop-table overflow-x-auto">
           <table className="w-full min-w-[920px] text-left text-sm">
             <thead className="bg-apple-gray-100 text-xs text-apple-gray-600"><tr>{[listKind === 'course' ? '學員' : '顧客', listKind === 'course' ? '班級' : '訂單 / 商品', listKind === 'course' ? '身分' : '類型', '金額', listKind === 'course' ? '後五碼' : '後五碼 / 取貨', '狀態', '提交時間', ''].map((label) => <th key={label || 'action'} className="px-3 py-2.5 font-bold">{label}</th>)}</tr></thead>
-            <tbody className="divide-y divide-black/5">{visible.map((order) => <tr key={order.id} className="hover:bg-apple-gray-50"><td className="px-3 py-2.5"><p className="font-bold">{order.studentName}</p><p className="max-w-52 truncate text-xs text-apple-gray-500">{order.email}</p></td><td className="max-w-64 px-3 py-2.5 font-semibold text-apple-gray-700">{order.orderKind === 'shop' ? <><p className="truncate">{order.orderNumber}</p><p className="mt-1 truncate text-xs font-medium text-apple-gray-500">{order.items.join('、') || '未載入商品'}</p></> : <p className="truncate">{order.courseName}</p>}</td><td className="px-3 py-2.5">{order.orderKind === 'shop' ? '商城' : studentType(order) === 'new' ? '新生' : studentType(order) === 'returning' ? '舊生' : '-'}</td><td className="px-3 py-2.5 font-semibold">{order.amountText}</td><td className="px-3 py-2.5 font-mono">{order.orderKind === 'shop' ? `${order.transferLastFive ? `•••${order.transferLastFive}` : '-'} / 自取` : order.transferLastFive || '-'}</td><td className="px-3 py-2.5"><span className={`rounded-full px-2 py-1 text-xs font-bold ${statusTone[order.status]}`}>{statusLabel(order)}</span>{order.openAttendanceAnomalyCount > 0 ? <span className="mt-1 block w-fit rounded-full bg-amber-100 px-2 py-1 text-[11px] font-black text-amber-800">計費異常 {order.openAttendanceAnomalyCount}</span> : null}</td><td className="whitespace-nowrap px-3 py-2.5 text-xs text-apple-gray-500">{formatDate(order.submittedAt)}</td><td className="px-3 py-2.5 text-right"><button type="button" onClick={() => setSelected(order)} className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-black hover:text-white" aria-label={`查看 ${order.studentName} 的${order.orderKind === 'shop' ? '訂單' : '報名資料'}`}><ChevronRight className="h-4 w-4" /></button></td></tr>)}</tbody>
+            <tbody className="divide-y divide-black/5">{visible.map((order) => <tr key={order.id} className="hover:bg-apple-gray-50"><td className="px-3 py-2.5"><p className="font-bold">{order.studentName}</p><p className="max-w-52 truncate text-xs text-apple-gray-500">{order.email}</p></td><td className="max-w-64 px-3 py-2.5 font-semibold text-apple-gray-700">{order.orderKind === 'shop' ? <><p className="truncate">{order.orderNumber}</p><p className="mt-1 truncate text-xs font-medium text-apple-gray-500">{order.items.join('、') || '未載入商品'}</p></> : <p className="truncate">{order.courseName}</p>}</td><td className="px-3 py-2.5">{order.orderKind === 'shop' ? '商城' : studentType(order) === 'new' ? '新生' : studentType(order) === 'returning' ? '舊生' : '-'}</td><td className="px-3 py-2.5 font-semibold">{order.amountText}</td><td className="px-3 py-2.5 font-mono">{order.orderKind === 'shop' ? `${order.transferLastFive ? `•••${order.transferLastFive}` : '-'} / ${english ? 'Pickup' : '自取'}` : order.transferLastFive || '-'}</td><td className="px-3 py-2.5"><span className={`rounded-full px-2 py-1 text-xs font-bold ${statusTone[order.status]}`}>{statusLabel(order)}</span>{order.openAttendanceAnomalyCount > 0 ? <span className="mt-1 block w-fit rounded-full bg-amber-100 px-2 py-1 text-[11px] font-black text-amber-800">計費異常 {order.openAttendanceAnomalyCount}</span> : null}</td><td className="whitespace-nowrap px-3 py-2.5 text-xs text-apple-gray-500">{formatDate(order.submittedAt, language)}</td><td className="px-3 py-2.5 text-right"><button type="button" onClick={() => setSelected(order)} className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-black hover:text-white" aria-label={english ? `View ${order.studentName}'s ${order.orderKind === 'shop' ? 'order' : 'registration'}` : `查看 ${order.studentName} 的${order.orderKind === 'shop' ? '訂單' : '報名資料'}`}><ChevronRight className="h-4 w-4" /></button></td></tr>)}</tbody>
           </table>
         </div>
         <div className="admin-enrollment-mobile-list">
@@ -508,29 +513,29 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
               <dl className="admin-enrollment-mobile-facts">
                 <div><dt>{order.orderKind === 'shop' ? '商品' : '班級'}</dt><dd>{order.orderKind === 'shop' ? order.items.join('、') || '未載入商品' : order.courseName || '未指定班級'}</dd></div>
                 <div><dt>金額</dt><dd>{order.amountText || '-'}</dd></div>
-                <div><dt>{order.orderKind === 'shop' ? '匯款／取貨' : '匯款後五碼'}</dt><dd>{order.orderKind === 'shop' ? (order.transferLastFive ? '•••' + order.transferLastFive : '-') + '／跑班自取' : order.transferLastFive || '-'}</dd></div>
-                <div><dt>提交時間</dt><dd>{formatDate(order.submittedAt)}</dd></div>
+                <div><dt>{order.orderKind === 'shop' ? '匯款／取貨' : '匯款後五碼'}</dt><dd>{order.orderKind === 'shop' ? (order.transferLastFive ? '•••' + order.transferLastFive : '-') + (english ? ' / Team pickup' : '／跑班自取') : order.transferLastFive || '-'}</dd></div>
+                <div><dt>提交時間</dt><dd>{formatDate(order.submittedAt, language)}</dd></div>
               </dl>
-              {order.orderKind === 'course' && order.openAttendanceAnomalyCount > 0 ? <p className="admin-enrollment-mobile-alert">計費異常 {order.openAttendanceAnomalyCount} 筆待處理</p> : null}
-              <button type="button" className="admin-enrollment-mobile-detail-button" onClick={() => setSelected(order)} aria-label={'查看 ' + order.studentName + ' 的' + (order.orderKind === 'shop' ? '訂單' : '報名資料')}><span>查看詳情</span><ChevronRight className="h-4 w-4" aria-hidden="true" /></button>
+              {order.orderKind === 'course' && order.openAttendanceAnomalyCount > 0 ? <p className="admin-enrollment-mobile-alert">{english ? `${order.openAttendanceAnomalyCount} billing exceptions to review` : `計費異常 ${order.openAttendanceAnomalyCount} 筆待處理`}</p> : null}
+              <button type="button" className="admin-enrollment-mobile-detail-button" onClick={() => setSelected(order)} aria-label={english ? `View ${order.studentName}'s ${order.orderKind === 'shop' ? 'order' : 'registration'}` : '查看 ' + order.studentName + ' 的' + (order.orderKind === 'shop' ? '訂單' : '報名資料')}><span>查看詳情</span><ChevronRight className="h-4 w-4" aria-hidden="true" /></button>
             </article>
           ))}
         </div>
-        {!filtered.length ? <p className="p-10 text-center text-sm font-semibold text-apple-gray-500">沒有符合條件的{listKind === 'course' ? '學員' : '商城訂單'}。</p> : null}
-        <div className="flex flex-col gap-3 border-t border-black/10 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"><p className="font-semibold text-apple-gray-500">共 {filtered.length} 筆，第 {page} / {pageCount} 頁</p><div className="flex gap-2"><button type="button" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))} className="inline-flex h-9 items-center gap-1 rounded-full border px-3 font-bold disabled:opacity-30"><ChevronLeft className="h-4 w-4" />上一頁</button><button type="button" disabled={page >= pageCount} onClick={() => setPage((current) => Math.min(pageCount, current + 1))} className="inline-flex h-9 items-center gap-1 rounded-full border px-3 font-bold disabled:opacity-30">下一頁<ChevronRight className="h-4 w-4" /></button></div></div>
+        {!filtered.length ? <p className="p-10 text-center text-sm font-semibold text-apple-gray-500">{english ? `No ${listKind === 'course' ? 'students' : 'shop orders'} match these filters.` : `沒有符合條件的${listKind === 'course' ? '學員' : '商城訂單'}。`}</p> : null}
+        <div className="flex flex-col gap-3 border-t border-black/10 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"><p className="font-semibold text-apple-gray-500">{english ? `${filtered.length} records · Page ${page} / ${pageCount}` : `共 ${filtered.length} 筆，第 ${page} / ${pageCount} 頁`}</p><div className="flex gap-2"><button type="button" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))} className="inline-flex h-9 items-center gap-1 rounded-full border px-3 font-bold disabled:opacity-30"><ChevronLeft className="h-4 w-4" />上一頁</button><button type="button" disabled={page >= pageCount} onClick={() => setPage((current) => Math.min(pageCount, current + 1))} className="inline-flex h-9 items-center gap-1 rounded-full border px-3 font-bold disabled:opacity-30">下一頁<ChevronRight className="h-4 w-4" /></button></div></div>
       </section>
 
       {selected ? (
         <div className="fixed inset-0 z-[90] bg-black/35" role="dialog" aria-modal="true" aria-label={selected.orderKind === 'shop' ? '商城訂單詳情' : '學員報名詳情'} onClick={() => setSelected(null)}>
           <aside className="ml-auto flex h-full w-full max-w-xl flex-col bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-start justify-between border-b p-5">
-              <div><p className="text-xs font-bold text-apple-gray-500">{selected.orderKind === 'shop' ? `商城訂單 ${selected.orderNumber}` : selected.seasonName}</p><h3 className="mt-1 text-2xl font-black">{selected.studentName}</h3><p className="mt-1 text-sm text-apple-gray-600">{selected.email}</p></div>
+              <div><p className="text-xs font-bold text-apple-gray-500">{selected.orderKind === 'shop' ? `${english ? 'Shop order' : '商城訂單'} ${selected.orderNumber}` : selected.seasonName}</p><h3 className="mt-1 text-2xl font-black">{selected.studentName}</h3><p className="mt-1 text-sm text-apple-gray-600">{selected.email}</p></div>
               <button type="button" onClick={() => setSelected(null)} className="inline-flex h-9 w-9 items-center justify-center rounded-full border" aria-label="關閉"><X className="h-4 w-4" /></button>
             </div>
             <div className="flex-1 overflow-y-auto p-5">
               {selectedArchived ? <p role="status" className="mb-4 rounded-lg bg-amber-50 p-3 text-sm font-bold text-amber-900">此季度已封存，僅供查閱，不再修改帳單。</p> : null}
               <div className="grid gap-3 sm:grid-cols-2">{selectedSummary.map(([label, value]) => <div key={label} className="rounded-lg bg-apple-gray-100 p-3"><p className="text-xs font-bold text-apple-gray-500">{label}</p><p className="mt-1 break-words text-sm font-bold">{value || '-'}</p></div>)}</div>
-              <dl className="mt-5 divide-y border-y">{selected.registrationDetails.filter((item) => item.label !== '學員身分').map((item) => <div key={item.label} className="py-3"><dt className="text-xs font-bold text-apple-gray-500">{item.label}</dt><dd className="mt-1 whitespace-pre-wrap break-words text-sm font-semibold leading-6">{item.value}</dd></div>)}{selected.notes ? <div className="py-3"><dt className="text-xs font-bold text-apple-gray-500">客戶備註</dt><dd className="mt-1 whitespace-pre-wrap text-sm font-semibold">{selected.notes}</dd></div> : null}</dl>
+              <dl className="mt-5 divide-y border-y">{selected.registrationDetails.filter((item) => item.label !== '學員身分').map((item) => <div key={item.label} className="py-3"><dt className="text-xs font-bold text-apple-gray-500">{item.label}</dt><dd className="mt-1 whitespace-pre-wrap break-words text-sm font-semibold leading-6">{item.value}</dd></div>)}{selected.notes ? <div className="py-3"><dt className="text-xs font-bold text-apple-gray-500">客戶備註</dt><dd translate="no" className="mt-1 whitespace-pre-wrap text-sm font-semibold">{selected.notes}</dd></div> : null}</dl>
               {selected.orderKind === 'course' && selected.attendanceAnomalies.length ? (
                 <section className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4">
                   <h4 className="flex items-center gap-2 font-black text-amber-950"><AlertTriangle className="h-4 w-4" />點名與計費起點核對</h4>
