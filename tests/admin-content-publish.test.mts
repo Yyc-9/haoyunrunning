@@ -67,3 +67,26 @@ test('failed atomic publish never returns success or partial content', async () 
   assert.equal((await env.save([{ section: 'home_content', value: {} }, { section: 'page_media', value: {} }])).status, 500)
   assert.equal(env.rows.size, 0)
 })
+
+
+test('all managed page sections round-trip edited display text through the publishing route', async () => {
+  const panels = [
+    ['brand_content', 'brand', 'tagline'], ['home_content', 'home', 'coursesTitle'],
+    ['about_content', 'about', 'heroChineseTitle'], ['courses_page_content', 'coursesPage', 'heroTitle'],
+    ['testimonials_content', 'testimonials', 'title'], ['team_content', 'team', 'title'],
+    ['achievements_content', 'achievements', 'heroTitle'], ['anniversary_content', 'anniversary', 'title'],
+    ['page_media', 'pageMedia', 'shopTitle'],
+  ] as const
+  for (const [section, key, field] of panels) {
+    const env = environment()
+    const response = await env.save([{ section, value: { ...content.defaultSiteContent[key], [field]: '驗收更新文案' } }])
+    assert.equal(response.status, 200, section)
+    assert.equal((await response.json()).siteContent[key][field], '驗收更新文案', section)
+  }
+  const env = environment()
+  const response = await env.save([{ section: 'hero_slides', value: ['https://example.com/new-slide.jpg'] }, { section: 'home_activities', value: [{ title: '驗收活動', description: '更新內容', action: '', href: '' }] }])
+  assert.equal(response.status, 200)
+  const published = (await response.json()).siteContent
+  assert.deepEqual(published.heroSlides, ['https://example.com/new-slide.jpg'])
+  assert.equal(published.activities[0].title, '驗收活動')
+})

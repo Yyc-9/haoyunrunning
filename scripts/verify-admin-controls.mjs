@@ -19,7 +19,7 @@ const api = async (role, path, body) => {
   const response = await fetch(base + path, { method: body ? 'PATCH' : 'GET', headers: { authorization: `Bearer ${clients[role]?.session.access_token || ''}`, 'content-type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}) })
   return { status: response.status, data: await response.json() }
 }
-const check = async (name, fn) => { await fn(); passed.push(name); console.log('PASS', name) }
+const check = async (name, fn) => { if (process.argv.includes('--browser-only') && !/^(desktop|saving|mobile)/.test(name)) return; await fn(); passed.push(name); console.log('PASS', name) }
 try {
   for (const role of ['admin', 'student']) {
     const email = `${marker}-${role}@example.com`, password = randomBytes(24).toString('base64url')
@@ -110,7 +110,7 @@ try {
         run('snapshot')
         run('run-code', `async(page)=>{await page.getByRole('textbox',{name:'課程預覽標題',exact:true}).fill('驗收未儲存草稿');await page.getByRole('button',{name:/^品牌與聯絡/}).click();}`)
         run('snapshot')
-        run('run-code', `async(page)=>{await page.getByRole('textbox',{name:'品牌標語',exact:true}).fill('隔離預覽標語');await page.getByRole('button',{name:'儲存並發布',exact:true}).click();await page.getByText('隔離前端驗收：未寫入正式內容').waitFor();await page.getByRole('button',{name:'首頁文案 近期報名與課程預覽',exact:true}).click();}`)
+        run('run-code', `async(page)=>{await page.getByRole('textbox',{name:'品牌標語',exact:true}).fill('隔離預覽標語');await page.getByRole('button',{name:'儲存並發布',exact:true}).click();await page.getByRole('status').filter({hasText:'隔離前端驗收：未寫入正式內容'}).waitFor();await page.getByRole('button',{name:'首頁文案 近期報名與課程預覽',exact:true}).click();}`)
         run('snapshot')
         run('run-code', `async(page)=>{
           const field=page.getByRole('textbox',{name:'課程預覽標題',exact:true});
@@ -128,7 +128,7 @@ try {
       await check('mobile administrator loads payment controls without overflow', async () => {
         run('run-code', `async (page) => { const more=page.getByRole('button',{name:'更多',exact:true}); if(await more.count()) await more.click(); }`)
         run('snapshot')
-        run('run-code', `async (page) => { await page.getByRole('button',{name:/收款帳戶/}).click(); await page.getByRole('heading',{name:'對外匯款資料',exact:true}).waitFor(); await page.getByRole('region',{name:'對外匯款資料設定',exact:true}).getByLabel('銀行名稱',{exact:true}).waitFor(); if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)) throw Error('Horizontal overflow'); await page.screenshot({path:'output/playwright/admin-controls-20260920/payment-mobile.png',fullPage:true,animations:'disabled'}); }`)
+        run('run-code', `async (page) => { await page.getByRole('button',{name:/收款帳戶/}).click(); await page.getByRole('heading',{name:'對外匯款資料',exact:true}).waitFor(); await page.getByRole('region',{name:'對外匯款資料設定',exact:true}).getByLabel('銀行名稱',{exact:true}).waitFor(); if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)) throw Error('Horizontal overflow'); await page.screenshot({path:'output/playwright/admin-controls-20260920/payment-mobile.png',fullPage:true,animations:'disabled'}); await page.getByRole('button',{name:'儲存並發布匯款資料',exact:true}).scrollIntoViewIfNeeded(); await page.screenshot({path:'output/playwright/admin-controls-20260920/payment-mobile-preview.png',fullPage:true,animations:'disabled'}); }`)
       })
     } finally { try { run('localstorage-clear'); run('close') } finally { await unlink(storage) } }
   }
