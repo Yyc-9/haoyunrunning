@@ -15,6 +15,7 @@ import {
   emptyProfile, getRaceCountdown, getRaceEvent, getTargetEventLabel, type AccountProfile, type Achievement,
 } from '@/lib/runner-profile'
 import { supabase } from '@/lib/supabase'
+import { isFinanceViewer } from '@/lib/finance-viewers'
 
 type CoachAccountState = {
   status: 'pending' | 'pending_email' | 'enabled' | 'disabled' | 'conflict'
@@ -147,6 +148,18 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
       <div className="container mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-12">
         {error ? <p role="alert" className="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p> : null}
+
+        {isFinanceViewer(user.email) && (
+          <section aria-label="財務工作區入口" className="mb-5 flex flex-col gap-4 rounded-lg border border-emerald-200 bg-emerald-50 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <div>
+              <h2 className="text-xl font-black text-emerald-950">財務工作區</h2>
+              <p className="mt-2 text-sm leading-6 text-emerald-900">上傳銀行明細、核對本季報名與繳費狀態。進入後請輸入財務密碼。</p>
+            </div>
+            <Link href="/finance" className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-lg bg-emerald-800 px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-800">
+              進入財務對帳<ArrowRight aria-hidden="true" className="h-4 w-4" />
+            </Link>
+          </section>
+        )}
 
         <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mobile-profile-card relative overflow-hidden rounded-lg bg-black text-white shadow-xl">
           <div className="absolute inset-y-0 left-0 w-2 bg-emerald-400" />
