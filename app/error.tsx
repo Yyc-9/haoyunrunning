@@ -54,11 +54,11 @@ export default function Error({ error, reset }: ErrorProps) {
               onClick={() => setShowDetails(!showDetails)}
               className="text-sm text-apple-blue hover:underline mb-4"
             >
-              {showDetails ? '隐藏' : '顯示'}详细資訊
+              {showDetails ? '隱藏詳細資訊' : '顯示詳細資訊'}
             </button>
             {showDetails && (
               <div className="bg-apple-gray-100 p-4 rounded-xl text-left">
-                <p className="text-xs font-mono text-apple-gray-700 break-words whitespace-pre-wrap">
+                <p translate="no" className="text-xs font-mono text-apple-gray-700 break-words whitespace-pre-wrap">
                   {error.message}
                 </p>
                 {error.digest && (

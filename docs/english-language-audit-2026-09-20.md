@@ -19,6 +19,8 @@ The whole-site audit is still in progress. Passing the checks below does not mea
 - Product administration includes English fields, validation, image cropping, unsaved-change confirmations and delete dialogs.
 - Content and season editors have English field labels, help text, media controls, validation, statuses and native confirmations. Coach/photo and badge labels translate their interface wording without rewriting form values.
 - Content navigation descriptions wrap instead of clipping. Milestone image fields have enough space for previews and controls. A failed slideshow image upload keeps the crop dialog open with an error and allows retry.
+- Changing language in the coach planner no longer refetches and overwrites an unsaved workout. Week labels update independently; stale requests from a previous student or week are ignored. Mobile workout fields use 16px text and date-specific accessible labels. History and CSV exports retain coach-authored text.
+- Planner API validation messages, 404 pages, error details and website-content loading/failure/retry prompts have English copy. Raw diagnostic details retain their original text.
 
 ## Evidence
 
@@ -34,6 +36,8 @@ The role scripts run against a local preview with synthetic accounts. Every busi
 | `audit-english-shop.mjs` | 40 states at 1440px and 375px, including five product details, English search, cart, checkout error/success, payment states, stale specifications, empty and failed loads; strict mode passed |
 | `LANGUAGE_ADMIN_PRODUCTS=1 audit-english-admin.mjs` | 28 desktop/mobile states: product editing, specification validation, image crop/upload, save/discard, create/delete and custom sizes; no untranslated interface text or horizontal overflow |
 | `LANGUAGE_ADMIN_CONTENT=1 audit-english-admin.mjs` | 102 strict desktop/mobile states: every content section, draft/restore/save, coach profile, hero/avatar cropping, image failure/retry and video upload failure, season settings, native delete/activate/discard confirmations, course pricing validation/save, new-course validation, draft/archived/empty seasons; no untranslated interface text, page errors, unexpected APIs or overflow |
+| `audit-english-planner.mjs` | 26 strict states: English/Traditional Chinese round trip preserves an unsaved draft without refetching; templates, failed/retried save, CSV headers and original content, copy previous week, history, next week, empty save, no selection, empty students/plans, load failure and access denial at 1440px/375px |
+| `audit-english-system.mjs` | 12 strict desktop/mobile states: actual 404 route, error screen/details/reset, content loading, failure and successful retry; temporary error preview existed only in an isolated checkout and was removed before production build |
 | Unit tests | 160 tests passed, including unchanged specification values, cart identifiers and backend validation under English display |
 | Static checks | TypeScript, ESLint, Traditional Chinese check, and production build passed |
 
@@ -45,12 +49,14 @@ The student, coach, and finance checkpoint `935cbe9` and subsequent administrato
 
 Content save checks compare the synthetic payload before and after saving in English, including unrelated sections and original Chinese copy. Course saves retain Chinese weekday values and Taiwan time. Screenshots wait for finite entrance animations and capture their finished state; content panels must be visible during text inspection. Desktop content, mobile course fields and avatar cropping were visually inspected.
 
+The planner language-switch regression was reproduced before the fix: switching to Traditional Chinese replaced `QA draft 原文保留` with the saved `Current workout`. The final check preserves the draft and makes no additional plan request during either language switch. The planner/error checkpoint passes 160 unit tests, TypeScript, ESLint, Traditional Chinese checks and an isolated production build; it remains local until released. The temporary system preview server was stopped after verification.
+
 ## Still required before whole-site completion
 
 - Extend season-editor checks to completed create/duplicate/activate/delete operations and their server failures. The current audit exercises all content sections, content/coach/course saving, pricing validation, native confirmations and archived/empty states, but does not mutate those season actions.
 - Extend administrator coverage to alternative coach-duty states, archived/empty/error states, coach account mutations, payment-account publication and account creation results. Current audit covers populated workspaces, primary review dialogs, native confirmations, and selected validations/actions.
 - Shop and product-editor checks above use synthetic products and intercepted APIs; live authenticated workflows still require separate verification.
-- Coach planner editing/saving and alternate leave/substitution states; current coach coverage includes the initial planner state, not every editor action.
+- Alternate coach leave/substitution states and their server failures. Planner editing, language switching, saving, history and CSV export are now covered above.
 - Additional registration cases, API validation failures, and remaining native file controls.
 - Recheck the final release on the production domain and record exactly which authenticated flows used real isolated fixtures versus mocked API responses.
 

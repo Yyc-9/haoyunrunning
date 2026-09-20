@@ -295,16 +295,19 @@ export default function CoachPlannerPage() {
   useEffect(() => {
     if (!selectedStudentId) {
       setSavedPlans([])
-      setRows(createEmptyRows(activeWeekLabel))
+      setRows(createEmptyRows(''))
+      setIsLoadingPlans(false)
       return
     }
 
+    let cancelled = false
     const loadPlans = async () => {
       setIsLoadingPlans(true)
       setError('')
 
       try {
         const payload = await authedFetch(`/api/coach/training-plans?studentId=${encodeURIComponent(selectedStudentId)}`) as { plans?: TrainingPlan[] }
+        if (cancelled) return
         const plans = payload.plans ?? []
         setSavedPlans(plans)
 
@@ -312,23 +315,21 @@ export default function CoachPlannerPage() {
         const exact = grouped.find((group) => group.weekStart === activeWeekStart)
         const rangePlans = plans.filter((plan) => plan.workout_date >= activeWeekStart && plan.workout_date <= activeRangeEnd)
         const displayPlans = exact?.plans ?? rangePlans
-        const label = formatTrainingWeekLabel(getTrainingWeekNumber(activeWeekStart, grouped), language)
-        setRows(displayPlans.length > 0 ? plansToRows(displayPlans, label) : createEmptyRows(label))
+        // Week labels render from the current language; switching language must not reload drafts.
+        setRows(displayPlans.length > 0 ? plansToRows(displayPlans, '') : createEmptyRows(''))
       } catch (err) {
+        if (cancelled) return
         setError(err instanceof Error ? err.message : '讀取課表失敗。')
         setSavedPlans([])
-        setRows(createEmptyRows(activeWeekLabel))
+        setRows(createEmptyRows(''))
       } finally {
-        setIsLoadingPlans(false)
+        if (!cancelled) setIsLoadingPlans(false)
       }
     }
 
     loadPlans()
-  }, [activeRangeEnd, activeWeekLabel, activeWeekStart, baseWeekStart, language, selectedStudentId])
-
-  useEffect(() => {
-    setRows((current) => current.map((row) => ({ ...row, date: activeWeekLabel })))
-  }, [activeWeekLabel])
+    return () => { cancelled = true }
+  }, [activeRangeEnd, activeWeekStart, selectedStudentId])
 
   const selectedStudent = useMemo(
     () => students.find((row) => row.student?.id === selectedStudentId)?.student ?? null,
@@ -495,6 +496,7 @@ export default function CoachPlannerPage() {
               <h2 className="font-bold text-apple-gray-900">{t.planner.assignTo}</h2>
               <div className="mt-4 space-y-3">
                 <select
+                  aria-label={t.planner.selectStudent}
                   value={selectedStudentId}
                   onChange={(event) => setSelectedStudentId(event.target.value)}
                   className="apple-input"
@@ -517,7 +519,7 @@ export default function CoachPlannerPage() {
                     {activeWeekRangeLabel}
                   </p>
                   <p className="mt-1 text-xs font-semibold text-apple-gray-500">
-                    weekStart: {activeWeekStart}
+                    週起始日：{activeWeekStart}
                   </p>
                 </div>
                 <p className="text-sm leading-6 text-apple-gray-600">
@@ -683,17 +685,18 @@ export default function CoachPlannerPage() {
                     <tr key={rowIndex} className="border-b border-black/10 last:border-b-0">
                       <td className="bg-white p-4 align-top">
                         <div className="rounded-2xl bg-apple-gray-100 px-3 py-3 font-black text-apple-gray-900">
-                          {row.date}
+                          {activeWeekLabel}
                         </div>
                       </td>
                       {columns.map((column) => (
                         <td key={column.key} className="p-3 align-top">
                           <textarea
+                            aria-label={`${weekdayLabels[column.offset]} ${addDays(activeWeekStart, column.offset)} — ${t.planner.inputPlaceholder}`}
                             value={row[column.key]}
                             onChange={(event) => updateCell(rowIndex, column.key, event.target.value)}
                             placeholder={t.planner.inputPlaceholder}
                             rows={5}
-                            className="min-h-28 w-full resize-none rounded-2xl border border-black/10 bg-white px-3 py-3 leading-6 text-apple-gray-800 outline-none transition focus:border-black/30 focus:shadow-sm"
+                            className="min-h-28 w-full resize-none rounded-2xl border border-black/10 bg-white px-3 py-3 text-base leading-6 text-apple-gray-800 outline-none transition focus:border-black/30 focus:shadow-sm sm:text-sm"
                           />
                         </td>
                       ))}
@@ -754,7 +757,7 @@ export default function CoachPlannerPage() {
                                 <td className="p-3 align-top font-black text-apple-gray-900">{row.date}</td>
                                 {columns.map((column) => (
                                   <td key={column.key} className="p-3 align-top">
-                                    <div className="min-h-24 whitespace-pre-wrap rounded-2xl bg-apple-gray-100 p-3 leading-6 text-apple-gray-700">
+                                    <div translate="no" className="min-h-24 whitespace-pre-wrap rounded-2xl bg-apple-gray-100 p-3 leading-6 text-apple-gray-700">
                                       {row[column.key] || '-'}
                                     </div>
                                   </td>

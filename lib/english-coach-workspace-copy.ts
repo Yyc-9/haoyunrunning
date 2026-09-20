@@ -1,5 +1,14 @@
 // Coach workspace interface and system messages, separate from coach-authored notes.
 export const coachWorkspaceEnglishCopy: Record<string, string> = {
+  '操作失敗，請稍後再試。': 'The action failed. Try again later.',
+  '目前帳號尚未取得教練權限。': 'This account does not have coach access.',
+  '只能查看或派發已綁定學員的課表。': 'You can only view or assign plans for your assigned students.',
+  '請選擇要查看課表的學員。': 'Select a student to view their plan.',
+  '請選擇要派發課表的學員。': 'Select a student to assign their plan.',
+  '請填寫有效週數。': 'Enter a valid training week number.',
+  '請填寫有效的周起始日期。': 'Enter a valid week start date.',
+  '請至少填寫一項訓練內容。': 'Enter at least one workout.',
+  '週起始日：': 'Week starts: ',
   '報名姓名': 'Registrant name',
   '學員身分': 'Student type',
   '新學員': 'New student',
