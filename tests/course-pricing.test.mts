@@ -90,3 +90,18 @@ test('補繳只能選擇最近一堂已結束課次並等待教練核實', () =>
   })
   assert.equal(quote.attendanceVerificationStatus, 'pending')
 })
+
+
+test('新增截止堂次控制會改變實際報價，但舊設定維持第一堂之後插班的行為', () => {
+  const request = { isReturning: false, referrerProvided: false, referrerVerified: false, billingStartSessionDate: '2026-07-13', now: new Date('2026-07-07T04:00:00Z') }
+  const legacy = calculateCourseRegistrationQuote({ ...request, config: billingConfig })
+  assert.equal(legacy.enrollmentTiming, 'late')
+  assert.equal(legacy.amount, 1500)
+  const configured = calculateCourseRegistrationQuote({ ...request, config: { ...billingConfig, regularCutoffConfigured: true } })
+  assert.equal(configured.enrollmentTiming, 'regular')
+  assert.equal(configured.amount, 2000)
+  assert.deepEqual(configured.chargedSessionDates, ['2026-07-13', '2026-07-20', '2026-07-27'])
+  const afterCutoff = calculateCourseRegistrationQuote({ ...request, billingStartSessionDate: '2026-07-20', config: { ...billingConfig, regularCutoffConfigured: true } })
+  assert.equal(afterCutoff.enrollmentTiming, 'late')
+  assert.equal(afterCutoff.amount, 1000)
+})

@@ -7,6 +7,7 @@ export type CourseBillingConfig = {
   referredLateRate: number
   standardLateRate: number
   regularUntilSessionNumber: number
+  regularCutoffConfigured?: boolean
   priceLockHours: number
 }
 
@@ -102,7 +103,7 @@ export function defaultCourseBillingConfig(course: CourseScheduleSource = {}, se
     returningLateRate: 450,
     referredLateRate: 450,
     standardLateRate: 500,
-    regularUntilSessionNumber: 2,
+    regularUntilSessionNumber: 1,
     priceLockHours: 24,
   }
 }
@@ -125,7 +126,9 @@ export function normalizeCourseBillingConfig(value: unknown, fallback: CourseBil
     returningLateRate: positiveInteger(source.returningLateRate, fallback.returningLateRate, 0),
     referredLateRate: positiveInteger(source.referredLateRate, fallback.referredLateRate, 0),
     standardLateRate: positiveInteger(source.standardLateRate, fallback.standardLateRate, 0),
-    regularUntilSessionNumber: positiveInteger(source.regularUntilSessionNumber, fallback.regularUntilSessionNumber, 1, 20),
+    // Legacy rows carried an unused value of 2; their effective cutoff was always 1.
+    regularUntilSessionNumber: source.regularCutoffConfigured === true ? positiveInteger(source.regularUntilSessionNumber, 1, 1, 20) : 1,
+    ...(source.regularCutoffConfigured === true ? { regularCutoffConfigured: true } : {}),
     priceLockHours: positiveInteger(source.priceLockHours, fallback.priceLockHours, 1, 168),
   }
 }
@@ -201,17 +204,17 @@ export function calculateCourseRegistrationQuote(options: {
     throw new Error('過去的課次必須申明已到課補繳。')
   }
 
-  const enrollmentTiming = billingStartIndex === 0 ? 'regular' : 'late'
+  const regularCutoff = config.regularCutoffConfigured === true ? config.regularUntilSessionNumber : 1
+  const enrollmentTiming = billingStartIndex + 1 <= regularCutoff ? 'regular' : 'late'
   const studentType = options.isReturning ? 'returning' : 'new'
   const fullPriceCap = options.isReturning ? config.returningFullPrice : config.newFullPrice
 
   let unitRate: number | null = null
   let amount = fullPriceCap
-  let chargedSessionDates = config.sessionDates
+  const chargedSessionDates = config.sessionDates.slice(billingStartIndex)
   let referrerStatus: CourseRegistrationQuote['referrerStatus'] = 'not_applicable'
 
   if (enrollmentTiming === 'late') {
-    chargedSessionDates = config.sessionDates.slice(billingStartIndex)
     if (options.isReturning) {
       unitRate = config.returningLateRate
     } else if (options.referrerVerified) {

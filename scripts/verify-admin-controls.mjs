@@ -32,7 +32,7 @@ try {
   }
   await must(db.from('course_seasons').insert({ id: seasonId, code: '1999-Q3', name: marker, status: 'draft', is_current: false, starts_on: '2026-09-20', ends_on: '2026-12-31' }))
   await must(db.from('course_season_courses').insert({ id: courseId, season_id: seasonId, course_slug: marker, capacity: 2, course_data: { name: marker, templateSlug: 'zhubei-night-run-monday', active: false }, billing_config: { scheduleReady: false, sessionDates: [] } }))
-  const billing = { scheduleReady: true, sessionDates: ['2026-10-05', '2026-10-12', '2026-10-19'], returningFullPrice: 0, newFullPrice: 0, returningLateRate: 0, referredLateRate: 0, standardLateRate: 0, regularUntilSessionNumber: 1, priceLockHours: 48 }
+  const billing = { scheduleReady: true, sessionDates: ['2026-10-05', '2026-10-12', '2026-10-19'], returningFullPrice: 0, newFullPrice: 0, returningLateRate: 0, referredLateRate: 0, standardLateRate: 0, regularUntilSessionNumber: 1, regularCutoffConfigured: true, priceLockHours: 48 }
   const course = { action: 'save_season_course', seasonId, courseSlug: marker, capacity: 3, value: { name: '驗收隔離新名稱', weekday: '週一', startTime: '19:30', classTime: '19:30', templateSlug: 'zhubei-night-run-monday', active: false, enrollmentNote: '', coachKeys: ['peter'] }, billingConfig: billing }
   await check('student and anonymous cannot modify administrator controls', async () => {
     assert.equal((await api('none', '/api/admin', course)).status, 401)
@@ -106,11 +106,11 @@ try {
           await page.getByRole('button',{name:'內容中心',exact:true}).click();
         }`)
         run('snapshot')
-        run('run-code', `async(page)=>{await page.getByRole('button',{name:/^首頁文案/}).click();}`)
+        run('run-code', `async(page)=>{await page.getByRole('button',{name:'首頁文案 近期報名與課程預覽',exact:true}).click();}`)
         run('snapshot')
         run('run-code', `async(page)=>{await page.getByRole('textbox',{name:'課程預覽標題',exact:true}).fill('驗收未儲存草稿');await page.getByRole('button',{name:/^品牌與聯絡/}).click();}`)
         run('snapshot')
-        run('run-code', `async(page)=>{await page.getByRole('textbox',{name:'品牌標語',exact:true}).fill('隔離預覽標語');await page.getByRole('button',{name:'儲存並發布',exact:true}).click();await page.getByText('隔離前端驗收：未寫入正式內容').waitFor();await page.getByRole('button',{name:/^首頁文案/}).click();}`)
+        run('run-code', `async(page)=>{await page.getByRole('textbox',{name:'品牌標語',exact:true}).fill('隔離預覽標語');await page.getByRole('button',{name:'儲存並發布',exact:true}).click();await page.getByText('隔離前端驗收：未寫入正式內容').waitFor();await page.getByRole('button',{name:'首頁文案 近期報名與課程預覽',exact:true}).click();}`)
         run('snapshot')
         run('run-code', `async(page)=>{
           const field=page.getByRole('textbox',{name:'課程預覽標題',exact:true});

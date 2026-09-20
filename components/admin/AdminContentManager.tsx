@@ -32,7 +32,7 @@ import {
   UsersRound,
 } from 'lucide-react'
 import { useAdminUnsavedChanges } from '@/lib/admin-unsaved-changes'
-import { reconcileAdminDraft } from '@/lib/admin-draft'
+import { reconcileAdminDraft, mergeAdminFields } from '@/lib/admin-draft'
 import { APP_TIME_ZONE_LABEL } from '@/lib/app-time'
 import { supabase } from '@/lib/supabase'
 import { courseSeasonCampaignLabel, courseSeasonStatusLabels, preferredCourseSeasonId, type CourseSeason, type CourseSeasonStatus } from '@/lib/course-seasons'
@@ -585,7 +585,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
       courseSlug: selectedCourse.slug,
       value: draft,
       capacity: draftCapacity,
-      billingConfig: draftBilling,
+      billingConfig: { ...draftBilling, regularCutoffConfigured: true },
     })
     if (!saved) return
     courseSnapshotRef.current = { key: `${selectedSeason.id}:${selectedCourse.slug}`, draft, capacity: draftCapacity, billing: draftBilling }
@@ -674,6 +674,14 @@ export default function AdminContentManager({ content, courses, seasons, scope =
   async function updateSeasonStatus(season: CourseSeason, status: CourseSeasonStatus) {
     await runAction(`season-status-${season.id}`, { action: 'update_course_season_status', seasonId: season.id, status })
   }
+
+  const panelMediaKeys: Partial<Record<ContentMode, (keyof PageMedia)[]>> = {
+    home: ['homeCoursesHero'], schedule: ['coursesHero'], team: ['teamHero'],
+    media: ['shopHero', 'shopTitle', 'shopSubtitle', 'anniversaryHero'],
+    about: ['aboutPageHero', 'aboutStoryHero'], testimonials: ['testimonialsHero', 'testimonialPathHero'],
+  }
+  const mediaForCurrentPanel = () => mergeAdminFields(content.pageMedia, pageMedia, panelMediaKeys[mode] ?? [])
+  const restorePageMedia = () => setPageMedia((current) => mergeAdminFields(current, content.pageMedia, panelMediaKeys[mode] ?? []))
 
   const saveButton = (id: string, section: string, value: unknown, label = '儲存並發布') => (
     <button type="button" onClick={() => runAction(id, { action: 'save_site_content', section, value })} className="apple-button-primary gap-2 px-6 py-3">
@@ -794,7 +802,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                 {([['activitiesLabel','近期報名小標'],['activitiesTitle','近期報名標題'],['activitiesDescription','近期報名說明'],['coursesLabel','課程預覽小標'],['coursesTitle','課程預覽標題'],['coursesDescription','課程預覽說明'],['coursesCtaLabel','課程預覽按鈕']] as const).map(([key,label]) => <Field key={key} label={label} wide={key.endsWith('Description')}><input value={home[key]} onChange={(e)=>setHome((c)=>({...c,[key]:e.target.value}))} className="apple-input" /></Field>)}
               </div>
             </div>
-            <div className="border-t border-black/10 p-5">{actionBar(() => { setHome(content.home); setPageMedia(content.pageMedia) }, multiSaveButton('save-home', [{ section: 'home_content', value: home }, { section: 'page_media', value: pageMedia }]))}</div>
+            <div className="border-t border-black/10 p-5">{actionBar(() => { setHome(content.home); restorePageMedia() }, multiSaveButton('save-home', [{ section: 'home_content', value: home }, { section: 'page_media', value: mediaForCurrentPanel() }]))}</div>
           </div>
         ) : null}
 
@@ -841,7 +849,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                 </div>
               </div>
             </div>
-            <div className="border-t border-black/10 p-5">{actionBar(() => { setCoursesPage(content.coursesPage); setPageMedia(content.pageMedia) }, multiSaveButton('save-schedule', [{ section: 'courses_page_content', value: coursesPage }, { section: 'page_media', value: pageMedia }]))}</div>
+            <div className="border-t border-black/10 p-5">{actionBar(() => { setCoursesPage(content.coursesPage); restorePageMedia() }, multiSaveButton('save-schedule', [{ section: 'courses_page_content', value: coursesPage }, { section: 'page_media', value: mediaForCurrentPanel() }]))}</div>
           </div>
         ) : null}
 
@@ -870,7 +878,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                   <Field label="名單標題"><input value={team.rosterTitle} onChange={(event) => setTeam((current) => ({ ...current, rosterTitle: event.target.value }))} className="apple-input" /></Field>
                 </div>
               </div>
-              <div className="border-t border-black/10 p-5">{actionBar(() => { setTeam(content.team); setPageMedia(content.pageMedia) }, multiSaveButton('save-team', [{ section: 'team_content', value: team }, { section: 'page_media', value: pageMedia }]))}</div>
+              <div className="border-t border-black/10 p-5">{actionBar(() => { setTeam(content.team); restorePageMedia() }, multiSaveButton('save-team', [{ section: 'team_content', value: team }, { section: 'page_media', value: mediaForCurrentPanel() }]))}</div>
             </div>
 
             <div id="admin-coach-photos" className="scroll-mt-28 overflow-hidden rounded-lg border border-black/10 bg-white">
@@ -982,7 +990,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
               </div>
             </div>
             <div className="border-t border-black/10 p-5">
-              {actionBar(() => setPageMedia(content.pageMedia), saveButton('save-media', 'page_media', pageMedia))}
+              {actionBar(() => restorePageMedia(), saveButton('save-media', 'page_media', mediaForCurrentPanel()))}
             </div>
           </div>
         ) : null}
@@ -1034,7 +1042,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                 </div>
               </section>
             </div>
-            <div className="border-t border-black/10 p-5">{actionBar(() => { setAbout(content.about); setPageMedia(content.pageMedia) }, multiSaveButton('save-about', [{ section: 'about_content', value: about }, { section: 'page_media', value: pageMedia }]))}</div>
+            <div className="border-t border-black/10 p-5">{actionBar(() => { setAbout(content.about); restorePageMedia() }, multiSaveButton('save-about', [{ section: 'about_content', value: about }, { section: 'page_media', value: mediaForCurrentPanel() }]))}</div>
           </div>
         ) : null}
 
@@ -1089,7 +1097,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
               </div>
             </div>
             </div>
-            <div className="border-t border-black/10 p-5">{actionBar(() => { setTestimonials(content.testimonials); setPageMedia(content.pageMedia) }, multiSaveButton('save-testimonials', [{ section: 'testimonials_content', value: testimonials }, { section: 'page_media', value: pageMedia }]))}</div>
+            <div className="border-t border-black/10 p-5">{actionBar(() => { setTestimonials(content.testimonials); restorePageMedia() }, multiSaveButton('save-testimonials', [{ section: 'testimonials_content', value: testimonials }, { section: 'page_media', value: mediaForCurrentPanel() }]))}</div>
           </div>
         ) : null}
 

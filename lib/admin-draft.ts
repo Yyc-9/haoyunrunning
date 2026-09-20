@@ -12,3 +12,10 @@ export function reconcileAdminDraft<T>(current: T, previous: T, incoming: T): T 
   }
   return current
 }
+
+/** A panel may publish or restore only the shared settings that it owns. */
+export function mergeAdminFields<T extends object>(base: T, source: T, keys: readonly (keyof T)[]): T {
+  const result = { ...base }
+  for (const key of keys) result[key] = source[key]
+  return result
+}
