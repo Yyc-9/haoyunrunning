@@ -138,7 +138,9 @@ export default function CoachDashboardClient() {
             <div className="min-w-0">
               <p className="text-xs font-bold text-apple-blue sm:text-sm">教練工作台</p>
               <h1 className="mt-1 truncate text-2xl font-black text-black sm:text-4xl">{greeting}{language === 'en' ? ', ' : '，'}{coachName}</h1>
-              <p className="mt-2 hidden text-sm leading-6 text-apple-gray-600 sm:block">今天有 {students.length} 位名下學員，{pendingSignups} 項團練報名待跟進。</p>
+              <p className="mt-2 hidden text-sm leading-6 text-apple-gray-600 sm:block">{language === 'en'
+                ? `Today you have ${students.length} assigned students and ${pendingSignups} group training registrations to follow up.`
+                : `今天有 ${students.length} 位名下學員，${pendingSignups} 項團練報名待跟進。`}</p>
             </div>
           </header>
 
