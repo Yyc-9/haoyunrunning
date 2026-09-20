@@ -1,0 +1,11 @@
+@media (max-width: 767px) {
+  .card .body {
+    display: block;
+  }
+
+  .card .qr {
+    width: 76px;
+    height: 76px;
+    margin: 0 auto 14px;
+  }
+}
