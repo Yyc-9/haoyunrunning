@@ -122,7 +122,7 @@ async function loadDutyCourses(options: { includeHistorical?: boolean } = {}): P
         const id = season.courseOfferingIds[course.slug]
         const billing = season.courseBillingConfigs[course.slug]
         const override = season.courseOverrides[course.slug]
-        if (!id || !billing?.sessionDates?.length) return []
+        if (!id) return []
         return [{
           seasonId: season.id,
           seasonName: season.name,
@@ -131,7 +131,7 @@ async function loadDutyCourses(options: { includeHistorical?: boolean } = {}): P
           courseName: course.name,
           weekday: course.weekday,
           location: course.location,
-          sessionDates: billing.sessionDates,
+          sessionDates: billing?.sessionDates ?? [],
           startTime: override?.startTime || '',
           timeZone: COACH_DUTY_TIME_ZONE,
           coachKeys: override?.coachKeys ?? getDefaultCourseCoachKeys(course.slug),

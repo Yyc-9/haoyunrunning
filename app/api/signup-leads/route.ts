@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendEnrollmentApprovedEmail } from '@/lib/email'
-import { getDefaultCourseCoachKeys } from '@/lib/coach-profiles'
-import { getCourseSeasons } from '@/lib/course-seasons-server'
-import { applyCourseOverrides } from '@/lib/managed-courses'
+import { getCoachApprovedEnrollments } from '@/lib/coach-enrollments-server'
+import { coachRegistrationFields } from '@/lib/coach-registration'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { isPaymentOrderStatus } from '@/lib/payment'
 import { transitionRemittanceStatus } from '@/lib/payment-workflow'
@@ -55,6 +54,7 @@ function safeCoachLead(row: Record<string, unknown>) {
     created_at: cleanText(row.created_at),
     emergency_contact_name: payloadText(row.payload, 'emergencyContactName'),
     emergency_contact_phone: payloadText(row.payload, 'emergencyContactPhone'),
+    registration_fields: coachRegistrationFields(row),
   }
 }
 
@@ -95,31 +95,6 @@ async function getAuthorizedProfile(request: NextRequest) {
   return { profile }
 }
 
-async function getCoachCourseAccess(profileId: string) {
-  const [{ data: publicProfile, error: profileError }, seasons] = await Promise.all([
-    supabaseAdmin!
-      .from('coach_public_profiles')
-      .select('coach_key')
-      .eq('owner_profile_id', profileId)
-      .maybeSingle(),
-    getCourseSeasons({ includeRegistrationStats: false }),
-  ])
-  if (profileError) throw new Error(profileError.message)
-
-  const offeringIds = new Set<string>()
-  const seasonCourseKeys = new Set<string>()
-  for (const season of seasons.filter((item) => item.isCurrent || ['enrolling', 'active'].includes(item.status))) {
-    for (const course of applyCourseOverrides(season.courseOverrides)) {
-      const coachKeys = season.courseOverrides[course.slug]?.coachKeys ?? getDefaultCourseCoachKeys(course.slug)
-      if (!publicProfile?.coach_key || !coachKeys.includes(publicProfile.coach_key)) continue
-      const offeringId = season.courseOfferingIds[course.slug]
-      if (offeringId) offeringIds.add(offeringId)
-      seasonCourseKeys.add(`${season.id}:${course.slug}`)
-    }
-  }
-  return { offeringIds, seasonCourseKeys }
-}
-
 export async function GET(request: NextRequest) {
   const auth = await getAuthorizedProfile(request)
   if (auth.error) return auth.error
@@ -138,6 +113,16 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const source = cleanText(searchParams.get('source'))
   const status = cleanText(searchParams.get('status'))
+  if (auth.profile.role === 'coach') {
+    try {
+      const rows = await getCoachApprovedEnrollments(auth.profile.id)
+      const visible = rows.filter(row => (!source || source === row.source) && (!status || status === row.status))
+      return NextResponse.json({ leads: visible.map(safeCoachLead) }, { headers: { 'Cache-Control': 'no-store' } })
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : '讀取教練課程權限失敗。' }, { status: 500 })
+    }
+  }
+
 
   let query = supabaseAdmin!
     .from('signup_leads')
@@ -159,22 +144,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  let visibleRows = (data ?? []) as Array<Record<string, unknown>>
-  if (auth.profile.role === 'coach') {
-    try {
-      const access = await getCoachCourseAccess(auth.profile.id)
-      visibleRows = visibleRows.filter((row) => {
-        if (row.source !== 'course_payment') return true
-        const offeringId = cleanText(row.course_season_course_id)
-        const seasonCourseKey = `${cleanText(row.season_id)}:${cleanText(row.course_slug)}`
-        return access.offeringIds.has(offeringId) || access.seasonCourseKeys.has(seasonCourseKey)
-      })
-    } catch (accessError) {
-      return NextResponse.json({ error: accessError instanceof Error ? accessError.message : '讀取教練課程權限失敗。' }, { status: 500 })
-    }
-  }
-
-  return NextResponse.json({ leads: visibleRows.map(safeCoachLead) })
+  return NextResponse.json({ leads: (data ?? []).map(safeCoachLead) }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 export async function POST(request: NextRequest) {
@@ -371,6 +341,10 @@ export async function PATCH(request: NextRequest) {
     const updated = { ...existing, status, ...(typeof body.notes === 'string' ? { notes } : {}) }
     await updateIsolatedTestState(testAccount, (state) => ({ ...state, signupLeads: current.map((lead) => lead.id === id ? updated : lead) }))
     return NextResponse.json({ lead: updated, emailMessage: '', isolatedTest: true })
+  }
+
+  if (auth.profile.role !== 'admin') {
+    return NextResponse.json({ error: '報名確認請由管理員或財務在後台處理。' }, { status: 403 })
   }
 
   const { data: existingLead, error: existingLeadError } = await supabaseAdmin!

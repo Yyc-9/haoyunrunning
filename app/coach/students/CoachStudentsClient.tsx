@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CalendarDays, Mail, MessageSquareText, Search, UsersRound } from 'lucide-react'
 import CoachSubNav from '@/components/CoachSubNav'
+import CoachRegistrationDetails from '@/components/coach/CoachRegistrationDetails'
+import type { RegistrationField } from '@/lib/coach-registration'
 import { supabase } from '@/lib/supabase'
 import { getStudentDisplayEmail, getStudentDisplayName, hasStudentName } from '@/lib/student-display'
 
@@ -30,6 +32,7 @@ type BoundStudentRow = {
     pb: string | null
   } | null
   recentFeedback?: RecentFeedback[]
+  enrollments?: { id: string; courseName: string; fields: RegistrationField[] }[]
 }
 
 async function fetchCoachStudents() {
@@ -121,7 +124,7 @@ export default function CoachStudentsClient() {
               </p>
               <h1 className="text-3xl font-black text-apple-gray-900 sm:text-5xl">學員列表</h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-apple-gray-600 sm:text-base sm:leading-7">
-                綁定完成後，這裡會顯示目前由你負責的學員與最近回饋。
+                課程確認入帳後，這裡會顯示由你負責且已建立帳號的學員、完整報名資料與最近回饋。
               </p>
             </div>
 
@@ -179,6 +182,13 @@ export default function CoachStudentsClient() {
                         </div>
                       ))}
                     </div>
+
+                    {row.enrollments?.map(enrollment => (
+                      <section key={enrollment.id} className="mt-4">
+                        <h3 className="text-sm font-bold">{enrollment.courseName}</h3>
+                        <CoachRegistrationDetails fields={enrollment.fields} />
+                      </section>
+                    ))}
 
                     <div id={`feedback-${student.id}`} className="mt-5 rounded-2xl bg-apple-gray-100 p-4">
                       <div className="mb-3 flex items-center gap-2 text-sm font-bold text-apple-gray-900">

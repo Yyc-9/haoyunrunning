@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Download, Filter, Inbox, Phone, Search } from 'lucide-react'
 import CoachSubNav from '@/components/CoachSubNav'
+import CoachRegistrationDetails from '@/components/coach/CoachRegistrationDetails'
+import type { RegistrationField } from '@/lib/coach-registration'
 import { paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
 import { supabase } from '@/lib/supabase'
+import { rosterCsv } from '@/lib/enrollment-export'
 
 type SignupLead = {
   id: string
@@ -22,6 +25,7 @@ type SignupLead = {
   created_at: string
   emergency_contact_name: string
   emergency_contact_phone: string
+  registration_fields?: RegistrationField[]
 }
 
 const sourceLabels: Record<SignupLead['source'], string> = {
@@ -46,11 +50,6 @@ function formatDate(value: string) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value))
-}
-
-function csvEscape(value: string | number | null | undefined) {
-  const text = String(value ?? '')
-  return `"${text.replaceAll('"', '""')}"`
 }
 
 async function getAccessToken() {
@@ -117,7 +116,7 @@ async function updateLeadStatus(id: string, status: SignupLead['status'], review
 
 export default function CoachSignupsClient() {
   const [leads, setLeads] = useState<SignupLead[]>([])
-  const [source, setSource] = useState<'all' | SignupLead['source']>('group_class')
+  const [source, setSource] = useState<'all' | SignupLead['source']>('course_payment')
   const [status, setStatus] = useState<'all' | SignupLead['status']>('all')
   const [query, setQuery] = useState('')
   const [isLoading, setIsLoading] = useState(true)
@@ -170,6 +169,7 @@ export default function CoachSignupsClient() {
         lead.notes,
         lead.emergency_contact_name,
         lead.emergency_contact_phone,
+        ...(lead.registration_fields ?? []).map(field => field.value),
       ]
         .filter(Boolean)
         .some((value) => value.toLowerCase().includes(text))
@@ -237,11 +237,12 @@ export default function CoachSignupsClient() {
       lead.created_at,
     ])
 
-    const csv = [headers, ...rows]
-      .map((row) => row.map(csvEscape).join(','))
-      .join('\n')
-
-    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' })
+    const extraFields = [...new Set(filteredLeads.flatMap(lead => (lead.registration_fields ?? []).map(field => field.label)))].filter(label => !headers.includes(label))
+    const csv = rosterCsv([...headers, ...extraFields], rows.map((row, index) => {
+      const values = new Map(filteredLeads[index].registration_fields?.map(field => [field.label, field.value]) ?? [])
+      return [...row, ...extraFields.map(label => values.get(label) ?? '')]
+    }))
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
@@ -261,9 +262,9 @@ export default function CoachSignupsClient() {
               <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">
                 報名名單
               </p>
-              <h1 className="text-3xl font-black text-apple-gray-900 sm:text-5xl">團練報名看板</h1>
+              <h1 className="text-3xl font-black text-apple-gray-900 sm:text-5xl">課程報名資料</h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-apple-gray-600 sm:text-base sm:leading-7">
-                優先查看團練報名，也可查看指派班級的報名與緊急聯絡資料。課程匯款核對統一由管理員處理。
+                查看負責課程已確認入帳的完整報名資料。匯款由超級管理員或財務核對；尚未建立帳號的報名者也會列在這裡。
               </p>
             </div>
 
@@ -346,7 +347,7 @@ export default function CoachSignupsClient() {
               <div className="apple-card p-10 text-center">
                 <Inbox className="mx-auto h-10 w-10 text-apple-gray-400" />
                 <p className="mt-4 text-lg font-bold text-apple-gray-900">還沒有符合條件的資料</p>
-                <p className="mt-2 text-sm text-apple-gray-600">表單提交後會出現在這裡。</p>
+                <p className="mt-2 text-sm text-apple-gray-600">負責課程的報名經後台確認入帳後會出現在這裡。</p>
               </div>
             ) : (
               <div className="grid gap-4">
@@ -406,6 +407,7 @@ export default function CoachSignupsClient() {
                       </div>
                     ) : null}
 
+                    <CoachRegistrationDetails fields={lead.registration_fields} />
                     <div className="mt-5 grid gap-3 md:grid-cols-2">
                       {[
                         ...(lead.source === 'course_payment' ? [] : [['想報名', lead.preferred_course || lead.companion_count]]),
