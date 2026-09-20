@@ -15,6 +15,7 @@ import { toSimplifiedWebsiteText } from '@/lib/traditional-chinese'
 
 type SiteContentContextValue = SiteContent & {
   courses: ManagedCourse[]
+  sourceCourses: ManagedCourse[]
   isLoading: boolean
   hasSyncedContent: boolean
 }
@@ -105,12 +106,16 @@ export function SiteContentProvider({ children, initialContent = null }: { child
       return value
     }
     const localizedContent = localize(content)
+    // Resolve defaults, eligibility and ordering before translating display copy.
+    const sourceCourses = applyCourseOverrides(content.courseOverrides, {
+      coachProfiles: content.coachProfiles,
+      onlyConfigured: hasSyncedContent,
+    })
     return {
       ...localizedContent,
-      courses: applyCourseOverrides(localizedContent.courseOverrides, {
-        coachProfiles: localizedContent.coachProfiles,
-        onlyConfigured: hasSyncedContent,
-      }),
+      // Filters and grouping use the original values, independent of display language.
+      sourceCourses,
+      courses: localize(sourceCourses),
       isLoading,
       hasSyncedContent,
     }

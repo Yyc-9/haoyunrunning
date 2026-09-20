@@ -27,7 +27,7 @@ const locationOrder = [
 ] as const
 
 export function normalizeWeekday(value: string) {
-  return value.trim().replaceAll('周', '週')
+  return value.trim().replace(/^(?:星期|周|週)([一二三四五六日天])$/, (_match, day: string) => `週${day === '天' ? '日' : day}`)
 }
 
 export function normalizeCourseLocation(value: string) {

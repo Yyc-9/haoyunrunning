@@ -16,7 +16,8 @@ const contentOnly = process.env.LANGUAGE_ADMIN_CONTENT === '1'
 const actionOnly = process.env.LANGUAGE_ADMIN_ACTIONS === '1'
 const accountOnly = process.env.LANGUAGE_ADMIN_ACCOUNTS === '1'
 const mediaOnly = process.env.LANGUAGE_ADMIN_MEDIA === '1'
-const output = mediaOnly ? '/private/tmp/haoyun-english-admin-media' : accountOnly ? '/private/tmp/haoyun-english-admin-accounts' : actionOnly ? '/private/tmp/haoyun-english-admin-actions' : contentOnly ? '/private/tmp/haoyun-english-admin-content' : productOnly ? '/private/tmp/haoyun-english-admin-products' : '/private/tmp/haoyun-english-admin'
+const workspaceOnly = process.env.LANGUAGE_ADMIN_WORKSPACE === '1'
+const output = workspaceOnly ? '/private/tmp/haoyun-english-admin-workspace' : mediaOnly ? '/private/tmp/haoyun-english-admin-media' : accountOnly ? '/private/tmp/haoyun-english-admin-accounts' : actionOnly ? '/private/tmp/haoyun-english-admin-actions' : contentOnly ? '/private/tmp/haoyun-english-admin-content' : productOnly ? '/private/tmp/haoyun-english-admin-products' : '/private/tmp/haoyun-english-admin'
 await mkdir(output, { recursive: true })
 const id = '1ed770c5-3666-4f30-bae1-1f6e08bcd9d4', now = new Date().toISOString(), slug = 'zhubei-night-run-monday'
 const course = { slug, name: '竹北夜跑班', weekday: '星期一', location: '竹北', period: '2026 Q4', classTime: '19:00–20:30', meetingPoint: 'QA Park', feeNote: '', campaignLabel: '2026 Q4', slogan: '', targetAudience: '', focus: '', benefits: [], trainingItems: [], suitableFor: [], enrollmentNote: '', signupUrl: '', coachKeys: ['qa-coach'] }
@@ -56,7 +57,11 @@ async function open(width) {
     if (url.pathname === '/api/account/me') return reply({ profile: { ...user, name: 'Admin QA', role: 'admin' } })
     if (url.pathname === '/api/notifications') return reply({ staff: true, unreadCount: 0, items: [] })
     if (url.pathname === '/api/admin') {
-      if (method === 'GET') return reply(data)
+      if (method === 'GET') {
+        if (data.qaAdminReadGate) await new Promise(resolve => { data.qaAdminRelease = resolve })
+        if (data.qaAdminReadError) return reply({ error: data.qaAdminReadError.message }, data.qaAdminReadError.status)
+        return reply(data)
+      }
       const body = req.postDataJSON()
       if (accountOnly) {
         assert.ok(data.qaAccountResponse, 'Account actions require an explicit mocked response')
@@ -85,6 +90,7 @@ async function open(width) {
     if (url.pathname === '/api/admin/google-sheets-script') return data.qaScriptError ? reply({ error: data.qaScriptError }, 403) : reply({ script: '// Synthetic preview only\nfunction setupGoodLuckRosterSync() {}' })
     if (url.pathname === '/api/admin/upload') { assert.equal(method, 'POST'); if (data.qaVideoFailure) return reply({ error: typeof data.qaVideoFailure === 'string' ? data.qaVideoFailure : '無法建立影片上傳憑證。' }, 503); assert.match(req.headers()['content-type'], /multipart\/form-data/); if (data.qaImageFailure) return reply({ error: typeof data.qaImageFailure === 'string' ? data.qaImageFailure : '圖片上傳失敗。' }, 503); return reply({ url: '/goodluck-running-vest-black.jpg' }) }
     if (url.pathname === '/api/admin/coach-duty') {
+      if (workspaceOnly) { assert.equal(method, 'GET'); return reply({ items: [], coaches: [], audits: [], acceptanceTest: null }) }
       if (accountOnly) {
         data.qaDutyItems ??= [structuredClone(duty)]
         if (method === 'PATCH') {
@@ -192,6 +198,7 @@ try {
     const { ctx, page, data } = await open(width)
     await page.goto(base + '/admin')
     await page.getByRole('heading', { name: 'Season overview', exact: true }).waitFor()
+    if (workspaceOnly) { const { adminWorkspaceChecks } = await import('./audit-english-admin-workspace.mjs'); await adminWorkspaceChecks({ page, width, data, record }); await ctx.close(); continue }
     if (mediaOnly) { await adminMediaActions({ page, width, data, record }); await ctx.close(); continue }
     if (accountOnly) { await adminAccountActions({ page, width, data, record, base }); await ctx.close(); continue }
     if (actionOnly) { await adminSeasonActions({ page, width, data, record }); await ctx.close(); continue }

@@ -8,6 +8,7 @@ import { useAuth } from '@/app/providers'
 import { useLanguage } from '@/app/language-context'
 import { notificationFetch, refreshNotifications } from '@/lib/notification-client'
 import { notificationHref, type NotificationFeed } from '@/lib/enrollment-notification-policy'
+import { localizeWebsiteValue } from '@/lib/english-website'
 
 export default function NotificationBell({ mobile = false }: { mobile?: boolean }) {
   const { language } = useLanguage()
@@ -60,7 +61,7 @@ export default function NotificationBell({ mobile = false }: { mobile?: boolean 
   if (!user || user.testAccount) return null
   const count = feed?.unreadCount ?? 0
   return <>
-    <button ref={trigger} type="button" onClick={() => setOpen(true)} aria-label={error ? '通知暫時無法讀取，點擊重試' : `通知，${count} 則未讀`} aria-haspopup="dialog" className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-sm hover:bg-apple-gray-100">
+    <button ref={trigger} type="button" onClick={() => setOpen(true)} aria-label={localizeWebsiteValue(error ? '通知暫時無法讀取，點擊重試' : `通知，${count} 則未讀`, language)} aria-haspopup="dialog" className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-sm hover:bg-apple-gray-100">
       <Bell className="h-5 w-5" />{count > 0 ? <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-600 px-1 text-[10px] font-black leading-5 text-white">{count > 99 ? '99+' : count}</span> : error ? <span className="absolute right-0 top-0 rounded-full bg-amber-100 px-1.5 text-xs text-amber-800">!</span> : null}
     </button>
     {mounted && createPortal(<dialog ref={dialog} onCancel={close} onClose={close} aria-label="報名通知" style={{ width: 'min(28rem, calc(100% - 2rem))' }} className="m-auto max-h-[85dvh] overflow-y-auto rounded-2xl border border-black/10 bg-white p-0 text-black shadow-2xl backdrop:bg-black/30">

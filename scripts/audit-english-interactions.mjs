@@ -8,7 +8,8 @@ if (!process.env.LANGUAGE_CONTENT_FILE || !process.env.LANGUAGE_AUTH_STORAGE_KEY
 const { content } = JSON.parse(await readFile(process.env.LANGUAGE_CONTENT_FILE, 'utf8'))
 const actionOnly = process.env.LANGUAGE_ENROLLMENT_ACTIONS === '1'
 const legacyOnly = process.env.LANGUAGE_LEGACY_ENROLLMENT === '1'
-const output = legacyOnly ? '/private/tmp/haoyun-english-legacy-enrollment' : actionOnly ? '/private/tmp/haoyun-english-enrollment-actions' : '/private/tmp/haoyun-english-interactions'
+const coursesOnly = process.env.LANGUAGE_PUBLIC_COURSES === '1'
+const output = coursesOnly ? '/private/tmp/haoyun-english-public-courses' : legacyOnly ? '/private/tmp/haoyun-english-legacy-enrollment' : actionOnly ? '/private/tmp/haoyun-english-enrollment-actions' : '/private/tmp/haoyun-english-interactions'
 await mkdir(output, { recursive: true })
 const records = [], errors = [], contexts = []
 const id = '1ed770c5-3666-4f30-bae1-1f6e08bcd9d4', nid = '2ed770c5-3666-4f30-bae1-1f6e08bcd9d4'
@@ -97,7 +98,10 @@ async function record(page, name) {
   console.log(`${name}: ${result.missing.length} untranslated strings; overflow=${result.overflow}`)
 }
 try {
-  if (legacyOnly) {
+  if (coursesOnly) {
+    const { auditPublicCourses } = await import('./audit-english-public-courses.mjs')
+    await auditPublicCourses({ account, record, base, output })
+  } else if (legacyOnly) {
     const { auditLegacyEnrollment } = await import('./audit-english-legacy-enrollment.mjs')
     await auditLegacyEnrollment({ account, record, scenario, base, output })
   } else if (actionOnly) {

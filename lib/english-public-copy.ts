@@ -1,6 +1,11 @@
 // Complete English copy for published public content and its visible UI fragments.
 // Keep source sentences intact: short dictionary words are not translation rules.
 export const publicEnglishCopy: Record<string, string> = {
+  '快速預覽': 'Quick preview',
+  '關閉課程預覽': 'Close class preview',
+  '查看課程詳情': 'View class details',
+  '暫無符合篩選條件的課程': 'No classes match your filters',
+  '試試其他城市或程度，或清除篩選查看所有班級。': 'Try another city or level, or clear the filters to see all classes.',
   '登入嘗試太頻繁，請稍後再試。': 'Too many sign-in attempts. Try again later.',
   '登入服務暫時無法完成驗證，請稍後再試。': 'The sign-in service cannot verify your account right now. Try again later.',
   '請填寫信箱和密碼。': 'Enter your email address and password.',

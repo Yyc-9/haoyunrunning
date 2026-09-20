@@ -5,8 +5,9 @@ import Link from 'next/link'
 import { ArrowUpRight, Clock3, MapPin } from 'lucide-react'
 import { useLanguage } from '@/app/language-context'
 import { useSiteContent } from '@/app/site-content-provider'
-import { compareCourses, courseMatchesCity, displayCourseCityFilter, displayCourseLocation, displayCourseTime, getCourseCityOptions, orderedWeekdays } from '@/lib/course-sort'
+import { compareCourses, courseMatchesCity, displayCourseCityFilter, displayCourseLocation, displayCourseTime, getCourseCityOptions, normalizeWeekday, orderedWeekdays } from '@/lib/course-sort'
 import { formatCourseWeekday } from '@/lib/course-weekday'
+import { toEnglishWebsiteText } from '@/lib/english-website'
 
 const weekdays = orderedWeekdays
 
@@ -38,7 +39,7 @@ function getCourseTone(level: Exclude<LevelFilter, 'all'>) {
 
 export default function CoursesTable() {
   const { language } = useLanguage()
-  const { courses } = useSiteContent()
+  const { sourceCourses: courses } = useSiteContent()
   const [levelFilter, setLevelFilter] = useState<LevelFilter>('all')
   const [cityFilter, setCityFilter] = useState('all')
 
@@ -73,7 +74,7 @@ export default function CoursesTable() {
     }
   }, [cityFilter, levelFilter])
 
-  const localeText = (text: string) => language === 'zh-CN' ? text.replaceAll('週', '周') : text.replaceAll('周', '週')
+  const localeText = (text: string) => language === 'en' ? toEnglishWebsiteText(text) : language === 'zh-CN' ? text.replaceAll('週', '周') : text.replaceAll('周', '週')
   const weekdayText = (text: string) => formatCourseWeekday(localeText(text), language)
   const cities = useMemo(() => getCourseCityOptions(courses.map((course) => course.location)), [courses])
   const filteredCourses = useMemo(() => courses.filter((course) => {
@@ -127,7 +128,7 @@ export default function CoursesTable() {
 
       <div className="space-y-3 md:hidden">
         {weekdays.map((weekday) => {
-          const weekdayCourses = filteredCourses.filter((course) => course.weekday.replace('周', '週') === weekday)
+          const weekdayCourses = filteredCourses.filter((course) => normalizeWeekday(course.weekday) === weekday)
           if (!weekdayCourses.length) return null
 
           return (
@@ -168,7 +169,7 @@ export default function CoursesTable() {
 
           <div className="grid grid-cols-7">
             {weekdays.map((weekday) => {
-              const weekdayCourses = filteredCourses.filter((course) => course.weekday.replace('周', '週') === weekday)
+              const weekdayCourses = filteredCourses.filter((course) => normalizeWeekday(course.weekday) === weekday)
               return (
                 <div key={weekday} className="min-h-40 border-r border-black/10 bg-white p-2 last:border-r-0">
                   <div className="space-y-2">
