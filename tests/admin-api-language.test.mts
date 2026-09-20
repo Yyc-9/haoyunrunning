@@ -9,8 +9,9 @@ registerHooks({ resolve(specifier, context, next) {
   return specifier.startsWith('@/') ? next(new URL('../' + specifier.slice(2) + '.ts', import.meta.url).href, context) : next(specifier, context)
 } })
 const { toEnglishWebsiteText } = await import('../lib/english-website.ts')
+const { validatePaymentDisplay } = await import('../lib/payment-display.ts')
 
-for (const file of ['app/api/admin/route.ts', 'app/api/admin/coach-duty/route.ts', 'app/api/signup-leads/route.ts']) {
+for (const file of ['app/api/admin/route.ts', 'app/api/admin/coach-duty/route.ts', 'app/api/admin/payment-info/route.ts', 'app/api/signup-leads/route.ts']) {
   test(`${file}: fixed Chinese response text has complete English coverage`, async () => {
     const ast = ts.createSourceFile(file, await readFile(new URL('../' + file, import.meta.url), 'utf8'), ts.ScriptTarget.Latest, true)
     const missing: string[] = []
@@ -37,4 +38,22 @@ test('generated season, course-copy and product action messages preserve names a
   assert.equal(toEnglishWebsiteText('還有 1 門對外課程未完成實際收費課次，不能切換前台招生。'), '1 public course has incomplete billable sessions. Public enrollment cannot switch yet.')
   assert.equal(toEnglishWebsiteText('商品「QA Shirt」已刪除；既有訂單記錄與刪除紀錄仍會保留。'), 'QA Shirt deleted. Existing orders and the deletion history are retained.')
   assert.equal(toEnglishWebsiteText('自訂名稱與學生原文不應改寫'), '自訂名稱與學生原文不應改寫')
+})
+
+test('payment display validation errors translate while bank codes and account numbers remain intact', () => {
+  const valid = { bankName: 'QA Bank', bankCode: '007', accountNumber: '000012345678', qrCodeUrl: '' }
+  assert.deepEqual(validatePaymentDisplay(valid), { ...valid, useLegacyQr: false })
+  for (const input of [
+    { ...valid, bankCode: '7' },
+    { ...valid, qrCodeUrl: 'http://example.invalid/qr.png' },
+    { ...valid, qrCodeUrl: 'https://user:pass@example.invalid/qr.png' },
+    { ...valid, useLegacyQr: true },
+  ]) {
+    assert.throws(() => validatePaymentDisplay(input), (error: unknown) => {
+      assert.ok(error instanceof Error)
+      assert.match(error.message, /[\u3400-\u9fff]/u)
+      assert.doesNotMatch(toEnglishWebsiteText(error.message), /[\u3400-\u9fff]/u)
+      return true
+    })
+  }
 })

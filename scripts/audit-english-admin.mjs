@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { defaultShopProducts } from '../lib/shop-products.ts'
 import { applyContentAction, contentChecks, prepareContentFixture } from './audit-english-content-flows.mjs'
 import { adminSeasonActions, applyAdminSeasonAction } from './audit-english-admin-season-actions.mjs'
+import { adminAccountActions, applyAdminAccountAction, prepareAccountFixture } from './audit-english-admin-account-actions.mjs'
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const base = process.env.LANGUAGE_AUDIT_ORIGIN || 'http://127.0.0.1:3202'
 if (!/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(base)) throw Error('Local preview required')
@@ -12,7 +13,8 @@ const { content } = JSON.parse(await readFile(process.env.LANGUAGE_CONTENT_FILE,
 const productOnly = process.env.LANGUAGE_ADMIN_PRODUCTS === '1'
 const contentOnly = process.env.LANGUAGE_ADMIN_CONTENT === '1'
 const actionOnly = process.env.LANGUAGE_ADMIN_ACTIONS === '1'
-const output = actionOnly ? '/private/tmp/haoyun-english-admin-actions' : contentOnly ? '/private/tmp/haoyun-english-admin-content' : productOnly ? '/private/tmp/haoyun-english-admin-products' : '/private/tmp/haoyun-english-admin'
+const accountOnly = process.env.LANGUAGE_ADMIN_ACCOUNTS === '1'
+const output = accountOnly ? '/private/tmp/haoyun-english-admin-accounts' : actionOnly ? '/private/tmp/haoyun-english-admin-actions' : contentOnly ? '/private/tmp/haoyun-english-admin-content' : productOnly ? '/private/tmp/haoyun-english-admin-products' : '/private/tmp/haoyun-english-admin'
 await mkdir(output, { recursive: true })
 const id = '1ed770c5-3666-4f30-bae1-1f6e08bcd9d4', now = new Date().toISOString(), slug = 'zhubei-night-run-monday'
 const course = { slug, name: '竹北夜跑班', weekday: '星期一', location: '竹北', period: '2026 Q4', classTime: '19:00–20:30', meetingPoint: 'QA Park', feeNote: '', campaignLabel: '2026 Q4', slogan: '', targetAudience: '', focus: '', benefits: [], trainingItems: [], suitableFor: [], enrollmentNote: '', signupUrl: '', coachKeys: ['qa-coach'] }
@@ -23,6 +25,7 @@ const records = [], errors = [], unexpected = [], writes = []
 const browser = await chromium.launch({ channel: 'chrome', headless: true })
 async function open(width) {
   const data = structuredClone(payload)
+  if (accountOnly) prepareAccountFixture(data)
   if (contentOnly || actionOnly) prepareContentFixture(data)
   if (productOnly) {
     data.products = structuredClone(defaultShopProducts)
@@ -53,6 +56,12 @@ async function open(width) {
     if (url.pathname === '/api/admin') {
       if (method === 'GET') return reply(data)
       const body = req.postDataJSON()
+      if (accountOnly) {
+        assert.ok(data.qaAccountResponse, 'Account actions require an explicit mocked response')
+        data.qaAccountSubmission = body
+        if (!data.qaAccountResponse.error) applyAdminAccountAction(data, body)
+        return reply(data.qaAccountResponse, data.qaAccountResponse.error ? 409 : 200)
+      }
       if (actionOnly) {
         const response = data.qaActionResponse
         assert.ok(response, 'Every simulated administrator action must have an explicit response')
@@ -74,10 +83,36 @@ async function open(width) {
     if (url.pathname === '/api/admin/google-sheets-script') return reply({ script: '// Synthetic preview only\nfunction setupGoodLuckRosterSync() {}' })
     if (url.pathname === '/api/admin/upload') { assert.equal(method, 'POST'); if (data.qaVideoFailure) return reply({ error: '無法建立影片上傳憑證。' }, 503); assert.match(req.headers()['content-type'], /multipart\/form-data/); if (data.qaImageFailure) return reply({ error: '圖片上傳失敗。' }, 503); return reply({ url: '/goodluck-running-vest-black.jpg' }) }
     if (url.pathname === '/api/admin/coach-duty') {
+      if (accountOnly) {
+        data.qaDutyItems ??= [structuredClone(duty)]
+        if (method === 'PATCH') {
+          assert.ok(data.qaDutyResponse, 'Duty writes require an explicit mocked response')
+          const body = req.postDataJSON()
+          assert.equal(body.assignmentId, duty.id)
+          assert.equal(body.reason, 'QA 原文原因保留')
+          data.qaDutySubmission = body
+          if (!data.qaDutyResponse.error && data.qaDutyAfter) data.qaDutyItems = [structuredClone(data.qaDutyAfter)]
+          return reply(data.qaDutyResponse, data.qaDutyResponse.error ? 409 : 200)
+        }
+        if (data.qaDutyReadError) return reply({ error: data.qaDutyReadError }, 503)
+        return reply({ items: data.qaDutyItems, coaches: [{ id: 'qa-coach', name: 'Coach QA', email: 'coach@example.invalid' }, { id: 'qa-substitute', name: 'Substitute QA', email: 'substitute@example.invalid' }], audits: [{ assignment_id: duty.id, action: data.qaDutyAudit || 'manual_correction', reason: '保留原始稽核備註', created_at: now }], acceptanceTest: null })
+      }
       if (method === 'PATCH') { const body = req.postDataJSON(); if (body.action === 'manual_correction') { assert.equal(body.reason, 'Synthetic correction'); duty.attendanceState = body.attendanceState }; return reply({ message: '資料已更新。' }) }
       return reply({ items: [duty], coaches: [{ id: 'qa-coach', name: 'Coach QA', email: 'coach@example.invalid' }, { id: 'qa-substitute', name: 'Substitute QA', email: 'substitute@example.invalid' }], audits: [{ assignment_id: duty.id, action: 'manual_correction', reason: '保留原始稽核備註', actor_profile_id: id, created_at: now }], acceptanceTest: null })
     }
-    if (url.pathname === '/api/admin/payment-info') { const info = { bankName: 'QA Bank', bankCode: '000', accountNumber: '00000000', qrCodeUrl: '', useLegacyQr: false }; return reply({ info, config: info, version: now }) }
+    if (url.pathname === '/api/admin/payment-info') {
+      if (accountOnly) {
+        if (method === 'GET') return data.qaPaymentReadError ? reply({ error: data.qaPaymentReadError }, 503) : reply(data.qaPayment)
+        assert.ok(data.qaPaymentResponse, 'Payment writes require an explicit mocked response')
+        data.qaPaymentSubmission = req.postDataJSON()
+        if (data.qaPaymentResponse.error) return reply(data.qaPaymentResponse, 409)
+        assert.equal(data.qaPaymentSubmission.confirmed, true)
+        assert.equal(data.qaPaymentSubmission.version, data.qaPayment.version)
+        data.qaPayment = { info: data.qaPaymentSubmission.info, config: data.qaPaymentSubmission.info, version: 'qa-updated' }
+        return reply({ ...data.qaPayment, ...data.qaPaymentResponse })
+      }
+      const info = { bankName: 'QA Bank', bankCode: '000', accountNumber: '00000000', qrCodeUrl: '', useLegacyQr: false }; return reply({ info, config: info, version: now })
+    }
     if (url.pathname === '/api/admin/reconciliation/access') return reply({ configured: true, canManagePassword: true, readOnly: false, lockedUntil: null })
     unexpected.push(url.pathname); return reply({ error: 'Unmocked API blocked' }, 503)
   })
@@ -155,6 +190,7 @@ try {
     const { ctx, page, data } = await open(width)
     await page.goto(base + '/admin')
     await page.getByRole('heading', { name: 'Season overview', exact: true }).waitFor()
+    if (accountOnly) { await adminAccountActions({ page, width, data, record, base }); await ctx.close(); continue }
     if (actionOnly) { await adminSeasonActions({ page, width, data, record }); await ctx.close(); continue }
     if (productOnly) { await productChecks(page, width); await ctx.close(); continue }
     if (contentOnly) { await contentChecks({ page, width, data, record }); await ctx.close(); continue }

@@ -114,6 +114,7 @@ export default function AdminMobileDashboard({ data, runAction, updatingId, acti
   })
   const [mobileMessage, setMobileMessage] = useState('')
   const [mobileError, setMobileError] = useState('')
+  const accountErrorRef = useRef<HTMLParagraphElement>(null)
   const [productEditState, setProductEditState] = useState<ProductEditState>({ dirty: false, busy: false })
   const [seasonSection, setSeasonSection] = useState<'students' | 'settings'>('students')
   const [coachRegisterKey, setCoachRegisterKey] = useState('')
@@ -199,6 +200,12 @@ export default function AdminMobileDashboard({ data, runAction, updatingId, acti
 
   useEffect(() => {
   }, [selectedStudentId])
+
+  useEffect(() => {
+    if (!accountOpen || !(actionError || mobileError)) return
+    accountErrorRef.current?.focus({ preventScroll: true })
+    accountErrorRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [accountOpen, actionError, mobileError])
 
   function navigate(nextView: MobileView) {
     if (nextView !== view && !confirmAdminWorkspaceChange()) return false
@@ -382,9 +389,29 @@ export default function AdminMobileDashboard({ data, runAction, updatingId, acti
 
       {bindOpen && selectedStudent ? <div className="admin-mobile-sheet-layer" role="dialog" aria-modal="true" aria-label="任課教練關聯"><section className="admin-mobile-sheet"><h2>依入帳班級自動關聯</h2><p className="mt-3">{selectedStudent.name}：{selectedStudent.bindings.map((binding) => binding.coachName).join("、") || "尚無正式教練關聯"}</p><p className="mt-3">請在季度管理調整班級任課教練；臨時代班請在教練管理處理。不再單獨新增或解除綁定。</p><button type="button" className="admin-mobile-button mt-4" onClick={() => setBindOpen(false)}>關閉</button></section></div> : null}
 
-      {accountOpen ? <div className="admin-mobile-sheet-layer" role="dialog" aria-modal="true" aria-labelledby="admin-mobile-account-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setAccountOpen(false) }}><section className="admin-mobile-sheet"><div className="admin-mobile-sheet-handle" /><div className="admin-mobile-sheet-head"><div><h2 id="admin-mobile-account-title">新增收款帳戶</h2><p>建立後加入對帳帳戶池，可隨時停用。</p></div><button type="button" className="admin-mobile-iconbutton" aria-label="關閉新增收款帳戶" onClick={() => setAccountOpen(false)}><X className="h-5 w-5" aria-hidden="true" /></button></div><div className="admin-mobile-form">{([['label', '通道名稱 *', '例如 A 帳戶'], ['accountName', '戶名 *', '輸入銀行戶名'], ['bankName', '銀行名稱 *', '銀行'], ['bankCode', '銀行代碼', '000'], ['accountNumber', '收款帳號 *', '輸入完整帳號'], ['weight', '分配權重', '1']] as const).map(([field, label, placeholder]) => <label key={field} className="admin-mobile-field"><span>{label}</span><input className="admin-mobile-control" value={accountForm[field]} onChange={(event) => setAccountForm((current) => ({ ...current, [field]: field === 'weight' ? event.target.value.replace(/\D/g, '') : event.target.value }))} placeholder={placeholder} inputMode={field === 'weight' || field === 'bankCode' || field === 'accountNumber' ? 'numeric' : undefined} /></label>)}</div><div className="admin-mobile-sheet-actions"><button type="button" className="admin-mobile-button" onClick={() => setAccountOpen(false)}>取消</button><button type="button" className="admin-mobile-button" data-tone="accent" disabled={Boolean(updatingId)} onClick={() => void createPaymentAccount()}>建立帳戶</button></div></section></div> : null}
+      {accountOpen ? (
+        <div className="admin-mobile-sheet-layer" role="dialog" aria-modal="true" aria-labelledby="admin-mobile-account-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setAccountOpen(false) }}>
+          <section className="admin-mobile-sheet">
+            <div className="admin-mobile-sheet-handle" />
+            <div className="admin-mobile-sheet-head">
+              <div><h2 id="admin-mobile-account-title">新增收款帳戶</h2><p>建立後加入對帳帳戶池，可隨時停用。</p></div>
+              <button type="button" className="admin-mobile-iconbutton" aria-label="關閉新增收款帳戶" onClick={() => setAccountOpen(false)}><X className="h-5 w-5" aria-hidden="true" /></button>
+            </div>
+            <div className="admin-mobile-form">
+              {([['label', '通道名稱 *', '例如 A 帳戶'], ['accountName', '戶名 *', '輸入銀行戶名'], ['bankName', '銀行名稱 *', '銀行'], ['bankCode', '銀行代碼', '000'], ['accountNumber', '收款帳號 *', '輸入完整帳號'], ['weight', '分配權重', '1']] as const).map(([field, label, placeholder]) => (
+                <label key={field} className="admin-mobile-field"><span>{label}</span><input className="admin-mobile-control" value={accountForm[field]} onChange={(event) => setAccountForm((current) => ({ ...current, [field]: field === 'weight' ? event.target.value.replace(/\D/g, '') : event.target.value }))} placeholder={placeholder} inputMode={field === 'weight' || field === 'bankCode' || field === 'accountNumber' ? 'numeric' : undefined} /></label>
+              ))}
+            </div>
+            {actionError || mobileError ? <p ref={accountErrorRef} tabIndex={-1} role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-semibold leading-6 text-red-700">{actionError || mobileError}</p> : null}
+            <div className="admin-mobile-sheet-actions">
+              <button type="button" className="admin-mobile-button" onClick={() => setAccountOpen(false)}>取消</button>
+              <button type="button" className="admin-mobile-button" data-tone="accent" disabled={Boolean(updatingId)} onClick={() => void createPaymentAccount()}>建立帳戶</button>
+            </div>
+          </section>
+        </div>
+      ) : null}
 
-      {actionMessage || actionError || mobileMessage || mobileError ? <div className="admin-mobile-notice" data-tone={actionError || mobileError ? 'error' : 'success'} role={actionError || mobileError ? 'alert' : 'status'} style={{ position: 'absolute', zIndex: 60, right: 14, bottom: 82, left: 14, boxShadow: '0 10px 30px rgba(9,45,58,.12)' }}>{actionError || mobileError || actionMessage || mobileMessage}</div> : null}
+      {!accountOpen && (actionMessage || actionError || mobileMessage || mobileError) ? <div className="admin-mobile-notice" data-tone={actionError || mobileError ? 'error' : 'success'} role={actionError || mobileError ? 'alert' : 'status'} style={{ position: 'absolute', zIndex: 60, right: 14, bottom: 82, left: 14, boxShadow: '0 10px 30px rgba(9,45,58,.12)' }}>{actionError || mobileError || actionMessage || mobileMessage}</div> : null}
     </section>
   )
 }
