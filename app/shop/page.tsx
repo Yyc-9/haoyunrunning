@@ -9,6 +9,8 @@ import { ArrowRight, ChevronDown, Package, Search } from 'lucide-react'
 import ShopCartDrawer from '@/components/ShopCartDrawer'
 import type { ShopProduct } from '@/lib/shop-products'
 import { useSiteContent } from '@/app/site-content-provider'
+import { useLanguage } from '@/app/language-context'
+import { toEnglishWebsiteText } from '@/lib/english-website'
 import './shop-catalog.css'
 
 type SortOption = 'featured' | 'price-low' | 'price-high'
@@ -18,6 +20,7 @@ function formatPrice(product: ShopProduct) {
 }
 
 export default function ShopPage() {
+  const { language } = useLanguage()
   const { pageMedia, brand } = useSiteContent()
   const [products, setProducts] = useState<ShopProduct[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -55,14 +58,15 @@ export default function ShopPage() {
     const normalizedQuery = query.trim().toLowerCase()
     const filtered = products.filter((product) => {
       const matchesCategory = !category || product.category === category
-      const haystack = [product.name, product.category, product.summary, ...product.tags].join(' ').toLowerCase()
+      const fields = [product.name, product.category, product.summary, ...product.tags]
+      const haystack = [...fields, ...(language === 'en' ? fields.map(toEnglishWebsiteText) : [])].join(' ').toLowerCase()
       return matchesCategory && (!normalizedQuery || haystack.includes(normalizedQuery))
     })
 
     if (sort === 'price-low') return [...filtered].sort((a, b) => a.price - b.price)
     if (sort === 'price-high') return [...filtered].sort((a, b) => b.price - a.price)
     return filtered
-  }, [category, products, query, sort])
+  }, [category, language, products, query, sort])
 
   return (
     <div className="shop-page kinetic-page min-h-screen bg-white pt-20 sm:pt-24">

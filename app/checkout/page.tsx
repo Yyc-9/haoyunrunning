@@ -13,6 +13,8 @@ import {
   Store,
 } from 'lucide-react'
 import { useCart } from '@/app/cart-provider'
+import { useLanguage } from '@/app/language-context'
+import { toEnglishWebsiteText } from '@/lib/english-website'
 import { useSiteContent } from '@/app/site-content-provider'
 import { supabase } from '@/lib/supabase'
 import { formatSelectedSpecifications, specificationSelectionError } from '@/lib/product-specifications'
@@ -30,6 +32,8 @@ type CreatedOrder = {
 }
 
 export default function CheckoutPage() {
+  const { language } = useLanguage()
+  const english = language === 'en'
   const { items, itemCount, total, clear, removeItem, isReady } = useCart()
   const { brand } = useSiteContent()
   const [form, setForm] = useState({ customerName: '', contact: '', email: '' })
@@ -129,7 +133,7 @@ export default function CheckoutPage() {
       <section className="mx-auto mt-6 max-w-xl rounded-2xl border border-black/10 bg-white p-7 text-center sm:mt-0 sm:p-10" role="status">
         {order ? <CheckCircle2 aria-hidden="true" className="mx-auto h-10 w-10 text-emerald-600" /> : <Store aria-hidden="true" className="mx-auto h-10 w-10 text-apple-gray-400" />}
         <h1 className="mt-5 text-2xl font-black">{order ? '訂單已送出，等待入帳核對' : '購物車還沒有商品'}</h1>
-        <p className="mt-3 text-sm leading-7 text-apple-gray-600">{order ? `訂單編號：${order.orderNumber}。請保留此編號；財務核對後，團隊會透過你填寫的聯絡方式確認自取安排。` : '先到商店選擇商品，再回來確認品項與金額。尚未選購商品前，不需要填寫資料或匯款。'}</p>
+        <p className="mt-3 text-sm leading-7 text-apple-gray-600">{order ? (english ? `Order number: ${order.orderNumber}. Keep this number. After finance verifies your payment, the team will contact you to arrange pickup.` : `訂單編號：${order.orderNumber}。請保留此編號；財務核對後，團隊會透過你填寫的聯絡方式確認自取安排。`) : '先到商店選擇商品，再回來確認品項與金額。尚未選購商品前，不需要填寫資料或匯款。'}</p>
         <Link href="/shop" className="apple-button-primary mt-6 w-full">{order ? '返回商店' : '前往商店'}</Link>
         <a href={brand.instagramUrl} target="_blank" rel="noreferrer" className="mt-4 inline-flex min-h-11 items-center text-sm font-bold text-apple-blue">聯絡好運 Instagram</a>
       </section>
@@ -218,8 +222,8 @@ export default function CheckoutPage() {
                     <div key={item.id} className="flex items-start justify-between gap-4 border-b border-black/10 pb-4">
                       <div className="min-w-0">
                         <h3 className="font-semibold leading-6 text-apple-gray-900">{item.name}</h3>
-                        {item.selectedSpecifications?.length ? <p className="mt-1 break-words text-sm leading-6 text-apple-gray-600">{formatSelectedSpecifications(item.selectedSpecifications)}</p> : null}
-                        <p className="mt-1 text-sm text-apple-gray-500">{item.size ? `尺寸 ${item.size} · ` : ''}數量 {item.quantity}</p>
+                        {item.selectedSpecifications?.length ? <p className="mt-1 break-words text-sm leading-6 text-apple-gray-600">{formatSelectedSpecifications(item.selectedSpecifications, english ? toEnglishWebsiteText : undefined)}</p> : null}
+                        <p className="mt-1 text-sm text-apple-gray-500">{english ? `${item.size ? `Size ${item.size} · ` : ''}Quantity ${item.quantity}` : `${item.size ? `尺寸 ${item.size} · ` : ''}數量 ${item.quantity}`}</p>
                       </div>
                       <span className="shrink-0 text-sm font-semibold text-apple-gray-700">NT$${((item.price * item.quantity) / 100).toFixed(0)}</span>
                     </div>

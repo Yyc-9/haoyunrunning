@@ -11,6 +11,8 @@ import { financeEnglishCopy } from '@/lib/english-finance-copy'
 import { adminEnglishCopy } from '@/lib/english-admin-copy'
 import { adminEnrollmentEnglishCopy } from '@/lib/english-admin-enrollment-copy'
 import { adminDutyEnglishCopy } from '@/lib/english-admin-duty-copy'
+import { shopEnglishCopy } from '@/lib/english-shop-copy'
+import { adminProductEnglishCopy } from '@/lib/english-admin-product-copy'
 
 type TextPair = readonly [string, string]
 
@@ -155,6 +157,8 @@ const englishCopy = new Map(
   [...dictionaryPairs, ...managedContentPairs, ...Object.entries(publicEnglishCopy), ...Object.entries(notificationEnglishCopy), ...Object.entries(policyEnglishCopy), ...Object.entries(coachEnglishCopy), ...Object.entries(achievementEnglishCopy), ...Object.entries(registrationEnglishCopy), ...Object.entries(studentEnglishCopy), ...Object.entries(coachWorkspaceEnglishCopy), ...Object.entries(financeEnglishCopy), ...Object.entries(adminEnglishCopy)]
     .concat(Object.entries(adminEnrollmentEnglishCopy))
     .concat(Object.entries(adminDutyEnglishCopy))
+    .concat(Object.entries(shopEnglishCopy))
+    .concat(Object.entries(adminProductEnglishCopy))
     .filter(([source, translation]) => source && translation)
     .map(([source, translation]) => [normalizeCopy(source), translation]),
 )
@@ -174,6 +178,18 @@ export function toEnglishWebsiteText(value: string): string {
   const exact = englishCopy.get(source) ?? cityFilterTranslations.get(source)
   const preserveSpace = (translation: string) => `${value.match(/^\s*/u)?.[0] ?? ''}${translation}${value.match(/\s*$/u)?.[0] ?? ''}`
   if (exact) return preserveSpace(exact)
+  const stockError = source.match(/^(庫存不足|商品尚未設定售價)：([A-Za-z0-9_-]+)$/u)
+  if (stockError) return preserveSpace(`${stockError[1] === '庫存不足' ? 'Not enough stock' : 'Price not configured'}: ${stockError[2]}`)
+  const specificationField = source.match(/^規格 (\d+) (名稱|可選項目)$/u)
+  if (specificationField) return preserveSpace(`Specification ${specificationField[1]} ${specificationField[2] === '名稱' ? 'name' : 'options'}`)
+  const productRemoval = source.match(/^(移除規格|刪除款式|移除詳情圖片) (\d+)$/u)
+  if (productRemoval) return preserveSpace(`${productRemoval[1] === '移除規格' ? 'Remove specification' : productRemoval[1] === '刪除款式' ? 'Delete style' : 'Remove detail image'} ${productRemoval[2]}`)
+  const styleImageMove = source.match(/^款式 (\d+) 圖片 (\d+) (向前移動|向後移動)$/u)
+  if (styleImageMove) return preserveSpace(`Move style ${styleImageMove[1]} image ${styleImageMove[2]} ${styleImageMove[3] === '向前移動' ? 'earlier' : 'later'}`)
+  const styleImageRemove = source.match(/^移除款式 (\d+) 圖片 (\d+)$/u)
+  if (styleImageRemove) return preserveSpace(`Remove style ${styleImageRemove[1]} image ${styleImageRemove[2]}`)
+  const missingSpecification = source.match(/^請填寫第 (\d+) 項規格的(名稱與內容，或刪除這一項|可選項目)。$/u)
+  if (missingSpecification) return preserveSpace(missingSpecification[2] === '可選項目' ? `Enter options for specification ${missingSpecification[1]}.` : `Enter a name and options for specification ${missingSpecification[1]}, or remove it.`)
   const imported = source.match(/^已匯入 (\d+) 筆交易，系統已完成初步比對(?:，並標記 (\d+) 筆匯款資料需補充)?。$/u)
   if (imported) return preserveSpace(`Imported ${imported[1]} transactions and completed initial matching.${imported[2] ? ` ${imported[2]} transfer records need more information.` : ''}`)
   const reconciled = source.match(/^已完成 (\d+) 筆唯一相符交易的對帳。$/u)

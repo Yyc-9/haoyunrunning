@@ -53,8 +53,8 @@ export function specificationSelectionError(product: SpecificationSource, select
   return ''
 }
 
-export function formatSelectedSpecifications(selection: unknown) {
-  return (readSelectedSpecifications(selection) ?? []).map(({ label, value }) => `${label}：${value}`).join(' · ')
+export function formatSelectedSpecifications(selection: unknown, localize?: (text: string) => string) {
+  return (readSelectedSpecifications(selection) ?? []).map(({ label, value }) => localize ? `${localize(label)}: ${localize(value)}` : `${label}：${value}`).join(' · ')
 }
 
 export function productCartItemId(productId: string, variantId: string | undefined, size: string, selection: ProductSpecification[]) {

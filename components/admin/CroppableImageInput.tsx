@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import { useLanguage } from '@/app/language-context'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Crop, Loader2, X } from 'lucide-react'
@@ -80,6 +81,7 @@ export default function CroppableImageInput({
   cropHint,
   onCroppedFile,
 }: CroppableImageInputProps) {
+  const { language } = useLanguage()
   const titleId = useId()
   const descriptionId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -212,7 +214,7 @@ export default function CroppableImageInput({
                   裁切圖片
                 </p>
                 <p id={descriptionId} className="mt-1 text-sm leading-6 text-apple-gray-600">
-                  {cropHint || `裁切比例 ${aspectLabel}，確認後才會上傳。`}
+                  {cropHint || (language === 'en' ? `Crop ratio ${aspectLabel}. Upload starts after you confirm.` : `裁切比例 ${aspectLabel}，確認後才會上傳。`)}
                 </p>
               </div>
               <button

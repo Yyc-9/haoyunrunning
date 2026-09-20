@@ -47,6 +47,18 @@ test('規格順序不同仍合併同一購物車項目，顏色、包裝、尺�
   assert.equal(formatSelectedSpecifications(chosen), '顏色：黑色 · 包裝：套裝')
 })
 
+test('英文規格顯示不改寫購物車選項、識別碼或後端驗證值', async () => {
+  const { toEnglishWebsiteText } = await import('../lib/english-website.ts')
+  const selection = [{ label: '顏色', value: '黑色' }]
+  const before = structuredClone(selection)
+  const key = productCartItemId('shirt', 'classic', 'M', selection)
+  assert.equal(formatSelectedSpecifications(selection, toEnglishWebsiteText), 'Color: Black')
+  assert.deepEqual(selection, before)
+  assert.equal(productCartItemId('shirt', 'classic', 'M', selection), key)
+  assert.equal(specificationSelectionError({ specifications: [{ label: '顏色', value: '黑色、白色' }] }, selection), '')
+  assert.equal(formatSelectedSpecifications(selection), '顏色：黑色')
+})
+
 test('購物車彈層脫離頁面隔離層，避免關閉按鈕被固定導航遮擋', () => {
   const drawer = readFileSync(new URL('../components/ShopCartDrawer.tsx', import.meta.url), 'utf8')
   assert.match(drawer, /createPortal/)

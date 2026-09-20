@@ -1,6 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useLanguage } from '@/app/language-context'
+import { toEnglishWebsiteText } from '@/lib/english-website'
 import './product-workspace.css'
 import { Package, Plus, Search, X } from 'lucide-react'
 import AdminProductCreator from '@/components/admin/AdminProductCreator'
@@ -13,13 +15,19 @@ export default function AdminProductWorkspace({ products, runAction, onStateChan
   onStateChange?: (state: ProductEditState) => void
   uploadMedia?: ProductMediaUpload
 }) {
+  const { language } = useLanguage()
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<ProductFilter>('all')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [createdName, setCreatedName] = useState('')
   const [editState, setEditState] = useState<ProductEditState>({ dirty: false, busy: false })
-  const filtered = useMemo(() => filterProducts(products, query, filter), [products, query, filter])
+  const filtered = useMemo(() => {
+    if (language !== 'en' || !query.trim()) return filterProducts(products, query, filter)
+    const text = query.trim().toLowerCase()
+    const rawMatches = new Set(filterProducts(products, query, filter).map((product) => product.id))
+    return filterProducts(products, '', filter).filter((product) => rawMatches.has(product.id) || [product.name, product.category, product.summary, ...product.tags].map(toEnglishWebsiteText).join(' ').toLowerCase().includes(text))
+  }, [language, products, query, filter])
   const selected = products.find((product) => product.id === selectedId) ?? products[0]
   const categories = useMemo(() => [...new Set(products.map((product) => product.category))], [products])
 
@@ -40,7 +48,7 @@ export default function AdminProductWorkspace({ products, runAction, onStateChan
 
   function canLeave() {
     if (editState.busy) return false
-    return !editState.dirty || window.confirm('目前商品有未儲存的變更。確定放棄變更並離開？')
+    return !editState.dirty || window.confirm(language === 'en' ? 'This product has unsaved changes. Discard them and leave?' : '目前商品有未儲存的變更。確定放棄變更並離開？')
   }
 
   function selectProduct(id: string) {

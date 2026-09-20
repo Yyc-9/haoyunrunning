@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useId, useRef, useState } from 'react'
+import { useLanguage } from '@/app/language-context'
 import { Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Film, ImagePlus, Loader2, Plus, Save, Settings2, Trash2, X } from 'lucide-react'
 import CroppableImageInput from '@/components/admin/CroppableImageInput'
 import { uploadProductMedia } from '@/lib/admin-product-media'
@@ -19,12 +20,14 @@ type Props = {
 const commonSizes = ['XS', 'S', 'M', 'L', 'XL', '2XL']
 
 function MediaState({ ready, changed, count }: { ready: boolean; changed: boolean; count?: number }) {
+  const { language } = useLanguage()
   return <span className={`product-media-state ${ready ? 'is-ready' : ''}`}>
-    {ready ? (changed ? '待儲存' : '已保存') : '未上傳'}{ready && count !== undefined ? ` ${count} 張` : ''}
+    {ready ? (changed ? '待儲存' : '已保存') : '未上傳'}{ready && count !== undefined ? ` ${count} ${language === 'en' ? 'images' : '張'}` : ''}
   </span>
 }
 
 export default function AdminProductForm({ product, categories = [], runAction, onStateChange, onSaved, onCancel, uploadMedia = uploadProductMedia }: Props) {
+  const { language } = useLanguage()
   const [draft, setDraft] = useState(() => productDraft(product))
   const [savedDraft, setSavedDraft] = useState(() => productDraft(product))
   const [uploadingKey, setUploadingKey] = useState('')
@@ -214,8 +217,8 @@ export default function AdminProductForm({ product, categories = [], runAction, 
         </details>
       </fieldset>
 
-      {!isNew ? <footer className="product-editor-footer"><button type="button" className="product-delete-action" disabled={busy} onClick={() => setDeleteOpen(!deleteOpen)}><Trash2 className="h-4 w-4" />刪除商品</button>{dirty ? <button type="button" className="product-text-action" disabled={busy} onClick={() => { if (window.confirm('確定放棄這件商品的未儲存變更？')) { setDraft(savedDraft); setError(''); setMessage('') } }}>放棄變更</button> : null}</footer> : null}
-      {deleteOpen ? <div className="product-delete-confirm" role="region" aria-label="刪除商品確認"><p>確定刪除「{product?.name}」？</p><p className="product-field-hint">商品將立即從商店移除，既有訂單仍會保留。</p><div><button type="button" className="product-button-secondary" disabled={busy} onClick={() => setDeleteOpen(false)}>取消</button><button type="button" className="product-button-danger" disabled={busy} onClick={() => void removeProduct()}>{deleting ? '刪除中' : '確認刪除'}</button></div></div> : null}
+      {!isNew ? <footer className="product-editor-footer"><button type="button" className="product-delete-action" disabled={busy} onClick={() => setDeleteOpen(!deleteOpen)}><Trash2 className="h-4 w-4" />刪除商品</button>{dirty ? <button type="button" className="product-text-action" disabled={busy} onClick={() => { if (window.confirm(language === 'en' ? 'Discard unsaved changes to this product?' : '確定放棄這件商品的未儲存變更？')) { setDraft(savedDraft); setError(''); setMessage('') } }}>放棄變更</button> : null}</footer> : null}
+      {deleteOpen ? <div className="product-delete-confirm" role="region" aria-label="刪除商品確認"><p>{language === 'en' ? 'Delete this product: ' : '確定刪除「'}<span translate="no">{product?.name}</span>{language === 'en' ? '?' : '」？'}</p><p className="product-field-hint">商品將立即從商店移除，既有訂單仍會保留。</p><div><button type="button" className="product-button-secondary" disabled={busy} onClick={() => setDeleteOpen(false)}>取消</button><button type="button" className="product-button-danger" disabled={busy} onClick={() => void removeProduct()}>{deleting ? '刪除中' : '確認刪除'}</button></div></div> : null}
     </div>
   </form>
 }

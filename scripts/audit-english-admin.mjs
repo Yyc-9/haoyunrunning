@@ -1,12 +1,14 @@
 // Local administrator UI audit. All business requests are fulfilled with synthetic data.
 import assert from 'node:assert/strict'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { defaultShopProducts } from '../lib/shop-products.ts'
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const base = process.env.LANGUAGE_AUDIT_ORIGIN || 'http://127.0.0.1:3202'
 if (!/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(base)) throw Error('Local preview required')
 if (!process.env.LANGUAGE_CONTENT_FILE || !process.env.LANGUAGE_AUTH_STORAGE_KEY) throw Error('Provide public content and auth storage key')
 const { content } = JSON.parse(await readFile(process.env.LANGUAGE_CONTENT_FILE, 'utf8'))
-const output = '/private/tmp/haoyun-english-admin'
+const productOnly = process.env.LANGUAGE_ADMIN_PRODUCTS === '1'
+const output = productOnly ? '/private/tmp/haoyun-english-admin-products' : '/private/tmp/haoyun-english-admin'
 await mkdir(output, { recursive: true })
 const id = '1ed770c5-3666-4f30-bae1-1f6e08bcd9d4', now = new Date().toISOString(), slug = 'zhubei-night-run-monday'
 const course = { slug, name: '竹北夜跑班', weekday: '星期一', location: '竹北', period: '2026 Q4', classTime: '19:00–20:30', meetingPoint: 'QA Park', feeNote: '', campaignLabel: '2026 Q4', slogan: '', targetAudience: '', focus: '', benefits: [], trainingItems: [], suitableFor: [], enrollmentNote: '', signupUrl: '', coachKeys: ['qa-coach'] }
@@ -17,6 +19,10 @@ const records = [], errors = [], unexpected = [], writes = []
 const browser = await chromium.launch({ channel: 'chrome', headless: true })
 async function open(width) {
   const data = structuredClone(payload)
+  if (productOnly) {
+    data.products = structuredClone(defaultShopProducts)
+    data.products[0].variants[0].detailImages = ['/goodluck-running-vest.jpg', '/goodluck-running-vest-black.jpg']
+  }
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
   const duty = { id: 'qa-duty', courseName: course.name, courseSeasonCourseId: id, sessionDate: today, startTime: '00:01', scheduledCoachId: 'qa-coach', scheduledCoachName: 'Coach QA', actualCoachId: 'qa-coach', actualCoachName: 'Coach QA', coachRole: 'head_coach', leaveStatus: 'requested', leaveReason: '教練原文原因保留', recommendedSubstituteName: 'Substitute QA', substituteCoachId: 'qa-substitute', substituteCoachName: 'Substitute QA', substituteResponse: 'pending', adminStatus: 'pending', attendanceState: 'not_checked_in', checkedInAt: now, manualCorrection: true, salaryStatusLabel: '待設定課酬', isCancelled: false }
   data.orders[0].notes = '學員原文備註保留'
@@ -35,18 +41,26 @@ async function open(width) {
     const reply = (data, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) })
     if (url.origin !== base) return route.abort()
     if (!url.pathname.startsWith('/api/')) return route.continue()
-    if (!['GET','HEAD'].includes(method)) writes.push({ path: url.pathname, method, action: req.postDataJSON()?.action })
+    if (!['GET','HEAD'].includes(method)) writes.push({ path: url.pathname, method, action: req.headers()['content-type']?.includes('application/json') ? req.postDataJSON()?.action : undefined })
     if (url.pathname === '/api/site-content') return reply({ content, source: 'database' })
     if (url.pathname === '/api/account/me') return reply({ profile: { ...user, name: 'Admin QA', role: 'admin' } })
     if (url.pathname === '/api/notifications') return reply({ staff: true, unreadCount: 0, items: [] })
     if (url.pathname === '/api/admin') {
       if (method === 'GET') return reply(data)
       const body = req.postDataJSON()
+      if (['create_product','update_product'].includes(body.action)) {
+        const product = { ...body, id: body.productId || 'qa-created', sizes: body.sizes.split('、').filter(Boolean), tags: body.tags.split('、').filter(Boolean), highlights: [], usageNotes: [], priceLabel: '', rating: 5, reviews: 0 }
+        assert.ok(Number.isFinite(product.price)); assert.ok(Number.isInteger(product.stockQuantity))
+        if (body.action === 'create_product') data.products.push(product)
+        else data.products = data.products.map(p => p.id === body.productId ? product : p)
+      }
+      if (body.action === 'delete_product') data.products = data.products.filter(p => p.id !== body.productId)
       if (body.action === 'review_order') { const order = data.orders.find(o => o.id === body.orderId); assert.ok(order); if (body.orderKind === 'course') { assert.equal(body.confirmReceipt, true); assert.equal(body.reviewNote, 'Synthetic bank verification') }; order.status = body.status; order.reviewNote = body.reviewNote }
       if (body.action === 'resolve_attendance_anomaly') { data.orders[0].attendanceAnomalies[0].status = 'resolved'; data.orders[0].attendanceAnomalies[0].outcome = body.outcome; data.orders[0].openAttendanceAnomalyCount = 0 }
       return reply({ message: '操作已完成。' })
     }
     if (url.pathname === '/api/admin/google-sheets-script') return reply({ script: '// Synthetic preview only\nfunction setupGoodLuckRosterSync() {}' })
+    if (url.pathname === '/api/admin/upload') { assert.equal(method, 'POST'); assert.match(req.headers()['content-type'], /multipart\/form-data/); return reply({ url: '/goodluck-running-vest-black.jpg' }) }
     if (url.pathname === '/api/admin/coach-duty') {
       if (method === 'PATCH') { const body = req.postDataJSON(); if (body.action === 'manual_correction') { assert.equal(body.reason, 'Synthetic correction'); duty.attendanceState = body.attendanceState }; return reply({ message: '資料已更新。' }) }
       return reply({ items: [duty], coaches: [{ id: 'qa-coach', name: 'Coach QA', email: 'coach@example.invalid' }, { id: 'qa-substitute', name: 'Substitute QA', email: 'substitute@example.invalid' }], audits: [{ assignment_id: duty.id, action: 'manual_correction', reason: '保留原始稽核備註', actor_profile_id: id, created_at: now }], acceptanceTest: null })
@@ -72,11 +86,60 @@ async function record(page, name) {
   records.push({ name, ...state }); await writeFile(output + '/report.json', JSON.stringify({ records, errors, unexpected, writes }, null, 2)); console.log(`${name}: ${state.missing.length} untranslated; overflow=${state.overflow}`)
   await page.screenshot({ path: output + '/' + name + '.png', fullPage: true })
 }
+async function productChecks(page, width) {
+  if (width > 768) await page.locator('#admin-tab-products').click()
+  else { await page.getByRole('navigation', { name: 'Main administrator navigation' }).getByRole('button', { name: 'More', exact: true }).click(); await page.getByRole('dialog').getByRole('button', { name: /^Products/ }).click() }
+  let form = page.getByRole('form', { name: 'Edit product', exact: true })
+  await form.waitFor(); assert.equal(await form.getByPlaceholder('Enter product name').inputValue(), defaultShopProducts[0].name)
+  await record(page, width + '-product-editor')
+  await form.getByRole('button', { name: 'Manage', exact: true }).click()
+  await form.locator('summary').filter({ hasText: 'Styles and advanced settings' }).click(); await record(page, width + '-product-media-and-styles')
+  await form.getByRole('button', { name: 'Custom sizes', exact: true }).click(); await record(page, width + '-custom-sizes')
+  await form.getByRole('textbox', { name: 'Custom sizes', exact: true }).fill('XXXL')
+  await form.getByRole('button', { name: 'Add', exact: true }).click(); assert.equal(await form.getByRole('button', { name: 'XXXL', exact: true }).getAttribute('aria-pressed'), 'true')
+  await form.getByRole('button', { name: 'Add specification', exact: true }).click()
+  await form.getByRole('textbox', { name: 'Specification 3 name', exact: true }).fill('Packaging')
+  await form.getByRole('button', { name: 'Save product', exact: true }).click()
+  await form.getByRole('alert').waitFor(); await record(page, width + '-specification-validation')
+  await form.getByRole('textbox', { name: 'Specification 3 options', exact: true }).fill('Single, Pair')
+  const crop = async (trigger, name) => {
+    const chooserEvent = page.waitForEvent('filechooser'); await trigger.click(); const chooser = await chooserEvent
+    await chooser.setFiles({ name: 'qa-product.jpg', mimeType: 'image/jpeg', buffer: await readFile(new URL('../public/goodluck-running-vest.jpg', import.meta.url)) })
+    const dialog = page.getByRole('dialog', { name: 'Crop image', exact: true }); await dialog.waitFor()
+    await dialog.getByRole('button', { name: 'Apply crop and upload', exact: true }).waitFor()
+    await record(page, width + '-' + name)
+    await dialog.getByRole('button', { name: 'Apply crop and upload', exact: true }).click(); await dialog.waitFor({ state: 'hidden' })
+  }
+  await crop(form.getByRole('button', { name: /^Replace.*Product main image$/ }), 'image-crop')
+  await record(page, width + '-image-uploaded')
+  await form.getByRole('button', { name: 'Save product', exact: true }).click()
+  await form.getByRole('button', { name: 'Save product', exact: true }).waitFor(); await page.waitForTimeout(400)
+  assert.equal(await form.getByRole('button', { name: 'Save product', exact: true }).isDisabled(), true)
+  assert.equal(await form.getByRole('textbox', { name: 'Specification 3 options', exact: true }).inputValue(), 'Single, Pair')
+  await record(page, width + '-product-saved')
+  await form.getByPlaceholder('Summarize the product in one sentence').fill('Synthetic unsaved summary')
+  const discardEvent = page.waitForEvent('dialog').then(async dialog => { assert.equal(dialog.message(), 'Discard unsaved changes to this product?'); await dialog.accept() })
+  await form.getByRole('button', { name: 'Discard changes', exact: true }).click(); await discardEvent; await record(page, width + '-product-discarded')
+  await form.getByRole('button', { name: 'Delete product', exact: true }).click(); await record(page, width + '-product-delete-confirmation')
+  await page.getByRole('region', { name: 'Confirm product deletion', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click()
+  await page.getByRole('button', { name: 'Add product', exact: true }).click()
+  form = page.getByRole('form', { name: 'Add product', exact: true }); await form.waitFor(); await record(page, width + '-new-product')
+  await form.getByRole('button', { name: 'Create product', exact: true }).click(); await form.getByRole('alert').waitFor(); await record(page, width + '-new-product-validation')
+  await form.getByPlaceholder('Enter product name').fill('QA New Product')
+  await crop(form.getByRole('button', { name: /^Upload.*Product main image$/ }), 'new-product-crop')
+  await form.getByRole('button', { name: 'Create product', exact: true }).click()
+  form = page.getByRole('form', { name: 'Edit product', exact: true }); await form.waitFor(); await page.waitForTimeout(400)
+  assert.equal(await form.getByPlaceholder('Enter product name').inputValue(), 'QA New Product'); await record(page, width + '-product-created')
+  await form.getByRole('button', { name: 'Delete product', exact: true }).click()
+  await page.getByRole('region', { name: 'Confirm product deletion', exact: true }).getByRole('button', { name: 'Confirm deletion', exact: true }).click()
+  await page.waitForTimeout(500); assert.notEqual(await page.getByPlaceholder('Enter product name').inputValue(), 'QA New Product'); await record(page, width + '-product-deleted')
+}
 try {
   for (const width of [1440,375]) {
     const { ctx, page } = await open(width)
     await page.goto(base + '/admin')
     await page.getByRole('heading', { name: 'Season overview', exact: true }).waitFor()
+    if (productOnly) { await productChecks(page, width); await ctx.close(); continue }
     await record(page, width + '-overview')
     const nav = page.getByRole('navigation', { name: 'Main administrator navigation' })
     for (const [tab, label] of [['students','Student'],['coaches','Coach'],['seasons','Seasons'],['products','Products'],['content','Site content'],['reconciliation','Reconciliation'],['paymentAccounts','Payment accounts']]) {

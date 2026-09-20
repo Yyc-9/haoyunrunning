@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, CheckCircle2, Clock3, Loader2, RefreshCw, ShieldCheck, TriangleAlert } from 'lucide-react'
 import { useAuth } from '@/app/providers'
+import { useLanguage } from '@/app/language-context'
 import type { MyCourseEnrollment } from '@/lib/course-registration'
 import {
   paymentOrderStatusDescriptions,
@@ -26,9 +27,9 @@ const statusIcon: Record<PaymentOrderStatus, React.ElementType> = {
   rejected: TriangleAlert,
 }
 
-function formatDate(value: string | null) {
+function formatDate(value: string | null, language: string) {
   if (!value) return '尚未提交'
-  return new Intl.DateTimeFormat('zh-TW', {
+  return new Intl.DateTimeFormat(language, {
     timeZone: 'Asia/Taipei',
     year: 'numeric',
     month: 'short',
@@ -39,6 +40,7 @@ function formatDate(value: string | null) {
 }
 
 export default function PaymentStatusClient() {
+  const { language } = useLanguage()
   const { isLoggedIn, isLoading: isAuthLoading } = useAuth()
   const [enrollments, setEnrollments] = useState<MyCourseEnrollment[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -157,10 +159,10 @@ export default function PaymentStatusClient() {
                     <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
                       <div><dt className="text-apple-gray-500">應匯金額</dt><dd className="mt-1 font-black text-apple-gray-950">{enrollment.amountText || '依報名資料'}</dd></div>
                       <div><dt className="text-apple-gray-500">匯款帳號後五碼</dt><dd className="mt-1 font-black text-apple-gray-950">{enrollment.transferLastFive ? `•••${enrollment.transferLastFive}` : '尚未提交'}</dd></div>
-                      <div><dt className="text-apple-gray-500">報名時間</dt><dd className="mt-1 font-bold text-apple-gray-900">{formatDate(enrollment.createdAt)}</dd></div>
-                      <div><dt className="text-apple-gray-500">匯款資料提交</dt><dd className="mt-1 font-bold text-apple-gray-900">{formatDate(enrollment.paymentSubmittedAt)}</dd></div>
+                      <div><dt className="text-apple-gray-500">報名時間</dt><dd className="mt-1 font-bold text-apple-gray-900">{formatDate(enrollment.createdAt, language)}</dd></div>
+                      <div><dt className="text-apple-gray-500">匯款資料提交</dt><dd className="mt-1 font-bold text-apple-gray-900">{formatDate(enrollment.paymentSubmittedAt, language)}</dd></div>
                     </dl>
-                    {enrollment.reviewNote ? <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold leading-6 text-amber-900">核對說明：{enrollment.reviewNote}</p> : null}
+                    {enrollment.reviewNote ? <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold leading-6 text-amber-900">核對說明：<span translate="no">{enrollment.reviewNote}</span></p> : null}
                     {enrollment.courseSlug ? (
                       <Link href={`/courses/${enrollment.courseSlug}/register`} className="apple-button-outline mt-5 w-full gap-2">
                         查看報名與匯款資料<ArrowRight className="h-4 w-4" />

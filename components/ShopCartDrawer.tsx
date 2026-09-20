@@ -7,6 +7,8 @@ import { createPortal } from 'react-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowRight, Minus, Package, Plus, ShoppingBag, Trash2, X } from 'lucide-react'
 import { useCart, type CartItem } from '@/app/cart-provider'
+import { useLanguage } from '@/app/language-context'
+import { toEnglishWebsiteText } from '@/lib/english-website'
 import { useToast } from '@/app/toast-provider'
 import type { ShopProduct } from '@/lib/shop-products'
 import { formatSelectedSpecifications, specificationSelectionError } from '@/lib/product-specifications'
@@ -22,6 +24,8 @@ function formatCartAmount(value: number) {
 }
 
 export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCartDrawerProps) {
+  const { language } = useLanguage()
+  const english = language === 'en'
   const { items, itemCount, total, updateQuantity, removeItem, clear, isEmpty } = useCart()
   const { showToast } = useToast()
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null)
@@ -91,7 +95,7 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
       const maxQuantity = Math.max(0, product.stockQuantity - otherQuantity)
 
       if (quantity > maxQuantity) {
-        showToast(`${product.name} 庫存不足`, 'error')
+        showToast(english ? `Not enough stock for ${toEnglishWebsiteText(product.name)}` : `${product.name} 庫存不足`, 'error')
         return
       }
     }
@@ -185,7 +189,7 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
                             </div>
                             <div className="min-w-0 flex-1">
                               <h3 className="line-clamp-2 text-sm font-black leading-5 text-apple-gray-950">{item.name}</h3>
-                              {item.selectedSpecifications?.length ? <p className="mt-1 break-words text-xs leading-5 text-apple-gray-600">{formatSelectedSpecifications(item.selectedSpecifications)}</p> : null}
+                              {item.selectedSpecifications?.length ? <p className="mt-1 break-words text-xs leading-5 text-apple-gray-600">{formatSelectedSpecifications(item.selectedSpecifications, english ? toEnglishWebsiteText : undefined)}</p> : null}
                               {specificationError ? <p className="mt-2 text-xs leading-5 text-red-700">規格需重新確認。<Link href={`/shop/${encodeURIComponent(item.productId)}`} onClick={() => { removeItem(item.id); onOpenChange(false) }} className="font-bold underline underline-offset-2">重新選擇</Link></p> : null}
                               <p className="mt-1 text-sm font-semibold text-apple-gray-600">
                                 {formatCartAmount(item.price * item.quantity)}
@@ -198,7 +202,7 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
                               type="button"
                               onClick={() => removeItem(item.id)}
                               className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-apple-gray-400 transition hover:bg-red-50 hover:text-red-600"
-                              aria-label={`移除 ${item.name}`}
+                              aria-label={english ? `Remove ${toEnglishWebsiteText(item.name)}` : `移除 ${item.name}`}
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -225,7 +229,7 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
                                 <Plus className="h-4 w-4" />
                               </button>
                             </div>
-                            <span className="text-xs font-semibold text-apple-gray-500">{item.size ? `尺寸 ${item.size}` : '已加入'}</span>
+                            <span className="text-xs font-semibold text-apple-gray-500">{item.size ? `${english ? 'Size' : '尺寸'} ${item.size}` : '已加入'}</span>
                           </div>
                         </article>
                       )

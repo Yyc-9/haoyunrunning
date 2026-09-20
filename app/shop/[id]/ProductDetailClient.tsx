@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, ChevronRight, Film, Loader2, Minus, Package, Plus, ShoppingBag } from 'lucide-react'
 import { useCart } from '@/app/cart-provider'
+import { useLanguage } from '@/app/language-context'
+import { toEnglishWebsiteText } from '@/lib/english-website'
 import { useSiteContent } from '@/app/site-content-provider'
 import { useToast } from '@/app/toast-provider'
 import ShopCartDrawer from '@/components/ShopCartDrawer'
@@ -28,6 +30,8 @@ function formatPrice(product: ShopProduct) {
 }
 
 export default function ProductDetailClient({ productId }: ProductDetailClientProps) {
+  const { language } = useLanguage()
+  const english = language === 'en'
   const router = useRouter()
   const { addItem, items } = useCart()
   const { brand } = useSiteContent()
@@ -76,9 +80,9 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
     const images = variantImages
       .filter((url): url is string => Boolean(url))
       .filter((url, index, list) => list.indexOf(url) === index)
-      .map((url, index) => ({ type: 'image' as const, url, label: `${product.name} 圖片 ${index + 1}` }))
-    return product.video ? [...images, { type: 'video' as const, url: product.video, label: `${product.name} 商品影片` }] : images
-  }, [product, selectedVariant])
+      .map((url, index) => ({ type: 'image' as const, url, label: english ? `${toEnglishWebsiteText(product.name)} image ${index + 1}` : `${product.name} 圖片 ${index + 1}` }))
+    return product.video ? [...images, { type: 'video' as const, url: product.video, label: english ? `${toEnglishWebsiteText(product.name)} product video` : `${product.name} 商品影片` }] : images
+  }, [english, product, selectedVariant])
 
   useEffect(() => {
     if (activeMediaIndex >= media.length) setActiveMediaIndex(0)
@@ -120,7 +124,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
     }
     const safeQuantity = Math.min(quantity, remainingStock)
     if (safeQuantity < 1) {
-      showToast(`${product!.name} 庫存不足`, 'error')
+      showToast(english ? `Not enough stock for ${toEnglishWebsiteText(product!.name)}` : `${product!.name} 庫存不足`, 'error')
       return false
     }
 
@@ -137,7 +141,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
       image: selectedVariant?.image || product!.image,
     }
     for (let index = 0; index < safeQuantity; index += 1) addItem(cartItem)
-    showToast(`${product!.name} 已加入購物車`, 'success')
+    showToast(english ? `${toEnglishWebsiteText(product!.name)} added to cart` : `${product!.name} 已加入購物車`, 'success')
     if (openCart) setIsCartOpen(true)
     return true
   }
@@ -183,7 +187,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
             {media.length > 1 ? (
               <div className="product-detail-thumbs mt-3 grid grid-cols-5 gap-2 sm:grid-cols-7">
                 {media.map((item, index) => (
-                  <button key={`${item.type}-${item.url}`} type="button" onClick={() => setActiveMediaIndex(index)} aria-label={`查看${item.label}`} className={`relative aspect-square overflow-hidden rounded-md border bg-apple-gray-50 transition ${activeMediaIndex === index ? 'border-black ring-1 ring-black' : 'border-black/10 hover:border-black/35'}`}>
+                  <button key={`${item.type}-${item.url}`} type="button" onClick={() => setActiveMediaIndex(index)} aria-label={english ? `View ${item.label}` : `查看${item.label}`} className={`relative aspect-square overflow-hidden rounded-md border bg-apple-gray-50 transition ${activeMediaIndex === index ? 'border-black ring-1 ring-black' : 'border-black/10 hover:border-black/35'}`}>
                     {item.type === 'video' ? <span className="flex h-full items-center justify-center bg-black text-white"><Film className="h-5 w-5" /></span> : <Image src={item.url} alt="" fill sizes="90px" className="object-contain p-1" />}
                   </button>
                 ))}
@@ -247,7 +251,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
                   <button type="button" onClick={() => setQuantity((value) => Math.min(Math.max(1, remainingStock), value + 1))} disabled={isSoldOut} className="flex h-11 items-center justify-center hover:bg-apple-gray-100 disabled:opacity-40" aria-label="增加數量"><Plus className="h-4 w-4" /></button>
                 </div>
               </div>
-              <p className={`text-sm font-bold ${isSoldOut ? 'text-red-600' : 'text-apple-gray-500'}`}>{isSoldOut ? '目前售完' : `尚有 ${remainingStock} 件`}</p>
+              <p className={`text-sm font-bold ${isSoldOut ? 'text-red-600' : 'text-apple-gray-500'}`}>{isSoldOut ? '目前售完' : (english ? `${remainingStock} in stock` : `尚有 ${remainingStock} 件`)}</p>
             </div>
 
             {isPurchasable ? (
@@ -265,7 +269,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
 
         <section className="mt-12 grid gap-6 border-y border-black/10 py-9 md:grid-cols-[220px_minmax(0,1fr)] lg:mt-16">
           <h2 className="text-xl font-black text-apple-gray-950">商品簡介</h2>
-          <p className="whitespace-pre-line text-base leading-8 text-apple-gray-700">{getProductIntro(product, { includeSpecifications: false })}</p>
+          <p className="whitespace-pre-line text-base leading-8 text-apple-gray-700">{english ? getProductIntro(product, { includeSpecifications: false }).split('\n').map(toEnglishWebsiteText).join('\n') : getProductIntro(product, { includeSpecifications: false })}</p>
         </section>
       </div>
 
