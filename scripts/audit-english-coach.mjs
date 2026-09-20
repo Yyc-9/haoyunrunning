@@ -7,7 +7,8 @@ const base = process.env.LANGUAGE_AUDIT_ORIGIN || 'http://127.0.0.1:3202'
 if (!/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(base)) throw Error('Local preview required')
 if (!process.env.LANGUAGE_CONTENT_FILE || !process.env.LANGUAGE_AUTH_STORAGE_KEY) throw Error('Provide public content and auth storage key')
 const { content } = JSON.parse(await readFile(process.env.LANGUAGE_CONTENT_FILE, 'utf8'))
-const output = '/private/tmp/haoyun-english-coach'
+const dutyOnly = process.env.LANGUAGE_COACH_DUTY === '1'
+const output = dutyOnly ? '/private/tmp/haoyun-english-coach-duty' : '/private/tmp/haoyun-english-coach'
 await mkdir(output, { recursive: true })
 const browser = await chromium.launch({ channel: 'chrome', headless: true })
 const id = '1ed770c5-3666-4f30-bae1-1f6e08bcd9d4', cid = '2ed770c5-3666-4f30-bae1-1f6e08bcd9d4'
@@ -20,6 +21,7 @@ const duty = { id, courseName: lead.preferred_course, location: 'Hsinchu', sessi
 const attendance = { courses: [{ seasonId: id, seasonName: '2026 Q4', courseSeasonCourseId: id, courseSlug: 'zhubei-night-run-monday', courseName: lead.preferred_course, weekday: '週一', location: 'Hsinchu', meetingPoint: 'Park entrance', sessionDates: [today, tomorrow] }], enrollments: [{ id, season_id: id, course_season_course_id: id, course_slug: 'zhubei-night-run-monday', home_course_name: lead.preferred_course, name: lead.name, email: lead.email, status: 'approved', billing_start_session_date: today, prior_attendance_claimed: false, attendance_verification_status: 'not_required', emergency_contact_name: 'Contact QA', emergency_contact_phone: '0900000001' }], attendance: [], makeups: [], cancellations: [], checkins: [] }
 const records = [], errors = [], unexpected = [], writes = []
 let empty = false
+const scenario = { items: null, response: null, loadError: '', refreshError: '' }
 async function open(width) {
   const ctx = await browser.newContext({ viewport: { width, height: 1000 }, serviceWorkers: 'block' })
   const expiry = Math.floor(Date.now() / 1000) + 3600
@@ -41,6 +43,15 @@ async function open(width) {
     if (url.pathname === '/api/coach/profile') return reply({ profile: { displayName: 'Coach QA' } })
     if (url.pathname === '/api/coach/training-plans') return reply({ plans: [] })
     if (url.pathname === '/api/coach/session-duty') {
+      if (dutyOnly) {
+        if (method === 'POST') {
+          const response = scenario.response || { message: '已完成準時簽到。' }
+          if (!response.error && scenario.refreshError) scenario.loadError = scenario.refreshError
+          return reply(response, response.error ? 409 : 200)
+        }
+        if (scenario.loadError) return reply({ error: scenario.loadError }, 503)
+        return reply({ items: scenario.items || [duty], coaches: [{ id: cid, name: 'Coach QA' }, { id, name: 'Substitute QA' }], serverTime: now.toISOString() })
+      }
       if (method === 'POST') {
         const body = req.postDataJSON()
         if (body.intent === 'check_in') Object.assign(duty, { checkedInAt: now.toISOString(), canCheckIn: false, punctuality: 'on_time', attendanceState: 'on_time' })
@@ -75,10 +86,14 @@ async function record(page, name) {
     return { missing: [...new Set(missing)], overflow: document.documentElement.scrollWidth > innerWidth }
   })
   records.push({ name, ...state }); await writeFile(output + '/report.json', JSON.stringify({ records, errors, unexpected, writes }, null, 2))
-  if (['375/coach', '375-duty-details', '375/coach/attendance', '375/coach/planner'].includes(name)) await page.screenshot({ path: output + '/' + name.replaceAll('/', '-') + '.png', fullPage: true })
+  if (dutyOnly || ['375/coach', '375-duty-details', '375/coach/attendance', '375/coach/planner'].includes(name)) await page.screenshot({ path: output + '/' + name.replaceAll('/', '-') + '.png', fullPage: true, animations: 'disabled' })
   console.log(`${name}: ${state.missing.length} untranslated; overflow=${state.overflow}`)
 }
 try {
+  if (dutyOnly) {
+    const { auditCoachDutyFlows } = await import('./audit-english-coach-duty-flows.mjs')
+    await auditCoachDutyFlows({ open, record, scenario, duty, base, id, writes })
+  } else {
   for (const width of [1440, 375]) {
     const { ctx, page } = await open(width)
     for (const route of ['/coach', '/coach/students', '/coach/signups', '/coach/attendance', '/coach/planner']) {
@@ -129,6 +144,7 @@ try {
   const { ctx, page } = await open(375)
   for (const route of ['/coach', '/coach/students', '/coach/signups', '/coach/attendance', '/coach/planner']) { await page.goto(base + route); await page.waitForTimeout(1000); await record(page, 'empty' + route) }
   await ctx.close()
+  }
   assert.deepEqual(unexpected, []); assert.deepEqual(errors, [])
   if (process.env.LANGUAGE_AUDIT_STRICT === '1') assert.deepEqual(records.filter(r => r.missing.length || r.overflow), [])
 } finally { await writeFile(output + '/report.json', JSON.stringify({ records, errors, unexpected, writes }, null, 2)); await browser.close() }

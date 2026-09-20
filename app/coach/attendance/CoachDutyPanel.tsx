@@ -98,6 +98,13 @@ export default function CoachDutyPanel() {
   const returnFocusRef = useRef<HTMLElement | null>(null)
   const requestInFlightRef = useRef(false)
 
+  useEffect(() => {
+    if (!selectedId || (!error && !message)) return
+    for (const dialog of [mobileDialogRef.current, desktopDialogRef.current]) {
+      if (dialog?.getClientRects().length) dialog.querySelector('[data-duty-feedback]')?.scrollIntoView({ block: 'nearest' })
+    }
+  }, [error, message, selectedId])
+
   const load = useCallback(async (quiet = false) => {
     if (requestInFlightRef.current) return false
     requestInFlightRef.current = true
@@ -289,12 +296,19 @@ export default function CoachDutyPanel() {
 
   const scheduleHeading = todayItems.length ? '今日課程' : '下一堂課'
   const scheduleSubheading = language === 'en'
-    ? (todayItems.length ? `${todayItems.length} classes | Times follow the server record` : nextItems.length ? `Next session: ${formatDutyDate(nextItems[0].sessionDate, language)} | Times follow the server record` : 'No teaching sessions currently need a check-in or action.')
+    ? (todayItems.length ? `${todayItems.length} ${todayItems.length === 1 ? 'class' : 'classes'} | Times follow the server record` : nextItems.length ? `Next session: ${formatDutyDate(nextItems[0].sessionDate, language)} | Times follow the server record` : 'No teaching sessions currently need a check-in or action.')
     : todayItems.length
     ? String(todayItems.length) + ' 堂課｜時間以伺服器資料為準'
     : nextItems.length
       ? '最近一堂：' + formatDutyDate(nextItems[0].sessionDate, language) + '｜時間以伺服器資料為準'
       : '目前沒有需要簽到或處理的授課課次。'
+
+  const actionFeedback = (
+    <div data-duty-feedback>
+      {error ? <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold leading-6 text-red-800">{error}</p> : null}
+      {message ? <p role="status" className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold leading-6 text-emerald-800">{message}</p> : null}
+    </div>
+  )
 
   return (
     <section data-testid="coach-workbench" className="overflow-visible rounded-2xl border border-[#0d3b3a]/15 bg-white shadow-sm">
@@ -318,8 +332,7 @@ export default function CoachDutyPanel() {
         </div>
       </div>
 
-      {error ? <p role="alert" className="m-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold leading-6 text-red-800 sm:m-6">{error}</p> : null}
-      {message ? <p role="status" className="m-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold leading-6 text-emerald-800 sm:m-6">{message}</p> : null}
+      {!selectedItem && (error || message) ? <div className="m-4 sm:m-6">{actionFeedback}</div> : null}
 
       <div className="p-4 sm:p-6">
         <div className={(viewMode === 'calendar' ? 'hidden md:grid' : 'grid') + ' gap-5 lg:grid-cols-[minmax(0,1fr)_320px]'}>
@@ -503,6 +516,7 @@ export default function CoachDutyPanel() {
                 onClose={closeSelected}
                 onSelectItem={(id) => { setSelectedId(id); setDetailTask('check_in') }}
               />
+              {error || message ? <div className="mt-4">{actionFeedback}</div> : null}
             </div>
           </div>
           <div className="fixed inset-0 z-[95] hidden md:block" onMouseDown={(event) => { if (event.target === event.currentTarget) closeSelected() }}>
@@ -524,6 +538,7 @@ export default function CoachDutyPanel() {
                 onClose={closeSelected}
                 onSelectItem={(id) => { setSelectedId(id); setDetailTask('check_in') }}
               />
+              {error || message ? <div className="mt-4">{actionFeedback}</div> : null}
             </div>
           </div>
         </>

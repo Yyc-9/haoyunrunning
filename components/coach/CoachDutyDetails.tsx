@@ -185,7 +185,7 @@ export default function CoachDutyDetails({
 
       {dateItems.length > 1 && onSelectItem ? (
         <div className="mt-4 border-b border-black/10 pb-4">
-          <p className="mb-2 text-xs font-black text-apple-gray-500">同日 {dateItems.length} 堂課</p>
+          <p className="mb-2 text-xs font-black text-apple-gray-500">{language === 'en' ? `${dateItems.length} classes on this day` : `同日 ${dateItems.length} 堂課`}</p>
           <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="同日課程">
             {dateItems.map((dateItem) => {
               const active = dateItem.id === item.id
@@ -276,9 +276,10 @@ export default function CoachDutyDetails({
       {item.canRequestLeave ? (
         <section className="mt-4 rounded-xl border border-black/10 bg-apple-gray-50" aria-labelledby={`leave-task-title-${item.id}`}>
           <button type="button" onClick={() => chooseTask(leaveOpen ? 'check_in' : 'leave')} className="flex min-h-12 w-full items-center justify-between gap-3 px-4 py-3 text-left" aria-expanded={leaveOpen}>
-            <span className="flex items-center gap-2 text-base font-black"><CalendarClock className="h-5 w-5 text-orange-600" aria-hidden="true" /><span id={`leave-task-title-${item.id}`}>{item.substituteResponse === 'rejected' ? '重新邀請代班教練' : '請假與代班安排'}</span></span>
-            <span className="flex shrink-0 items-center gap-2 text-xs font-bold text-apple-gray-600"><span className="hidden sm:inline">可選擇由管理員安排</span><ChevronDown className={`h-5 w-5 transition-transform ${leaveOpen ? 'rotate-180' : ''}`} aria-hidden="true" /></span>
+            <span className="flex min-w-0 items-center gap-2 text-base font-black leading-6"><CalendarClock className="h-5 w-5 shrink-0 text-orange-600" aria-hidden="true" /><span id={`leave-task-title-${item.id}`}>{item.substituteResponse === 'rejected' ? '重新邀請代班教練' : '請假與代班安排'}</span></span>
+            <ChevronDown className={`h-5 w-5 shrink-0 text-apple-gray-600 transition-transform ${leaveOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
           </button>
+          {!leaveOpen ? <p className="-mt-1 px-4 pb-3 text-xs font-semibold leading-5 text-apple-gray-600">可選擇由管理員安排</p> : null}
           {leaveOpen ? (
             <div className="space-y-4 border-t border-black/10 p-4">
               <label className="block">
