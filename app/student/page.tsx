@@ -28,6 +28,7 @@ import {
 import Link from 'next/link'
 import { useAuth } from '@/app/providers'
 import { useLanguage } from '@/app/language-context'
+import { localizeTrainingFeedback } from '@/lib/training-feedback-language'
 import StudentCoachBindingPanel from '@/components/StudentCoachBindingPanel'
 import { paymentOrderStatusLabels } from '@/lib/payment'
 import {
@@ -987,8 +988,8 @@ export default function StudentPage() {
                       </span>
                     </div>
                     {latestFeedback?.feeling && (
-                      <p className="mt-4 rounded-2xl bg-white p-4 text-sm leading-6 text-apple-gray-700">
-                        {latestFeedback.feeling}
+                      <p data-training-feedback translate={language === 'en' ? 'no' : undefined} className="mt-4 whitespace-pre-line rounded-2xl bg-white p-4 text-sm leading-6 text-apple-gray-700">
+                        {localizeTrainingFeedback(latestFeedback.feeling, language)}
                       </p>
                     )}
                   </div>
@@ -1402,8 +1403,11 @@ export default function StudentPage() {
                     type="file"
                     accept="image/*"
                     onChange={(event) => updateField('screenshotName', event.target.files?.[0]?.name || '')}
-                    className="block w-full text-sm text-apple-gray-600 file:mr-4 file:rounded-full file:border-0 file:bg-black file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+                    aria-label="上傳跑步截圖"
+                    className="peer sr-only"
                   />
+                  <span className="inline-flex min-h-11 cursor-pointer items-center rounded-full bg-black px-4 py-2 text-sm font-semibold text-white peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-apple-blue">{language === 'en' ? 'Choose image' : '選擇圖片'}</span>
+                  <span className="mt-2 block break-words text-sm text-apple-gray-600" translate={feedback.screenshotName ? 'no' : undefined}>{feedback.screenshotName || (language === 'en' ? 'No image selected' : '尚未選擇圖片')}</span>
                   <span className="mt-2 block text-xs leading-5 text-apple-gray-500">
                     第一版先記錄截圖檔案名；後續可接圖片上傳與自動識別里程、配速、心率。
                   </span>

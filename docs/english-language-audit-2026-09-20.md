@@ -22,6 +22,8 @@ The whole-site audit is still in progress. Passing the checks below does not mea
 - Changing language in the coach planner no longer refetches and overwrites an unsaved workout. Week labels update independently; stale requests from a previous student or week are ignored. Mobile workout fields use 16px text and date-specific accessible labels. History and CSV exports retain coach-authored text.
 - Planner API validation messages, 404 pages, error details and website-content loading/failure/retry prompts have English copy. Raw diagnostic details retain their original text.
 - Coach attendance and substitution API responses have English copy, including expired check-in windows, stale invitations, administrator confirmation and cancelled sessions. Action feedback is shown and scrolled into view inside the open session dialog. Leave guidance uses a separate line so longer English titles retain their space.
+- Enrollment, supplement, account and student-action responses have English copy for expired quotes, full classes, archived payment instructions, stale submissions, email delivery, attendance and makeup validation. Failed submissions retain their input values.
+- Stored training feedback now renders generated labels and selected sleep/fatigue/completion values in English on both student and coach pages. Authored feelings, pain descriptions, notes and filenames remain verbatim; incomplete or plain legacy notes are not treated as structured records. The student screenshot picker uses website labels instead of browser-native file-control text.
 
 ## Evidence
 
@@ -30,6 +32,8 @@ The role scripts run against a local preview with synthetic accounts. Every busi
 | Check | Verified scope |
 | --- | --- |
 | `audit-english-student.mjs` | 19 states: enrollment gates, populated/empty/error dashboard, settings, feedback submission, profile/badges, profile save, attendance, leave and makeup scheduling; 1440px and 375px |
+| `LANGUAGE_STUDENT_ACTIONS=1 audit-english-student.mjs` | 32 strict desktop/mobile states: structured feedback readback, chosen filename, leave conflict/success, full/cancelled makeup sessions, cancellation errors/success, feedback ownership/RPE errors, invoice/profile errors and training/attendance access errors. Explicit assertions inspect translated structured fields even inside the authored-text opt-out container. |
+| `LANGUAGE_ENROLLMENT_ACTIONS=1 audit-english-interactions.mjs` | 16 desktop/mobile states: expired quote, full class, archived payment instructions, stale/invalid supplements, stale staff review, unconfirmed email delivery and email retry. Form values, Chinese notes and leading zeroes remain unchanged; no real registrations or emails are sent. |
 | `audit-english-coach.mjs` | 28 states: workspace, check-in and leave forms, populated and empty rosters, expanded registration details, attendance save, cancellation/restoration, mobile calendar, and planner initial states |
 | `LANGUAGE_COACH_DUTY=1 audit-english-coach.mjs` | 42 strict desktop/mobile states: expired check-in window, leave conflict, invited/admin-arranged leave, stale invitation, accepted/declined substitutions with and without administrator confirmation, manual entry, re-invitation, refresh failure, upcoming/missing-time/late/absent/cancelled/approved-leave states, same-day class switching and access denial. Action feedback must be inside the open dialog; submitted reasons and invitation IDs remain intact. |
 | `audit-english-finance.mjs` | 18 states: locked/unlocked access, incorrect password, matching results, batch confirmation, CSV column preview, password setup, temporary lock, archived season, read-only access, empty batches, and unauthorized account |
@@ -40,7 +44,7 @@ The role scripts run against a local preview with synthetic accounts. Every busi
 | `LANGUAGE_ADMIN_CONTENT=1 audit-english-admin.mjs` | 102 strict desktop/mobile states: every content section, draft/restore/save, coach profile, hero/avatar cropping, image failure/retry and video upload failure, season settings, native delete/activate/discard confirmations, course pricing validation/save, new-course validation, draft/archived/empty seasons; no untranslated interface text, page errors, unexpected APIs or overflow |
 | `audit-english-planner.mjs` | 26 strict states: English/Traditional Chinese round trip preserves an unsaved draft without refetching; templates, failed/retried save, CSV headers and original content, copy previous week, history, next week, empty save, no selection, empty students/plans, load failure and access denial at 1440px/375px |
 | `audit-english-system.mjs` | 12 strict desktop/mobile states: actual 404 route, error screen/details/reset, content loading, failure and successful retry; temporary error preview existed only in an isolated checkout and was removed before production build |
-| Unit tests | 160 tests passed, including unchanged specification values, cart identifiers and backend validation under English display |
+| Unit tests | 163 tests passed, including unchanged specification values, cart identifiers and backend validation under English display; structured feedback preserves authored text and covers every selectable sleep/fatigue/completion combination |
 | Static checks | TypeScript, ESLint, Traditional Chinese check, and production build passed |
 
 Strict mode for the role scripts fails on untranslated visible interface text, option labels, attributes, page errors, unexpected API requests, or horizontal document overflow. Screenshots were also inspected because native browser control text is not represented in DOM text scans.
@@ -55,13 +59,15 @@ The planner language-switch regression was reproduced before the fix: switching 
 
 The coach action-feedback regression was reproduced before the fix: a rejected check-in displayed its error behind the open session dialog, with no alert inside it. All 42 new states pass after the fix, and the previous 28-state coach audit passes again. Desktop feedback and the mobile leave-conflict form were visually inspected. TypeScript, ESLint, Traditional Chinese checks, 160 unit tests and an isolated production build pass; these coach changes remain local until released. The fixtures validate rendered responses and outgoing payloads, not real coach authorization or database transitions.
 
+The enrollment/student checkpoint passes 48 new states plus the original 19 student, 28 coach and 31 public/notification interaction states. Its synthetic feedback uses the actual generated multiline format rather than a plain English placeholder; both reader surfaces assert English system fields without changing stored values. The mobile supplement form was visually inspected. TypeScript, ESLint, Traditional Chinese checks, 163 unit tests and an isolated production build pass. These changes remain local until released.
+
 ## Still required before whole-site completion
 
 - Extend season-editor checks to completed create/duplicate/activate/delete operations and their server failures. The current audit exercises all content sections, content/coach/course saving, pricing validation, native confirmations and archived/empty states, but does not mutate those season actions.
 - Extend administrator coverage to alternative coach-duty states, archived/empty/error states, coach account mutations, payment-account publication and account creation results. Current audit covers populated workspaces, primary review dialogs, native confirmations, and selected validations/actions.
 - Shop and product-editor checks above use synthetic products and intercepted APIs; live authenticated workflows still require separate verification.
 - Coach alternate states and server failures are covered locally above; live authenticated verification remains part of final release checks.
-- Additional registration cases, API validation failures, and remaining native file controls.
+- Remaining API validation failures (including administrator and legacy/group-enrollment routes), additional registration branches, and other native file controls. Course submission failures, supplement/email failures and the student screenshot picker are covered above.
 - Recheck the final release on the production domain and record exactly which authenticated flows used real isolated fixtures versus mocked API responses.
 
 Names, user-authored notes, uploaded filenames, and submitted values must not be silently rewritten to eliminate Chinese from audit results. Keep authored content distinct from system interface copy.

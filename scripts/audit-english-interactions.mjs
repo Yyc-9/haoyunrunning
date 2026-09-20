@@ -6,13 +6,15 @@ const base = process.env.LANGUAGE_AUDIT_ORIGIN || 'http://127.0.0.1:3202'
 if (!/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(base)) throw Error('A local preview is required')
 if (!process.env.LANGUAGE_CONTENT_FILE || !process.env.LANGUAGE_AUTH_STORAGE_KEY) throw Error('Provide a public content snapshot and the local preview auth storage key')
 const { content } = JSON.parse(await readFile(process.env.LANGUAGE_CONTENT_FILE, 'utf8'))
-const output = '/private/tmp/haoyun-english-interactions'
+const actionOnly = process.env.LANGUAGE_ENROLLMENT_ACTIONS === '1'
+const output = actionOnly ? '/private/tmp/haoyun-english-enrollment-actions' : '/private/tmp/haoyun-english-interactions'
 await mkdir(output, { recursive: true })
 const records = [], errors = [], contexts = []
 const id = '1ed770c5-3666-4f30-bae1-1f6e08bcd9d4', nid = '2ed770c5-3666-4f30-bae1-1f6e08bcd9d4'
 const enrollment = { id, name: 'Language QA', course_slug: 'zhubei-night-run-monday', preferred_course: '竹北夜跑班', status: 'pending_review', amount_text: 'NT$ 3,600', season_id: id, season_name: '2026 Q4', transfer_last_five: '00123', transfer_date: null, student_review_message: null, payment_submitted_at: '2026-09-20T01:00:00Z', created_at: '2026-09-20T01:00:00Z', notes: '學生原文應保持不變', archived: false }
 const followups = []
 let writes = 0
+const scenario = { overrides: {}, registrationError: '', submissions: [] }
 const browser = await chromium.launch({ channel: 'chrome', headless: true })
 async function account(role, width = 1440) {
   const ctx = await browser.newContext({ viewport: { width, height: 1000 }, serviceWorkers: 'block' })
@@ -25,16 +27,26 @@ async function account(role, width = 1440) {
     localStorage.setItem(key, JSON.stringify({ access_token: token, refresh_token: 'synthetic-only', expires_at: expiry, expires_in: 3600, token_type: 'bearer', user }))
   }, { user, token, expiry, key: process.env.LANGUAGE_AUTH_STORAGE_KEY })
   let read = false
+  await ctx.routeWebSocket('**/*', socket => socket.close())
   await ctx.route('**/*', async route => {
     const request = route.request(), u = new URL(request.url()), method = request.method()
     const reply = (data, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) })
     if (u.origin !== base) return route.abort()
+    const override = scenario.overrides[method + ' ' + u.pathname]
+    if (override) {
+      if (!['GET', 'HEAD'].includes(method)) scenario.submissions.push(request.postDataJSON())
+      return reply(override.body, override.status ?? 200)
+    }
     if (u.pathname === '/api/site-content') return reply({ content, source: 'database' })
     if (u.pathname === '/api/account/me') return reply({ profile: { ...user, name: user.user_metadata.name, role } })
     if (u.pathname === '/api/course-enrollments/payment-info') return reply({ bankName: 'QA Bank', bankCode: '000', accountNumber: '00000000', qrCodeUrl: '' })
     if (u.pathname === '/api/course-enrollments') {
       if (method === 'GET') return reply({ availability: { courseSlug: 'zhubei-night-run-monday', capacity: 40, paidCount: 0, pendingReviewCount: 0, remaining: 40, full: false }, pricingOptions: { today: '2026-09-20', courseStarted: false, selectionRequired: false, automaticStartSessionDate: '2026-10-05', availableStartSessions: [], priorAttendanceSession: null }, legacyStudent: { matched: false, name: '' }, enrollment: null })
       const body = request.postDataJSON()
+      if (actionOnly && body.intent === 'direct_site_registration') {
+        scenario.submissions.push(body)
+        return reply({ error: scenario.registrationError }, 409)
+      }
       if (body.intent === 'course_pricing_quote') return reply({ quoteToken: 'synthetic-quote', pricingQuote: { studentType: 'new', enrollmentTiming: 'regular', billingStartSessionDate: '2026-10-05', billingStartSessionNumber: 1, priorAttendanceClaimed: false, attendanceVerificationStatus: 'not_required', amount: 3600, amountText: 'NT$ 3,600', totalSessionCount: 12, chargedSessionCount: 12, chargedSessionDates: ['2026-10-05'], unitRate: null, fullPriceCap: 3600, referrerStatus: 'not_provided', calculatedAt: new Date().toISOString(), lockedUntil: new Date(Date.now() + 86400000).toISOString() } })
       throw Error('The audit must not submit a course registration')
     }
@@ -60,7 +72,7 @@ async function account(role, width = 1440) {
     return route.continue()
   })
   const page = await ctx.newPage()
-  page.on('pageerror', error => errors.push({ role, message: error.message }))
+  page.on('pageerror', error => errors.push({ role, message: error.message, stack: error.stack }))
   return page
 }
 async function record(page, name) {
@@ -84,6 +96,10 @@ async function record(page, name) {
   console.log(`${name}: ${result.missing.length} untranslated strings; overflow=${result.overflow}`)
 }
 try {
+  if (actionOnly) {
+    const { auditEnrollmentActions } = await import('./audit-english-enrollment-actions.mjs')
+    await auditEnrollmentActions({ account, record, scenario, enrollment, followups, id, nid, base, output })
+  } else {
   const admin = await account('admin')
   await admin.goto(base + '/notifications?view=staff')
   await admin.getByRole('heading', { name: 'Registration notifications and reviews' }).waitFor()
@@ -169,6 +185,7 @@ try {
     await team.getByRole('dialog').waitFor()
     await record(team, `coach-profile-${i + 1}`)
     await team.getByRole('button', { name: 'Close coach profile', exact: true }).last().click()
+  }
   }
   assert.deepEqual(errors, [])
   assert.deepEqual(records.filter(record => record.missing.length || record.overflow), [], 'Every exercised state must be fully translated and fit the viewport')

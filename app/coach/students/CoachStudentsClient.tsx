@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLanguage } from '@/app/language-context'
+import { localizeTrainingFeedback } from '@/lib/training-feedback-language'
 import { CalendarDays, Mail, MessageSquareText, Search, UsersRound } from 'lucide-react'
 import CoachSubNav from '@/components/CoachSubNav'
 import CoachRegistrationDetails from '@/components/coach/CoachRegistrationDetails'
@@ -209,7 +210,7 @@ export default function CoachStudentsClient() {
                                   RPE {feedback.rpe ?? '-'}
                                 </span>
                               </div>
-                              <p className="line-clamp-4 whitespace-pre-line leading-6">{feedback.feeling || '學員未填寫文字感受。'}</p>
+                              <p data-training-feedback translate={feedback.feeling && language === 'en' ? 'no' : undefined} className="line-clamp-4 whitespace-pre-line leading-6">{feedback.feeling ? localizeTrainingFeedback(feedback.feeling, language) : '學員未填寫文字感受。'}</p>
                             </div>
                           ))}
                         </div>

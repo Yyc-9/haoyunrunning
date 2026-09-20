@@ -16,7 +16,7 @@ const now = new Date(), today = now.toISOString().slice(0, 10)
 const tomorrow = new Date(now.getTime() + 86400000).toISOString().slice(0, 10)
 const lead = { id, source: 'course_payment', name: 'Student QA', phone: '0900000000', email: 'student@example.invalid', instagram: '', preferred_course: '竹北夜跑班', running_experience: '1-2 年', goal: '建立規律跑步習慣', companion_count: '1', notes: '', status: 'approved', created_at: now.toISOString(), emergency_contact_name: 'Contact QA', emergency_contact_phone: '0900000001' }
 lead.registration_fields = coachRegistrationFields({ ...lead, registration_identity: 'new', prior_attendance_claimed: false, payload: { agreements: { coachSubstituteConsent: true, rulesConsent: true, finalConsent: true, agreedAt: now.toISOString() } } })
-const students = [{ id, active: true, created_at: now.toISOString(), student: { id, name: lead.name, email: lead.email, program: '竹北夜跑班', goal: lead.goal, pb: '10K 00:50:00' }, recentFeedback: [{ id, created_at: now.toISOString(), distance_km: 5, pace_text: '6:00/km', average_heart_rate: 145, rpe: 5, feeling: 'Good session', status: 'reviewed' }], enrollments: [{ id, courseName: lead.preferred_course, fields: lead.registration_fields }] }]
+const students = [{ id, active: true, created_at: now.toISOString(), student: { id, name: lead.name, email: lead.email, program: '竹北夜跑班', goal: lead.goal, pb: '10K 00:50:00' }, recentFeedback: [{ id, created_at: now.toISOString(), distance_km: 5, pace_text: '6:00/km', average_heart_rate: 145, rpe: 5, feeling: '訓練感受：Good session\n睡眠質量：很好\n疲勞程度：偏疲勞\n是否完成原計畫：完成原計畫\n疼痛 / 不適位置：無明顯不適\n備註：Keep original note\n跑步截圖：run.png', status: 'reviewed' }], enrollments: [{ id, courseName: lead.preferred_course, fields: lead.registration_fields }] }]
 const duty = { id, courseName: lead.preferred_course, location: 'Hsinchu', sessionDate: today, startTime: now.toISOString(), scheduledCoachId: cid, scheduledCoachName: 'Coach QA', actualCoachId: cid, actualCoachName: 'Coach QA', coachRole: 'coach', leaveStatus: 'none', leaveReason: '', substituteCoachId: '', substituteCoachName: '', substituteResponse: 'none', adminStatus: 'not_required', attendanceState: 'check_in_open', checkedInAt: '', punctuality: '', canViewCheckIn: true, canCheckIn: true, checkInOpensAt: now.toISOString(), canRequestLeave: true, canRespondSubstitute: false, managedByAdmin: false, isCancelled: false }
 const attendance = { courses: [{ seasonId: id, seasonName: '2026 Q4', courseSeasonCourseId: id, courseSlug: 'zhubei-night-run-monday', courseName: lead.preferred_course, weekday: '週一', location: 'Hsinchu', meetingPoint: 'Park entrance', sessionDates: [today, tomorrow] }], enrollments: [{ id, season_id: id, course_season_course_id: id, course_slug: 'zhubei-night-run-monday', home_course_name: lead.preferred_course, name: lead.name, email: lead.email, status: 'approved', billing_start_session_date: today, prior_attendance_claimed: false, attendance_verification_status: 'not_required', emergency_contact_name: 'Contact QA', emergency_contact_phone: '0900000001' }], attendance: [], makeups: [], cancellations: [], checkins: [] }
 const records = [], errors = [], unexpected = [], writes = []
@@ -121,6 +121,12 @@ try {
         if (width === 375) { await page.getByRole('tab', { name: 'Calendar', exact: true }).click(); await record(page, 'mobile-calendar') }
       }
       if (route === '/coach/students' || route === '/coach/signups') {
+        if (route === '/coach/students') {
+          const feedbackText = await page.locator('[data-training-feedback]').innerText()
+          assert.ok(feedbackText.includes('Sleep quality: Very good'))
+          assert.ok(feedbackText.includes('Notes: Keep original note'))
+          assert.doesNotMatch(feedbackText, /[\u3400-\u9fff]/u)
+        }
         const details = page.getByText('View complete registration', { exact: true }).first()
         if (await details.count()) { await details.click(); await record(page, width + route + '-registration') }
       }

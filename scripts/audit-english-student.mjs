@@ -7,7 +7,8 @@ const base = process.env.LANGUAGE_AUDIT_ORIGIN || 'http://127.0.0.1:3202'
 if (!/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(base)) throw Error('Local preview required')
 if (!process.env.LANGUAGE_CONTENT_FILE || !process.env.LANGUAGE_AUTH_STORAGE_KEY) throw Error('Provide public content and local auth storage key')
 const { content } = JSON.parse(await readFile(process.env.LANGUAGE_CONTENT_FILE, 'utf8'))
-const output = '/private/tmp/haoyun-english-student'
+const actionOnly = process.env.LANGUAGE_STUDENT_ACTIONS === '1'
+const output = actionOnly ? '/private/tmp/haoyun-english-student-actions' : '/private/tmp/haoyun-english-student'
 await mkdir(output, { recursive: true })
 const browser = await chromium.launch({ channel: 'chrome', headless: true })
 const records = [], errors = [], unexpected = [], writes = []
@@ -21,8 +22,9 @@ const plan = { id, student_id: id, coach_id: id, week_number: 1, week_start: wee
 const course = { seasonId: id, seasonName: '2026 Q4', courseSeasonCourseId: id, courseSlug: 'zhubei-night-run-monday', courseName: '竹北夜跑班', weekday: '週一', classTime: '19:30', sessionDates: [futureDate(1), futureDate(8)], capacity: 40, approvedCount: 10, scheduledMakeupCounts: {}, location: 'Hsinchu' }
 const attendance = { season: { id, name: '2026 Q4', code: '2026Q4', endsOn: '2027-12-31' }, seasons: [{ id, name: '2026 Q4' }], courses: [course, { ...course, courseSeasonCourseId: 'makeup-class', courseName: '新竹早鳥班', sessionDates: [futureDate(2)] }], enrollments: [{ id, seasonId: id, courseSeasonCourseId: id, courseName: course.courseName, name: profile.name, email: profile.email }], attendance: [], makeups: [], cancellations: [], checkins: [] }
 let accessState = 'approved', populated = true, fail = false
-const feedback = [{ id: 'feedback', training_plan_id: id, student_id: id, coach_id: id, distance_km: 5, duration_text: '30:00', pace_text: '6:00/km', average_heart_rate: 145, rpe: 5, feeling: 'Good session', status: 'reviewed', created_at: new Date().toISOString(), completed_at: today }]
+const feedback = [{ id: 'feedback', training_plan_id: id, student_id: id, coach_id: id, distance_km: 5, duration_text: '30:00', pace_text: '6:00/km', average_heart_rate: 145, rpe: 5, feeling: '訓練感受：Good session\n睡眠質量：很好\n疲勞程度：偏疲勞\n是否完成原計畫：完成原計畫\n疼痛 / 不適位置：無明顯不適\n備註：Keep original note\n跑步截圖：run.png', status: 'reviewed', created_at: new Date().toISOString(), completed_at: today }]
 const races = []
+const scenario = { overrides: {} }
 async function context(width) {
   const ctx = await browser.newContext({ viewport: { width, height: 1000 }, serviceWorkers: 'block' })
   const expiry = Math.floor(Date.now() / 1000) + 3600
@@ -40,6 +42,8 @@ async function context(width) {
     if (url.origin !== base) return route.abort()
     if (!url.pathname.startsWith('/api/')) return route.continue()
     if (!['GET', 'HEAD'].includes(method)) writes.push({ path: url.pathname, method, body: req.postDataJSON() })
+    const override = scenario.overrides[method + ' ' + url.pathname]
+    if (override) return reply(override.body, override.status ?? 200)
     if (url.pathname === '/api/site-content') return reply({ content, source: 'database' })
     if (url.pathname === '/api/account/me') {
       if (method === 'PATCH') {
@@ -99,11 +103,15 @@ async function record(page, name) {
     return { missing: [...new Set(missing)], original: [...new Set(original)], overflow: document.documentElement.scrollWidth > innerWidth }
   })
   records.push({ name, ...result })
-  if (['mobile/student', 'mobile/profile/edit', 'mobile/profile#attendance-overview'].includes(name)) await page.screenshot({ path: output + '/' + name.replaceAll('/', '-').replaceAll('#', '-') + '.png', fullPage: true })
+  if (actionOnly || ['mobile/student', 'mobile/profile/edit', 'mobile/profile#attendance-overview'].includes(name)) await page.screenshot({ path: output + '/' + name.replaceAll('/', '-').replaceAll('#', '-') + '.png', fullPage: !actionOnly, animations: 'disabled' })
   await writeFile(output + '/report.json', JSON.stringify({ records, errors, unexpected, writes }, null, 2))
   console.log(name + ': ' + result.missing.length + ' untranslated; overflow=' + result.overflow)
 }
 try {
+  if (actionOnly) {
+    const { auditStudentActions } = await import('./audit-english-student-actions.mjs')
+    await auditStudentActions({ context, record, scenario, attendance, id, base, writes, futureDate })
+  } else {
   const { page, ctx } = await context(1440)
   for (const state of ['not_enrolled', 'pending_transfer', 'pending_review', 'rejected', 'approved']) {
     accessState = state
@@ -155,6 +163,7 @@ try {
   await mobile.page.reload(); await mobile.page.waitForTimeout(1000)
   await record(mobile.page, 'student-load-error')
   await mobile.ctx.close()
+  }
   assert.deepEqual(unexpected, [])
   assert.deepEqual(errors, [])
   if (process.env.LANGUAGE_AUDIT_STRICT === '1') assert.deepEqual(records.filter(r => r.missing.length || r.overflow), [])
