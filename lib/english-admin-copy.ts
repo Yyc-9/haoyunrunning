@@ -1,5 +1,6 @@
 // Administrator navigation, account management, and season overview copy.
 export const adminEnglishCopy: Record<string, string> = {
+  '學員管理表格': 'Student management table',
   '總覽': 'Overview',
   '掌握待處理事項、報名與營運概況。': 'Review pending tasks, registrations, and operations.',
   '學員管理': 'Students',

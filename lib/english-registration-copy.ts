@@ -1,4 +1,11 @@
 export const registrationEnglishCopy: Record<string, string> = {
+  '課程報價簽名服務尚未設定。': 'Class pricing is temporarily unavailable.',
+  '本班尚未完成收費課次設定，請聯絡管理員。': 'Billable sessions have not been configured for this class. Contact the administrator.',
+  '請選擇正確的本期計費起始課次。': 'Select a valid first billable session for this season.',
+  '課程已開始，請選擇本期計費起始課次。': 'This class has started. Select your first billable session for this season.',
+  '補繳只能選擇最近一堂已結束的課次。': 'A catch-up payment can only cover the most recently completed session.',
+  '過去的課次必須申明已到課補繳。': 'For a past session, confirm that you attended and need to pay for it.',
+  '匯款資料需補充，請查看報名通知。': 'Your transfer details need more information. Check your registration notifications.',
   '報名課程': 'Registered class',
   '舊生': 'Returning student',
   '新生': 'New student',

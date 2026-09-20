@@ -194,7 +194,7 @@ export default function Navigation() {
                     </span>
                     <span className="min-w-0 text-left">
                       <span className="block text-sm font-black">{entry.label}</span>
-                      <span className={clsx('mt-0.5 block truncate text-xs', active ? 'text-white/65' : 'text-apple-gray-500')}>{entry.description}</span>
+                      <span className={clsx('mt-0.5 block text-xs leading-5', active ? 'text-white/65' : 'text-apple-gray-500')}>{entry.description}</span>
                     </span>
                   </Link>
                 )

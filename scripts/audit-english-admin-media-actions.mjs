@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { adminProductEnglishCopy } from '../lib/english-admin-product-copy.ts'
 import { adminActionEnglishCopy } from '../lib/english-admin-action-copy.ts'
+import { systemEnglishCopy } from '../lib/english-system-copy.ts'
 
 export async function adminMediaActions({ page, width, data, record }) {
   if (width > 768) await page.locator('#admin-tab-content').click()
@@ -54,8 +55,11 @@ export async function adminMediaActions({ page, width, data, record }) {
     assert.deepEqual(data.siteContent.testimonials, original)
     await snapshot(name)
   }
-  if (width > 768) await page.locator('#admin-tab-seasons').click()
-  else { await page.getByRole('navigation', { name: 'Main administrator navigation' }).getByRole('button', { name: 'More', exact: true }).click(); await page.getByRole('dialog').getByRole('button', { name: /^Seasons/ }).click() }
+  const openSeasons = async () => {
+    if (width > 768) await page.locator('#admin-tab-seasons').click()
+    else { await page.getByRole('navigation', { name: 'Main administrator navigation' }).getByRole('button', { name: 'More', exact: true }).click(); await page.getByRole('dialog').getByRole('button', { name: /^Seasons/ }).click() }
+  }
+  await openSeasons()
   for (const [name, source] of [
     ['sync-permission', '只有超級管理員可以取得表格同步程式。'],
     ['sync-configuration', 'Google 表格同步憑證尚未設定。'],
@@ -71,5 +75,18 @@ export async function adminMediaActions({ page, width, data, record }) {
     else assert.match(await sync.getByRole('textbox').inputValue(), /Synthetic preview only/)
     await snapshot(name)
     await sync.getByRole('button', { name: 'Close', exact: true }).click()
+  }
+  for (const [name, source] of [
+    ['sync-stored-validation', '表格中的班級沒有對應季度設定。'],
+    ['sync-stored-read-error', '讀取季度資料失敗。'],
+    ['sync-stored-partial-success', '學員資料已同步，但同步狀態更新失敗。'],
+  ]) {
+    data.seasonSyncSources[0].lastError = source
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.getByRole('heading', { name: 'Season overview', exact: true }).waitFor()
+    await openSeasons()
+    await page.getByText(systemEnglishCopy[source], { exact: true }).waitFor()
+    assert.equal(data.seasonSyncSources[0].lastError, source, 'Stored synchronization messages must remain unchanged')
+    await snapshot(name)
   }
 }

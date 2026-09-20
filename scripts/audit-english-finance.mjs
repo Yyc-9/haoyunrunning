@@ -1,6 +1,7 @@
 // Local-only finance language audit. Bank files, credentials, and transactions are synthetic.
 import assert from 'node:assert/strict'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { financeEnglishCopy } from '../lib/english-finance-copy.ts'
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const base = process.env.LANGUAGE_AUDIT_ORIGIN || 'http://127.0.0.1:3202'
 if (!/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(base)) throw Error('Local preview required')
@@ -13,6 +14,7 @@ const id = '1ed770c5-3666-4f30-bae1-1f6e08bcd9d4'
 const now = new Date().toISOString()
 const records = [], errors = [], unexpected = [], writes = []
 async function open(width, scenario = 'normal') {
+  const faults = { previewError: '', importError: '' }
   const ctx = await browser.newContext({ viewport: { width, height: 1000 }, serviceWorkers: 'block' })
   const expiry = Math.floor(Date.now() / 1000) + 3600
   const user = { id, email: 'finance@example.invalid', role: 'authenticated', aud: 'authenticated', user_metadata: { name: 'Finance QA' } }
@@ -38,9 +40,9 @@ async function open(width, scenario = 'normal') {
       if (method === 'POST') return req.postDataJSON().password === 'bad' ? reply({ error: '目前的財務密碼不正確。' }, 403) : reply({ token: 'synthetic-finance', message: '財務對帳區已解鎖 30 分鐘。' })
       return reply({ configured: scenario !== 'setup', canManagePassword: true, readOnly: scenario === 'readonly', lockedUntil: scenario === 'locked' ? new Date(Date.now() + 900000).toISOString() : null, passwordRequirements: '12 至 128 個字元，至少包含一個英文字母與一個數字。' })
     }
-    if (url.pathname === '/api/admin/reconciliation/preview') return reply({ preview: { fileName: 'synthetic-bank.csv', fileSize: 100, fileSha256: 'synthetic', sheetName: 'Sheet1', sheetNames: ['Sheet1'], headerRow: 1, rowCount: 1, columns: [{ index: 0, header: '交易日期', samples: ['2026-09-20'] }, { index: 1, header: '入帳金額', samples: ['3600'] }, { index: 2, header: '後五碼', samples: ['54321'] }], suggestedMapping: { date: 0, time: null, amount: 1, lastFive: 2, sourceName: null, reference: null, note: null, direction: null } } })
+    if (url.pathname === '/api/admin/reconciliation/preview') return faults.previewError ? reply({ error: faults.previewError }, 400) : reply({ preview: { fileName: 'synthetic-bank.csv', fileSize: 100, fileSha256: 'synthetic', sheetName: 'Sheet1', sheetNames: ['Sheet1'], headerRow: 1, rowCount: 1, columns: [{ index: 0, header: '交易日期', samples: ['2026-09-20'] }, { index: 1, header: '入帳金額', samples: ['3600'] }, { index: 2, header: '後五碼', samples: ['54321'] }], suggestedMapping: { date: 0, time: null, amount: 1, lastFive: 2, sourceName: null, reference: null, note: null, direction: null } } })
     if (url.pathname === '/api/admin/reconciliation') {
-      if (method === 'POST') return reply({ batchId: id, message: '已匯入 1 筆交易，系統已完成初步比對。' })
+      if (method === 'POST') return faults.importError ? reply({ error: faults.importError }, 400) : reply({ batchId: id, message: '已匯入 1 筆交易，系統已完成初步比對。' })
       if (method === 'PATCH') {
         const body = req.postDataJSON()
         if (body.action === 'confirm_batch') transactions.filter(t => t.match_status === 'matched').forEach(t => t.match_status = 'confirmed')
@@ -51,7 +53,7 @@ async function open(width, scenario = 'normal') {
     unexpected.push(url.pathname); return reply({ error: 'Unmocked API blocked' }, 503)
   })
   const page = await ctx.newPage(); page.on('pageerror', e => errors.push(e.message))
-  return { ctx, page }
+  return { ctx, page, faults }
 }
 async function record(page, name) {
   await page.waitForTimeout(400)
@@ -66,7 +68,7 @@ async function record(page, name) {
 }
 try {
   for (const width of [1440,375]) {
-    const { ctx, page } = await open(width)
+    const { ctx, page, faults } = await open(width)
     await page.goto(base + '/finance')
     await page.getByRole('button', { name: 'Unlock reconciliation', exact: true }).waitFor()
     await record(page, width + '-locked')
@@ -86,6 +88,36 @@ try {
     await page.getByText('Header row', { exact: true }).waitFor()
     await record(page, width + '-file-preview')
     await page.screenshot({ path: output + '/' + width + '-finance.png', fullPage: true })
+    for (const [name, source] of [
+      ['empty', '銀行檔案是空的。'],
+      ['size', '銀行檔案不可超過 10 MB。'],
+      ['legacy', '舊版 XLS 格式目前不支援，請由銀行系統另存為 XLSX 或 CSV 後再上傳。'],
+      ['unreadable', 'CSV 檔案內容無法辨識，請重新下載。'],
+      ['header', '標題列設定無效。'],
+    ]) {
+      faults.previewError = source
+      await page.locator('input[type="file"]').setInputFiles({ name: `synthetic-${name}.csv`, mimeType: 'text/csv', buffer: Buffer.from('Synthetic file validation') })
+      await page.getByRole('alert').getByText(financeEnglishCopy[source], { exact: true }).waitFor()
+      await record(page, `${width}-file-error-${name}`)
+    }
+    faults.previewError = ''
+    await page.locator('input[type="file"]').setInputFiles({ name: 'synthetic-retry.csv', mimeType: 'text/csv', buffer: Buffer.from('Date,Amount,Last5\n2026-09-20,3600,00123') })
+    await page.getByText('Header row', { exact: true }).waitFor()
+    await record(page, `${width}-file-recovered`)
+    for (const [name, source, translated] of [
+      ['mapping', '請指定「匯款帳號或後五碼」欄位。', 'Select the “Transfer account or last five digits” column.'],
+      ['limit', '單次最多匯入 5,000 筆交易。', 'You can import up to 5,000 transactions at a time.'],
+    ]) {
+      faults.importError = source
+      await page.getByRole('button', { name: /^Import and match/ }).click()
+      await page.getByRole('alert').getByText(translated, { exact: true }).waitFor()
+      await page.getByText('Header row', { exact: true }).waitFor()
+      await record(page, `${width}-import-error-${name}`)
+    }
+    faults.importError = ''
+    await page.getByRole('button', { name: /^Import and match/ }).click()
+    await page.getByText('Header row', { exact: true }).waitFor({ state: 'hidden' })
+    await record(page, `${width}-import-recovered`)
     await ctx.close()
   }
   for (const scenario of ['setup','locked','archived','readonly','empty','unauthorized']) {

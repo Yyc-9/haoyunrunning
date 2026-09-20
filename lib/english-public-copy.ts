@@ -1,6 +1,14 @@
 // Complete English copy for published public content and its visible UI fragments.
 // Keep source sentences intact: short dictionary words are not translation rules.
 export const publicEnglishCopy: Record<string, string> = {
+  '個人會員': 'Member',
+  '財務專用・匯入明細與核對款項': 'Import bank records and reconcile payments',
+  '管理網站、訂單與內容': 'Manage the website, orders and content',
+  '管理學員與訓練工作': 'Manage students and training',
+  '編輯跑者資料與查看勳章': 'Edit your runner profile and view badges',
+  '季度資訊': 'Season information',
+  '課程不存在 - 好運跑班': 'Class not found - Nurture Running Team',
+  '正在讀取報名通知…': 'Loading registration notifications…',
   '快速預覽': 'Quick preview',
   '關閉課程預覽': 'Close class preview',
   '查看課程詳情': 'View class details',

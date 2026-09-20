@@ -959,7 +959,7 @@ export const dictionary = {
       login: 'Log In',
       logout: 'Log Out',
       logoutFull: 'Log Out',
-      myAccount: 'Student Dashboard',
+      myAccount: 'My account',
       shop: 'Shop',
       language: 'Language',
     },

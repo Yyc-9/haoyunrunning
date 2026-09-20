@@ -190,6 +190,14 @@ export function toEnglishWebsiteText(value: string): string {
   const exact = englishCopy.get(source) ?? cityFilterTranslations.get(source)
   const preserveSpace = (translation: string) => `${value.match(/^\s*/u)?.[0] ?? ''}${translation}${value.match(/\s*$/u)?.[0] ?? ''}`
   if (exact) return preserveSpace(exact)
+  const requiredBankColumn = source.match(/^請指定「(.+)」欄位。$/u)
+  const invalidBankColumn = source.match(/^「(.+)」欄位設定無效。$/u)
+  if (requiredBankColumn || invalidBankColumn) {
+    const label = toEnglishWebsiteText((requiredBankColumn || invalidBankColumn)![1])
+    if (!/[\u3400-\u9fff]/u.test(label)) return preserveSpace(requiredBankColumn ? `Select the “${label}” column.` : `The “${label}” column setting is invalid.`)
+  }
+  const bankRowLimit = source.match(/^單次最多匯入 ([\d,]+) 筆交易。$/u)
+  if (bankRowLimit) return preserveSpace(`You can import up to ${bankRowLimit[1]} transactions at a time.`)
   const imageLimit = source.match(/^圖片大小必須小於 (\d+) MB。$/u)
   if (imageLimit) return preserveSpace(`Images must be smaller than ${imageLimit[1]} MB.`)
   const seasonName = source.match(/^(\d{4})\s*第([一二三四])季$/u)
