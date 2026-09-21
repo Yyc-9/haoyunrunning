@@ -1,6 +1,12 @@
 // Complete English copy for published public content and its visible UI fragments.
 // Keep source sentences intact: short dictionary words are not translation rules.
 export const publicEnglishCopy: Record<string, string> = {
+  '性別與 PB 可在註冊後，至「修改跑者資料」補填。': 'You can add your gender and personal best later in Edit runner profile.',
+  '性別（選填）': 'Gender (optional)',
+  '暫不填寫': 'Prefer not to say',
+  '性別選項無效。': 'Select a valid gender option.',
+  '部分資料已儲存，但性別資料儲存失敗，請重試。': 'Some details were saved, but gender could not be saved. Please try again.',
+  '登入方式暫時無法讀取。': 'Sign-in methods are temporarily unavailable.',
   '個人會員': 'Member',
   '財務專用・匯入明細與核對款項': 'Import bank records and reconcile payments',
   '管理網站、訂單與內容': 'Manage the website, orders and content',

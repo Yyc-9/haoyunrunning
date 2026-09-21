@@ -112,6 +112,7 @@ export default function EditProfilePage() {
         headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: profile.name,
+          gender: profile.gender ?? '',
           nickname: profile.nickname,
           phone: formatPhone(phoneCode, phoneNumber),
           city,
@@ -157,6 +158,7 @@ export default function EditProfilePage() {
           <div className="grid gap-5 md:grid-cols-2">
             <label><FieldLabel required>真實姓名</FieldLabel><input autoComplete="name" value={profile.name} onChange={(event) => updateField('name', event.target.value)} className="apple-input min-h-12" /></label>
             <label><FieldLabel>暱稱</FieldLabel><input value={profile.nickname} onChange={(event) => updateField('nickname', event.target.value)} className="apple-input min-h-12" placeholder="跑友怎麼稱呼你？" /></label>
+            <label><FieldLabel>性別（選填）</FieldLabel><select value={profile.gender ?? ''} onChange={event => updateField('gender', event.target.value as AccountProfile['gender'])} className="apple-input min-h-12"><option value="">暫不填寫</option><option value="male">男</option><option value="female">女</option><option value="other">其他</option></select></label>
 
             <div className="md:col-span-2"><FieldLabel>手機電話</FieldLabel><div className={language === 'en' ? 'grid grid-cols-1 gap-2 sm:grid-cols-[180px_minmax(0,1fr)]' : 'grid grid-cols-[135px_1fr] gap-2'}><select value={phoneCode} onChange={(event) => setPhoneCode(event.target.value)} className="apple-input min-h-12 px-3">{countryCodes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select><input type="tel" inputMode="numeric" autoComplete="tel-national" value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value.replace(/\D/g, ''))} className="apple-input min-h-12" placeholder="912345678" /></div></div>
 

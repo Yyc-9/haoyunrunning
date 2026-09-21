@@ -3,13 +3,15 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { socialProviderScopes, type SocialProvider } from '@/lib/auth-providers'
+import { normalizeProfileGender, type ProfileGender } from '@/lib/profile-gender'
 
 export interface User {
   id: string
   name: string
   email: string
   phone: string
-  gender: 'male' | 'female' | 'other'
+  gender: ProfileGender
   pb: string
   avatar?: string
   nickname?: string
@@ -33,7 +35,7 @@ export interface AuthContextType {
   isLoggedIn: boolean
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
-  loginWithOAuth: (provider: 'google' | 'apple') => Promise<void>
+  loginWithOAuth: (provider: SocialProvider) => Promise<void>
   logout: () => void
   register: (data: Omit<User, 'id'> & { password: string; coachId?: string }) => Promise<{ needsEmailConfirmation: boolean }>
   updateUser: (data: Partial<User>) => void
@@ -43,6 +45,7 @@ export interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 type ProfilePayload = {
+  gender?: ProfileGender
   id: string
   role?: 'student' | 'coach' | 'admin'
   name?: string | null
@@ -172,7 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       name: data.name || '好運會員',
       email: data.email || fallbackEmail,
       phone: data.phone || '',
-      gender: 'other',
+      gender: normalizeProfileGender(data.gender),
       pb: data.pb || '',
       avatar: data.avatar_url || undefined,
       nickname: data.nickname || '',
@@ -204,7 +207,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         '好運會員',
       email: authUser.email ?? '',
       phone: '',
-      gender: 'other',
+      gender: '',
       pb: '',
       role: 'student',
     }
@@ -286,7 +289,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         name: fallbackEmail ? fallbackEmail.split('@')[0] : '好運會員',
         email: fallbackEmail,
         phone: '',
-        gender: 'other',
+        gender: '',
         pb: '',
         role: 'student',
       }
@@ -401,7 +404,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [applyAuthUser, loadProfileFromServer])
 
-  const loginWithOAuth = useCallback(async (provider: 'google' | 'apple') => {
+  const loginWithOAuth = useCallback(async (provider: SocialProvider) => {
     if (!supabase) {
       throw new Error('Supabase 尚未設定。')
     }
@@ -419,6 +422,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       provider,
       options: {
         redirectTo,
+        scopes: socialProviderScopes(provider),
       },
     })
 

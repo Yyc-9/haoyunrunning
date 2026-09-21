@@ -3,10 +3,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { X, User, Mail, Phone, Lock, Award, Eye, EyeOff, ChevronRight } from 'lucide-react'
+import { X, User, Mail, Phone, Lock, Eye, EyeOff, ChevronRight } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '@/app/providers'
 import { useLanguage } from '@/app/language-context'
+import { enabledSocialProviders, socialProviders, type SocialProvider } from '@/lib/auth-providers'
 
 interface AuthModalProps {
   isOpen: boolean
@@ -58,31 +59,34 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [oauthSubmitting, setOauthSubmitting] = useState<'google' | 'apple' | null>(null)
+  const [oauthSubmitting, setOauthSubmitting] = useState<SocialProvider | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
-    gender: '',
-    pb: '',
     email: '',
     password: '',
     coachId: '',
   })
   const router = useRouter()
   const { login, loginWithOAuth, register } = useAuth()
-  const { t } = useLanguage()
-  const oauthProviders = [
-    {
-      id: 'apple' as const,
-      label: 'Apple',
-      enabled: process.env.NEXT_PUBLIC_APPLE_AUTH_ENABLED === 'true',
-    },
-    {
-      id: 'google' as const,
-      label: 'Google',
-      enabled: process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === 'true',
-    },
-  ].filter((provider) => provider.enabled)
+  const { t, language } = useLanguage()
+  const [oauthProviders, setOauthProviders] = useState(() => enabledSocialProviders({
+    google: process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === 'true',
+    apple: process.env.NEXT_PUBLIC_APPLE_AUTH_ENABLED === 'true',
+  }))
+
+  useEffect(() => {
+    if (!isOpen) return
+    const controller = new AbortController()
+    fetch('/api/auth/providers', { signal: controller.signal }).then(async response => {
+      if (!response.ok) return
+      const payload = await response.json()
+      if (Array.isArray(payload.providers)) {
+        setOauthProviders(socialProviders.filter(provider => payload.providers.some((enabled: { id?: string }) => enabled?.id === provider.id)))
+      }
+    }).catch(() => { /* Keep configured fallback; email registration remains available. */ })
+    return () => controller.abort()
+  }, [isOpen])
 
   useEffect(() => {
     if (isOpen) {
@@ -138,8 +142,8 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
-        gender: formData.gender as 'male' | 'female' | 'other',
-        pb: formData.pb,
+        gender: '',
+        pb: '',
         coachId: formData.coachId,
         password: formData.password,
       })
@@ -160,7 +164,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
     }
   }
 
-  const handleOAuthLogin = async (provider: 'google' | 'apple') => {
+  const handleOAuthLogin = async (provider: SocialProvider) => {
     setErrorMessage('')
     setSuccessMessage('')
     setOauthSubmitting(provider)
@@ -179,13 +183,6 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
       [e.target.name]: e.target.value,
     })
   }
-
-  const genderOptions = [
-    { value: '', label: t.auth.genderOptions[0] },
-    { value: 'male', label: t.auth.genderOptions[1] },
-    { value: 'female', label: t.auth.genderOptions[2] },
-    { value: 'other', label: t.auth.genderOptions[3] },
-  ]
 
   return (
     <AnimatePresence>
@@ -271,6 +268,16 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
               </div>
 
               {/* Form */}
+              {oauthProviders.length > 0 && <div className="px-4 pt-5 sm:px-6">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {oauthProviders.map(provider => <button key={provider.id} type="button" onClick={() => handleOAuthLogin(provider.id)}
+                    disabled={oauthSubmitting !== null || isSubmitting}
+                    className={clsx('flex min-h-12 items-center justify-center rounded-xl border px-4 py-3 text-sm font-bold transition-colors disabled:opacity-50', provider.id === 'google' ? 'border-apple-gray-300 bg-white text-black hover:bg-apple-gray-50' : 'border-apple-gray-200 bg-apple-gray-50 text-black hover:bg-apple-gray-100', oauthProviders.length === 1 && 'sm:col-span-2')}>
+                    {oauthSubmitting === provider.id ? (language === 'en' ? 'Connecting...' : '連線中...') : language === 'en' ? `Continue with ${provider.label}` : `使用 ${provider.label} 繼續`}
+                  </button>)}
+                </div>
+                <div className="mt-5 flex items-center gap-3 text-xs text-apple-gray-500"><span className="h-px flex-1 bg-apple-gray-200" /><span>{t.auth.email}</span><span className="h-px flex-1 bg-apple-gray-200" /></div>
+              </div>}
               <form onSubmit={handleSubmit} className="p-4 sm:p-6">
                 <div className="space-y-4">
                   {activeMode === 'register' && (
@@ -315,47 +322,7 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                         </div>
                       </div>
 
-                      <div>
-                        <label htmlFor="auth-gender" className="block text-sm font-medium text-apple-gray-700 mb-2">
-                          {t.auth.gender}
-                        </label>
-                        <div className="relative">
-                          <select
-                            name="gender"
-                            id="auth-gender"
-                            value={formData.gender}
-                            onChange={handleChange}
-                            className="apple-input"
-                            required
-                          >
-                            {genderOptions.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label htmlFor="auth-pb" className="block text-sm font-medium text-apple-gray-700 mb-2">
-                          {t.auth.pb}
-                        </label>
-                        <div className="relative">
-                          <Award className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-apple-gray-400" />
-                          <input
-                            type="text"
-                            name="pb"
-                            id="auth-pb"
-                            value={formData.pb}
-                            onChange={handleChange}
-                            placeholder={t.auth.pbPlaceholder}
-                            className="apple-input pl-10"
-                          />
-                        </div>
-                      </div>
-
-                      <p className="text-sm text-apple-gray-600">教練將在課程確認入帳後，依報名班級自動關聯。</p>
+                      <p className="text-sm text-apple-gray-600">性別與 PB 可在註冊後，至「修改跑者資料」補填。</p>
                     </>
                   )}
 
@@ -470,32 +437,6 @@ export default function AuthModal({ isOpen, onClose, mode = 'login' }: AuthModal
                 </div>
               </form>
 
-              {oauthProviders.length > 0 ? (
-              <div className="px-6 pb-6">
-                <div className="text-center">
-                  <div className="inline-flex items-center space-x-2 text-apple-gray-500">
-                    <div className="h-px w-12 bg-apple-gray-300" />
-                    <span className="text-xs">{t.auth.otherMethods}</span>
-                    <div className="h-px w-12 bg-apple-gray-300" />
-                  </div>
-                  <div className="flex justify-center space-x-3 mt-4">
-                    {oauthProviders.map((provider) => (
-                      <motion.button
-                        key={provider.id}
-                        type="button"
-                        onClick={() => handleOAuthLogin(provider.id)}
-                        disabled={oauthSubmitting !== null}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="apple-button-outline px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {oauthSubmitting === provider.id ? '連線中...' : provider.label}
-                      </motion.button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              ) : null}
             </motion.div>
           </div>
         </>

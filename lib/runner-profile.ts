@@ -1,4 +1,5 @@
 export type AccountProfile = {
+  gender?: import('./profile-gender').ProfileGender
   id: string
   role: 'student' | 'coach' | 'admin'
   name: string
@@ -44,6 +45,7 @@ export type RaceEvent = {
 }
 
 export const emptyProfile: AccountProfile = {
+  gender: '',
   id: '',
   role: 'student',
   name: '',

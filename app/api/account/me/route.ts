@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isAdminAllowlistedEmail } from '@/lib/admin-auth'
 import { getAuthedUser, isRevokedDeviceSession, supabaseAdmin } from '@/lib/supabase-server'
 import { getIsolatedTestAccount } from '@/lib/test-account'
+import { normalizeProfileGender } from '@/lib/profile-gender'
 
 const noStoreHeaders = {
   'Cache-Control': 'no-store',
 }
 
 type AccountUpdateBody = {
+  gender?: string
   name?: string
   phone?: string
   pb?: string
@@ -274,7 +276,7 @@ export async function GET(request: NextRequest) {
       responseProfile = refreshedProfile
     }
 
-    return accountResponse(responseProfile, coachAccount)
+    return accountResponse({ ...responseProfile, gender: normalizeProfileGender(user.user_metadata?.gender) }, coachAccount)
   }
 
   const email = (user.email ?? '').trim().toLowerCase()
@@ -314,10 +316,10 @@ export async function GET(request: NextRequest) {
     if (refreshedProfileError || !refreshedProfile) {
       return NextResponse.json({ error: refreshedProfileError?.message || '讀取教練帳號狀態失敗。' }, { status: 500 })
     }
-    return accountResponse(refreshedProfile, coachAccount)
+    return accountResponse({ ...refreshedProfile, gender: normalizeProfileGender(user.user_metadata?.gender) }, coachAccount)
   }
 
-  return accountResponse(profile, coachAccount)
+  return accountResponse({ ...profile, gender: normalizeProfileGender(user.user_metadata?.gender) }, coachAccount)
 }
 
 export async function PATCH(request: NextRequest) {
@@ -334,6 +336,10 @@ export async function PATCH(request: NextRequest) {
   }
 
   const body = (await request.json().catch(() => ({}))) as AccountUpdateBody
+  if (body.gender !== undefined && !['', 'male', 'female', 'other'].includes(body.gender)) {
+    return NextResponse.json({ error: '性別選項無效。' }, { status: 400 })
+  }
+  const gender = body.gender === undefined ? normalizeProfileGender(user.user_metadata?.gender) : normalizeProfileGender(body.gender)
   const nextName = cleanText(body.name, 120)
   const nickname = cleanText(body.nickname, 80)
   const city = cleanText(body.city, 80)
@@ -397,12 +403,14 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: billingError.message }, { status: 500 })
   }
 
-  await supabaseAdmin.auth.admin.updateUserById(user.id, {
+  const { error: metadataError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
     user_metadata: {
       ...(user.user_metadata ?? {}),
       name: nextName,
+      gender,
     },
   })
+  if (metadataError) return NextResponse.json({ error: '部分資料已儲存，但性別資料儲存失敗，請重試。' }, { status: 500 })
 
   if (nickname && city && favoriteDistance) {
     const { data: profileBadge } = await supabaseAdmin
@@ -437,5 +445,5 @@ export async function PATCH(request: NextRequest) {
     }
     responseProfile = refreshedProfile
   }
-  return accountResponse(responseProfile, coachAccount)
+  return accountResponse({ ...responseProfile, gender }, coachAccount)
 }
