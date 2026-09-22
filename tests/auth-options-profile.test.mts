@@ -7,7 +7,7 @@ import { enabledSocialProviders, socialProviderScopes } from '../lib/auth-provid
 import { normalizeProfileGender } from '../lib/profile-gender.ts'
 
 test('only configured providers appear, Google first; Microsoft requests required email scope', () => {
-  assert.deepEqual(enabledSocialProviders({ facebook: true, azure: true, google: true, apple: false }).map(p => p.id), ['google', 'azure', 'facebook'])
+  assert.deepEqual(enabledSocialProviders({ facebook: true, azure: true, google: true, apple: false }).map(p => p.id), ['google', 'azure'])
   assert.deepEqual(enabledSocialProviders({ azure: 'true', apple: false }), [])
   assert.equal(socialProviderScopes('azure'), 'email')
   assert.equal(socialProviderScopes('google'), undefined)

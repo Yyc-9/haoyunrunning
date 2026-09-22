@@ -2,7 +2,6 @@ export const socialProviders = [
   { id: 'google', label: 'Google' },
   { id: 'azure', label: 'Microsoft' },
   { id: 'apple', label: 'Apple' },
-  { id: 'facebook', label: 'Facebook' },
 ] as const
 
 export type SocialProvider = typeof socialProviders[number]['id']
