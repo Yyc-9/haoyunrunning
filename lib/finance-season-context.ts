@@ -1,6 +1,7 @@
 import 'server-only'
 import { supabaseAdmin } from '@/lib/supabase-server'
 import { overviewSeasonId, type CourseSeasonStatus } from '@/lib/course-seasons'
+import { financeRegistrationDetails } from '@/lib/finance-roster'
 
 export async function financeSeasonContext(requestedSeasonId = '') {
   const { data, error } = await supabaseAdmin!.from('course_seasons')
@@ -14,11 +15,11 @@ export async function financeSeasonContext(requestedSeasonId = '') {
   if (selectedSeasonId) {
     for (let from = 0; ; from += 500) {
       const { data: rows, error: rosterError } = await supabaseAdmin!.from('signup_leads')
-        .select('id, name, preferred_course, calculated_amount, transfer_last_five, status')
+        .select('id, name, email, phone, preferred_course, calculated_amount, transfer_last_five, transfer_date, status, notes, review_note, reviewed_at, payment_submitted_at, created_at, payload')
         .eq('source', 'course_payment').eq('season_id', selectedSeasonId)
         .order('created_at').order('id').range(from, from + 499)
       if (rosterError) throw rosterError
-      roster.push(...(rows ?? []))
+      roster.push(...(rows ?? []).map(({ payload, ...row }) => ({ ...row, ...financeRegistrationDetails(payload) })))
       if (!rows || rows.length < 500) break
     }
   }

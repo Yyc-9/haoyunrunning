@@ -17,7 +17,6 @@ import {
   Upload,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import Link from 'next/link'
 import FinanceSeasonRoster, { type FinanceRosterRow } from './FinanceSeasonRoster'
 
 type PaymentAccount = {
@@ -245,7 +244,8 @@ export default function AdminBankReconciliation({ paymentAccounts, readOnly: vie
       if (savedToken) {
         storeFinanceToken(savedToken)
         try {
-          const reconciliation = await authorizedFetch('/api/admin/reconciliation', undefined, savedToken)
+          const requestedSeason = new URLSearchParams(window.location.search).get('seasonId') || ''
+          const reconciliation = await authorizedFetch(`/api/admin/reconciliation?seasonId=${encodeURIComponent(requestedSeason)}`, undefined, savedToken)
           setData(reconciliation as unknown as ReconciliationPayload)
         } catch {
           storeFinanceToken('')
@@ -269,7 +269,8 @@ export default function AdminBankReconciliation({ paymentAccounts, readOnly: vie
   const loadData = useCallback(async (batchId = '', tokenOverride?: string, seasonId = '') => {
     const query = new URLSearchParams()
     if (batchId) query.set('batchId', batchId)
-    if (seasonId) query.set('seasonId', seasonId)
+    const requestedSeason = seasonId || (!batchId ? new URLSearchParams(window.location.search).get('seasonId') || '' : '')
+    if (requestedSeason) query.set('seasonId', requestedSeason)
     const payload = await authorizedFetch(`/api/admin/reconciliation?${query}`, undefined, tokenOverride)
     setData(payload as unknown as ReconciliationPayload)
   }, [authorizedFetch])
@@ -600,10 +601,9 @@ export default function AdminBankReconciliation({ paymentAccounts, readOnly: vie
         <p className="text-xs leading-5 text-apple-gray-500">{archived ? '此季度已封存，僅供查閱，不能匯入或修改對帳。' : '上傳前請確認季度。銀行明細只會比對此季度的課程報名；唯一相符也需確認入帳後才列為已繳費。'}</p>
       </div>
 
-      {data && <FinanceSeasonRoster rows={data.roster ?? []} />}
-      <Link href="/notifications?view=staff" className="apple-card flex min-h-16 items-center justify-between gap-4 p-5 text-sm font-bold hover:bg-apple-gray-100">
-        <span>報名通知與核對待辦<span className="mt-1 block text-xs font-normal text-apple-gray-500">查看新報名、請學生補充資料或回報匯款</span></span><span aria-hidden="true">→</span>
-      </Link>
+      {data && <FinanceSeasonRoster key={data.selectedSeasonId} rows={data.roster ?? []} readOnly={readOnly} busy={Boolean(busy)}
+        onConfirm={(id, reason) => runAction(`enrollment-${id}`, { action: 'confirm_enrollment', enrollmentId: id, reason, confirmReceipt: true })}
+        onChanged={() => loadData(data.selectedBatchId, undefined, data.selectedSeasonId)} />}
 
       {!readOnly && accessStatus.canManagePassword ? (
         <details className="apple-card overflow-hidden">

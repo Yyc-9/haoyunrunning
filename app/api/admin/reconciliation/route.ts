@@ -13,6 +13,7 @@ import { authenticateFinanceRequest, financeNoStoreHeaders } from '@/lib/finance
 import { transitionRemittanceStatus } from '@/lib/payment-workflow'
 import { supabaseAdmin } from '@/lib/supabase-server'
 import { financeSeasonContext } from '@/lib/finance-season-context'
+import { validateFinanceReceipt } from '@/lib/finance-roster'
 
 export const runtime = 'nodejs'
 
@@ -28,7 +29,9 @@ type MatchableOrder = {
 }
 
 type ReconciliationActionBody = {
-  action?: 'select_candidate' | 'confirm' | 'confirm_batch' | 'ignore'
+  action?: 'select_candidate' | 'confirm' | 'confirm_batch' | 'ignore' | 'confirm_enrollment'
+  enrollmentId?: string
+  confirmReceipt?: boolean
   transactionId?: string
   candidateId?: string
   batchId?: string
@@ -497,6 +500,27 @@ export async function PATCH(request: NextRequest) {
   const batchId = cleanUuid(body.batchId)
 
   try {
+    if (body.action === 'confirm_enrollment') {
+      const invalid = validateFinanceReceipt(body)
+      if (invalid) return json({ error: invalid }, { status: 400 })
+      const enrollmentId = cleanUuid(body.enrollmentId)
+      const { data: lead, error: leadError } = await supabaseAdmin!.from('signup_leads')
+        .select('id,status').eq('id', enrollmentId).eq('source', 'course_payment').maybeSingle()
+      if (leadError) throw leadError
+      if (!lead) return json({ error: '找不到課程報名。' }, { status: 404 })
+      const archiveError = await archivedSeasonResponse({ enrollmentId })
+      if (archiveError) return archiveError
+      if (lead.status === 'approved') return json({ message: '這筆報名已確認入帳，沒有重複修改。' })
+      const { error } = await supabaseAdmin!.rpc('approve_course_enrollment', {
+        p_lead_id: enrollmentId,
+        p_review_note: `財務人工確認入帳｜操作人：${auth.adminProfile.id}｜核對依據：${body.reason!.trim()}`,
+      })
+      if (error) {
+        const full = error.message.includes('course capacity reached')
+        return json({ error: full ? '本班名額已滿，未確認入帳；請先處理班級名額。' : '確認入帳未完成，請重新整理核對狀態後再試。' }, { status: full ? 409 : 400 })
+      }
+      return json({ message: '已確認課程匯款入帳，確認時間、操作人及核對依據已保存。' })
+    }
     let targetBatchId = body.action === 'confirm_batch' ? batchId : ''
     if (!targetBatchId && transactionId) {
       const { data: transaction, error } = await supabaseAdmin!.from('finance_bank_transactions')

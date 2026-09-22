@@ -21,7 +21,7 @@ function load(relative: string, modules: Record<string, unknown>) {
 const bank = load('../lib/bank-reconciliation.ts', {}) as typeof import('../lib/bank-reconciliation.ts')
 const fixture = readFileSync(new URL('./fixtures/finance-bank-example.xlsx', import.meta.url))
 
-function harness() {
+function harness(authStatus = 200) {
   const tables: Record<string, Row[]> = {
     course_seasons: [{ id: q4, name: '第四季', code: '2026-Q4', status: 'enrolling', is_current: true }, { id: q3, name: '第三季', code: '2026-Q3', status: 'archived', is_current: false }],
     signup_leads: [
@@ -34,6 +34,13 @@ function harness() {
   let serial = 10
   const actors: string[] = []
   const client = { async rpc(name: string, args: Record<string, string>) {
+    if (name === 'approve_course_enrollment') {
+      const lead = tables.signup_leads.find(row => row.id === args.p_lead_id)!
+      if (lead.full) return { data: null, error: { message: 'course capacity reached' } }
+      actors.push(args.p_review_note)
+      Object.assign(lead, { status: 'approved', review_note: args.p_review_note, reviewed_at: new Date().toISOString() })
+      return { data: lead, error: null }
+    }
     assert.equal(name, 'confirm_finance_reconciliation_transaction')
     actors.push(args.p_actor_profile_id)
     const transaction = tables.finance_bank_transactions.find(row => row.id === args.p_transaction_id)!
@@ -71,16 +78,18 @@ function harness() {
   } }
   const seasonModules = load('../lib/course-seasons.ts', {})
   const server = { supabaseAdmin: client }
-  const context = load('../lib/finance-season-context.ts', { '@/lib/supabase-server': server, '@/lib/course-seasons': seasonModules })
+  const financeRoster = load('../lib/finance-roster.ts', {})
+  const context = load('../lib/finance-season-context.ts', { '@/lib/supabase-server': server, '@/lib/course-seasons': seasonModules, '@/lib/finance-roster': financeRoster })
   const routes = load('../app/api/admin/reconciliation/route.ts', {
     'next/server': { NextResponse: { json: (body: unknown, init?: ResponseInit) => Response.json(body, init) } },
     '@/lib/supabase-server': server,
     '@/lib/finance-season-context': context,
+    '@/lib/finance-roster': financeRoster,
     '@/lib/bank-reconciliation': bank,
-    '@/lib/finance-access': { authenticateFinanceRequest: async () => ({ adminProfile: { id: 'finance-teacher', role: 'student' } }), financeNoStoreHeaders: () => ({ 'Cache-Control': 'no-store' }) },
+    '@/lib/finance-access': { authenticateFinanceRequest: async () => authStatus !== 200 ? { response: Response.json({ error: 'locked or unauthorized' }, { status: authStatus }) } : ({ adminProfile: { id: 'finance-teacher', role: 'student' } }), financeNoStoreHeaders: () => ({ 'Cache-Control': 'no-store' }) },
     '@/lib/admin-payment-notifications': {},
     '@/lib/payment-workflow': { transitionRemittanceStatus: () => 'rejected' },
-    '@/lib/season-write-guard': { archivedSeasonResponse: async ({ seasonId }: { seasonId: string }) => seasonId === q3 ? Response.json({ error: 'archived' }, { status: 409 }) : null },
+    '@/lib/season-write-guard': { archivedSeasonResponse: async ({ seasonId, enrollmentId }: { seasonId?: string; enrollmentId?: string }) => (seasonId || tables.signup_leads.find(r => r.id === enrollmentId)?.season_id) === q3 ? Response.json({ error: 'archived' }, { status: 409 }) : null },
   }) as Record<'GET' | 'POST' | 'PATCH', (request: Request) => Promise<Response>>
   return { tables, routes, actors }
 }
@@ -109,6 +118,37 @@ test('real XLSX import matches only its quarter and includes people absent from 
   assert.equal(tables.signup_leads[0].status, 'pending_review', 'import alone never confirms payment')
   assert.equal(tables.signup_leads[2].status, 'approved', 'archived quarter stays unchanged')
   assert.equal((await upload(routes, q4)).status, 409, 'same file cannot be imported twice')
+})
+
+test('manual finance receipt needs no bank batch, preserves audit and is idempotent', async () => {
+  const { routes, tables, actors } = harness()
+  const id = '00000000-0000-4000-8000-000000000100'
+  Object.assign(tables.signup_leads[0], { id, email: 'test@example.invalid', payload: { invoiceDetail: '/ABC1234', injuryHistory: 'PRIVATE' } })
+  const action = () => routes.PATCH(new Request('https://test/api/admin/reconciliation', { method: 'PATCH', body: JSON.stringify({ action: 'confirm_enrollment', enrollmentId: id, confirmReceipt: true, reason: 'bank verified' }) }))
+  assert.equal((await action()).status, 200)
+  assert.equal(tables.finance_reconciliation_batches.length, 0)
+  assert.match(actors[0], /finance-teacher.*bank verified/)
+  assert.equal((await action()).status, 200)
+  assert.equal(actors.length, 1)
+  const result = await (await routes.GET(new Request(`https://test/api/admin/reconciliation?seasonId=${q4}`))).json()
+  assert.equal(result.roster[0].invoiceDetail, '/ABC1234')
+  assert.equal(result.roster[0].payload, undefined)
+  assert.equal(JSON.stringify(result.roster).includes('PRIVATE'), false)
+})
+
+test('manual finance receipt rejects locked access, missing acknowledgement, archived, missing and full classes', async () => {
+  const id = '00000000-0000-4000-8000-000000000100'
+  const body = { action: 'confirm_enrollment', enrollmentId: id, confirmReceipt: true, reason: 'verified' }
+  const request = (patch = {}) => new Request('https://test/api/admin/reconciliation', { method: 'PATCH', body: JSON.stringify({ ...body, ...patch }) })
+  for (const status of [401, 403]) assert.equal((await harness(status).routes.PATCH(request())).status, status)
+  const { routes, tables, actors } = harness()
+  assert.equal((await routes.PATCH(request())).status, 404)
+  Object.assign(tables.signup_leads[0], { id, full: true })
+  assert.equal((await routes.PATCH(request({ confirmReceipt: false }))).status, 400)
+  assert.equal((await routes.PATCH(request())).status, 409)
+  Object.assign(tables.signup_leads[0], { full: false, season_id: q3 })
+  assert.equal((await routes.PATCH(request())).status, 409)
+  assert.equal(actors.length, 0)
 })
 
 test('archived quarters reject upload without creating transactions', async () => {
