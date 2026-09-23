@@ -1,3 +1,4 @@
+import { SEAT_HOLDING_STATUSES, courseSeatAvailability } from '@/lib/course-capacity'
 import { NextRequest, NextResponse } from 'next/server'
 import { COURSE_CAPACITY, courseEnrollmentPayload } from '@/lib/course-registration'
 import {
@@ -82,7 +83,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: '目前尚未設定招生季度。' }, { status: 503 })
   }
 
-  const [paidResult, pendingReviewResult] = await Promise.all([
+  const [paidResult, pendingReviewResult, registeredResult] = await Promise.all([
     supabaseAdmin
       .from('signup_leads')
       .select('id', { count: 'exact', head: true })
@@ -97,10 +98,13 @@ export async function GET(request: NextRequest) {
       .eq('season_id', currentSeason.id)
       .eq('course_slug', courseSlug)
       .eq('status', 'pending_review'),
+    supabaseAdmin.from('signup_leads').select('id', { count: 'exact', head: true })
+      .eq('source', 'course_payment').eq('season_id', currentSeason.id).eq('course_slug', courseSlug)
+      .in('status', [...SEAT_HOLDING_STATUSES]),
   ])
 
-  if (paidResult.error || pendingReviewResult.error) {
-    return NextResponse.json({ error: paidResult.error?.message || pendingReviewResult.error?.message }, { status: 500 })
+  if (paidResult.error || pendingReviewResult.error || registeredResult.error) {
+    return NextResponse.json({ error: paidResult.error?.message || pendingReviewResult.error?.message || registeredResult.error?.message }, { status: 500 })
   }
 
   const capacity = currentSeason.courseCapacities[courseSlug] ?? COURSE_CAPACITY
@@ -110,8 +114,7 @@ export async function GET(request: NextRequest) {
     capacity,
     paidCount,
     pendingReviewCount: pendingReviewResult.count ?? 0,
-    remaining: Math.max(0, capacity - paidCount),
-    full: paidCount >= capacity,
+    ...courseSeatAvailability(capacity, registeredResult.count ?? 0),
   }
   let pricingOptions
   try {
@@ -240,19 +243,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ enrollment: courseEnrollmentPayload(activeLead), duplicate: true })
   }
 
-  const { count: paidCount, error: paidCountError } = await supabaseAdmin
+  const { count: registeredCount, error: registeredCountError } = await supabaseAdmin
     .from('signup_leads')
     .select('id', { count: 'exact', head: true })
     .eq('source', 'course_payment')
     .eq('season_id', currentSeason.id)
     .eq('course_slug', courseSlug)
-    .eq('status', 'approved')
+    .in('status', [...SEAT_HOLDING_STATUSES])
 
-  if (paidCountError) {
-    return NextResponse.json({ error: paidCountError.message }, { status: 500 })
+  if (registeredCountError) {
+    return NextResponse.json({ error: registeredCountError.message }, { status: 500 })
   }
   const courseCapacity = currentSeason.courseCapacities[courseSlug] ?? COURSE_CAPACITY
-  if ((paidCount ?? 0) >= courseCapacity) {
+  if ((registeredCount ?? 0) >= courseCapacity) {
     return NextResponse.json({ error: '本班目前已額滿，暫時無法建立新的報名記錄。' }, { status: 409 })
   }
 

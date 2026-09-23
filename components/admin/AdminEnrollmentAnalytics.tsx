@@ -55,6 +55,7 @@ type Capacity = {
   seasonId: string
   seasonName: string
   capacity: number
+  registeredCount: number
   paidCount: number
   pendingTransferCount: number
   pendingReviewCount: number
@@ -190,7 +191,7 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
     const approved = seasonOrders.filter((order) => order.status === 'approved').length
     const capacity = capacities.reduce((sum, course) => sum + course.capacity, 0)
     const amounts = seasonOrders.map((order) => knownAmount(order.amountText)).filter((value): value is number => value !== null)
-    const classCounts = capacities.map((course) => course.paidCount).sort((a, b) => a - b)
+    const classCounts = capacities.map((course) => course.registeredCount).sort((a, b) => a - b)
     const midpoint = Math.floor(classCounts.length / 2)
     const median = classCounts.length === 0 ? 0 : classCounts.length % 2
       ? classCounts[midpoint]
@@ -307,7 +308,7 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
       window.alert(english ? toEnglishWebsiteText('請在管理備註填寫核對依據，例如入帳日期、實收金額與銀行交易參考號。') : '請在管理備註填寫核對依據，例如入帳日期、實收金額與銀行交易參考號。')
       return
     }
-    if (!window.confirm(english ? `Confirm receipt of ${selected.amountText} from ${selected.studentName}? This confirms the registration and reserves a class place. Verify actual receipt; a transfer notification alone is not sufficient.` : `確認「${selected.studentName}」的 ${selected.amountText} 已實際入帳？此操作會確認報名並占用班級名額，請勿僅憑匯款通知確認。`)) return
+    if (!window.confirm(english ? `Confirm receipt of ${selected.amountText} from ${selected.studentName}? This confirms payment for the submitted registration. Verify actual receipt; a transfer notification alone is not sufficient.` : `確認「${selected.studentName}」的 ${selected.amountText} 已實際入帳？此操作會將已提交的報名確認為已入帳，請勿僅憑匯款通知確認。`)) return
     const saved = await runAction(selected.id, {
       action: 'review_order', orderId: selected.id, orderKind: 'course',
       status: 'approved', confirmReceipt: true, reviewNote: reviewNote.trim(),
@@ -463,8 +464,8 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
           <div className="flex items-center justify-between border-b border-black/10 px-4 py-3"><h3 className="flex items-center gap-2 text-sm font-black"><BarChart3 className="h-4 w-4" />班級名額</h3><span className="text-xs font-bold text-apple-gray-500">平均 {summary.average.toFixed(1)}｜中位數 {summary.median}</span></div>
           <div className="divide-y divide-black/5">
             {capacities.map((course) => {
-              const used = course.capacity ? Math.min(100, course.paidCount / course.capacity * 100) : 0
-              return <div key={course.slug} className="grid gap-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_90px_140px] sm:items-center"><p className="truncate text-sm font-bold">{course.name}</p><p className={`text-sm font-black ${course.remaining <= 2 ? 'text-red-600' : 'text-apple-gray-700'}`}>{course.paidCount} / {course.capacity}</p><div className="h-2 overflow-hidden rounded-full bg-apple-gray-100"><div className={`h-full rounded-full ${used >= 95 ? 'bg-red-500' : used >= 75 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${used}%` }} /></div></div>
+              const used = course.capacity ? Math.min(100, course.registeredCount / course.capacity * 100) : 0
+              return <div key={course.slug} className="grid gap-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_90px_140px] sm:items-center"><p className="truncate text-sm font-bold">{course.name}</p><p className={`text-sm font-black ${course.remaining <= 2 ? 'text-red-600' : 'text-apple-gray-700'}`}>{course.registeredCount} / {course.capacity}</p><div className="h-2 overflow-hidden rounded-full bg-apple-gray-100"><div className={`h-full rounded-full ${used >= 95 ? 'bg-red-500' : used >= 75 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${used}%` }} /></div></div>
             })}
           </div>
         </section>

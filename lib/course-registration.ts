@@ -5,6 +5,7 @@ export const COURSE_CAPACITY = 40
 export type CourseAvailability = {
   courseSlug: string
   capacity: number
+  registeredCount: number
   paidCount: number
   pendingReviewCount: number
   remaining: number

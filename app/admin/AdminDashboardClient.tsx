@@ -94,6 +94,7 @@ type CourseCapacityRow = {
   seasonId: string
   seasonName: string
   capacity: number
+  registeredCount: number
   paidCount: number
   pendingTransferCount: number
   pendingReviewCount: number
@@ -430,7 +431,7 @@ export default function AdminDashboardClient() {
             ...course,
             name: saved.course_data.name || course.name,
             capacity: saved.capacity,
-            remaining: Math.max(0, saved.capacity - course.paidCount),
+            remaining: Math.max(0, saved.capacity - course.registeredCount),
           } : course),
           orders: current.orders.map((order) => order.orderKind === 'course' && order.seasonId === saved.season_id && order.courseSlug === saved.course_slug
             ? { ...order, courseName: saved.course_data.name || order.courseName } : order),

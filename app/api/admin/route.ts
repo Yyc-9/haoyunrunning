@@ -1,3 +1,4 @@
+import { SEAT_HOLDING_STATUSES, courseSeatAvailability } from '@/lib/course-capacity'
 import { courseBillingInputError } from '@/lib/admin-course-validation'
 import { randomUUID } from 'node:crypto'
 import { revalidateTag } from 'next/cache'
@@ -983,7 +984,7 @@ export async function GET(request: NextRequest) {
         paidCount,
         pendingTransferCount: courseOrders.filter((order) => order.status === 'pending_transfer').length,
         pendingReviewCount: courseOrders.filter((order) => order.status === 'pending_review').length,
-        remaining: Math.max(0, capacity - paidCount),
+        ...courseSeatAvailability(capacity, courseOrders.filter((order) => (SEAT_HOLDING_STATUSES as readonly string[]).includes(order.status)).length),
       }
     })
   )
