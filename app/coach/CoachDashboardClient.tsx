@@ -6,6 +6,7 @@ import { ArrowRight, CalendarCheck2, ClipboardList, LockKeyhole, RefreshCw, User
 import { useAuth } from '@/app/providers'
 import { useLanguage } from '@/app/language-context'
 import CoachSubNav from '@/components/CoachSubNav'
+import StudentDisplayToggle, { useStudentDisplay } from '@/components/coach/StudentDisplayToggle'
 import CoachDutyPanel from '@/app/coach/attendance/CoachDutyPanel'
 import { paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
 import { supabase } from '@/lib/supabase'
@@ -72,6 +73,7 @@ function formatDate(value: string, language: string) {
 
 export default function CoachDashboardClient() {
   const { language } = useLanguage()
+  const [display, setDisplay] = useStudentDisplay()
   const { user, isLoading: isAuthLoading } = useAuth()
   const [students, setStudents] = useState<BoundStudentRow[]>([])
   const [groupSignups, setGroupSignups] = useState<GroupSignup[]>([])
@@ -171,15 +173,16 @@ export default function CoachDashboardClient() {
                 <Link href="/coach/students" className="inline-flex items-center gap-1 text-sm font-bold">全部<ArrowRight className="h-4 w-4" /></Link>
               </div>
 
+              <div className="mt-4"><StudentDisplayToggle value={display} onChange={setDisplay} /></div>
               {students.length ? (
-                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <div className={display === 'compact' ? 'mt-4 grid gap-2' : 'mt-4 grid gap-3 sm:grid-cols-2'}>
                   {students.slice(0, 6).map((row) => {
                     const student = row.student
                     if (!student) return null
                     return (
-                      <Link key={row.id} href="/coach/students" className="flex min-w-0 items-center gap-3 rounded-md bg-apple-gray-100 p-3 transition hover:bg-apple-gray-200">
+                      <Link key={row.id} href="/coach/students" className={`flex min-w-0 items-center gap-3 rounded-lg bg-apple-gray-100 motion-safe:transition-colors hover:bg-apple-gray-200 ${display === 'compact' ? 'p-3' : 'p-5'}`}>
                         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black text-sm font-black text-white">{(getStudentDisplayName(student) || student.email).charAt(0)}</span>
-                        <span className="min-w-0"><span className="block truncate text-sm font-black text-black">{getStudentDisplayName(student) || student.email}</span><span className="mt-0.5 block truncate text-xs text-apple-gray-500">{student.program || student.goal || '尚未填寫目標'}</span></span>
+                        <span className="min-w-0"><span className={`block break-words font-black text-black ${display === 'compact' ? 'text-sm' : 'text-lg'}`}>{getStudentDisplayName(student) || student.email}</span><span className={`mt-0.5 block break-words text-apple-gray-500 ${display === 'compact' ? 'text-xs' : 'text-sm'}`}>{student.program || student.goal || '尚未填寫目標'}</span></span>
                       </Link>
                     )
                   })}

@@ -121,7 +121,7 @@ export function SiteContentProvider({ children, initialContent = null }: { child
     }
   }, [content, hasSyncedContent, isLoading, language, pathname])
 
-  return <SiteContentContext.Provider value={value}>{hasSyncedContent || pathname.startsWith('/admin') ? children : (
+  return <SiteContentContext.Provider value={value}>{hasSyncedContent || pathname.startsWith('/admin') || (process.env.NODE_ENV === 'development' && pathname === '/preview/coach-display') ? children : (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center" role="status">
       <h1 className="text-xl font-bold">{isLoading ? '正在載入網站內容…' : '網站內容暫時無法載入'}</h1>
       <p>請確認網路連線後重試，我們不會以舊版資料取代目前內容。</p>
