@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { getIsolatedTestAccount, isolatedTestStudentFixtures } from '@/lib/test-account'
-import { getCoachApprovedEnrollments } from '@/lib/coach-enrollments-server'
+import { getCoachApprovedEnrollments, getCoachVisibleEnrollments } from '@/lib/coach-enrollments-server'
+import { appendPendingStudents } from '@/lib/coach-pending-students'
 import { coachRegistrationFields } from '@/lib/coach-registration'
 
 const noStoreHeaders = {
@@ -47,7 +48,9 @@ export async function GET(request: NextRequest) {
 
   let enrollments: Record<string, unknown>[]
   try {
-    enrollments = await getCoachApprovedEnrollments(user.id)
+    enrollments = request.nextUrl.searchParams.get('includePending') === 'true'
+      ? await getCoachVisibleEnrollments(user.id)
+      : await getCoachApprovedEnrollments(user.id)
   } catch {
     return NextResponse.json({ error: '讀取正式報名資料失敗，請稍後再試。' }, { status: 500 })
   }
@@ -66,7 +69,7 @@ export async function GET(request: NextRequest) {
   const studentIds = rows.map((row) => row.student_id)
 
   if (studentIds.length === 0) {
-    return NextResponse.json({ students: [] }, { headers: noStoreHeaders })
+    return NextResponse.json({ students: appendPendingStudents([], enrollments) }, { headers: noStoreHeaders })
   }
 
   const { data: profiles, error: profilesError } = await supabaseAdmin
@@ -104,10 +107,10 @@ export async function GET(request: NextRequest) {
     active: row.active,
     created_at: row.created_at,
     student: profilesById.get(row.student_id) ?? null,
-    enrollments: enrollments.filter(lead => typeof lead.email === 'string' && lead.email.trim().toLowerCase() === profilesById.get(row.student_id)?.email?.trim().toLowerCase())
-      .map(lead => ({ id: String(lead.id), courseName: String(lead.preferred_course ?? ''), fields: coachRegistrationFields(lead) })),
+    enrollments: enrollments.filter(lead => lead.status === 'approved' && typeof lead.email === 'string' && lead.email.trim().toLowerCase() === profilesById.get(row.student_id)?.email?.trim().toLowerCase())
+      .map(lead => ({ id: String(lead.id), status: 'approved', courseName: String(lead.preferred_course ?? ''), fields: coachRegistrationFields(lead) })),
     recentFeedback: feedbackByStudent.get(row.student_id) ?? [],
   }))
 
-  return NextResponse.json({ students }, { headers: noStoreHeaders })
+  return NextResponse.json({ students: appendPendingStudents(students, enrollments) }, { headers: noStoreHeaders })
 }

@@ -46,12 +46,15 @@ for (const [method, statuses] of [
   }
 })
 
-test('pending visibility is limited to registration review, not the formal student roster', () => {
+test('student list previews scoped pending registrations while retaining formal membership query', () => {
   const signups = readFileSync(new URL('../app/api/signup-leads/route.ts', import.meta.url), 'utf8')
   const students = readFileSync(new URL('../app/api/coach/students/route.ts', import.meta.url), 'utf8')
   assert.match(signups, /getCoachVisibleEnrollments\(auth\.profile\.id\)/)
+  assert.match(students, /getCoachVisibleEnrollments\(user\.id\)/)
+  assert.match(students, /searchParams\.get\('includePending'\) === 'true'/)
   assert.match(students, /getCoachApprovedEnrollments\(user\.id\)/)
   assert.match(students, /formal_coach_students/)
+  assert.match(students, /appendPendingStudents\(\[\], enrollments\)/)
 })
 
 test('mark-current-read lives in sticky notification header before the feed', () => {

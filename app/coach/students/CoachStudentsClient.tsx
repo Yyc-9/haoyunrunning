@@ -24,6 +24,7 @@ type RecentFeedback = {
 type BoundStudentRow = {
   id: string
   active: boolean
+  pendingReview?: boolean
   created_at: string
   student: {
     id: string
@@ -34,7 +35,7 @@ type BoundStudentRow = {
     pb: string | null
   } | null
   recentFeedback?: RecentFeedback[]
-  enrollments?: { id: string; courseName: string; fields: RegistrationField[] }[]
+  enrollments?: { id: string; courseName: string; fields: RegistrationField[]; status?: string }[]
 }
 
 async function fetchCoachStudents() {
@@ -50,7 +51,7 @@ async function fetchCoachStudents() {
     throw new Error('請先登入教練帳號。')
   }
 
-  const response = await fetch('/api/coach/students', {
+  const response = await fetch('/api/coach/students?includePending=true', {
     cache: 'no-store',
     headers: {
       Authorization: `Bearer ${session.access_token}`,
@@ -127,7 +128,7 @@ export default function CoachStudentsClient() {
               </p>
               <h1 className="text-3xl font-black text-apple-gray-900 sm:text-5xl">學員列表</h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-apple-gray-600 sm:text-base sm:leading-7">
-                課程確認入帳後，這裡會顯示由你負責且已建立帳號的學員、完整報名資料與最近回饋。
+                這裡會顯示你負責班級的待核對學員與正式學員。待核對僅供提前查看；確認入帳後才正式綁定並開放簽到。
               </p>
             </div>
 
@@ -168,8 +169,8 @@ export default function CoachStudentsClient() {
                           {hasStudentName(student) ? getStudentDisplayEmail(student) : '學員尚未設定姓名'}
                         </p>
                       </div>
-                      <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">
-已綁定
+                      <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${row.pendingReview ? 'bg-amber-50 text-amber-800' : 'bg-green-50 text-green-700'}`}>
+{row.pendingReview ? '待核對' : '已綁定'}
                       </span>
                     </div>
 
@@ -189,11 +190,12 @@ export default function CoachStudentsClient() {
                     {row.enrollments?.map(enrollment => (
                       <section key={enrollment.id} className="mt-4">
                         <h3 className="text-sm font-bold">{enrollment.courseName}</h3>
+                        {enrollment.status === 'pending_review' && <p className="mt-1 text-xs leading-5 text-amber-800">待核對，尚未取得此班正式資格。</p>}
                         <CoachRegistrationDetails fields={enrollment.fields} />
                       </section>
                     ))}
 
-                    <div id={`feedback-${student.id}`} className="mt-5 rounded-2xl bg-apple-gray-100 p-4">
+                    {!row.pendingReview && <div id={`feedback-${student.id}`} className="mt-5 rounded-2xl bg-apple-gray-100 p-4">
                       <div className="mb-3 flex items-center gap-2 text-sm font-bold text-apple-gray-900">
                         <MessageSquareText className="h-4 w-4" />
                         最近回饋
@@ -219,9 +221,9 @@ export default function CoachStudentsClient() {
                           學員還沒有提交訓練回饋。可以提醒他完成訓練後到學員中心填寫 RPE、睡眠、疲勞與不適位置。
                         </p>
                       )}
-                    </div>
+                    </div>}
 
-                    <div className="mt-5">
+                    {!row.pendingReview && <div className="mt-5">
                       <a
                         href={`#feedback-${student.id}`}
                         className="apple-button-secondary w-full gap-2 px-4 py-2.5 text-sm"
@@ -229,7 +231,7 @@ export default function CoachStudentsClient() {
                         <CalendarDays className="h-4 w-4" />
                         查看回饋
                       </a>
-                    </div>
+                    </div>}
                   </article>
                 )
               })}
@@ -239,9 +241,9 @@ export default function CoachStudentsClient() {
               <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-black text-white">
                 <UsersRound className="h-8 w-8" />
               </div>
-              <h2 className="text-2xl font-black text-apple-gray-900">尚未綁定真實學員</h2>
+              <h2 className="text-2xl font-black text-apple-gray-900">目前沒有符合條件的學員</h2>
               <p className="mx-auto mt-4 max-w-2xl leading-7 text-apple-gray-600">
-                請先讓學員註冊帳號，再用上方欄位輸入對方信箱。綁定成功後，這裡會出現真實學員資料。
+                學員報名你的班級並進入待核對後，就會顯示在這裡；也可以清除搜尋條件再查看。
               </p>
             </div>
           )}

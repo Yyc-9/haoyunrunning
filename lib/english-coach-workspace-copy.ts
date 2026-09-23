@@ -1,5 +1,9 @@
 // Coach workspace interface and system messages, separate from coach-authored notes.
 export const coachWorkspaceEnglishCopy: Record<string, string> = {
+  '這裡會顯示你負責班級的待核對學員與正式學員。待核對僅供提前查看；確認入帳後才正式綁定並開放簽到。': 'View pending-review and enrolled students in your assigned classes. Pending students are shown for advance review only; class membership and check-in access start after payment confirmation.',
+  '待核對，尚未取得此班正式資格。': 'Pending review; not yet enrolled in this class.',
+  '目前沒有符合條件的學員': 'No matching students',
+  '學員報名你的班級並進入待核對後，就會顯示在這裡；也可以清除搜尋條件再查看。': 'Students appear here once registration for your class enters payment review. You can also clear your search to see all students.',
   '操作失敗，請稍後再試。': 'The action failed. Try again later.',
   '目前帳號尚未取得教練權限。': 'This account does not have coach access.',
   '只能查看或派發已綁定學員的課表。': 'You can only view or assign plans for your assigned students.',
