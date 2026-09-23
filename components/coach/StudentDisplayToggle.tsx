@@ -33,7 +33,7 @@ export default function StudentDisplayToggle({ value, onChange }: { value: Stude
       ] as const).map(({ id, label, Icon }) => (
         <button key={id} type="button" aria-label={label} aria-pressed={value === id} onClick={() => onChange(id)} title={label}
           className={`inline-flex min-h-11 items-center justify-center gap-2 px-4 text-sm font-semibold outline-none motion-safe:transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600 ${id === 'comfortable' ? 'border-l border-slate-400' : ''} ${value === id ? 'bg-sky-100 text-sky-950' : 'text-slate-600 hover:bg-slate-50'}`}>
-          <Check aria-hidden="true" className={`h-4 w-4 ${value === id ? 'opacity-100' : 'opacity-0'}`} />
+          {value === id && <Check aria-hidden="true" className="h-4 w-4" />}
           <Icon aria-hidden="true" className="h-5 w-5" />
         </button>
       ))}
