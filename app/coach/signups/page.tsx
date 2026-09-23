@@ -1,8 +1,8 @@
 import CoachSignupsClient from './CoachSignupsClient'
 
 export const metadata = {
-  title: '報名資料 - 好運跑班教練端',
-  description: '查看好運跑班活動與團練報名資料。',
+  title: '緊急聯絡人 - 好運跑班教練端',
+  description: '查看學員與緊急聯絡人的聯絡方式及 LINE ID。',
 }
 
 export default function CoachSignupsPage() {

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useLanguage } from '@/app/language-context'
 import { usePathname } from 'next/navigation'
 import { CalendarCheck2, ClipboardList, LayoutDashboard, UsersRound } from 'lucide-react'
 
@@ -8,7 +9,7 @@ const coachNavItems = [
   { href: '/coach', label: '工作台', icon: LayoutDashboard },
   { href: '/coach/attendance', label: '課程點名', icon: CalendarCheck2 },
   { href: '/coach/students', label: '學員列表', icon: UsersRound },
-  { href: '/coach/signups', label: '報名資料', icon: ClipboardList },
+  { href: '/coach/signups', label: '緊急聯絡人', icon: ClipboardList },
 ]
 
 function isActivePath(pathname: string, href: string) {
@@ -18,6 +19,7 @@ function isActivePath(pathname: string, href: string) {
 
 export default function CoachSubNav() {
   const pathname = usePathname()
+  const { language } = useLanguage()
 
   return (
     <nav aria-label="教練端內部導航" className="mb-5 -mx-4 overflow-x-auto px-4 sm:mb-8 sm:mx-0 sm:px-0">
@@ -38,7 +40,7 @@ export default function CoachSubNav() {
               }`}
             >
               <Icon className="h-4 w-4" />
-              {item.label}
+              {item.href === '/coach/signups' && language === 'en' ? 'Emergency contacts' : item.label}
             </Link>
           )
         })}

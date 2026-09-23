@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendEnrollmentApprovedEmail } from '@/lib/email'
 import { getCoachVisibleEnrollments } from '@/lib/coach-enrollments-server'
+import { coachEmergencyContact } from '@/lib/coach-emergency-contacts'
 import { coachRegistrationFields } from '@/lib/coach-registration'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { isPaymentOrderStatus } from '@/lib/payment'
@@ -99,6 +100,8 @@ export async function GET(request: NextRequest) {
   const auth = await getAuthorizedProfile(request)
   if (auth.error) return auth.error
 
+  const contactsOnly = new URL(request.url).searchParams.get('view') === 'emergency_contacts'
+  const projectLead = (row: Record<string, unknown>) => contactsOnly ? coachEmergencyContact(row) : safeCoachLead(row)
   const testAccount = 'testAccount' in auth ? auth.testAccount : undefined
   if (testAccount) {
     const saved = Array.isArray(testAccount.sandboxState.signupLeads) ? testAccount.sandboxState.signupLeads : null
@@ -107,7 +110,7 @@ export async function GET(request: NextRequest) {
       preferred_course: '週一測試班', running_experience: '測試資料', goal: '驗證教練端報名流程', companion_count: '0', notes: '獨立沙盒資料',
       status: 'pending_transfer', created_at: new Date().toISOString(), emergency_contact_name: '測試聯絡人', emergency_contact_phone: '0900-000-001',
     }]
-    return NextResponse.json({ leads, isolatedTest: true })
+    return NextResponse.json({ leads: contactsOnly ? leads.map(coachEmergencyContact) : leads, isolatedTest: true }, { headers: { 'Cache-Control': 'no-store' } })
   }
 
   const { searchParams } = new URL(request.url)
@@ -117,7 +120,7 @@ export async function GET(request: NextRequest) {
     try {
       const rows = await getCoachVisibleEnrollments(auth.profile.id)
       const visible = rows.filter(row => (!source || source === row.source) && (!status || status === row.status))
-      return NextResponse.json({ leads: visible.map(safeCoachLead) }, { headers: { 'Cache-Control': 'no-store' } })
+      return NextResponse.json({ leads: visible.map(projectLead) }, { headers: { 'Cache-Control': 'no-store' } })
     } catch (error) {
       return NextResponse.json({ error: error instanceof Error ? error.message : '讀取教練課程權限失敗。' }, { status: 500 })
     }
@@ -144,7 +147,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json({ leads: (data ?? []).map(safeCoachLead) }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ leads: (data ?? []).map(projectLead) }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 export async function POST(request: NextRequest) {
