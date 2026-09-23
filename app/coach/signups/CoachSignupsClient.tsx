@@ -266,7 +266,7 @@ export default function CoachSignupsClient() {
               </p>
               <h1 className="text-3xl font-black text-apple-gray-900 sm:text-5xl">課程報名資料</h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-apple-gray-600 sm:text-base sm:leading-7">
-                查看負責課程已確認入帳的完整報名資料。匯款由超級管理員或財務核對；尚未建立帳號的報名者也會列在這裡。
+                查看負責課程待核對與已確認入帳的報名資料。待核對不代表正式入班；財務確認入帳後才建立正式班級資格與簽到權限。尚未建立帳號的報名者也會列在這裡。
               </p>
             </div>
 

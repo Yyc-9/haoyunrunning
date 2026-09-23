@@ -3,6 +3,15 @@ import { supabaseAdmin } from '@/lib/supabase-server'
 import { syncCoachSessionAssignments } from '@/lib/coach-session-duty'
 
 export async function getCoachApprovedEnrollments(coachId: string) {
+  return getCoachEnrollments(coachId, ['approved'])
+}
+
+/** Registration visibility does not confer paid membership or attendance access. */
+export async function getCoachVisibleEnrollments(coachId: string) {
+  return getCoachEnrollments(coachId, ['pending_review', 'approved'])
+}
+
+async function getCoachEnrollments(coachId: string, statuses: string[]) {
   if (!supabaseAdmin) throw new Error('Supabase 尚未設定。')
   await syncCoachSessionAssignments()
   const [{ data: memberships, error: membershipError }, { data: seasons, error: seasonError }] = await Promise.all([
@@ -15,7 +24,7 @@ export async function getCoachApprovedEnrollments(coachId: string) {
   const rows: Record<string, unknown>[] = []
   for (let from = 0; ; from += 500) {
     const { data, error } = await supabaseAdmin.from('signup_leads').select('*')
-      .eq('source', 'course_payment').eq('status', 'approved')
+      .eq('source', 'course_payment').in('status', statuses)
       .in('course_season_course_id', memberships.map(row => row.course_season_course_id))
       .in('season_id', seasons.map(row => row.id))
       .order('created_at', { ascending: false }).order('id').range(from, from + 499)

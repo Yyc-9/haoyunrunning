@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendEnrollmentApprovedEmail } from '@/lib/email'
-import { getCoachApprovedEnrollments } from '@/lib/coach-enrollments-server'
+import { getCoachVisibleEnrollments } from '@/lib/coach-enrollments-server'
 import { coachRegistrationFields } from '@/lib/coach-registration'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { isPaymentOrderStatus } from '@/lib/payment'
@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
   const status = cleanText(searchParams.get('status'))
   if (auth.profile.role === 'coach') {
     try {
-      const rows = await getCoachApprovedEnrollments(auth.profile.id)
+      const rows = await getCoachVisibleEnrollments(auth.profile.id)
       const visible = rows.filter(row => (!source || source === row.source) && (!status || status === row.status))
       return NextResponse.json({ leads: visible.map(safeCoachLead) }, { headers: { 'Cache-Control': 'no-store' } })
     } catch (error) {

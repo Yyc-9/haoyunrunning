@@ -173,7 +173,7 @@ export const coachWorkspaceEnglishCopy: Record<string, string> = {
   '提交時間': 'Submitted at',
   '報名名單': 'Registration roster',
   '課程報名資料': 'Class registrations',
-  '查看負責課程已確認入帳的完整報名資料。匯款由超級管理員或財務核對；尚未建立帳號的報名者也會列在這裡。': 'View complete registrations for your assigned classes after payment confirmation. Transfers are reviewed by a super administrator or finance. Registrants without accounts are also listed here.',
+  '查看負責課程待核對與已確認入帳的報名資料。待核對不代表正式入班；財務確認入帳後才建立正式班級資格與簽到權限。尚未建立帳號的報名者也會列在這裡。': 'View pending-review and payment-confirmed registrations for your assigned classes. Pending review does not grant class membership; membership and check-in access begin after finance confirms payment. Registrants without accounts are also listed here.',
   '全部資料': 'All records',
   '搜尋姓名、電話、IG、目標或備註': 'Search name, phone, Instagram, goal, or notes',
   '全部來源': 'All sources',

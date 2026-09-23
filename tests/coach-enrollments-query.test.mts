@@ -8,10 +8,13 @@ const require = createRequire(import.meta.url)
 const ts = require('typescript')
 const source = readFileSync(new URL('../lib/coach-enrollments-server.ts', import.meta.url), 'utf8')
 
-test('coach scope is applied in the database on every page and includes orders beyond 500', async () => {
+for (const [method, statuses] of [
+  ['getCoachApprovedEnrollments', ['approved']],
+  ['getCoachVisibleEnrollments', ['pending_review', 'approved']],
+] as const) test(`${method}: own-course and active-season scope applies on every page beyond 500`, async () => {
   const calls: Array<{ table: string; operations: unknown[][] }> = []
   let syncCount = 0
-  const exports = {} as { getCoachApprovedEnrollments: (id: string) => Promise<unknown[]> }
+  const exports = {} as Record<string, (id: string) => Promise<unknown[]>>
   vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText, {
     exports, require(name: string) {
       if (name === 'server-only') return {}
@@ -31,14 +34,29 @@ test('coach scope is applied in the database on every page and includes orders b
       } } }
     },
   })
-  assert.equal((await exports.getCoachApprovedEnrollments('coach-a')).length, 501)
+  assert.equal((await exports[method]('coach-a')).length, 501)
   assert.equal(syncCount, 1)
   const pages = calls.filter(call => call.table === 'signup_leads')
   assert.equal(pages.length, 2)
   for (const page of pages) {
     const ops = JSON.parse(JSON.stringify(page.operations))
-    for (const expected of [['eq', 'source', 'course_payment'], ['eq', 'status', 'approved'], ['in', 'course_season_course_id', ['own-course']], ['in', 'season_id', ['active-season']]]) {
+    for (const expected of [['eq', 'source', 'course_payment'], ['in', 'status', statuses], ['in', 'course_season_course_id', ['own-course']], ['in', 'season_id', ['active-season']]]) {
       assert.ok(ops.some((op: unknown) => JSON.stringify(op) === JSON.stringify(expected)))
     }
   }
+})
+
+test('pending visibility is limited to registration review, not the formal student roster', () => {
+  const signups = readFileSync(new URL('../app/api/signup-leads/route.ts', import.meta.url), 'utf8')
+  const students = readFileSync(new URL('../app/api/coach/students/route.ts', import.meta.url), 'utf8')
+  assert.match(signups, /getCoachVisibleEnrollments\(auth\.profile\.id\)/)
+  assert.match(students, /getCoachApprovedEnrollments\(user\.id\)/)
+  assert.match(students, /formal_coach_students/)
+})
+
+test('mark-current-read lives in sticky notification header before the feed', () => {
+  const bell = readFileSync(new URL('../components/NotificationBell.tsx', import.meta.url), 'utf8')
+  assert.equal(bell.split('將目前通知標為已讀').length - 1, 1)
+  assert.ok(bell.indexOf('sticky top-0') < bell.indexOf('將目前通知標為已讀'))
+  assert.ok(bell.indexOf('將目前通知標為已讀') < bell.indexOf('feed.items.map'))
 })
