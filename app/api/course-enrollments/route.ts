@@ -308,6 +308,7 @@ export async function POST(request: NextRequest) {
       tokenPayload.seasonId !== currentSeason.id ||
       tokenPayload.referrer !== normalizedReferrer ||
       tokenPayload.quote.studentType !== studentType ||
+      (studentType === 'new' && Boolean(normalizedReferrer) && tokenPayload.quote.referrerStatus === 'not_applicable') ||
       tokenPayload.quote.billingStartSessionDate !== billingStartSessionDate ||
       tokenPayload.quote.priorAttendanceClaimed !== priorAttendanceClaimed
     ) {

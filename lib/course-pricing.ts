@@ -207,22 +207,23 @@ export function calculateCourseRegistrationQuote(options: {
   const regularCutoff = config.regularCutoffConfigured === true ? config.regularUntilSessionNumber : 1
   const enrollmentTiming = billingStartIndex + 1 <= regularCutoff ? 'regular' : 'late'
   const studentType = options.isReturning ? 'returning' : 'new'
-  const fullPriceCap = options.isReturning ? config.returningFullPrice : config.newFullPrice
+  const hasReferralDiscount = !options.isReturning && options.referrerVerified
+  const fullPriceCap = options.isReturning || hasReferralDiscount ? config.returningFullPrice : config.newFullPrice
 
   let unitRate: number | null = null
   let amount = fullPriceCap
   const chargedSessionDates = config.sessionDates.slice(billingStartIndex)
-  let referrerStatus: CourseRegistrationQuote['referrerStatus'] = 'not_applicable'
+  const referrerStatus: CourseRegistrationQuote['referrerStatus'] = options.isReturning
+    ? 'not_applicable'
+    : hasReferralDiscount ? 'verified' : options.referrerProvided ? 'not_verified' : 'not_provided'
 
   if (enrollmentTiming === 'late') {
     if (options.isReturning) {
       unitRate = config.returningLateRate
     } else if (options.referrerVerified) {
       unitRate = config.referredLateRate
-      referrerStatus = 'verified'
     } else {
       unitRate = config.standardLateRate
-      referrerStatus = options.referrerProvided ? 'not_verified' : 'not_provided'
     }
     amount = Math.min(unitRate * chargedSessionDates.length, fullPriceCap)
   }

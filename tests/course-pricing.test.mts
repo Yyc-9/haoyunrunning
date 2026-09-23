@@ -105,3 +105,29 @@ test('新增截止堂次控制會改變實際報價，但舊設定維持第一�
   assert.equal(afterCutoff.enrollmentTiming, 'late')
   assert.equal(afterCutoff.amount, 1000)
 })
+
+test('所有推薦新生整季享舊生價但保留新生身分', () => {
+  const base = { config: { ...billingConfig, newFullPrice: 6500, returningFullPrice: 5850 }, isReturning: false, referrerProvided: true, referrerVerified: true, now: new Date('2026-07-01T04:00:00Z') }
+  const quote = calculateCourseRegistrationQuote(base)
+  assert.equal(quote.amount, 5850)
+  assert.equal(quote.fullPriceCap, 5850)
+  assert.equal(quote.studentType, 'new')
+  assert.equal(quote.referrerStatus, 'verified')
+  assert.equal(quote.enrollmentTiming, 'regular')
+  for (const provided of [true, false]) {
+    const full = calculateCourseRegistrationQuote({ ...base, referrerProvided: provided, referrerVerified: false })
+    assert.equal(full.amount, 6500)
+    assert.equal(full.referrerStatus, provided ? 'not_verified' : 'not_provided')
+  }
+  const returning = calculateCourseRegistrationQuote({ ...base, isReturning: true })
+  assert.equal(returning.amount, 5850)
+  assert.equal(returning.referrerStatus, 'not_applicable')
+})
+
+test('推薦插班新生不超過其優惠整季價格且費率來自班級設定', () => {
+  const quote = calculateCourseRegistrationQuote({ config: { ...billingConfig, referredLateRate: 470, returningFullPrice: 800 }, isReturning: false, referrerProvided: true, referrerVerified: true, billingStartSessionDate: '2026-07-20', now: new Date('2026-07-14T04:00:00Z') })
+  assert.equal(quote.unitRate, 470)
+  assert.equal(quote.amount, 800)
+  assert.equal(quote.referrerStatus, 'verified')
+  assert.equal(quote.studentType, 'new')
+})

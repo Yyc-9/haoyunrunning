@@ -114,8 +114,8 @@ function PricingQuoteSummary({ quote }: { quote: CourseRegistrationQuote }) {
           : `剩餘 ${quote.chargedSessionCount} 堂 × 每堂 ${quote.unitRate ? `NT$${quote.unitRate}` : ''}。`}</>}
       </p>
       {quote.priorAttendanceClaimed ? <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold leading-6 text-amber-900">你已申報最近一堂有到課並補繳費用；教練完成該堂點名後，系統會自動核對到課紀錄。</p> : null}
-      {quote.referrerStatus === 'verified' ? <p className="mt-2 text-sm font-bold text-emerald-700">推薦資格已核對，插班費率為每堂 NT$450。</p> : null}
-      {quote.referrerStatus === 'not_verified' ? <p className="mt-2 text-sm font-semibold text-apple-gray-600">目前無法核對推薦資格，插班費率依每堂 NT$500 計算。</p> : null}
+      {quote.referrerStatus === 'verified' ? <p className="mt-2 text-sm font-bold text-emerald-700">{language === 'en' ? (quote.enrollmentTiming === 'regular' ? 'Referral verified. The returning-student full-season price applies.' : `Referral verified. The rate is NT$${quote.unitRate} per session.`) : (quote.enrollmentTiming === 'regular' ? '推薦資格已核對，本期享舊生整季優惠價。' : `推薦資格已核對，插班費率為每堂 NT$${quote.unitRate}。`)}</p> : null}
+      {quote.referrerStatus === 'not_verified' ? <p className="mt-2 text-sm font-semibold text-apple-gray-600">{language === 'en' ? 'Referral could not be verified. The standard new-student price applies.' : '目前無法核對推薦資格，依一般新生價格計算。'}</p> : null}
       <p className="mt-3 text-xs leading-5 text-apple-gray-500">此金額保留至 {formatQuoteExpiry(quote.lockedUntil, language)}。選定的起始課次是本期計費承諾；之後若該堂請假，不會自動順延計費日期。</p>
     </div>
   )
@@ -478,7 +478,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
                     setIsQuoting(false)
                   }} onBlur={() => {
                     if (form.billingStartSessionDate) void loadPricingQuote({ referrer: form.referrer })
-                  }} className="apple-input min-h-12" placeholder="請填推薦人的好運跑班報名信箱；若無可留白" /><span className="mt-2 block text-xs leading-5 text-apple-gray-500">插班新生的推薦資格會以舊生名單或已確認入帳的報名記錄自動核對。</span></label>
+                  }} className="apple-input min-h-12" placeholder="請填推薦人的好運跑班報名信箱；若無可留白" /><span className="mt-2 block text-xs leading-5 text-apple-gray-500">{language === 'en' ? 'All new students can receive a referral discount. Referrers are checked against returning-student records or confirmed enrollments.' : '所有新生皆可享推薦優惠；推薦資格會以舊生名單或已確認入帳的報名記錄自動核對。'}</span></label>
                   <label className="block"><FieldLabel>近期挑戰</FieldLabel><textarea value={form.recentChallenge} onChange={(event) => update('recentChallenge', event.target.value)} className="apple-input min-h-24 resize-y" placeholder="半年內 5K、10K、半馬或全馬成績；沒有可填「無」" /></label>
                   <label className="block"><FieldLabel>近期目標</FieldLabel><textarea value={form.recentGoal} onChange={(event) => update('recentGoal', event.target.value)} className="apple-input min-h-24 resize-y" placeholder="目標賽事、距離或完賽時間" /></label>
                   <label className="block"><FieldLabel>過去到現在是否有病史或運動傷害？</FieldLabel><textarea value={form.injuryHistory} onChange={(event) => update('injuryHistory', event.target.value)} className="apple-input min-h-24 resize-y" placeholder="沒有請填「無」" /></label>
