@@ -11,9 +11,11 @@ import {
   UserRoundCheck,
   X,
 } from 'lucide-react'
+import { groupCoachDutySessions } from '@/lib/coach-duty-sessions'
 import { APP_TIME_ZONE_LABEL } from '@/lib/app-time'
 
 export type DutyItem = {
+  courseSeasonCourseId?: string
   id: string
   courseName: string
   location: string
@@ -185,7 +187,7 @@ export default function CoachDutyDetails({
 
       {dateItems.length > 1 && onSelectItem ? (
         <div className="mt-4 border-b border-black/10 pb-4">
-          <p className="mb-2 text-xs font-black text-apple-gray-500">{language === 'en' ? `${dateItems.length} classes on this day` : `同日 ${dateItems.length} 堂課`}</p>
+          <p className="mb-2 text-xs font-black text-apple-gray-500">{language === 'en' ? `${groupCoachDutySessions(dateItems).length} classes on this day` : `同日 ${groupCoachDutySessions(dateItems).length} 堂課`}</p>
           <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="同日課程">
             {dateItems.map((dateItem) => {
               const active = dateItem.id === item.id
@@ -198,7 +200,7 @@ export default function CoachDutyDetails({
                   onClick={() => onSelectItem(dateItem.id)}
                   className={`min-h-11 shrink-0 rounded-full border px-3 py-2 text-xs font-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-apple-blue ${active ? 'border-black bg-black text-white' : 'border-black/10 bg-white text-black'}`}
                 >
-                  {formatDutyTime(dateItem.startTime) || '--:--'} · {dateItem.courseName}
+                  {formatDutyTime(dateItem.startTime) || '--:--'} · {dateItem.courseName} · <span translate="no">{dateItem.actualCoachName || dateItem.scheduledCoachName}</span>
                 </button>
               )
             })}
@@ -209,7 +211,7 @@ export default function CoachDutyDetails({
       <div className="mt-4 space-y-2 text-base font-semibold leading-6 text-apple-gray-700">
         <p className="flex items-center gap-2"><CalendarClock className="h-4 w-4 shrink-0 text-apple-blue" aria-hidden="true" />{formatDutyTime(item.startTime) || '未設定開始時間'}（{APP_TIME_ZONE_LABEL}）</p>
         <p className="flex items-center gap-2"><MapPin className="h-4 w-4 shrink-0 text-apple-blue" aria-hidden="true" />{item.location || '地點待確認'}</p>
-        <p>本人角色：{roleLabels[item.coachRole || 'coach'] || '教練'}</p>
+        <p><span translate="no">{item.actualCoachName || item.scheduledCoachName}</span> · {roleLabels[item.coachRole || 'coach'] || '教練'}</p>
         <p>原定教練：{item.scheduledCoachName}</p>
         <p>實際授課：{item.actualCoachName || '待安排'}</p>
       </div>

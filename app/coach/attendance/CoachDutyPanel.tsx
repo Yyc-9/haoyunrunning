@@ -26,6 +26,7 @@ import {
   groupCoachDutyCalendarItems,
   selectCoachDutyCalendarDate,
 } from '@/lib/coach-duty-calendar'
+import { groupCoachDutySessions } from '@/lib/coach-duty-sessions'
 import { supabase } from '@/lib/supabase'
 
 const weekdays = ['週一', '週二', '週三', '週四', '週五', '週六', '週日']
@@ -169,7 +170,9 @@ export default function CoachDutyPanel() {
   const nextItems = useMemo(() => items
     .filter((item) => item.sessionDate > todayKey && !item.isCancelled)
     .sort((left, right) => (left.sessionDate + left.startTime).localeCompare(right.sessionDate + right.startTime)), [items, todayKey])
-  const agendaItems = todayItems.length ? todayItems : nextItems.slice(0, 3)
+  const todaySessions = useMemo(() => groupCoachDutySessions(todayItems), [todayItems])
+  const nextSessions = useMemo(() => groupCoachDutySessions(nextItems), [nextItems])
+  const agendaSessions = todaySessions.length ? todaySessions : nextSessions.slice(0, 3)
   const pendingInvitations = useMemo(() => items
     .filter((item) => item.canRespondSubstitute)
     .sort((left, right) => (left.sessionDate + left.startTime).localeCompare(right.sessionDate + right.startTime)), [items])
@@ -294,11 +297,11 @@ export default function CoachDutyPanel() {
     }
   }
 
-  const scheduleHeading = todayItems.length ? '今日課程' : '下一堂課'
+  const scheduleHeading = todaySessions.length ? '今日課程' : '下一堂課'
   const scheduleSubheading = language === 'en'
-    ? (todayItems.length ? `${todayItems.length} ${todayItems.length === 1 ? 'class' : 'classes'} | Times follow the server record` : nextItems.length ? `Next session: ${formatDutyDate(nextItems[0].sessionDate, language)} | Times follow the server record` : 'No teaching sessions currently need a check-in or action.')
-    : todayItems.length
-    ? String(todayItems.length) + ' 堂課｜時間以伺服器資料為準'
+    ? (todaySessions.length ? `${todaySessions.length} ${todaySessions.length === 1 ? 'class' : 'classes'} | Times follow the server record` : nextItems.length ? `Next session: ${formatDutyDate(nextItems[0].sessionDate, language)} | Times follow the server record` : 'No teaching sessions currently need a check-in or action.')
+    : todaySessions.length
+    ? String(todaySessions.length) + ' 堂課｜時間以伺服器資料為準'
     : nextItems.length
       ? '最近一堂：' + formatDutyDate(nextItems[0].sessionDate, language) + '｜時間以伺服器資料為準'
       : '目前沒有需要簽到或處理的授課課次。'
@@ -316,8 +319,8 @@ export default function CoachDutyPanel() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="hidden text-xs font-black tracking-wide text-[#176b67] sm:block">本人到課工作台</p>
-            <h2 className="mt-0 text-2xl font-black text-[#0d3b3a] sm:mt-1 sm:text-3xl"><span className="sm:hidden">{todayItems.length ? '今日課程' : '近期課程'}</span><span className="hidden sm:inline">今天先把到課記好</span></h2>
-            <p className="mt-1 text-sm font-semibold leading-5 text-apple-gray-600 sm:mt-2 sm:leading-6"><span className="sm:hidden">{todayItems.length ? '可直接完成簽到' : '下一堂課時間以伺服器資料為準'}</span><span className="hidden sm:inline">{scheduleSubheading}。本人簽到與學員出席核實是兩份獨立紀錄。</span></p>
+            <h2 className="mt-0 text-2xl font-black text-[#0d3b3a] sm:mt-1 sm:text-3xl"><span className="sm:hidden">{todaySessions.length ? '今日課程' : '近期課程'}</span><span className="hidden sm:inline">今天先把到課記好</span></h2>
+            <p className="mt-1 text-sm font-semibold leading-5 text-apple-gray-600 sm:mt-2 sm:leading-6"><span className="sm:hidden">{todaySessions.length ? '可直接完成簽到' : '下一堂課時間以伺服器資料為準'}</span><span className="hidden sm:inline">{scheduleSubheading}。本人簽到與學員出席核實是兩份獨立紀錄。</span></p>
           </div>
           <div className="flex items-center gap-2 text-xs font-bold text-apple-gray-600">
             {serverTime ? <span>上次更新 {shortServerTime(serverTime)}（{APP_TIME_ZONE_LABEL}）</span> : <span>等待伺服器時間</span>}
@@ -339,10 +342,10 @@ export default function CoachDutyPanel() {
           <section data-testid="coach-agenda" aria-labelledby="coach-agenda-title" className="min-w-0">
             <div className="hidden items-end justify-between gap-3 sm:flex">
               <div>
-                <p className="text-xs font-black tracking-wide text-apple-gray-500">{todayItems.length ? 'TODAY' : 'UP NEXT'}</p>
+                <p className="text-xs font-black tracking-wide text-apple-gray-500">{todaySessions.length ? 'TODAY' : 'UP NEXT'}</p>
                 <h3 id="coach-agenda-title" className="mt-1 text-xl font-black text-black sm:text-2xl">{scheduleHeading}</h3>
               </div>
-              {todayItems.length ? <span className="rounded-full bg-[#e6f1ef] px-3 py-1.5 text-xs font-black text-[#0d3b3a]">{todayItems.length} 堂</span> : null}
+              {todaySessions.length ? <span className="rounded-full bg-[#e6f1ef] px-3 py-1.5 text-xs font-black text-[#0d3b3a]">{todaySessions.length} 堂</span> : null}
             </div>
 
             {loading && !items.length ? (
@@ -350,26 +353,30 @@ export default function CoachDutyPanel() {
                 <div className="h-36 animate-pulse rounded-2xl bg-apple-gray-100" />
                 <div className="h-36 animate-pulse rounded-2xl bg-apple-gray-100" />
               </div>
-            ) : agendaItems.length ? (
+            ) : agendaSessions.length ? (
               <div className="mt-3 space-y-3 sm:mt-4">
-                {agendaItems.map((item) => {
+                {agendaSessions.map((session) => (
+                  <article key={session.key} data-testid="coach-session-card" className="rounded-2xl border border-black/10 p-4 sm:p-5">
+                    <div className="mb-4">
+                      <span className="text-xl font-black tabular-nums text-[#0d3b3a]">{formatDutyTime(session.items[0].startTime) || '未設定'}</span>
+                      <h4 className="mt-2 text-lg font-black text-black">{session.items[0].courseName}</h4>
+                      <p className="mt-2 flex items-center gap-2 text-sm font-semibold text-apple-gray-600"><MapPin className="h-4 w-4 shrink-0 text-[#176b67]" aria-hidden="true" />{session.items[0].location || '地點待確認'}</p>
+                    </div>
+                    <div className="divide-y divide-black/10">
+                    {session.items.map((item) => {
                   const meta = stateMeta[item.attendanceState] ?? stateMeta.upcoming
                   const selected = item.id === selectedId
                   const checkInBusy = savingKey === item.id && detailTask === 'check_in'
                   const cardTask: DutyTask = item.canRespondSubstitute ? 'substitute' : item.canRequestLeave ? 'leave' : 'check_in'
                   return (
-                    <article key={item.id} data-testid={'coach-duty-card-' + item.id} className={selected ? 'rounded-2xl border border-[#176b67] p-4 ring-2 ring-[#176b67]/10 transition sm:p-5' : 'rounded-2xl border border-black/10 p-4 transition hover:border-black/20 sm:p-5'}>
+                    <div key={item.id} data-testid={'coach-duty-card-' + item.id} className={selected ? 'rounded-lg bg-[#f3f8f7] py-4 ring-2 ring-[#176b67]/10' : 'py-4'}>
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-xl font-black tabular-nums text-[#0d3b3a]">{formatDutyTime(item.startTime) || '未設定'}</span>
+                            <span translate="no" className="text-base font-black text-black">{item.actualCoachName || item.scheduledCoachName}</span>
                             <span className={'rounded-full border px-2.5 py-1 text-xs font-black ' + meta.chip}>{meta.label}</span>
                           </div>
-                          <h4 className="mt-2 text-lg font-black text-black">{item.courseName}</h4>
-                          <div className="mt-2 grid gap-1 text-sm font-semibold leading-6 text-apple-gray-600 sm:grid-cols-2">
-                            <p className="flex items-center gap-2"><MapPin className="h-4 w-4 shrink-0 text-[#176b67]" aria-hidden="true" />{item.location || '地點待確認'}</p>
-                            <p>本人角色：{item.coachRole === 'head_coach' ? '主教練' : item.coachRole === 'assistant' ? '助教' : item.coachRole === 'substitute' ? '代班教練' : '教練'}</p>
-                          </div>
+                          <p className="mt-2 text-sm font-semibold text-apple-gray-600">{item.coachRole === 'head_coach' ? '主教練' : item.coachRole === 'assistant' ? '助教' : item.coachRole === 'substitute' ? '代班教練' : '教練'}</p>
                           {item.checkedInAt ? <p className="mt-2 text-sm font-bold text-emerald-700">{item.manualCorrection ? '管理員登記時間' : '伺服器時間'}：{formatDutyTime(item.checkedInAt)}</p> : item.attendanceState === 'not_checked_in' ? <p className="mt-2 text-sm font-bold text-amber-800">未簽到，待管理員確認；不等同未到課。</p> : null}
                         </div>
                         <button type="button" onClick={(event) => openDetails(item, cardTask, event.currentTarget)} aria-expanded={selected} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-black text-black hover:bg-apple-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-apple-blue">查看詳情</button>
@@ -387,9 +394,12 @@ export default function CoachDutyPanel() {
                           {item.canRequestLeave ? <button type="button" onClick={(event) => openDetails(item, 'leave', event.currentTarget)} className="inline-flex min-h-11 items-center gap-1 whitespace-nowrap rounded-lg px-2 py-2 text-[#176b67] underline underline-offset-2">請假／代班</button> : null}
                         </div>
                       </div>
-                    </article>
+                    </div>
                   )
                 })}
+                    </div>
+                  </article>
+                ))}
               </div>
             ) : (
               <div className="mt-4 rounded-2xl border border-dashed border-black/15 bg-apple-gray-50 p-6 text-center">
@@ -452,6 +462,7 @@ export default function CoachDutyPanel() {
                   {weekdays.map((weekday) => <div key={weekday} className="border-b border-r border-black/10 bg-apple-gray-50 px-1 py-2 text-center text-xs font-black text-apple-gray-500">{weekday}</div>)}
                   {monthDays.map((day) => {
                     const events = eventsByDate.get(day.key) ?? []
+                    const sessions = groupCoachDutySessions(events)
                     const selected = selectedDate === day.key && Boolean(selectedItem)
                     return (
                       <div key={day.key} className={day.inMonth ? 'relative flex min-h-20 flex-col items-center border-b border-r border-black/10 bg-white p-1.5 text-center' : 'relative flex min-h-20 flex-col items-center border-b border-r border-black/10 bg-apple-gray-50/70 p-1.5 text-center'}>
@@ -461,7 +472,7 @@ export default function CoachDutyPanel() {
                             type="button"
                             aria-haspopup="dialog"
                             aria-expanded={selected}
-                            aria-label={language === 'en' ? `${formatDutyDate(day.key, language)}, ${events.length} teaching sessions` : formatDutyDate(day.key, language) + '，' + events.length + ' 堂授課日程'}
+                            aria-label={language === 'en' ? `${formatDutyDate(day.key, language)}, ${sessions.length} teaching sessions` : formatDutyDate(day.key, language) + '，' + sessions.length + ' 堂授課日程'}
                             onClick={(event) => {
                               if (selected) {
                                 closeSelected()
@@ -477,8 +488,8 @@ export default function CoachDutyPanel() {
                           >
                             <span className={day.key === todayKey ? 'mx-auto flex h-7 w-7 items-center justify-center rounded-full bg-[#176b67] text-xs font-bold leading-none text-white tabular-nums' : day.inMonth ? 'mx-auto flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold leading-none text-black tabular-nums' : 'mx-auto flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold leading-none text-apple-gray-300 tabular-nums'}>{day.day}</span>
                             <span className="mt-auto flex min-h-3 max-w-full items-center justify-center gap-1" aria-hidden="true">
-                              {events.slice(0, 4).map((item) => <span key={item.id} className={'h-2 w-2 shrink-0 rounded-full ' + (stateMeta[item.attendanceState] ?? stateMeta.upcoming).dot} />)}
-                              {events.length > 4 ? <span className="text-[9px] font-black text-apple-gray-500">+{events.length - 4}</span> : null}
+                              {sessions.slice(0, 4).map((session) => <span key={session.key} className="h-2 w-2 shrink-0 rounded-full bg-[#176b67]" />)}
+                              {sessions.length > 4 ? <span className="text-[9px] font-black text-apple-gray-500">+{sessions.length - 4}</span> : null}
                             </span>
                           </button>
                         ) : <span className={day.key === todayKey ? 'mx-auto flex h-7 w-7 items-center justify-center rounded-full bg-[#176b67] text-xs font-bold leading-none text-white tabular-nums' : day.inMonth ? 'mx-auto flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold leading-none text-black tabular-nums' : 'mx-auto flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold leading-none text-apple-gray-300 tabular-nums'}>{day.day}</span>}
