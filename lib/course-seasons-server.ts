@@ -1,3 +1,4 @@
+import { seasonCourseName } from '@/lib/course-name'
 import 'server-only'
 
 import { normalizeCourseOverrides } from '@/lib/site-content'
@@ -92,6 +93,7 @@ export async function getCourseSeasons(options: { includeRegistrationStats?: boo
           course.course_slug,
           {
             ...(normalizeCourseOverrides({ [course.course_slug]: course.course_data })[course.course_slug] ?? {}),
+            name: seasonCourseName(String(normalizeCourseOverrides({ [course.course_slug]: course.course_data })[course.course_slug]?.name || allCourses.find((item) => item.slug === course.course_slug)?.name || ''), season.code),
             campaignLabel: normalizeCourseOverrides({ [course.course_slug]: course.course_data })[course.course_slug]?.customCampaignLabel || courseSeasonCampaignLabel(season.code),
             startTime: course.start_time?.slice(0, 5) ?? '',
             timeZone: 'Asia/Taipei' as const,

@@ -90,7 +90,7 @@ export const courseGroups: CourseGroup[] = [
     courses: [
       {
         slug: 'hsinchu-beginner-tuesday',
-        name: '2026 好運跑步訓練營 X 週二竹市初心補習班',
+        name: '2026Q3週二竹市初心補習班',
         weekday: '週二',
         location: '新竹市',
         period: '7/14 - 9/29',
@@ -106,7 +106,7 @@ export const courseGroups: CourseGroup[] = [
     courses: [
       {
         slug: 'zhubei-night-run-monday',
-        name: '2026 好運跑步訓練營 X 週一竹北夜跑班',
+        name: '2026Q3週一竹北夜跑班',
         weekday: '週一',
         location: '竹北',
         period: '7/13 - 9/21',
@@ -115,7 +115,7 @@ export const courseGroups: CourseGroup[] = [
       },
       {
         slug: 'taipei-night-run-wednesday',
-        name: '2026 好運跑步訓練營 X 週三台北夜跑班',
+        name: '2026Q3週三台北夜跑班',
         weekday: '週三',
         location: '台北',
         period: '7/15 - 9/30',
@@ -124,7 +124,7 @@ export const courseGroups: CourseGroup[] = [
       },
       {
         slug: 'taipei-pb-tuesday',
-        name: '2026 好運跑步訓練營 X 週二台北 PB 班',
+        name: '2026Q3週二台北PB班',
         weekday: '週二',
         location: '台北',
         period: '7/14 - 9/29',
@@ -133,7 +133,7 @@ export const courseGroups: CourseGroup[] = [
       },
       {
         slug: 'hsinchu-morning-run-wednesday',
-        name: '2026 好運跑步訓練營 X 週三新竹早鳥班',
+        name: '2026Q3週三新竹早鳥班',
         weekday: '週三',
         location: '新竹',
         period: '7/8 - 9/30',
@@ -142,7 +142,7 @@ export const courseGroups: CourseGroup[] = [
       },
       {
         slug: 'zhubei-night-run-wednesday',
-        name: '2026 好運跑步訓練營 X 週三竹北夜跑班',
+        name: '2026Q3週三竹北夜跑班',
         weekday: '週三',
         location: '竹北',
         period: '7/15 - 9/30',
@@ -151,7 +151,7 @@ export const courseGroups: CourseGroup[] = [
       },
       {
         slug: 'hsinchu-night-run-thursday',
-        name: '2026 好運跑步訓練營 X 週四竹市夜跑班',
+        name: '2026Q3週四竹市夜跑班',
         weekday: '週四',
         location: '新竹市',
         period: '7/9 - 9/24',
@@ -160,7 +160,7 @@ export const courseGroups: CourseGroup[] = [
       },
       {
         slug: 'zhunan-beginner-thursday',
-        name: '2026 好運跑步訓練營 X 週四竹南初階班',
+        name: '2026Q3週四竹南初階班',
         weekday: '週四',
         location: '竹南',
         period: '7/9 - 9/24',
@@ -169,7 +169,7 @@ export const courseGroups: CourseGroup[] = [
       },
       {
         slug: 'taipei-morning-run-saturday',
-        name: '2026 好運跑步訓練營 X 週六台北早鳥班',
+        name: '2026Q3週六台北早鳥班',
         weekday: '週六',
         location: '台北',
         period: '7/11 - 9/19',

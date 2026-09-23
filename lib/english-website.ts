@@ -260,6 +260,13 @@ export function toEnglishWebsiteText(value: string): string {
 
   // Translate complete, known formats only. Replacing dictionary words inside an
   // unknown sentence used to turn 是 into Yes and 一起 into 一From.
+  const seasonalCourse = source.match(/^(\d{4})Q([1-4])((?:週|星期)[一二三四五六日])(.+)$/u)
+  if (seasonalCourse) {
+    const day = englishCopy.get(seasonalCourse[3].replace('星期', '週'))
+    const title = seasonalCourse[4].replace(/PB班$/u, ' PB 班')
+    const course = englishCopy.get(title)
+    if (day && course) return preserveSpace(`${seasonalCourse[1]}Q${seasonalCourse[2]} ${day} ${course}`)
+  }
   const camp = source.match(/^(\d{4})\s*好運跑步訓練營\s*[X×]\s*((?:週|星期)[一二三四五六日])\s*(.+)$/u)
   if (camp) {
     const day = englishCopy.get(camp[2].replace('星期', '週'))
