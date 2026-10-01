@@ -1,31 +1,16 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, CalendarCheck2, ClipboardList, LockKeyhole, RefreshCw, UsersRound } from 'lucide-react'
 import { useAuth } from '@/app/providers'
 import { useLanguage } from '@/app/language-context'
 import CoachSubNav from '@/components/CoachSubNav'
-import StudentDisplayToggle, { useStudentDisplay } from '@/components/coach/StudentDisplayToggle'
+import { coachRosterSummary, type CoachRosterPayload } from '@/lib/coach-roster'
 import CoachDutyPanel from '@/app/coach/attendance/CoachDutyPanel'
 import { paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
 import { supabase } from '@/lib/supabase'
-import { getStudentDisplayName } from '@/lib/student-display'
 import type { CoachPublicProfile } from '@/lib/coach-profiles'
-
-type BoundStudentRow = {
-  id: string
-  active: boolean
-  created_at: string
-  student: {
-    id: string
-    name: string
-    email: string
-    program: string | null
-    goal: string | null
-    pb: string | null
-  } | null
-}
 
 type GroupSignup = {
   id: string
@@ -45,26 +30,26 @@ async function getAccessToken() {
   return session?.access_token ?? null
 }
 
-async function fetchCoachWorkspace() {
+async function fetchCoachWorkspace(seasonId: string) {
   const token = await getAccessToken()
   if (!token) throw new Error('請先登入教練或超級管理員帳號。')
 
   const headers = { Authorization: `Bearer ${token}` }
-  const [studentsResponse, signupsResponse, profileResponse] = await Promise.all([
-    fetch('/api/coach/students', { cache: 'no-store', headers }),
+  const [rosterResponse, signupsResponse, profileResponse] = await Promise.all([
+    fetch(`/api/coach/roster${seasonId ? `?seasonId=${encodeURIComponent(seasonId)}` : ''}`, { cache: 'no-store', headers }),
     fetch('/api/signup-leads?source=group_class', { cache: 'no-store', headers }),
     fetch('/api/coach/profile', { cache: 'no-store', headers }),
   ])
 
-  const studentsPayload = (await studentsResponse.json().catch(() => ({}))) as { students?: BoundStudentRow[]; error?: string }
+  const rosterPayload = (await rosterResponse.json().catch(() => ({}))) as CoachRosterPayload & { error?: string }
   const signupsPayload = (await signupsResponse.json().catch(() => ({}))) as { leads?: GroupSignup[]; error?: string }
   const profilePayload = (await profileResponse.json().catch(() => ({}))) as { profile?: CoachPublicProfile; error?: string }
 
-  if (!studentsResponse.ok) throw new Error(studentsPayload.error || '讀取學員失敗。')
+  if (!rosterResponse.ok) throw new Error(rosterPayload.error || '讀取班級名單失敗。')
   if (!signupsResponse.ok) throw new Error(signupsPayload.error || '讀取團練報名失敗。')
   if (!profileResponse.ok) throw new Error(profilePayload.error || '讀取教練資料失敗。')
 
-  return { students: studentsPayload.students ?? [], signups: signupsPayload.leads ?? [], profile: profilePayload.profile ?? null }
+  return { roster: rosterPayload, signups: signupsPayload.leads ?? [], profile: profilePayload.profile ?? null }
 }
 
 function formatDate(value: string, language: string) {
@@ -73,25 +58,33 @@ function formatDate(value: string, language: string) {
 
 export default function CoachDashboardClient() {
   const { language } = useLanguage()
-  const [display, setDisplay] = useStudentDisplay()
   const { user, isLoading: isAuthLoading } = useAuth()
-  const [students, setStudents] = useState<BoundStudentRow[]>([])
+  const [roster, setRoster] = useState<CoachRosterPayload | null>(null)
+  const [seasonId, setSeasonId] = useState('')
+  const [isWorkspaceLoading, setIsWorkspaceLoading] = useState(true)
+  const latestRequest = useRef(0)
   const [groupSignups, setGroupSignups] = useState<GroupSignup[]>([])
   const [coachProfile, setCoachProfile] = useState<CoachPublicProfile | null>(null)
   const [error, setError] = useState('')
   const hasCoachAccess = user?.role === 'coach' || user?.role === 'admin'
 
   const loadWorkspace = useCallback(async () => {
+    const requestId = ++latestRequest.current
+    setIsWorkspaceLoading(true)
     setError('')
     try {
-      const data = await fetchCoachWorkspace()
-      setStudents(data.students)
+      const data = await fetchCoachWorkspace(seasonId)
+      if (requestId !== latestRequest.current) return
+      setRoster(data.roster)
       setGroupSignups(data.signups)
       setCoachProfile(data.profile)
     } catch (loadError) {
+      if (requestId !== latestRequest.current) return
       setError(loadError instanceof Error ? loadError.message : '讀取教練工作台失敗。')
+    } finally {
+      if (requestId === latestRequest.current) setIsWorkspaceLoading(false)
     }
-  }, [])
+  }, [seasonId])
 
   useEffect(() => {
     if (isAuthLoading) return
@@ -99,7 +92,8 @@ export default function CoachDashboardClient() {
     loadWorkspace()
   }, [hasCoachAccess, isAuthLoading, loadWorkspace])
 
-  const pendingSignups = groupSignups.filter((signup) => signup.status !== 'approved').length
+  const summary = coachRosterSummary(roster?.courses ?? [])
+  const ownCourses = roster?.courses.filter(course => course.isOwn) ?? []
   const statusLabels = paymentOrderStatusLabels['zh-TW']
   const hour = new Date().getHours()
   const greeting = hour < 11 ? '早安' : hour < 18 ? '午安' : '晚安'
@@ -136,58 +130,58 @@ export default function CoachDashboardClient() {
         <div className="container mx-auto max-w-7xl">
           <CoachSubNav />
 
-          <header className="mb-3 border-b border-black/10 pb-3 sm:mb-8 sm:pb-8">
+          <header className="mb-3 flex flex-col justify-between gap-4 border-b border-black/10 pb-3 sm:mb-8 sm:flex-row sm:items-end sm:pb-8">
             <div className="min-w-0">
               <p className="text-xs font-bold text-apple-blue sm:text-sm">教練工作台</p>
               <h1 className="mt-1 truncate text-2xl font-black text-black sm:text-4xl">{greeting}{language === 'en' ? ', ' : '，'}{coachName}</h1>
               <p className="mt-2 hidden text-sm leading-6 text-apple-gray-600 sm:block">{language === 'en'
-                ? `Today you have ${students.length} assigned students and ${pendingSignups} group training registrations to follow up.`
-                : `今天有 ${students.length} 位名下學員，${pendingSignups} 項團練報名待跟進。`}</p>
+                ? `${summary.classCount} assigned classes · ${summary.registeredCount} registrations this quarter.`
+                : `本季負責 ${summary.classCount} 個班級，共 ${summary.registeredCount} 人次報名。`}</p>
             </div>
+            <label className="flex items-center gap-3 text-sm font-bold">{language === 'en' ? 'Quarter' : '季度'}
+              <select aria-label={language === 'en' ? 'Quarter' : '季度'} value={seasonId || roster?.selectedSeasonId || ''} disabled={isWorkspaceLoading || !roster?.seasons.length} onChange={event => setSeasonId(event.target.value)} className="min-h-11 rounded-lg border border-black/15 bg-white px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-apple-blue">
+                {!roster?.seasons.length && <option value="">{language === 'en' ? 'Loading…' : '讀取中…'}</option>}
+                {roster?.seasons.map(season => <option key={season.id} value={season.id}>{season.name}{season.status === 'archived' ? (language === 'en' ? ' · Archived' : ' · 已封存') : ''}</option>)}
+              </select>
+            </label>
           </header>
 
           {error ? <p className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-800">{error}</p> : null}
 
           <CoachDutyPanel />
 
-          <div className="my-5 grid grid-cols-3 gap-3 sm:my-8 sm:gap-4">
+          <div className="my-5 grid grid-cols-2 gap-3 sm:my-8 sm:grid-cols-4 sm:gap-4">
             {[
-              { label: '名下學員', value: students.length, icon: UsersRound },
-              { label: '團練報名', value: groupSignups.length, icon: ClipboardList },
-              { label: '待跟進', value: pendingSignups, icon: CalendarCheck2 },
+              { label: language === 'en' ? 'My classes' : '我的班級', value: summary.classCount, icon: CalendarCheck2 },
+              { label: language === 'en' ? 'Registrations' : '已報名（人次）', value: summary.registeredCount, icon: UsersRound },
+              { label: language === 'en' ? 'Payment confirmed' : '已確認入帳', value: summary.approvedCount, icon: ClipboardList },
+              { label: language === 'en' ? 'Awaiting confirmation' : '尚未確認入帳', value: summary.pendingCount, icon: RefreshCw },
             ].map(({ label, value, icon: Icon }) => (
               <div key={label} className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-5">
                 <Icon className="h-4 w-4 text-apple-gray-500 sm:h-5 sm:w-5" />
-                <p className="mt-3 text-2xl font-black text-black sm:text-3xl">{value}</p>
+                <p className="mt-3 text-2xl font-black text-black sm:text-3xl">{isWorkspaceLoading ? '—' : value}</p>
                 <p className="mt-1 text-xs font-semibold text-apple-gray-500 sm:text-sm">{label}</p>
               </div>
             ))}
           </div>
 
-          <div className="mb-6 grid gap-5 lg:grid-cols-[360px_1fr]">
-            <section className="rounded-lg border border-black/10 bg-white p-5"><h2 className="text-xl font-black">班級學員關聯</h2><p className="mt-3 text-sm leading-6 text-apple-gray-600">學員確認入帳後，依任課班級自動列入名單。補課學員請在「課程點名」選擇接收班級與補課日期查看；不需要手動綁定。</p></section>
-
+          <div className="mb-6">
             <section className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-6">
               <div className="flex items-center justify-between gap-3">
-                <div><p className="text-xs font-bold text-apple-blue">MY RUNNERS</p><h2 className="mt-1 text-xl font-black text-black sm:text-2xl">名下學員</h2></div>
-                <Link href="/coach/students" className="inline-flex items-center gap-1 text-sm font-bold">全部<ArrowRight className="h-4 w-4" /></Link>
+                <div><p className="text-xs font-bold text-apple-blue">MY CLASSES</p><h2 className="mt-1 text-xl font-black text-black sm:text-2xl">{language === 'en' ? 'My class registrations' : '我的班級報名'}</h2></div>
+                <Link href={`/coach/students${roster?.selectedSeasonId ? `?seasonId=${roster.selectedSeasonId}` : ''}`} className="inline-flex items-center gap-1 text-sm font-bold">{language === 'en' ? 'All rosters' : '查看名單'}<ArrowRight className="h-4 w-4" /></Link>
               </div>
 
-              <div className="mt-4"><StudentDisplayToggle value={display} onChange={setDisplay} /></div>
-              {students.length ? (
-                <div className={display === 'compact' ? 'mt-4 grid gap-2' : 'mt-4 grid gap-3 sm:grid-cols-2'}>
-                  {students.slice(0, 6).map((row) => {
-                    const student = row.student
-                    if (!student) return null
-                    return (
-                      <Link key={row.id} href="/coach/students" className={`flex min-w-0 items-center gap-3 rounded-lg bg-apple-gray-100 motion-safe:transition-colors hover:bg-apple-gray-200 ${display === 'compact' ? 'p-3' : 'p-5'}`}>
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black text-sm font-black text-white">{(getStudentDisplayName(student) || student.email).charAt(0)}</span>
-                        <span className="min-w-0"><span className={`block break-words font-black text-black ${display === 'compact' ? 'text-sm' : 'text-lg'}`}>{getStudentDisplayName(student) || student.email}</span><span className={`mt-0.5 block break-words text-apple-gray-500 ${display === 'compact' ? 'text-xs' : 'text-sm'}`}>{student.program || student.goal || '尚未填寫目標'}</span></span>
-                      </Link>
-                    )
-                  })}
+              <p className="mt-3 text-sm leading-6 text-apple-gray-600">{language === 'en' ? 'Includes all registrations, before and after payment confirmation. Each class counts its own registrations.' : '包含已核帳與尚未核帳的所有報名；同一人報名不同班級，各班分別計數。'}</p>
+              {isWorkspaceLoading ? <p role="status" className="mt-4 text-sm text-apple-gray-500">{language === 'en' ? 'Loading class rosters…' : '正在讀取班級名單…'}</p> : ownCourses.length ? (
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {ownCourses.map(course => <Link key={course.id} href={`/coach/students?seasonId=${roster!.selectedSeasonId}&courseId=${course.id}`} className="rounded-lg border border-black/10 bg-white p-4 motion-safe:transition-colors hover:bg-blue-50">
+                    <span className="flex items-start justify-between gap-3"><span className="text-sm font-black leading-6">{course.name}</span><ArrowRight aria-hidden="true" className="mt-1 h-4 w-4 shrink-0" /></span>
+                    <span className="mt-3 block text-sm"><strong className="mr-1 text-3xl font-black">{course.registeredCount}</strong>{language === 'en' ? 'registered' : '位已報名'}</span>
+                    <span className="mt-2 block text-xs leading-5 text-apple-gray-500">{language === 'en' ? 'Confirmed' : '已入帳'} {course.paymentCounts?.approved ?? 0} · {language === 'en' ? 'Review' : '待核對'} {course.paymentCounts?.pending_review ?? 0} · {language === 'en' ? 'Transfer' : '待匯款'} {course.paymentCounts?.pending_transfer ?? 0}</span>
+                  </Link>)}
                 </div>
-              ) : <p className="mt-4 rounded-md border border-dashed border-black/15 p-5 text-sm leading-6 text-apple-gray-600">目前任課班級尚無已確認入帳的學員。</p>}
+              ) : <p className="mt-4 rounded-md border border-dashed border-black/15 p-5 text-sm leading-6 text-apple-gray-600">{language === 'en' ? 'No assigned classes this quarter. Other class rosters are available in Student roster.' : '這個季度尚未安排你的任課班級，可到學員列表查看其他班級名單。'}</p>}
             </section>
           </div>
 

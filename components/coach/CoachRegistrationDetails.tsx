@@ -1,9 +1,9 @@
 import type { RegistrationField } from '@/lib/coach-registration'
 
-export default function CoachRegistrationDetails({ fields }: { fields?: RegistrationField[] }) {
+export default function CoachRegistrationDetails({ fields, compact = false }: { fields?: RegistrationField[]; compact?: boolean }) {
   if (!fields?.length) return null
   return (
-    <details className="mt-4 rounded-lg border border-black/10 p-4">
+    <details className={`rounded-lg border border-black/10 ${compact ? 'mt-1 p-2 text-xs' : 'mt-4 p-4'}`}>
       <summary className="cursor-pointer font-bold text-apple-gray-900">查看完整報名資料</summary>
       <dl className="mt-4 grid min-w-0 gap-3 sm:grid-cols-2">
         {fields.map(({ label, value }) => (
