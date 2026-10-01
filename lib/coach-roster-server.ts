@@ -7,7 +7,7 @@ import { allCourses } from '@/lib/goodluck-data'
 import { buildCoachRosterCourses, rosterCourseId, type CoachRosterPayload, type RosterFeedback, type RosterProfile } from '@/lib/coach-roster'
 
 /** Public roster projection intentionally omits emails, payloads and financial information. */
-const rosterColumns = 'id, source, season_id, course_season_course_id, course_slug, name, status'
+const rosterColumns = 'id, source, season_id, course_season_course_id, course_slug, name, status, registration_status'
 const ownColumns = `${rosterColumns}, email, phone, preferred_course, registration_identity, instagram, goal, running_experience, billing_start_session_date, prior_attendance_claimed, amount_text, transfer_last_five, notes, payload`
 
 export async function getCoachRoster(coachId: string, requestedSeasonId = ''): Promise<CoachRosterPayload> {

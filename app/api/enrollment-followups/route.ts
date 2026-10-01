@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const id = request.nextUrl.searchParams.get('enrollment')
     if (id && !isUuid(id)) return notificationJson({ error: '報名編號格式不正確。' }, 400)
     const page = Math.floor(Math.max(0, Math.min(10000, Number(request.nextUrl.searchParams.get('page')) || 0)))
-    let query = supabaseAdmin!.from('signup_leads').select('id,name,course_slug,preferred_course,status,amount_text,season_id,transfer_last_five,transfer_date,student_review_message,payment_submitted_at,created_at,notes').eq('source', 'course_payment')
+    let query = supabaseAdmin!.from('signup_leads').select('id,name,course_slug,preferred_course,status,amount_text,season_id,transfer_last_five,transfer_date,student_review_message,payment_submitted_at,created_at,notes').eq('source', 'course_payment').eq('registration_status', 'active')
     if (!staff) query = query.eq('email', auth.email)
     if (id) query = query.eq('id', id)
     const status = request.nextUrl.searchParams.get('status')

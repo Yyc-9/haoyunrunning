@@ -61,10 +61,10 @@ test('pending registration cannot gain feedback or formal access from an approve
   if (student.visibility === 'own') { assert.equal(student.hasFormalAccess, false); assert.equal(student.pb, '') }
 })
 test('returned duplicate records remain available to their coach but do not inflate counts', () => {
-  const result = buildCoachRosterCourses({ seasonId: 'q4', courses, ownCourseIds: ['own'], registrations: [enrollment('a'), enrollment('duplicate', 'rejected'), enrollment('other-duplicate', 'rejected', 'other')] })
+  const result = buildCoachRosterCourses({ seasonId: 'q4', courses, ownCourseIds: ['own'], registrations: [enrollment('a'), { ...enrollment('duplicate', 'rejected'), registration_status: 'duplicate' }, { ...enrollment('other-duplicate', 'rejected', 'other'), registration_status: 'duplicate' }] })
   assert.equal(result[0].registeredCount, 1)
   assert.equal(result[0].students.length, 2)
-  assert.equal(result[0].paymentCounts?.rejected, 1)
+  assert.equal(result[0].paymentCounts?.rejected, 0)
   assert.equal(result[1].students.length, 0)
   assert.equal(result[1].registeredCount, 0)
 })
@@ -186,4 +186,20 @@ for (const scenario of [
   assert.equal(result.status, scenario.status)
   assert.equal(result.headers['Cache-Control'], 'private, no-store')
   assert.equal(calledCoach, scenario.status === 200 ? 'coach-a' : '')
+})
+
+test('supplement requests retain seats and attendance while explicit cancellations and duplicates do not count', () => {
+  const rows = [
+    { ...enrollment('supplement', 'rejected'), registration_status: 'active' },
+    { ...enrollment('cancelled', 'pending_review'), registration_status: 'cancelled' },
+    { ...enrollment('duplicate', 'rejected'), registration_status: 'duplicate' },
+    { ...enrollment('other-supplement', 'rejected', 'other'), registration_status: 'active' },
+  ]
+  const result = buildCoachRosterCourses({ seasonId: 'q4', courses, ownCourseIds: ['own'], registrations: rows, ownDetails: rows })
+  assert.equal(result[0].registeredCount, 1)
+  assert.equal(result[0].paymentCounts?.rejected, 1)
+  assert.equal(coachRosterSummary(result).pendingCount, 1)
+  assert.equal(result[0].students.length, 3)
+  assert.equal(result[1].registeredCount, 1)
+  assert.deepEqual(Object.keys(result[1].students[0]).sort(), ['id', 'name', 'visibility'])
 })

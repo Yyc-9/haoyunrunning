@@ -1,5 +1,5 @@
 import { coachRegistrationFields, type RegistrationField } from './coach-registration'
-import { SEAT_HOLDING_STATUSES } from './course-capacity'
+import { SEAT_HOLDING_STATUSES, isActiveEnrollment, type RegistrationStatus } from './course-capacity'
 import type { CourseSeasonStatus } from './course-seasons'
 import type { PaymentOrderStatus } from './payment'
 
@@ -13,7 +13,7 @@ export type RosterFeedback = {
 export type OwnRosterStudent = {
   id: string; name: string; visibility: 'own'; status: PaymentOrderStatus
   email: string; goal: string; pb: string; fields: RegistrationField[]
-  hasFormalAccess: boolean; recentFeedback: RosterFeedback[]
+  registrationStatus?: RegistrationStatus; hasFormalAccess: boolean; recentFeedback: RosterFeedback[]
 }
 export type OtherRosterStudent = { id: string; name: string; visibility: 'name_only' }
 export type CoachRosterStudent = OwnRosterStudent | OtherRosterStudent
@@ -56,16 +56,18 @@ export function buildCoachRosterCourses(options: {
       const row = detail?.season_id === options.seasonId && rosterCourseId(detail, options.courses) === course.id ? detail : registration
       const status = text(row.status)
       if (!activeStatuses.includes(status) && status !== 'rejected') continue
-      paymentCounts[status as PaymentOrderStatus]++
+      const active = isActiveEnrollment(row)
+      if (active) paymentCounts[status as PaymentOrderStatus]++
       const basic = { id: text(row.id), name: text(row.name) || '未填寫姓名' }
       if (!isOwn) {
-        if (activeStatuses.includes(status)) students.push({ ...basic, visibility: 'name_only' })
+        if (active) students.push({ ...basic, visibility: 'name_only' })
         continue
       }
-      const profile = options.allowFormalAccess !== false && status === 'approved'
+      const profile = active && options.allowFormalAccess !== false && status === 'approved'
         ? profiles.get(text(row.email).toLowerCase()) : undefined
       students.push({
         ...basic, visibility: 'own', status: status as PaymentOrderStatus,
+        registrationStatus: (row.registration_status || (active ? 'active' : 'duplicate')) as RegistrationStatus,
         email: text(row.email), goal: text(row.goal), pb: profile?.pb ?? '',
         fields: coachRegistrationFields(row), hasFormalAccess: Boolean(profile),
         recentFeedback: profile?.recentFeedback ?? [],
@@ -73,7 +75,7 @@ export function buildCoachRosterCourses(options: {
     }
     students.sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'))
     return {
-      ...course, isOwn, registeredCount: paymentCounts.approved + paymentCounts.pending_review + paymentCounts.pending_transfer,
+      ...course, isOwn, registeredCount: paymentCounts.approved + paymentCounts.pending_review + paymentCounts.pending_transfer + paymentCounts.rejected,
       students, ...(isOwn ? { paymentCounts } : {}),
     }
   })
@@ -83,6 +85,6 @@ export function coachRosterSummary(courses: readonly CoachRosterCourse[]) {
   return courses.filter(course => course.isOwn).reduce((summary, course) => ({
     classCount: summary.classCount + 1, registeredCount: summary.registeredCount + course.registeredCount,
     approvedCount: summary.approvedCount + (course.paymentCounts?.approved ?? 0),
-    pendingCount: summary.pendingCount + (course.paymentCounts?.pending_review ?? 0) + (course.paymentCounts?.pending_transfer ?? 0),
+    pendingCount: summary.pendingCount + (course.paymentCounts?.pending_review ?? 0) + (course.paymentCounts?.pending_transfer ?? 0) + (course.paymentCounts?.rejected ?? 0),
   }), { classCount: 0, registeredCount: 0, approvedCount: 0, pendingCount: 0 })
 }

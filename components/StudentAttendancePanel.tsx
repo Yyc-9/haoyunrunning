@@ -139,7 +139,7 @@ export default function StudentAttendancePanel() {
         const cancelled = cancellations.some((item) => item.course_season_course_id === course.courseSeasonCourseId && item.session_date === sessionDate)
         const scheduledCount = course.scheduledMakeupCounts[sessionDate] ?? 0
         const isCurrentTarget = row.makeup?.target_course_season_course_id === course.courseSeasonCourseId && row.makeup.target_session_date === sessionDate
-        const full = course.approvedCount + scheduledCount >= course.capacity
+        const full = (course.registeredCount ?? course.approvedCount) + scheduledCount >= course.capacity
         const afterOriginalSession = isCourseSessionAfter(
           sessionDate,
           course.classTime,

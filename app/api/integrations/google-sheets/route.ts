@@ -30,6 +30,7 @@ type ExistingLead = {
   amount_text: string
   calculated_amount: number | null
   notes: string
+  registration_status?: string
   status: string
   transfer_last_five: string
   payment_submitted_at: string | null
@@ -223,7 +224,7 @@ export async function POST(request: NextRequest) {
       .eq('season_id', season.id),
     supabaseAdmin
       .from('signup_leads')
-      .select('id, source, name, phone, email, preferred_course, course_slug, season_id, course_season_course_id, course_capacity, registration_identity, amount_text, calculated_amount, notes, status, transfer_last_five, payment_submitted_at, reviewed_at, review_note, payload, created_at, external_submission_id, form_submitted_at')
+      .select('id, source, name, phone, email, preferred_course, course_slug, season_id, course_season_course_id, course_capacity, registration_identity, amount_text, calculated_amount, notes, status, registration_status, transfer_last_five, payment_submitted_at, reviewed_at, review_note, payload, created_at, external_submission_id, form_submitted_at')
       .eq('season_id', season.id)
       .eq('source', 'course_payment'),
   ])
@@ -327,6 +328,7 @@ export async function POST(request: NextRequest) {
       calculated_amount: declaredAmount(record) || null,
       notes: record.notes,
       status,
+      registration_status: current?.registration_status === 'cancelled' ? 'cancelled' : duplicateRegistration ? 'duplicate' : current?.registration_status || 'active',
       transfer_last_five: transferLastFive(record),
       payment_submitted_at: status === 'pending_review' || status === 'approved'
         ? current?.payment_submitted_at || submittedAt

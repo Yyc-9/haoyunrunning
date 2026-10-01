@@ -133,6 +133,7 @@ export const adminActionEnglishCopy: Record<string, string> = {
   '找不到課程報名訂單。': 'Course enrollment order not found.',
   '已確認入帳的課程報名不能刪除。': 'Course enrollments with confirmed payment cannot be deleted.',
   '刪除課程報名失敗。': 'Unable to delete the course enrollment.',
+  '報名已取消並釋出名額；原始報名、核帳及出席紀錄均已保留。': 'Registration cancelled and seat released. Enrollment, payment and attendance history has been retained.',
   '未完成的課程報名記錄已刪除。': 'Incomplete course enrollment deleted.',
   '缺少訂單 ID。': 'An order ID is required.',
   '商城訂單只能確認匯款入帳或標記為匯款資料需補充。': 'Shop orders can only be marked as payment confirmed or requiring additional transfer details.',

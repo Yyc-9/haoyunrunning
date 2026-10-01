@@ -102,7 +102,7 @@ try {
     await page.getByLabel('繳費狀態').selectOption('pending_transfer')
     await page.getByRole('heading', { name: '黃以辰', exact: true }).waitFor()
     assert.equal(await page.locator('article').count(), 1)
-    await page.getByLabel('繳費狀態').selectOption('rejected')
+    await page.getByLabel('繳費狀態').selectOption('inactive')
     await page.getByRole('heading', { name: '測試退回紀錄', exact: true }).waitFor()
     await page.getByLabel('繳費狀態').selectOption('all')
     await page.getByLabel('搜尋學員').fill('找不到的學員')
@@ -157,7 +157,21 @@ try {
     assert.ok(!(await page.locator('body').innerText()).includes('@example.com'))
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
     assert.deepEqual(errors, [])
-    console.log(`PASS ${width}px: full roster, payment filters, density, names-only access, archived quarter, class navigation, loading and retry`)
+    noAssignments = false
+    const returned = q4.courses[0].students.find(student => student.status === 'rejected')
+    returned.registrationStatus = 'active'
+    q4.courses[0].registeredCount++
+    q4.courses[0].paymentCounts.rejected++
+    await page.goto(`${base}/coach/students`)
+    await page.getByRole('heading', { name: '測試退回紀錄', exact: true }).waitFor()
+    await page.getByRole('button', { name: '我的班級', exact: true }).click()
+    await page.getByLabel('繳費狀態').selectOption('rejected')
+    assert.equal(await page.locator('article').count(), 1, 'supplementary registration is active and independently filterable')
+    await page.getByText('有效報名即可簽到與點名，不必等待核帳；訓練課表與回饋仍於確認入帳後開放。', { exact: true }).waitFor()
+    delete returned.registrationStatus
+    q4.courses[0].registeredCount--
+    q4.courses[0].paymentCounts.rejected--
+    console.log(`PASS ${width}px: roster, supplementary registration, payment filters, density, names-only access, archived quarter, navigation and retry`)
     await context.close()
   }
 } finally { await browser.close() }

@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
       .eq('status', 'pending_review'),
     supabaseAdmin.from('signup_leads').select('id', { count: 'exact', head: true })
       .eq('source', 'course_payment').eq('season_id', currentSeason.id).eq('course_slug', courseSlug)
-      .in('status', [...SEAT_HOLDING_STATUSES]),
+      .in('status', [...SEAT_HOLDING_STATUSES]).eq('registration_status', 'active'),
   ])
 
   if (paidResult.error || pendingReviewResult.error || registeredResult.error) {
@@ -231,7 +231,7 @@ export async function POST(request: NextRequest) {
     .eq('season_id', currentSeason.id)
     .eq('course_slug', courseSlug)
     .eq('email', email)
-    .in('status', ['pending_transfer', 'pending_review', 'rejected', 'approved'])
+    .in('status', ['pending_transfer', 'pending_review', 'rejected', 'approved']).eq('registration_status', 'active')
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -249,7 +249,7 @@ export async function POST(request: NextRequest) {
     .eq('source', 'course_payment')
     .eq('season_id', currentSeason.id)
     .eq('course_slug', courseSlug)
-    .in('status', [...SEAT_HOLDING_STATUSES])
+    .in('status', [...SEAT_HOLDING_STATUSES]).eq('registration_status', 'active')
 
   if (registeredCountError) {
     return NextResponse.json({ error: registeredCountError.message }, { status: 500 })
@@ -452,7 +452,7 @@ export async function PATCH(request: NextRequest) {
     .eq('id', leadId)
     .eq('source', 'course_payment')
     .eq('email', user.email.trim().toLowerCase())
-    .eq('status', 'pending_transfer')
+    .eq('status', 'pending_transfer').eq('registration_status', 'active')
     .select('id, course_slug, preferred_course, status, amount_text, billing_start_session_date, prior_attendance_claimed, attendance_verification_status, transfer_last_five, student_review_message, created_at, payment_submitted_at')
     .maybeSingle()
 

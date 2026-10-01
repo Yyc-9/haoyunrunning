@@ -39,10 +39,10 @@ async function loadStudentContext(request: NextRequest) {
   const allSeasons = await getCourseSeasons()
   const seasons = allSeasons.filter((item) => ['active', 'enrolling'].includes(item.status))
   const requestedSeasonId = request.nextUrl.searchParams.get('seasonId')
-  const { data: paidSeasons, error: paidSeasonError } = await supabaseAdmin.from('signup_leads').select('season_id')
-    .eq('source', 'course_payment').eq('email', user.email.trim().toLowerCase()).eq('status', 'approved')
-  if (paidSeasonError) return { response: NextResponse.json({ error: paidSeasonError.message }, { status: 500, headers: noStoreHeaders }) }
-  const owns = (id: string) => paidSeasons?.some((lead) => lead.season_id === id)
+  const { data: enrolledSeasons, error: enrollmentSeasonError } = await supabaseAdmin.from('signup_leads').select('season_id')
+    .eq('source', 'course_payment').eq('email', user.email.trim().toLowerCase()).eq('registration_status', 'active')
+  if (enrollmentSeasonError) return { response: NextResponse.json({ error: enrollmentSeasonError.message }, { status: 500, headers: noStoreHeaders }) }
+  const owns = (id: string) => enrolledSeasons?.some((lead) => lead.season_id === id)
   const season = requestedSeasonId ? seasons.find((item) => item.id === requestedSeasonId)
     : seasons.find((item) => item.status === 'active' && owns(item.id))
       ?? seasons.find((item) => owns(item.id)) ?? seasons.find((item) => item.isCurrent) ?? seasons[0]
@@ -80,19 +80,14 @@ async function loadStudentContext(request: NextRequest) {
     .eq('source', 'course_payment')
     .eq('season_id', season.id)
     .eq('email', user.email.trim().toLowerCase())
-    .eq('status', 'approved')
+    .eq('registration_status', 'active')
     .order('created_at', { ascending: false })
 
   if (error) {
     return { response: NextResponse.json({ error: error.message }, { status: 500, headers: noStoreHeaders }) }
   }
 
-  const seenCourses = new Set<string>()
-  const ownedEnrollments = (enrollments ?? []).filter((enrollment) => {
-    if (!enrollment.course_season_course_id || seenCourses.has(enrollment.course_season_course_id)) return false
-    seenCourses.add(enrollment.course_season_course_id)
-    return true
-  })
+  const ownedEnrollments = (enrollments ?? []).filter(enrollment => enrollment.course_season_course_id)
 
   const courses = managedCourses.flatMap((course) => {
     const courseSeasonCourseId = season.courseOfferingIds[course.slug]
@@ -130,7 +125,7 @@ export async function GET(request: NextRequest) {
     const courseNames = new Map(context.courses.map((course) => [course.courseSeasonCourseId, course.courseName]))
     return NextResponse.json({
       season: { id: context.season.id, name: context.season.name, code: context.season.code, endsOn: context.season.endsOn },
-      courses: context.courses.map((course) => ({ ...course, approvedCount: 0, scheduledMakeupCounts: {} })),
+      courses: context.courses.map((course) => ({ ...course, approvedCount: 0, registeredCount: 0, scheduledMakeupCounts: {} })),
       enrollments: context.enrollments.map((enrollment) => ({
         id: enrollment.id, seasonId: enrollment.season_id, courseSeasonCourseId: enrollment.course_season_course_id,
         courseSlug: enrollment.course_slug, courseName: courseNames.get(enrollment.course_season_course_id) ?? enrollment.course_slug,
@@ -140,16 +135,16 @@ export async function GET(request: NextRequest) {
     }, { headers: noStoreHeaders })
   }
 
-  const [approvedResult, scheduledResult, cancellationResult, attendanceResult, makeupResult, checkinResult, timeResult] = await Promise.all([
+  const [registeredResult, scheduledResult, cancellationResult, attendanceResult, makeupResult, checkinResult, timeResult] = await Promise.all([
     supabaseAdmin!
       .from('signup_leads')
-      .select('course_season_course_id')
+      .select('id, course_season_course_id')
       .eq('source', 'course_payment')
       .eq('season_id', context.season.id)
-      .eq('status', 'approved'),
+      .eq('registration_status', 'active'),
     supabaseAdmin!
       .from('course_makeup_requests')
-      .select('target_course_season_course_id, target_session_date')
+      .select('enrollment_id, target_course_season_course_id, target_session_date')
       .eq('season_id', context.season.id)
       .eq('status', 'scheduled'),
     offeringIds.length
@@ -177,18 +172,20 @@ export async function GET(request: NextRequest) {
     offeringIds.length ? supabaseAdmin!.from('course_season_courses').select('id, start_time').in('id', offeringIds) : Promise.resolve({ data: [], error: null }),
   ])
 
-  const firstError = [approvedResult.error, scheduledResult.error, cancellationResult.error, attendanceResult.error, makeupResult.error, checkinResult.error, timeResult.error].find(Boolean)
+  const firstError = [registeredResult.error, scheduledResult.error, cancellationResult.error, attendanceResult.error, makeupResult.error, checkinResult.error, timeResult.error].find(Boolean)
   if (firstError) {
     return NextResponse.json({ error: firstError.message }, { status: 500, headers: noStoreHeaders })
   }
 
-  const approvedCounts = new Map<string, number>()
-  for (const row of approvedResult.data ?? []) {
+  const registeredCounts = new Map<string, number>()
+  for (const row of registeredResult.data ?? []) {
     if (!row.course_season_course_id) continue
-    approvedCounts.set(row.course_season_course_id, (approvedCounts.get(row.course_season_course_id) ?? 0) + 1)
+    registeredCounts.set(row.course_season_course_id, (registeredCounts.get(row.course_season_course_id) ?? 0) + 1)
   }
   const scheduledMakeupCounts = new Map<string, Record<string, number>>()
+  const activeEnrollmentIds = new Set((registeredResult.data ?? []).map(row => row.id))
   for (const row of scheduledResult.data ?? []) {
+    if (!activeEnrollmentIds.has(row.enrollment_id)) continue
     if (!row.target_course_season_course_id || !row.target_session_date) continue
     const current = scheduledMakeupCounts.get(row.target_course_season_course_id) ?? {}
     current[row.target_session_date] = (current[row.target_session_date] ?? 0) + 1
@@ -207,7 +204,8 @@ export async function GET(request: NextRequest) {
     courses: context.courses.map((course) => ({
       ...course,
       startTime: timeResult.data?.find((row) => row.id === course.courseSeasonCourseId)?.start_time ?? '',
-      approvedCount: approvedCounts.get(course.courseSeasonCourseId) ?? 0,
+      approvedCount: registeredCounts.get(course.courseSeasonCourseId) ?? 0, // Backward-compatible capacity field.
+      registeredCount: registeredCounts.get(course.courseSeasonCourseId) ?? 0,
       scheduledMakeupCounts: scheduledMakeupCounts.get(course.courseSeasonCourseId) ?? {},
     })),
     enrollments: context.enrollments.map((enrollment) => ({

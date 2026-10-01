@@ -179,7 +179,7 @@ export async function GET(request: NextRequest) {
       .select('id, season_id, course_season_course_id, course_slug, name, email, status, billing_start_session_date, prior_attendance_claimed, attendance_verification_status, created_at, payload')
       .eq('source', 'course_payment')
       .in('season_id', seasonIds)
-      .eq('status', 'approved')
+      .eq('registration_status', 'active')
       .order('created_at', { ascending: false }),
     supabaseAdmin!
       .from('course_attendance_records')
@@ -216,7 +216,7 @@ export async function GET(request: NextRequest) {
   const enrollments = permittedEnrollments.flatMap((row) => {
     const hasRegularAccess = Boolean(row.season_id && courseAccess.has(`${row.season_id}:${row.course_slug}`))
     if (!hasRegularAccess && !makeupEnrollmentIds.has(row.id)) return []
-    const key = `${row.season_id}:${row.course_slug}:${row.email.trim().toLowerCase()}`
+    const key = row.id
     if (seen.has(key) && !makeupEnrollmentIds.has(row.id)) return []
     seen.add(key)
     return [{
@@ -335,7 +335,7 @@ export async function POST(request: NextRequest) {
       .in('id', enrollmentIds)
       .eq('source', 'course_payment')
       .eq('season_id', course.seasonId)
-      .eq('status', 'approved'),
+      .eq('registration_status', 'active'),
     supabaseAdmin!
       .from('course_makeup_requests')
       .select('id, enrollment_id, status')

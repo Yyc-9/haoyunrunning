@@ -351,6 +351,7 @@ export default function CoachAttendanceClient() {
                         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                           <div className="min-w-0">
                             <p className="truncate font-black text-black">{enrollment.name || enrollment.email}</p>
+                            {enrollment.status !== 'approved' && <p className="mt-1 text-xs text-amber-700">{enrollment.status === 'rejected' ? '待補件' : enrollment.status === 'pending_transfer' ? '待匯款' : '待核帳'} · 可正常點名</p>}
                             <p className="mt-1 truncate text-[11px] font-bold text-apple-gray-500">所屬班級：{enrollment.home_course_name}</p>
                             {makeup ? <p className="mt-2 rounded-md bg-blue-50 p-2 text-xs font-bold text-blue-800">補課學員｜來自 {enrollment.home_course_name}｜原請假日期：{formatSessionDate(makeup.original_session_date, language)}</p> : null}
                             {originalLeave ? <p className="mt-2 text-xs font-bold text-amber-800">原班請假保留｜{originalLeave.status === 'completed' ? '補課已完成' : originalLeave.target_session_date ? `已安排 ${formatSessionDate(originalLeave.target_session_date, language)} 補課` : '尚未安排補課'}</p> : null}

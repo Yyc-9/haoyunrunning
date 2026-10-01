@@ -702,7 +702,7 @@ export default function StudentPage() {
 
   if (!canAccessTraining) {
     const waitingText = studentAccessState === 'not_enrolled'
-      ? '目前沒有已確認入帳的開課中或招生中季度報名。請先選擇課程，完成匯款核對後即會建立正式班級資格。'
+      ? '目前沒有有效的開課中或招生中季度報名，請先選擇課程。'
       : studentAccessState === 'rejected'
       ? '你的匯款資料需要補充或重新核對，請聯絡好運跑班協助處理。'
       : studentAccessState === 'pending_transfer'
@@ -729,6 +729,7 @@ export default function StudentPage() {
               </h1>
               <p className="mt-5 text-lg leading-8 text-apple-gray-600">
                 {waitingText}
+                {studentAccessState !== 'not_enrolled' && ' 有效報名即可簽到、請假及由教練點名，不必等待財務核帳。'}
               </p>
               <div className="mt-8 grid gap-4 md:grid-cols-3">
                 {[
@@ -743,6 +744,7 @@ export default function StudentPage() {
                 ))}
               </div>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                {studentAccessState !== 'not_enrolled' && <Link href="/profile#attendance-overview" className="apple-button-primary px-6 py-3">簽到與出席紀錄</Link>}
                 <Link href="/payment" className="apple-button-primary inline-flex items-center justify-center gap-2 px-6 py-3">
                   查看匯款狀態
                   <ArrowRight className="h-4 w-4" />

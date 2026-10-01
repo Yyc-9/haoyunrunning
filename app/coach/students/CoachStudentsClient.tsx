@@ -11,8 +11,8 @@ import { fetchCoachRoster } from '@/lib/coach-roster-client'
 import type { CoachRosterPayload, OwnRosterStudent } from '@/lib/coach-roster'
 import type { PaymentOrderStatus } from '@/lib/payment'
 
-const statusLabels = { approved: '已入帳', pending_review: '待核對', pending_transfer: '待匯款', rejected: '已退回' }
-const statusLabelsEn = { approved: 'Payment confirmed', pending_review: 'Pending review', pending_transfer: 'Awaiting transfer', rejected: 'Returned' }
+const statusLabels = { approved: '已入帳', pending_review: '待核對', pending_transfer: '待匯款', rejected: '待補件' }
+const statusLabelsEn = { approved: 'Payment confirmed', pending_review: 'Pending review', pending_transfer: 'Awaiting transfer', rejected: 'Needs information' }
 
 function OwnStudentCard({ student, compact, english }: { student: OwnRosterStudent; compact: boolean; english: boolean }) {
   const statusClass = student.status === 'approved' ? 'bg-green-50 text-green-700'
@@ -24,7 +24,7 @@ function OwnStudentCard({ student, compact, english }: { student: OwnRosterStude
           <h3 className={`${compact ? 'text-base' : 'text-xl'} break-words font-black text-apple-gray-900`}>{student.name}</h3>
           {student.email && <p className="mt-1 flex items-center gap-2 break-all text-xs text-apple-gray-500"><Mail aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />{student.email}</p>}
         </div>
-        <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${statusClass}`}>{(english ? statusLabelsEn : statusLabels)[student.status]}</span>
+        <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${statusClass}`}>{student.registrationStatus === 'cancelled' ? (english ? 'Cancelled' : '已取消') : student.registrationStatus === 'duplicate' ? (english ? 'Duplicate' : '重複報名') : (english ? statusLabelsEn : statusLabels)[student.status]}</span>
       </div>
       {(student.goal || student.pb) && <div className={`grid gap-2 text-sm ${compact ? 'mt-2 sm:grid-cols-2' : 'mb-3 rounded-lg bg-apple-gray-50 p-3'}`}>
         {student.goal && <p><span className="mr-2 text-xs text-apple-gray-500">{english ? 'Goal' : '目標'}</span>{student.goal}</p>}
@@ -37,7 +37,7 @@ function OwnStudentCard({ student, compact, english }: { student: OwnRosterStude
           <div className="mb-1 flex items-center justify-between gap-3"><span>{new Date(feedback.created_at).toLocaleDateString(english ? 'en' : 'zh-TW')}</span><span>RPE {feedback.rpe ?? '—'}</span></div>
           <p data-training-feedback translate={english ? 'no' : undefined} className="whitespace-pre-line leading-6">{feedback.feeling ? localizeTrainingFeedback(feedback.feeling, english ? 'en' : 'zh-TW') : (english ? 'No written feedback.' : '尚無文字回饋。')}</p>
         </div>)}</div> : <p className="mt-2 leading-6 text-apple-gray-500">{english ? 'No training feedback yet.' : '尚未提交訓練回饋。'}</p>}
-      </details> : student.status !== 'approved' && <p className="mt-2 text-xs leading-5 text-apple-gray-500 sm:col-span-2">{english ? 'Visible on the roster; formal class access opens after payment confirmation.' : '報名已列入名單；確認入帳後才開放正式上課權限。'}</p>}
+      </details> : student.status !== 'approved' && (!student.registrationStatus || student.registrationStatus === 'active') && <p className="mt-2 text-xs leading-5 text-apple-gray-500 sm:col-span-2">{english ? 'Active registrations can check in and be marked present before payment review. Training plans and feedback open after confirmation.' : '有效報名即可簽到與點名，不必等待核帳；訓練課表與回饋仍於確認入帳後開放。'}</p>}
     </article>
   )
 }
@@ -53,7 +53,7 @@ export default function CoachStudentsClient({ previewRoster, initialSeasonId = '
   const [requestedSeasonId, setRequestedSeasonId] = useState(initialSeasonId)
   const [scope, setScope] = useState<'all' | 'own' | 'other'>('all')
   const [courseId, setCourseId] = useState(initialCourseId)
-  const [status, setStatus] = useState<'all' | PaymentOrderStatus>('all')
+  const [status, setStatus] = useState<'all' | 'inactive' | PaymentOrderStatus>('all')
   const [query, setQuery] = useState('')
   const [isLoading, setIsLoading] = useState(!previewRoster)
   const [error, setError] = useState('')
@@ -97,7 +97,11 @@ export default function CoachStudentsClient({ previewRoster, initialSeasonId = '
   const filteredGroups = useMemo(() => {
     const term = query.trim().toLowerCase()
     return visibleCourses.map(course => ({ ...course, students: course.students.filter(student => {
-      if (student.visibility === 'own' && (status === 'all' || !canFilterPayment ? student.status === 'rejected' : student.status !== status)) return false
+      if (student.visibility === 'own') {
+        const active = student.registrationStatus === 'active' || (!student.registrationStatus && student.status !== 'rejected')
+        if (canFilterPayment && status === 'inactive') { if (active) return false }
+        else if (!active || (canFilterPayment && status !== 'all' && student.status !== status)) return false
+      }
       const values = student.visibility === 'own' ? [student.name, student.email, student.goal, student.pb] : [student.name]
       return !term || values.some(value => value.toLowerCase().includes(term))
     }) })).filter(course => course.students.length > 0)
@@ -165,6 +169,7 @@ export default function CoachStudentsClient({ previewRoster, initialSeasonId = '
                 className="min-h-11 w-full rounded-lg border border-black/15 bg-white py-2 pl-10 pr-3 text-sm focus:border-apple-blue focus:outline-none focus:ring-2 focus:ring-apple-blue/20" /></div>
               {canFilterPayment && <select aria-label={english ? 'Payment status' : '繳費狀態'} value={status} onChange={event => setStatus(event.target.value as typeof status)} className="min-h-11 rounded-lg border border-black/15 bg-white px-3 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue">
                 <option value="all">{english ? 'All registrations' : '全部報名'}</option>
+                <option value="inactive">{english ? 'Cancelled / duplicate records' : '取消／重複紀錄'}</option>
                 {(['approved', 'pending_review', 'pending_transfer', 'rejected'] as const).map(value => <option key={value} value={value}>{(english ? statusLabelsEn : statusLabels)[value]} · {paymentCounts[value]}</option>)}
               </select>}
             </div>

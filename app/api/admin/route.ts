@@ -1,4 +1,4 @@
-import { SEAT_HOLDING_STATUSES, courseSeatAvailability } from '@/lib/course-capacity'
+import { isActiveEnrollment, SEAT_HOLDING_STATUSES, courseSeatAvailability } from '@/lib/course-capacity'
 import { courseBillingInputError } from '@/lib/admin-course-validation'
 import { randomUUID } from 'node:crypto'
 import { revalidateTag } from 'next/cache'
@@ -68,6 +68,7 @@ type SignupLeadRow = {
   course_season_course_id: string | null
   course_capacity: number
   registration_identity: string | null
+  registration_status: 'active' | 'cancelled' | 'duplicate'
   enrollment_timing: string | null
   calculated_amount: number | null
   pricing_snapshot: Record<string, unknown> | null
@@ -893,6 +894,7 @@ export async function GET(request: NextRequest) {
     return {
       id: order.id,
       orderKind: 'course' as const,
+      registrationStatus: order.registration_status,
       orderNumber: '',
       studentName: order.name,
       email: order.email,
@@ -973,7 +975,7 @@ export async function GET(request: NextRequest) {
       const courseOrders = coursePaymentOrders.filter((order) =>
         order.course_slug === course.slug && order.season_id === season.id
       )
-      const paidCount = courseOrders.filter((order) => order.status === 'approved').length
+      const paidCount = courseOrders.filter((order) => isActiveEnrollment(order) && order.status === 'approved').length
       const capacity = season.courseCapacities[course.slug] ?? 40
       return {
         slug: course.slug,
@@ -982,9 +984,9 @@ export async function GET(request: NextRequest) {
         seasonName: season.name,
         capacity,
         paidCount,
-        pendingTransferCount: courseOrders.filter((order) => order.status === 'pending_transfer').length,
-        pendingReviewCount: courseOrders.filter((order) => order.status === 'pending_review').length,
-        ...courseSeatAvailability(capacity, courseOrders.filter((order) => (SEAT_HOLDING_STATUSES as readonly string[]).includes(order.status)).length),
+        pendingTransferCount: courseOrders.filter((order) => isActiveEnrollment(order) && order.status === 'pending_transfer').length,
+        pendingReviewCount: courseOrders.filter((order) => isActiveEnrollment(order) && order.status === 'pending_review').length,
+        ...courseSeatAvailability(capacity, courseOrders.filter((order) => isActiveEnrollment(order) && (SEAT_HOLDING_STATUSES as readonly string[]).includes(order.status)).length),
       }
     })
   )
@@ -1694,17 +1696,20 @@ export async function PATCH(request: NextRequest) {
       return json({ error: '已確認入帳的課程報名不能刪除。' }, { status: 409 })
     }
 
-    const { error } = await supabaseAdmin!
+    const { data: cancelled, error } = await supabaseAdmin!
       .from('signup_leads')
-      .delete()
+      .update({ registration_status: 'cancelled', updated_at: new Date().toISOString() })
       .eq('id', orderId)
       .eq('source', 'course_payment')
+      .neq('status', 'approved')
+      .select('id').maybeSingle()
 
     if (error) {
       return json({ error: error.message || '刪除課程報名失敗。' }, { status: 500 })
     }
 
-    return json({ message: '未完成的課程報名記錄已刪除。' })
+    if (!cancelled) return json({ error: '已確認入帳的課程報名不能刪除。' }, { status: 409 })
+    return json({ message: '報名已取消並釋出名額；原始報名、核帳及出席紀錄均已保留。' })
   }
 
   if (body.action === 'review_order') {

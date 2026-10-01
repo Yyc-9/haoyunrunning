@@ -21,6 +21,7 @@ export type StudentAttendanceCourse = {
   sessionDates: string[]
   capacity: number
   approvedCount: number
+  registeredCount?: number
   scheduledMakeupCounts: Record<string, number>
 }
 

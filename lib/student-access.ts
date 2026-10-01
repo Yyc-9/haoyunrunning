@@ -15,7 +15,7 @@ export async function getStudentAccessSummary(userId: string, email?: string | n
   if (seasonError) throw seasonError
   if (!seasons?.length) return { state: 'not_enrolled', coachBound: false, coachName: '' }
   const { data: leads, error } = await supabaseAdmin.from('signup_leads').select('status, created_at')
-    .eq('source', 'course_payment').eq('email', email.trim().toLowerCase()).in('season_id', seasons.map((row) => row.id)).order('created_at', { ascending: false })
+    .eq('source', 'course_payment').eq('registration_status', 'active').eq('email', email.trim().toLowerCase()).in('season_id', seasons.map((row) => row.id)).order('created_at', { ascending: false })
   if (error) throw error
   const { data: bindings, error: bindingError } = await supabaseAdmin.from('formal_coach_students')
     .select('coach_id').eq('student_id', userId)

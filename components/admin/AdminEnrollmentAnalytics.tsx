@@ -26,6 +26,7 @@ type AttendanceAnomaly = {
 type Enrollment = {
   id: string
   orderKind: 'course' | 'shop'
+  registrationStatus?: 'active' | 'cancelled' | 'duplicate'
   orderNumber: string
   studentName: string
   email: string
@@ -317,11 +318,14 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
   }
 
   async function deleteOrder() {
-    if (!selected || selected.status === 'approved') return
+    if (!selected || selected.status === 'approved' || selected.registrationStatus === 'cancelled') return
     const inventoryMessage = selected.orderKind === 'shop' && selected.inventoryReserved
       ? (english ? ' Reserved stock will also be released.' : ' 系統會同時歸還這筆訂單預留的商品庫存。')
       : ''
-    if (!window.confirm(english ? `Delete the ${selected.orderKind === 'shop' ? 'shop order' : 'class registration'} for ${selected.studentName}?${inventoryMessage} This cannot be undone.` : `確定刪除「${selected.studentName}」的${selected.orderKind === 'shop' ? '商城訂單' : '課程報名'}？${inventoryMessage} 此操作無法復原。`)) return
+    const prompt = selected.orderKind === 'course'
+      ? (english ? `Cancel the registration for ${selected.studentName}? The seat is released and all attendance and payment history is retained.` : `確定取消「${selected.studentName}」的報名？將釋出名額，保留報名、核帳與出席紀錄。`)
+      : (english ? `Delete the shop order for ${selected.studentName}?${inventoryMessage} This cannot be undone.` : `確定刪除「${selected.studentName}」的商城訂單？${inventoryMessage} 此操作無法復原。`)
+    if (!window.confirm(prompt)) return
     const deleted = await runAction(`delete-${selected.id}`, {
       action: 'delete_order',
       orderId: selected.id,
@@ -561,10 +565,10 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
             </div>
             <div className="grid gap-2 border-t bg-white p-4 sm:grid-cols-2">
               <p className={`rounded-lg px-3 py-2 text-xs font-bold leading-5 sm:col-span-2 ${selected.orderKind === 'shop' ? 'bg-apple-gray-100 text-apple-gray-700' : 'bg-blue-50 text-blue-800'}`}>{selected.orderKind === 'shop' ? '商城使用銀行匯款付款，入帳後再安排跑班自取；可在銀行對帳頁核對，也可於此人工確認。' : '財務可透過銀行對帳確認；超級管理員亦可核實實際入帳後，填寫管理備註並人工確認。系統保留操作人、時間及核對依據，財務之後仍可補登銀行對帳。'}</p>
-              {selected.orderKind === 'course' ? <button type="button" disabled={selectedArchived || updatingId === selected.id || selected.status === 'approved'} onClick={confirmCourseTransfer} className="apple-button-primary gap-2 px-4 py-3 disabled:opacity-40"><CheckCircle2 className="h-4 w-4" />{selected.status === 'approved' ? '已確認入帳' : '確認入帳（管理員）'}</button> : null}
+              {selected.orderKind === 'course' ? <button type="button" disabled={selectedArchived || updatingId === selected.id || selected.status === 'approved' || (selected.registrationStatus !== undefined && selected.registrationStatus !== 'active')} onClick={confirmCourseTransfer} className="apple-button-primary gap-2 px-4 py-3 disabled:opacity-40"><CheckCircle2 className="h-4 w-4" />{selected.status === 'approved' ? '已確認入帳' : '確認入帳（管理員）'}</button> : null}
               {selected.orderKind === 'shop' ? <button type="button" disabled={selectedArchived || updatingId === selected.id || selected.status === 'rejected' || selected.status === 'approved'} onClick={confirmShopTransfer} className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-40"><Package className="h-4 w-4" />確認匯款並安排自取</button> : null}
               {selected.orderKind === 'course' ? <Link href={`/notifications?enrollment=${selected.id}&view=staff`} className="inline-flex items-center justify-center gap-2 rounded-lg border border-black/10 px-4 py-3 text-sm font-bold"><RotateCcw className="h-4 w-4" />補件通知與紀錄</Link> : <button type="button" disabled={selectedArchived || updatingId === selected.id || selected.status === 'rejected' || selected.status === 'approved'} onClick={flagOrderForReview} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40"><RotateCcw className="h-4 w-4" />標記匯款資料需補充</button>}
-              <button type="button" disabled={selectedArchived || updatingId === `delete-${selected.id}` || selected.status === 'approved'} onClick={deleteOrder} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40">{updatingId === `delete-${selected.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}刪除記錄</button>
+              <button type="button" disabled={selectedArchived || updatingId === `delete-${selected.id}` || selected.status === 'approved' || selected.registrationStatus === 'cancelled'} onClick={deleteOrder} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-40">{updatingId === `delete-${selected.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}{selected.orderKind === 'course' ? (selected.registrationStatus === 'cancelled' ? '已取消報名' : '取消報名（保留紀錄）') : '刪除記錄'}</button>
             </div>
           </aside>
         </div>
