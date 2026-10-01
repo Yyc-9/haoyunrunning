@@ -1,17 +1,17 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { GROUP_LINE_URL, groupLineUrl, isGroupPractice } from '../lib/group-practice.ts'
+import { GROUP_PRACTICE_PATH, publicActivityHref, isGroupPractice } from '../lib/group-practice.ts'
 
-test('only group practice cards use the explanation route', () => {
-  const base = { description: '', action: '' }
-  assert.equal(isGroupPractice({ ...base, title: '好運跑班 X 週末團練', href: GROUP_LINE_URL }), true)
-  assert.equal(isGroupPractice({ ...base, title: 'Group', href: '/group-signup' }), true)
-  assert.equal(isGroupPractice({ ...base, title: '週年活動', href: '/anniversary' }), false)
+const group = { title: '好運跑班 X 週末團練', description: '已發布說明', action: '', href: '' }
+test('clearing a group link in the CMS leaves an announcement with no navigation', () => {
+  assert.equal(isGroupPractice(group), true)
+  assert.equal(publicActivityHref(group), '')
 })
-
-test('LINE destination follows configured invitations and rejects unrelated URLs', () => {
-  assert.equal(groupLineUrl('https://lin.ee/example'), 'https://lin.ee/example')
-  for (const href of ['/group-signup', 'javascript:alert(1)', 'https://line.me.example.com/', undefined]) {
-    assert.equal(groupLineUrl(href), GROUP_LINE_URL)
+test('custom activity destinations are respected while public group invitations remain closed', () => {
+  assert.equal(publicActivityHref({ ...group, href: '/courses' }), '/courses')
+  assert.equal(publicActivityHref({ ...group, href: '/group-signup' }), '/group-signup')
+  for (const href of ['https://line.me/ti/g2/example', 'https://lin.ee/example']) {
+    assert.equal(publicActivityHref({ ...group, href }), GROUP_PRACTICE_PATH)
   }
+  assert.equal(publicActivityHref({ ...group, title: '週年活動', href: '/anniversary' }), '/anniversary')
 })

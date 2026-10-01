@@ -16,6 +16,7 @@ import { toSimplifiedWebsiteText } from '@/lib/traditional-chinese'
 type SiteContentContextValue = SiteContent & {
   courses: ManagedCourse[]
   sourceCourses: ManagedCourse[]
+  sourceActivities: SiteContent['activities']
   isLoading: boolean
   hasSyncedContent: boolean
 }
@@ -115,6 +116,7 @@ export function SiteContentProvider({ children, initialContent = null }: { child
       ...localizedContent,
       // Filters and grouping use the original values, independent of display language.
       sourceCourses,
+      sourceActivities: content.activities,
       courses: localize(sourceCourses),
       isLoading,
       hasSyncedContent,

@@ -173,6 +173,7 @@ export const publicEnglishCopy: Record<string, string> = {
   '為什麼我們一起團練': 'Why we run together',
   '週末，一個人跑是練習，一群人跑是好運！\n\n有同學、教練相約，用「輕鬆跑」或「長距離」練習，累積跑量，也享受一起運動的時光，\n大家依自己的狀態與配速，找合拍的夥伴一起跑步。\n\n團練位於台北、新竹兩地舉辦，\n安排在週末，日期、時間與集合地點依每次公告為準。\n\n好運跑班學員皆可「免費」報名，也歡迎邀請朋友一起參加！': 'Spend your weekend running with good company!\n\nMeet teammates and coaches for easy runs or long runs, build your mileage, and enjoy being active together. Find running partners who suit your pace and how you feel.\n\nGroup runs take place on weekends in Taipei and Hsinchu. Check each announcement for the date, time, and meeting point.\n\nRegistration is free for Nurture Running Team students, and friends are welcome to join!',
   '如何參加團練': 'How to join a group run',
+  '已加入 LINE 大家庭的學員，可查看當次團練記事本。': 'Students who are already in the LINE community can check the notes for the upcoming group run.',
   '進入 LINE 大家庭，查看當次團練記事本。': 'Join our LINE community and open the notes for the upcoming group run.',
   '依記事本說明登記參加；需要更改或取消，也請在同一則記事本更新。': 'Follow the note’s instructions to register. Use the same note to update or cancel your registration.',
   '出發前確認群內最新公告的日期、時間與集合地點。': 'Before leaving, check the latest group announcement for the date, time, and meeting point.',

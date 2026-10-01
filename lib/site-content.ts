@@ -1,4 +1,4 @@
-import { GROUP_DESCRIPTION, GROUP_LINE_URL } from '@/lib/group-practice'
+import { GROUP_DESCRIPTION, GROUP_PRACTICE_PATH } from '@/lib/group-practice'
 
 export type HomeActivity = {
   title: string
@@ -257,7 +257,7 @@ export const defaultHomeActivities: HomeActivity[] = [
     title: '好運跑班 X 週末團練',
     description: GROUP_DESCRIPTION,
     action: '了解團練',
-    href: GROUP_LINE_URL,
+    href: GROUP_PRACTICE_PATH,
   },
 ]
 

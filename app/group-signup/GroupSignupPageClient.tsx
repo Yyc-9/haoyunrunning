@@ -1,14 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowLeft, ArrowUpRight, UsersRound } from 'lucide-react'
+import { ArrowLeft, UsersRound } from 'lucide-react'
 import { useSiteContent } from '@/app/site-content-provider'
 import MobileContextHeader from '@/components/MobileContextHeader'
-import { GROUP_DESCRIPTION, groupLineUrl, isGroupPractice } from '@/lib/group-practice'
+import { GROUP_DESCRIPTION, isGroupPractice } from '@/lib/group-practice'
 
 export default function GroupSignupPageClient() {
-  const { activities } = useSiteContent()
-  const activity = activities.find(isGroupPractice)
+  const { activities, sourceActivities } = useSiteContent()
+  const activity = activities[sourceActivities.findIndex(isGroupPractice)]
 
   return (
     <div className="mobile-focused-main min-h-screen bg-white pb-16 pt-24">
@@ -26,15 +26,12 @@ export default function GroupSignupPageClient() {
         <section aria-labelledby="group-join" className="mt-10 rounded-2xl border border-apple-gray-200 bg-apple-gray-50 p-5 sm:p-8">
           <h2 id="group-join" className="text-xl font-bold text-apple-gray-900">如何參加團練</h2>
           <ol className="mt-5 list-decimal space-y-3 pl-5 text-base leading-7 text-apple-gray-700">
-            <li>進入 LINE 大家庭，查看當次團練記事本。</li>
+            <li>已加入 LINE 大家庭的學員，可查看當次團練記事本。</li>
             <li>依記事本說明登記參加；需要更改或取消，也請在同一則記事本更新。</li>
             <li>出發前確認群內最新公告的日期、時間與集合地點。</li>
           </ol>
           <p className="mt-6 text-base font-semibold leading-7 text-apple-gray-900">團練報名與人數統計，統一以 LINE 大家庭記事本為準。網站不另外收集報名資料。</p>
-          <a href={groupLineUrl(activity?.href)} target="_blank" rel="noreferrer" className="mt-6 flex min-h-12 items-center justify-center gap-2 rounded-xl bg-apple-gray-900 px-4 py-4 text-center font-bold text-white transition-colors hover:bg-apple-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-apple-blue">
-            前往 LINE 大家庭報名 <ArrowUpRight className="h-5 w-5 shrink-0" />
-          </a>
-          <p className="mt-3 text-sm leading-6 text-apple-gray-600">連結會開啟 LINE 社群邀請頁；加入後，請到記事本查看團練公告。</p>
+
         </section>
       </div>
     </div>

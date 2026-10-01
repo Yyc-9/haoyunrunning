@@ -6,26 +6,26 @@ import { motion, useMotionValue, useReducedMotion, useSpring } from 'framer-moti
 import { ArrowUpRight, CalendarDays, PartyPopper, UsersRound, type LucideIcon } from 'lucide-react'
 import { useSiteContent } from '@/app/site-content-provider'
 import type { HomeActivity } from '@/lib/site-content'
-import { GROUP_PRACTICE_PATH, isGroupPractice } from '@/lib/group-practice'
+import { publicActivityHref } from '@/lib/group-practice'
 
 const icons = [PartyPopper, UsersRound]
 const ENTRANCE_EASE = [0.16, 1, 0.3, 1] as const
 
 type ActivityCardProps = {
   activity: HomeActivity
+  sourceActivity: HomeActivity
   icon: LucideIcon
   index: number
 }
 
-function ActivityCard({ activity, icon: Icon, index }: ActivityCardProps) {
+function ActivityCard({ activity, sourceActivity, icon: Icon, index }: ActivityCardProps) {
   const prefersReducedMotion = useReducedMotion()
   const rotateX = useMotionValue(0)
   const rotateY = useMotionValue(0)
   const springRotateX = useSpring(rotateX, { stiffness: 180, damping: 22, mass: 0.8 })
   const springRotateY = useSpring(rotateY, { stiffness: 180, damping: 22, mass: 0.8 })
-  const isGroup = isGroupPractice(activity)
-  const href = isGroup ? GROUP_PRACTICE_PATH : activity.href
-  const action = isGroup ? '了解團練' : activity.action
+  const href = publicActivityHref(sourceActivity)
+  const action = activity.action || '閱讀公告'
   const isExternal = href.startsWith('http')
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLElement>) => {
@@ -68,7 +68,7 @@ function ActivityCard({ activity, icon: Icon, index }: ActivityCardProps) {
         <h3 className="mb-3 text-xl font-bold text-apple-gray-900">
           {activity.title}
         </h3>
-        <p className={`mb-8 max-w-lg whitespace-pre-wrap break-words leading-7 text-apple-gray-600 ${isGroup ? 'group-practice-summary' : ''}`}>{isGroup ? activity.description.split(/\r?\n/).find((line) => line.trim()) : activity.description}</p>
+        <p className="mb-8 max-w-lg whitespace-pre-wrap break-words leading-7 text-apple-gray-600">{activity.description}</p>
         <div className="inline-flex items-center text-sm font-semibold text-apple-blue">
           {action}
           <ArrowUpRight className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1 group-focus-visible:translate-x-1 group-focus-visible:-translate-y-1" />
@@ -111,7 +111,7 @@ function ActivityCard({ activity, icon: Icon, index }: ActivityCardProps) {
 }
 
 export default function UpcomingActivitiesSection() {
-  const { activities: recentActivities, home } = useSiteContent()
+  const { activities: recentActivities, sourceActivities, home } = useSiteContent()
   const prefersReducedMotion = useReducedMotion()
 
   if (recentActivities.length === 0) return null
@@ -147,7 +147,7 @@ export default function UpcomingActivitiesSection() {
         <div className="grid gap-6 md:grid-cols-2">
           {recentActivities.map((activity, index) => {
             const Icon = icons[index] ?? CalendarDays
-            return <ActivityCard key={`${activity.title}-${activity.href}`} activity={activity} icon={Icon} index={index} />
+            return <ActivityCard key={`${activity.title}-${activity.href}`} activity={activity} sourceActivity={sourceActivities[index] ?? activity} icon={Icon} index={index} />
           })}
         </div>
       </div>
