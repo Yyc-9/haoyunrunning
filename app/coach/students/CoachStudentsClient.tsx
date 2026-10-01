@@ -51,7 +51,7 @@ export default function CoachStudentsClient({ previewRoster, initialSeasonId = '
   const compact = display === 'compact'
   const [roster, setRoster] = useState<CoachRosterPayload | null>(previewRoster ?? null)
   const [requestedSeasonId, setRequestedSeasonId] = useState(initialSeasonId)
-  const [scope, setScope] = useState<'own' | 'other'>('own')
+  const [scope, setScope] = useState<'all' | 'own' | 'other'>('all')
   const [courseId, setCourseId] = useState(initialCourseId)
   const [status, setStatus] = useState<'all' | PaymentOrderStatus>('all')
   const [query, setQuery] = useState('')
@@ -72,20 +72,39 @@ export default function CoachStudentsClient({ previewRoster, initialSeasonId = '
     return () => controller.abort()
   }, [requestedSeasonId, retry, previewRoster])
 
-  const courses = (roster?.courses ?? []).filter(course => course.isOwn === (scope === 'own'))
-  const selected = courses.find(course => course.id === courseId) ?? courses[0]
+  useEffect(() => {
+    if (previewRoster) return
+    const refresh = () => { if (document.visibilityState === 'visible') setRetry(value => value + 1) }
+    document.addEventListener('visibilitychange', refresh)
+    return () => document.removeEventListener('visibilitychange', refresh)
+  }, [previewRoster])
+
+  const courses = useMemo(() => (roster?.courses ?? [])
+    .filter(course => scope === 'all' || course.isOwn === (scope === 'own'))
+    .sort((a, b) => Number(b.isOwn) - Number(a.isOwn)), [roster, scope])
+  const selected = courses.find(course => course.id === courseId)
+  const visibleCourses = useMemo(() => selected ? [selected] : courses, [selected, courses])
+  const canFilterPayment = visibleCourses.length > 0 && visibleCourses.every(course => course.isOwn)
+  const registeredCount = visibleCourses.reduce((sum, course) => sum + course.registeredCount, 0)
+  const paymentCounts = visibleCourses.reduce((sum, course) => ({
+    approved: sum.approved + (course.paymentCounts?.approved ?? 0),
+    pending_review: sum.pending_review + (course.paymentCounts?.pending_review ?? 0),
+    pending_transfer: sum.pending_transfer + (course.paymentCounts?.pending_transfer ?? 0),
+    rejected: sum.rejected + (course.paymentCounts?.rejected ?? 0),
+  }), { approved: 0, pending_review: 0, pending_transfer: 0, rejected: 0 })
   const season = roster?.seasons.find(item => item.id === roster.selectedSeasonId)
   const historical = season?.status === 'archived' || season?.status === 'completed'
-  const filteredStudents = useMemo(() => {
+  const filteredGroups = useMemo(() => {
     const term = query.trim().toLowerCase()
-    return (selected?.students ?? []).filter(student => {
-      if (student.visibility === 'own' && (status === 'all' ? student.status === 'rejected' : student.status !== status)) return false
+    return visibleCourses.map(course => ({ ...course, students: course.students.filter(student => {
+      if (student.visibility === 'own' && (status === 'all' || !canFilterPayment ? student.status === 'rejected' : student.status !== status)) return false
       const values = student.visibility === 'own' ? [student.name, student.email, student.goal, student.pb] : [student.name]
       return !term || values.some(value => value.toLowerCase().includes(term))
-    })
-  }, [selected, query, status])
+    }) })).filter(course => course.students.length > 0)
+  }, [visibleCourses, query, status, canFilterPayment])
+  const resultCount = filteredGroups.reduce((sum, course) => sum + course.students.length, 0)
 
-  function changeScope(next: 'own' | 'other') { setScope(next); setCourseId(''); setStatus('all'); setQuery('') }
+  function changeScope(next: 'all' | 'own' | 'other') { setScope(next); setCourseId(''); setStatus('all'); setQuery('') }
 
   return (
     <div className="min-h-screen bg-apple-gray-50 pt-24">
@@ -106,42 +125,56 @@ export default function CoachStudentsClient({ previewRoster, initialSeasonId = '
           </label>
         </header>
         <div role="group" aria-label={english ? 'Class scope' : '班級範圍'} className="mb-5 inline-flex gap-1 rounded-lg border border-black/10 bg-white p-1">
-          {(['own', 'other'] as const).map(value => <button key={value} type="button" aria-pressed={scope === value} disabled={isLoading} onClick={() => changeScope(value)}
+          {(['all', 'own', 'other'] as const).map(value => <button key={value} type="button" aria-pressed={scope === value} disabled={isLoading} onClick={() => changeScope(value)}
             className={`min-h-10 rounded-md px-4 text-sm font-bold motion-safe:transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-apple-blue ${scope === value ? 'bg-black text-white' : 'text-apple-gray-600 hover:bg-apple-gray-100'}`}>
-            {value === 'own' ? (english ? 'My classes' : '我的班級') : (english ? 'Other classes' : '其他班級')}
+            {value === 'all' ? (english ? 'All classes' : '全部班級') : value === 'own' ? (english ? 'My classes' : '我的班級') : (english ? 'Other classes' : '其他班級')}
           </button>)}
         </div>
+        {!previewRoster && <button type="button" disabled={isLoading} onClick={() => setRetry(value => value + 1)} className="mb-5 ml-3 inline-flex min-h-11 items-center gap-2 rounded-lg border border-black/10 bg-white px-3 text-sm font-bold disabled:opacity-50"><RefreshCw aria-hidden="true" className={`h-4 w-4 ${isLoading ? 'motion-safe:animate-spin' : ''}`} />{english ? 'Refresh roster' : '更新名單'}</button>}
         {historical && <p className="mb-4 rounded-lg border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-600">{english ? 'This quarter has ended. Rosters are read-only.' : '這個季度已結束，名單僅供查閱。'}</p>}
         {error ? <div role="alert" className="rounded-lg border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
           <p>{english ? 'Unable to load the roster. Please try again.' : error}</p>
           <button type="button" onClick={() => setRetry(value => value + 1)} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-md bg-white px-4 font-bold"><RefreshCw className="h-4 w-4" />{english ? 'Retry' : '重新讀取'}</button>
         </div> : isLoading ? <div role="status" className="rounded-xl border border-black/10 bg-white p-10 text-center text-apple-gray-600"><RefreshCw aria-hidden="true" className="mx-auto mb-3 h-5 w-5 motion-safe:animate-spin" />{english ? 'Loading class rosters…' : '正在讀取班級名單…'}</div> : <>
-          {courses.length > 0 && <div className="mb-6 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{courses.map(course => <button key={course.id} type="button" onClick={() => { setCourseId(course.id); setStatus('all'); setQuery('') }} aria-pressed={selected?.id === course.id}
+          {courses.length > 0 && <label className="mb-5 block text-sm font-bold sm:hidden">{english ? 'Class' : '班級'}
+            <select aria-label={english ? 'Class' : '班級'} value={selected?.id ?? ''} onChange={event => { setCourseId(event.target.value); setStatus('all'); setQuery('') }} className="mt-2 min-h-11 w-full min-w-0 rounded-lg border border-black/15 bg-white px-3 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue">
+              <option value="">{english ? 'All classes in this view' : '此範圍全部班級'} · {courses.reduce((sum, course) => sum + course.registeredCount, 0)} {english ? 'registrations' : '筆報名'}</option>
+              {courses.map(course => <option key={course.id} value={course.id}>{course.name} · {course.registeredCount} {english ? 'registered' : '位已報名'}{course.isOwn ? (english ? ' · My class' : ' · 本班') : ''}</option>)}
+            </select>
+          </label>}
+          {courses.length > 0 && <div className="mb-6 hidden gap-2 sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"><button type="button" onClick={() => { setCourseId(''); setStatus('all'); setQuery('') }} aria-pressed={!selected}
+            className={`min-w-0 rounded-xl border p-4 text-left motion-safe:transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-apple-blue ${!selected ? 'border-apple-blue bg-blue-50' : 'border-black/10 bg-white hover:border-black/30'}`}>
+            <span className="block text-sm font-bold">{english ? 'Show all classes in this view' : '顯示此範圍全部班級'}</span>
+            <span className="mt-2 block text-sm text-apple-gray-600"><strong className="mr-1 text-2xl font-black text-black">{courses.reduce((sum, course) => sum + course.registeredCount, 0)}</strong>{english ? 'registrations' : '筆報名'} · {courses.length} {english ? 'classes' : '個班級'}</span>
+          </button>{courses.map(course => <button key={course.id} type="button" onClick={() => { setCourseId(course.id); setStatus('all'); setQuery('') }} aria-pressed={selected?.id === course.id}
             className={`min-w-0 rounded-xl border p-4 text-left motion-safe:transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-apple-blue ${selected?.id === course.id ? 'border-apple-blue bg-blue-50' : 'border-black/10 bg-white hover:border-black/30'}`}>
             <span className="flex items-start justify-between gap-2"><span className="text-sm font-bold leading-6">{course.name}</span>{selected?.id === course.id && <Check aria-hidden="true" className="mt-1 h-4 w-4 shrink-0 text-apple-blue" />}</span>
             <span className="mt-2 block text-sm text-apple-gray-600"><strong className="mr-1 text-2xl font-black text-black">{course.registeredCount}</strong>{english ? 'registered' : '位已報名'}</span>
             {course.paymentCounts && <span className="mt-2 block text-xs leading-5 text-apple-gray-500">{english ? 'Confirmed' : '已入帳'} {course.paymentCounts.approved} · {english ? 'Review' : '待核對'} {course.paymentCounts.pending_review} · {english ? 'Transfer' : '待匯款'} {course.paymentCounts.pending_transfer}</span>}
           </button>)}</div>}
-          {selected ? <>
+          {courses.length > 0 ? <>
             <div className="mb-4 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-              <div><h2 className="text-xl font-black sm:text-2xl">{selected.name}</h2><p className="mt-1 text-sm text-apple-gray-500">{english ? `${selected.registeredCount} registered students` : `已報名 ${selected.registeredCount} 位`}
-                {(selected.paymentCounts?.rejected ?? 0) > 0 && (english ? ` · ${selected.paymentCounts!.rejected} returned records` : ` · 另有 ${selected.paymentCounts!.rejected} 筆退回紀錄`)}</p></div>
+              <div><h2 className="text-xl font-black sm:text-2xl">{selected?.name ?? (english ? 'All registrations in this view' : '此範圍全部報名')}</h2><p className="mt-1 text-sm text-apple-gray-500">{english ? `${registeredCount} registrations across ${visibleCourses.length} classes` : `${visibleCourses.length} 個班級，共 ${registeredCount} 筆報名`}
+                {paymentCounts.rejected > 0 && (english ? ` · ${paymentCounts.rejected} returned records in your classes` : ` · 本班另有 ${paymentCounts.rejected} 筆退回紀錄`)}</p></div>
               <StudentDisplayToggle value={display} onChange={setDisplay} />
             </div>
-            {!selected.isOwn && <p className="mb-4 flex items-center gap-2 rounded-lg border border-black/10 bg-white px-4 py-3 text-sm text-apple-gray-600"><LockKeyhole aria-hidden="true" className="h-4 w-4 shrink-0" />{english ? 'Other classes show names and registration counts only. Personal details and individual payment status are private.' : '其他班級僅顯示姓名與報名人數，個人資料和個別繳費狀態不開放查看。'}</p>}
+            <p className="mb-4 flex items-center gap-2 rounded-lg border border-black/10 bg-white px-4 py-3 text-sm text-apple-gray-600"><LockKeyhole aria-hidden="true" className="h-4 w-4 shrink-0" />{english ? 'Your classes include full registration details and payment status. Other classes show names only. Registrations appear before payment confirmation.' : '本班可查看完整報名資料與入帳狀態，非本班僅顯示姓名。已報名但尚未入帳的學員也會列出。'}</p>
             <div className="mb-4 flex flex-col gap-3 sm:flex-row">
               <div className="relative flex-1"><Search aria-hidden="true" className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-apple-gray-400" /><input aria-label={english ? 'Search students' : '搜尋學員'} value={query} onChange={event => setQuery(event.target.value)}
-                placeholder={selected.isOwn ? (english ? 'Search name, email or goal' : '搜尋姓名、Email 或目標') : (english ? 'Search name' : '搜尋姓名')}
+                placeholder={canFilterPayment ? (english ? 'Search name, email or goal' : '搜尋姓名、Email 或目標') : (english ? 'Search name across classes' : '跨班搜尋學員姓名')}
                 className="min-h-11 w-full rounded-lg border border-black/15 bg-white py-2 pl-10 pr-3 text-sm focus:border-apple-blue focus:outline-none focus:ring-2 focus:ring-apple-blue/20" /></div>
-              {selected.isOwn && <select aria-label={english ? 'Payment status' : '繳費狀態'} value={status} onChange={event => setStatus(event.target.value as typeof status)} className="min-h-11 rounded-lg border border-black/15 bg-white px-3 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue">
+              {canFilterPayment && <select aria-label={english ? 'Payment status' : '繳費狀態'} value={status} onChange={event => setStatus(event.target.value as typeof status)} className="min-h-11 rounded-lg border border-black/15 bg-white px-3 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue">
                 <option value="all">{english ? 'All registrations' : '全部報名'}</option>
-                {(['approved', 'pending_review', 'pending_transfer', 'rejected'] as const).map(value => <option key={value} value={value}>{(english ? statusLabelsEn : statusLabels)[value]} · {selected.paymentCounts?.[value] ?? 0}</option>)}
+                {(['approved', 'pending_review', 'pending_transfer', 'rejected'] as const).map(value => <option key={value} value={value}>{(english ? statusLabelsEn : statusLabels)[value]} · {paymentCounts[value]}</option>)}
               </select>}
             </div>
-            <p className="mb-3 text-xs text-apple-gray-500" aria-live="polite">{english ? `${filteredStudents.length} results` : `顯示 ${filteredStudents.length} 位`}</p>
-            {filteredStudents.length ? <div className={compact ? 'grid gap-1.5' : selected.isOwn ? 'grid gap-4 lg:grid-cols-2' : 'grid gap-3 sm:grid-cols-2 lg:grid-cols-3'}>{filteredStudents.map(student => student.visibility === 'own'
+            <p className="mb-3 text-xs text-apple-gray-500" aria-live="polite">{english ? `${resultCount} results` : `顯示 ${resultCount} 筆報名`}</p>
+            {resultCount ? <div className="space-y-8">{filteredGroups.map(course => <section key={course.id} aria-label={course.name}>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h2 className="text-lg font-black">{course.name} <span className="ml-1 text-sm font-medium text-apple-gray-500">{course.students.length} {english ? 'results' : '位'}</span></h2><span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-apple-gray-600">{course.isOwn ? (english ? 'My class · Full details' : '本班 · 可查看詳細資料') : (english ? 'Other class · Names only' : '非本班 · 僅姓名')}</span></div>
+              <div className={compact ? 'grid gap-1.5' : course.isOwn ? 'grid gap-4 lg:grid-cols-2' : 'grid gap-3 sm:grid-cols-2 lg:grid-cols-3'}>{course.students.map(student => student.visibility === 'own'
               ? <OwnStudentCard key={student.id} student={student} compact={compact} english={english} />
               : <article key={student.id} className={`rounded-lg border border-black/10 bg-white font-bold ${compact ? 'px-3 py-2.5 text-sm' : 'p-5 text-base'}`}>{student.name}</article>)}</div>
+            </section>)}</div>
               : <div className="rounded-xl border border-dashed border-black/15 bg-white p-10 text-center"><UsersRound aria-hidden="true" className="mx-auto mb-3 h-7 w-7 text-apple-gray-400" /><p className="font-bold">{english ? 'No matching students' : '目前沒有符合條件的學員'}</p><p className="mt-2 text-sm text-apple-gray-500">{query || status !== 'all' ? (english ? 'Try clearing your search or changing the status filter.' : '可以清除搜尋或切換繳費狀態再查看。') : (english ? 'New registrations will appear here, even before payment confirmation.' : '學員完成報名後，就會出現在這裡，不需要先完成核帳。')}</p></div>}
           </> : <div className="rounded-xl border border-dashed border-black/15 bg-white p-10 text-center"><p className="font-bold">{scope === 'own' ? (english ? 'No assigned classes this quarter' : '這個季度尚未安排你的任課班級') : (english ? 'No other classes this quarter' : '這個季度沒有其他班級')}</p>{scope === 'own' && <button type="button" onClick={() => changeScope('other')} className="mt-4 min-h-11 rounded-lg bg-black px-5 text-sm font-bold text-white">{english ? 'View other classes' : '查看其他班級名單'}</button>}</div>}
         </>}

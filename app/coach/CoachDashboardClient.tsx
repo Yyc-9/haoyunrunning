@@ -169,7 +169,7 @@ export default function CoachDashboardClient() {
             <section className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-6">
               <div className="flex items-center justify-between gap-3">
                 <div><p className="text-xs font-bold text-apple-blue">MY CLASSES</p><h2 className="mt-1 text-xl font-black text-black sm:text-2xl">{language === 'en' ? 'My class registrations' : '我的班級報名'}</h2></div>
-                <Link href={`/coach/students${roster?.selectedSeasonId ? `?seasonId=${roster.selectedSeasonId}` : ''}`} className="inline-flex items-center gap-1 text-sm font-bold">{language === 'en' ? 'All rosters' : '查看名單'}<ArrowRight className="h-4 w-4" /></Link>
+                <Link href={`/coach/students${roster?.selectedSeasonId ? `?seasonId=${roster.selectedSeasonId}` : ''}`} className="inline-flex items-center gap-1 text-sm font-bold">{language === 'en' ? 'All class registrations' : '查看全部班級報名'}<ArrowRight className="h-4 w-4" /></Link>
               </div>
 
               <p className="mt-3 text-sm leading-6 text-apple-gray-600">{language === 'en' ? 'Includes all registrations, before and after payment confirmation. Each class counts its own registrations.' : '包含已核帳與尚未核帳的所有報名；同一人報名不同班級，各班分別計數。'}</p>

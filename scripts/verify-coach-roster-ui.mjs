@@ -50,6 +50,8 @@ try {
     }, { user, expiry, token, projectRef })
     let failNext = false
     let delayNext = false
+    let noAssignments = false
+    let newRegistration = false
     await context.route('**/*', async route => {
       const url = new URL(route.request().url())
       const reply = (data, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) })
@@ -62,7 +64,19 @@ try {
       if (url.pathname === '/api/coach/roster') {
         if (failNext) { failNext = false; return reply({ error: '讀取班級名單失敗，請稍後重試。' }, 503) }
         if (delayNext) { delayNext = false; await new Promise(resolve => setTimeout(resolve, 1200)) }
-        return reply(url.searchParams.get('seasonId') === oldId ? q3 : q4)
+        const data = JSON.parse(JSON.stringify(url.searchParams.get('seasonId') === oldId ? q3 : q4))
+        if (newRegistration) {
+          const course = data.courses[0]
+          course.students.push({ ...course.students.find(student => student.status === 'pending_review'), id: 'new-registration', name: '新報名學員' })
+          course.registeredCount++
+          course.paymentCounts.pending_review++
+        }
+        if (noAssignments) for (const course of data.courses) {
+          course.isOwn = false
+          delete course.paymentCounts
+          course.students = course.students.filter(student => student.status !== 'rejected').map(({ id, name }) => ({ id, name, visibility: 'name_only' }))
+        }
+        return reply(data)
       }
       if (url.pathname.startsWith('/api/')) return reply({ items: [], unreadCount: 0, coaches: [] })
       return route.continue()
@@ -72,6 +86,18 @@ try {
     page.on('pageerror', error => errors.push(error.message))
     await page.goto(`${base}/coach/students`)
     await page.getByRole('heading', { name: '林小晴', exact: true }).waitFor()
+    assert.equal(await page.locator('article').count(), 6, 'initial view includes every class, not only the first assigned class')
+    await page.getByText('李承恩', { exact: true }).waitFor()
+    await page.getByRole('heading', { name: '王品涵', exact: true }).waitFor()
+    assert.equal(await page.getByRole('region', { name: '26Q4 週四竹南初階班', exact: true }).locator('details, a, input').count(), 0)
+    await page.getByLabel('搜尋學員').fill('李承恩')
+    assert.equal(await page.locator('article').count(), 1, 'default search spans all classes')
+    await page.getByLabel('搜尋學員').fill('')
+    await page.screenshot({ path: `output/playwright/coach-roster-all-${width}.png`, fullPage: true, animations: 'disabled' })
+    await page.getByRole('button', { name: '我的班級', exact: true }).click()
+    assert.equal(await page.locator('article').count(), 4, 'my classes includes both assigned classes')
+    if (width < 640) await page.getByLabel('班級', { exact: true }).selectOption('demo-class-a')
+    else await page.getByRole('button', { name: /26Q4 週二台北 PB 班/ }).click()
     assert.equal(await page.locator('article').count(), 3, 'paid, pending review and awaiting transfer are all visible')
     await page.getByLabel('繳費狀態').selectOption('pending_transfer')
     await page.getByRole('heading', { name: '黃以辰', exact: true }).waitFor()
@@ -117,6 +143,19 @@ try {
     await page.getByRole('button', { name: '重新讀取', exact: true }).click()
     await page.getByText('正在讀取班級名單…', { exact: true }).waitFor()
     await page.getByRole('heading', { name: '林小晴', exact: true }).waitFor()
+    newRegistration = true
+    await page.getByRole('button', { name: '更新名單', exact: true }).click()
+    await page.getByRole('heading', { name: '新報名學員', exact: true }).waitFor()
+    assert.equal(await page.locator('article').count(), 7, 'refresh includes registrations added since the page opened')
+    newRegistration = false
+    noAssignments = true
+    await page.goto(`${base}/coach/students`)
+    await page.getByText('林小晴', { exact: true }).waitFor()
+    assert.equal(await page.locator('article').count(), 6, 'unassigned coaches see all names immediately instead of an empty default view')
+    assert.equal(await page.getByLabel('繳費狀態').count(), 0)
+    assert.equal(await page.getByText('查看完整報名資料', { exact: true }).count(), 0)
+    assert.ok(!(await page.locator('body').innerText()).includes('@example.com'))
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
     assert.deepEqual(errors, [])
     console.log(`PASS ${width}px: full roster, payment filters, density, names-only access, archived quarter, class navigation, loading and retry`)
     await context.close()
