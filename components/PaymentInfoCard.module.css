@@ -1,11 +1,59 @@
 @media (max-width: 767px) {
+  .card {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
   .card .body {
     display: block;
   }
 
   .card .qr {
-    width: 76px;
-    height: 76px;
-    margin: 0 auto 14px;
+    width: clamp(128px, 36vw, 160px);
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    object-fit: contain;
+    margin: 0 auto 18px;
+  }
+
+  .card :global(.payment-info-subtitle) {
+    font-size: 15px;
+  }
+
+  .card :global(.payment-info-field dt) {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .card :global(.payment-info-value) {
+    min-width: 0;
+    font-size: clamp(18px, 4.6vw, 20px);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  .card :global(.payment-info-copy) {
+    min-width: 36px;
+  }
+
+  .card :global(.payment-info-copy svg) {
+    width: 18px;
+    height: 18px;
+  }
+
+  .card :global(.payment-info-field) + :global(.payment-info-field) {
+    margin-top: 8px;
+  }
+
+  .card :global(.payment-info-note) {
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  .card :global(.payment-info-status) {
+    font-size: 14px;
+    overflow-wrap: anywhere;
   }
 }
