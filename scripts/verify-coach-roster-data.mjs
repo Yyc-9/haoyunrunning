@@ -37,8 +37,14 @@ const { getCoachRoster } = loadModule(path.join(root, 'lib/coach-roster-server.t
 if (!supabaseAdmin) throw Error('Server configuration is missing')
 const { data: seasons, error: seasonError } = await supabaseAdmin.from('course_seasons').select('id, code, status').neq('status', 'draft').order('code', { ascending: false })
 if (seasonError) throw Error(`Could not read quarters: ${seasonError.message}`)
-const { data: coaches, error: coachError } = await supabaseAdmin.from('coach_public_profiles').select('coach_key, owner_profile_id').in('coach_key', ['bianbian', 'chenShengQi']).not('owner_profile_id', 'is', null)
-if (coachError || !coaches?.length) throw Error('Could not read assigned coach identities')
+const [{ data: identities, error: identityError }, { data: profiles, error: profileError }] = await Promise.all([
+  supabaseAdmin.from('coach_public_profiles').select('coach_key, owner_profile_id').not('owner_profile_id', 'is', null),
+  supabaseAdmin.from('profiles').select('id, name, role').in('role', ['coach', 'admin']),
+])
+if (identityError || profileError || !profiles?.length) throw Error('Could not read coach identities')
+const coaches = profiles.map(profile => ({ owner_profile_id: profile.id,
+  coach_key: identities.find(identity => identity.owner_profile_id === profile.id)?.coach_key ?? profile.name ?? profile.id,
+}))
 for (const season of seasons ?? []) {
   const registrations = []
   for (let from = 0; ; from += 500) {
@@ -48,7 +54,7 @@ for (const season of seasons ?? []) {
     registrations.push(...(data ?? []))
     if (!data || data.length < 500) break
   }
-  for (const coach of coaches) {
+  for (let index = 0; index < coaches.length; index += 3) await Promise.all(coaches.slice(index, index + 3).map(async coach => {
     const roster = await getCoachRoster(coach.owner_profile_id, season.id)
     assert.equal(roster.selectedSeasonId, season.id)
     let ownCount = 0
@@ -58,6 +64,7 @@ for (const season of seasons ?? []) {
       const active = expected.filter(row => ['approved', 'pending_review', 'pending_transfer'].includes(row.status))
       assert.equal(course.registeredCount, active.length, `${season.code}: ${course.slug} count`)
       assert.equal(course.students.filter(student => student.visibility !== 'own' || student.status !== 'rejected').length, active.length)
+      assert.deepEqual(Array.from(course.students.filter(student => student.visibility !== 'own' || student.status !== 'rejected'), student => student.id).sort(), active.map(row => row.id).sort(), 'every registration ID is present, including pending payments')
       if (course.isOwn) {
         ownCount += course.registeredCount
         for (const status of ['approved', 'pending_review', 'pending_transfer', 'rejected']) assert.equal(course.paymentCounts[status], expected.filter(row => row.status === status).length)
@@ -72,5 +79,5 @@ for (const season of seasons ?? []) {
       }
     }
     console.log(`PASS ${season.code} ${coach.coach_key}: ${ownCount} own-class registrations + ${otherCount} names-only registrations; per-class counts match records`)
-  }
+  }))
 }

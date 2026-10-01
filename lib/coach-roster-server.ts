@@ -19,7 +19,8 @@ export async function getCoachRoster(coachId: string, requestedSeasonId = ''): P
   const season = availableSeasons.find(item => item.id === selectedSeasonId)
   if (!season) return { seasons, selectedSeasonId: '', courses: [] }
 
-  await syncCoachSessionAssignments()
+  const historical = season.status === 'archived' || season.status === 'completed'
+  if (!historical) await syncCoachSessionAssignments()
   const courses = Object.entries(season.courseOfferingIds).map(([slug, id]) => ({
     id, slug, name: season.courseOverrides[slug]?.name || allCourses.find(course => course.slug === slug)?.name || slug,
   }))
@@ -27,6 +28,21 @@ export async function getCoachRoster(coachId: string, requestedSeasonId = ''): P
     .select('course_season_course_id').eq('coach_id', coachId)
   if (membershipError) throw membershipError
   const ownCourseIds = (memberships ?? []).map(row => row.course_season_course_id as string)
+  if (historical) {
+    // Archived quarters can predate the current membership table. Recover only
+    // explicit quarter snapshots or scheduled teaching records, never today's defaults.
+    const [{ data: identities, error: identityError }, { data: assignments, error: assignmentError }] = await Promise.all([
+      supabaseAdmin.from('coach_public_profiles').select('coach_key').eq('owner_profile_id', coachId),
+      supabaseAdmin.from('coach_session_assignments').select('course_season_course_id')
+        .eq('season_id', season.id).eq('scheduled_coach_id', coachId),
+    ])
+    if (identityError) throw identityError
+    if (assignmentError) throw assignmentError
+    const coachKeys = new Set((identities ?? []).map(row => row.coach_key as string))
+    ownCourseIds.push(...courses.filter(course => season.courseOverrides[course.slug]?.coachKeys?.some(key => coachKeys.has(key))).map(course => course.id))
+    const historicalCourseIds = new Set(courses.map(course => course.id))
+    ownCourseIds.push(...(assignments ?? []).map(row => row.course_season_course_id as string).filter(id => historicalCourseIds.has(id)))
+  }
   const owned = new Set(ownCourseIds)
   const registrations: Record<string, unknown>[] = []
   for (let from = 0; ; from += 500) {

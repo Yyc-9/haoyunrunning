@@ -120,6 +120,54 @@ test('server reads all pages and only fetches private fields for assigned enroll
   assert.ok(calls[0].ops.some(op => op[0] === 'eq' && op[1] === 'coach_id' && op[2] === 'coach-a'))
 })
 
+test('archived classes recover explicit historical teaching permissions without granting unknown classes', async () => {
+  const registrations = ['own', 'taught', 'other'].map(id => ({ ...enrollment(id, 'approved', id), season_id: 'q3' }))
+  const calls: { table: string; columns: string; ops: unknown[][] }[] = []
+  let syncCount = 0
+  const supabaseAdmin = { from(table: string) {
+    const call = { table, columns: '', ops: [] as unknown[][] }; calls.push(call)
+    const query = {
+      select(columns: string) { call.columns = columns; return query },
+      eq(...args: unknown[]) { call.ops.push(['eq', ...args]); return query },
+      in(...args: unknown[]) { call.ops.push(['in', ...args]); return query },
+      order() { return query },
+      async range() { return { data: registrations, error: null } },
+      then(resolve: (value: unknown) => unknown) {
+        const ids = call.ops.find(op => op[0] === 'in' && op[1] === 'id')?.[2] as string[] | undefined
+        const data = table === 'course_coach_memberships' ? []
+          : table === 'coach_public_profiles' ? [{ coach_key: 'saved-coach' }]
+          : table === 'coach_session_assignments' ? [{ course_season_course_id: 'taught' }, { course_season_course_id: 'current-quarter-only' }]
+          : registrations.filter(row => ids?.includes(row.id))
+        return Promise.resolve({ data, error: null }).then(resolve)
+      },
+    }; return query
+  } }
+  const { getCoachRoster } = load('../lib/coach-roster-server.ts', {
+    'server-only': {}, '@/lib/supabase-server': { supabaseAdmin },
+    '@/lib/course-seasons-server': { getCourseSeasons: async () => [{ id: 'q3', code: '2026-Q3', name: '第三季', status: 'archived', isCurrent: false,
+      courseOfferingIds: { 'own-class': 'own', 'taught-class': 'taught', 'other-class': 'other' },
+      courseOverrides: { 'own-class': { coachKeys: ['saved-coach'] } },
+    }] },
+    '@/lib/course-seasons': { overviewSeasonId: () => 'q3' }, '@/lib/coach-session-duty': { syncCoachSessionAssignments: async () => { syncCount++ } },
+    '@/lib/goodluck-data': { allCourses: [] }, '@/lib/coach-roster': { buildCoachRosterCourses, rosterCourseId: (row: Record<string, unknown>) => row.course_season_course_id },
+  }) as typeof import('../lib/coach-roster-server')
+  const result = await getCoachRoster('coach-a', 'q3')
+  assert.equal(syncCount, 0, 'reading an archived roster must not synchronize or change current assignments')
+  assert.deepEqual(Array.from(result.courses, course => course.isOwn), [true, true, false])
+  for (const course of result.courses.slice(0, 2)) {
+    const student = course.students[0]
+    assert.equal(student.visibility, 'own')
+    if (student.visibility === 'own') { assert.equal(student.email, 'shared@example.invalid'); assert.equal(student.hasFormalAccess, false) }
+  }
+  assert.deepEqual(Object.keys(result.courses[2].students[0]).sort(), ['id', 'name', 'visibility'])
+  const assignments = calls.find(call => call.table === 'coach_session_assignments')!
+  assert.ok(assignments.ops.some(op => op[0] === 'eq' && op[1] === 'scheduled_coach_id' && op[2] === 'coach-a'))
+  assert.ok(assignments.ops.some(op => op[0] === 'eq' && op[1] === 'season_id' && op[2] === 'q3'))
+  const identities = calls.find(call => call.table === 'coach_public_profiles')!
+  assert.ok(identities.ops.some(op => op[0] === 'eq' && op[1] === 'owner_profile_id' && op[2] === 'coach-a'))
+  assert.equal(calls.some(call => call.table === 'formal_coach_students' || call.table === 'training_feedback'), false)
+})
+
 for (const scenario of [
   { name: 'anonymous', user: null, role: 'coach', status: 401 },
   { name: 'ordinary student', user: { id: 'student' }, role: 'student', status: 403 },
