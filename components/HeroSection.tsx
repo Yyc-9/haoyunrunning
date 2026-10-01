@@ -1,6 +1,8 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
+import { ArrowUpRight } from 'lucide-react'
 import { useEffect, useMemo, useRef } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { useSiteContent } from '@/app/site-content-provider'
@@ -282,6 +284,10 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
           <span>認識跑步，</span>
           <span>跑向更穩定的自己。</span>
         </h1>
+        <Link href="/courses" className="home-hero-course-link">
+          查看本期課程
+          <ArrowUpRight size={18} aria-hidden="true" />
+        </Link>
         <p className="home-hero-pointer-instruction">
           <span aria-hidden="true" />
           輕觸或滑動，留下你的好運足跡。

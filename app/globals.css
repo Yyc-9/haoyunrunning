@@ -193,7 +193,8 @@
     #eeeae0;
 }
 
-.home-hero-mobile-media {
+.home-hero-mobile-media,
+.home-hero-course-link {
   display: none;
 }
 
@@ -2874,6 +2875,34 @@ html[lang="en"] .home-hero-copy h1 {
 
 /* Mobile homepage media: show the supplied portrait composition at its native aspect ratio. */
 @media (max-width: 767px) {
+  .home-hero-course-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 48px;
+    max-width: 100%;
+    margin-top: 20px;
+    padding: 12px 20px;
+    border: 1px solid #e3d9ef;
+    border-radius: 999px;
+    background: #e3d9ef;
+    color: #131117;
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1.5;
+    text-decoration: none;
+  }
+
+  .home-hero-course-link:active {
+    background: #c9bed8;
+  }
+
+  .home-hero-course-link:focus-visible {
+    outline: 3px solid #faf7f2;
+    outline-offset: 4px;
+  }
+
   .home-hero {
     height: max(680px, 100svh, calc(60px + var(--mobile-safe-top) + 177.778vw));
     min-height: max(680px, calc(60px + var(--mobile-safe-top) + 177.778vw));
