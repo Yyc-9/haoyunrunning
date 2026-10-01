@@ -22,7 +22,7 @@ function load(path: string, modules: Record<string, unknown> = {}) {
   return exports as Record<string, unknown>
 }
 const accessHelpers = load('../lib/coach-attendance-access.ts')
-function harness(role='coach') {
+function harness(role='coach', rpcError: string | null=null) {
   const rows: Row[] = ['pending_transfer','pending_review','rejected','approved'].map((status,i)=>({
     id:`enrollment-${i}`,source:'course_payment',status,registration_status:'active',name:`Student ${i}`,email:'shared@example.invalid',
     season_id:'quarter',course_slug:'home',course_season_course_id:'home-id',created_at:'2026-10-01',payload:{},
@@ -30,7 +30,8 @@ function harness(role='coach') {
   rows.push({...rows[0],id:'cancelled',registration_status:'cancelled'})
   rows.push({...rows[0],id:'other',course_slug:'other',course_season_course_id:'other-id'})
   const writes: Row[]=[]
-  const supabaseAdmin={from(table:string) {
+  const rpcCalls: Row[]=[]
+  const supabaseAdmin={rpc:async(name:string,args:Row)=>{rpcCalls.push({name,...args});return {data:null,error:rpcError ? {message:rpcError} : null}},from(table:string) {
     const filters: ((row:Row)=>boolean)[]=[]
     let write: Row[] | null=null
     const data=()=> {
@@ -59,11 +60,12 @@ function harness(role='coach') {
     '@/lib/supabase-server':{supabaseAdmin,getAuthedUser:async()=>({id:'coach'})},
     '@/lib/coach-attendance-access':accessHelpers,
     '@/lib/coach-session-duty':{syncCoachSessionAssignments:async()=>{}},
+    '@/lib/coach-leave-options':{getCoachLeaveOptions:async()=>[]},
     '@/lib/test-account':{getIsolatedTestAccount:async()=>null},
     '@/lib/season-write-guard':{archivedSeasonResponse:async()=>null},
   }) as Route
   const req=(body:unknown={})=>({headers:new Headers(),nextUrl:new URL('https://example.invalid/api/coach/attendance'),json:async()=>body})
-  return {route,writes,req}
+  return {route,writes,req,rpcCalls}
 }
 test('coach attendance GET includes unpaid and supplementary records separately despite shared email',async()=>{
   const {route,req}=harness();const result=await route.GET(req());assert.equal(result.status,200)
@@ -83,4 +85,30 @@ test('student role cannot gain coach write access',async()=>{
 })
 test('coach cannot mark an unassigned session',async()=>{
   const {route,writes,req}=harness();assert.equal((await route.POST(req({courseSeasonCourseId:'home-id',sessionDate:'2026-10-02'}))).status,400);assert.equal(writes.length,0)
+})
+
+for (const mode of ['in_person','self_training']) test(`coach can submit ${mode} for an unpaid own-class enrollee`,async()=>{
+  const {route,req,rpcCalls}=harness()
+  const result=await route.POST(req({intent:'resolve_leave',courseSeasonCourseId:'home-id',sessionDate:'2026-10-01',enrollmentId:'enrollment-0',leaveMode:mode,targetCourseSeasonCourseId:'target',targetSessionDate:'2026-10-05'}))
+  assert.equal(result.status,200);assert.equal(rpcCalls.length,1);assert.equal(rpcCalls[0].name,'resolve_coach_course_leave');assert.equal(rpcCalls[0].p_actor_id,'coach')
+  if(mode==='self_training') assert.equal(rpcCalls[0].p_target_course_id,null)
+})
+for (const id of ['cancelled','other']) test(`coach cannot resolve leave for ${id} enrollment`,async()=>{
+  const {route,req,rpcCalls}=harness()
+  assert.equal((await route.POST(req({intent:'resolve_leave',courseSeasonCourseId:'home-id',sessionDate:'2026-10-01',enrollmentId:id,leaveMode:'self_training'}))).status,403)
+  assert.equal(rpcCalls.length,0)
+})
+test('database capacity conflict is reported without issuing separate attendance writes',async()=>{
+  const {route,req,rpcCalls,writes}=harness('coach','makeup target capacity reached')
+  assert.equal((await route.POST(req({intent:'resolve_leave',courseSeasonCourseId:'home-id',sessionDate:'2026-10-01',enrollmentId:'enrollment-1',leaveMode:'in_person',targetCourseSeasonCourseId:'target',targetSessionDate:'2026-10-05'}))).status,409)
+  assert.equal(rpcCalls.length,1);assert.equal(writes.length,0)
+})
+test('legacy bare excused writes require an explicit leave choice',async()=>{
+  const {route,req,writes}=harness()
+  assert.equal((await route.POST(req({courseSeasonCourseId:'home-id',sessionDate:'2026-10-01',records:[{enrollmentId:'enrollment-1',status:'excused'}]}))).status,409)
+  assert.equal(writes.length,0)
+})
+test('makeup options require teaching access to the original session',async()=>{
+  const {route,req}=harness();const request=req();request.nextUrl.search='?leaveOptionsFor=other-id&sessionDate=2026-10-01'
+  assert.equal((await route.GET(request)).status,403)
 })

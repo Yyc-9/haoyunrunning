@@ -7,13 +7,18 @@ import { applyCourseOverrides } from '@/lib/managed-courses'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { allowedSessionDateSet, filterCourseEnrollmentsByAccess, filterCourseMakeupsBySessionAccess, filterRowsBySessionAccess } from '@/lib/coach-attendance-access'
 import { syncCoachSessionAssignments } from '@/lib/coach-session-duty'
+import { getCoachLeaveOptions } from '@/lib/coach-leave-options'
 import { getIsolatedMondayCourse, getIsolatedTestAccount, isolatedTestStudentFixtures, updateIsolatedTestState } from '@/lib/test-account'
 
 const noStoreHeaders = { 'Cache-Control': 'no-store' }
 const attendanceStatuses = new Set<CourseAttendanceStatus>(['present', 'excused', 'deducted'])
 
 type AttendanceRequest = {
-  intent?: 'save_attendance' | 'set_session_cancellation'
+  intent?: 'save_attendance' | 'set_session_cancellation' | 'resolve_leave'
+  enrollmentId?: string
+  leaveMode?: 'in_person' | 'self_training'
+  targetCourseSeasonCourseId?: string
+  targetSessionDate?: string
   courseSeasonCourseId?: string
   sessionDate?: string
   cancelled?: boolean
@@ -140,6 +145,18 @@ export async function GET(request: NextRequest) {
   const access = await loadAccess(request)
   if ('response' in access) return access.response
 
+  const leaveCourseId = request.nextUrl.searchParams.get('leaveOptionsFor')
+  if (leaveCourseId) {
+    const course = access.courses.find(item => item.courseSeasonCourseId === leaveCourseId)
+    const date = request.nextUrl.searchParams.get('sessionDate') ?? ''
+    if (!course?.sessionDates.includes(date)) return NextResponse.json({ error: '沒有這堂課的請假管理權限。' }, { status: 403, headers: noStoreHeaders })
+    try {
+      return NextResponse.json({ options: await getCoachLeaveOptions(course.seasonId, leaveCourseId, date) }, { headers: noStoreHeaders })
+    } catch {
+      return NextResponse.json({ error: '讀取補課課次失敗，請重試。' }, { status: 503, headers: noStoreHeaders })
+    }
+  }
+
   if (access.courses.length === 0) {
     return NextResponse.json({ courses: [], enrollments: [], attendance: [], makeups: [], cancellations: [] }, { headers: noStoreHeaders })
   }
@@ -263,6 +280,23 @@ export async function POST(request: NextRequest) {
     if (archiveError) return archiveError
   }
   const testAccount = 'testAccount' in access ? access.testAccount : undefined
+  if (body.intent === 'resolve_leave') {
+    if (testAccount) return NextResponse.json({ error: '隔離測試帳號不會建立正式補課，請使用本機預覽測試此流程。' }, { status: 409, headers: noStoreHeaders })
+    if (!['in_person', 'self_training'].includes(body.leaveMode ?? '')) return NextResponse.json({ error: '請選擇請假處理方式。' }, { status: 400, headers: noStoreHeaders })
+    const enrollmentId = cleanText(body.enrollmentId, 80)
+    const { data: enrollment, error: enrollmentError } = await supabaseAdmin!.from('signup_leads')
+      .select('id').eq('id', enrollmentId).eq('source', 'course_payment').eq('registration_status', 'active')
+      .eq('season_id', course.seasonId).eq('course_season_course_id', courseSeasonCourseId).maybeSingle()
+    if (enrollmentError || !enrollment) return NextResponse.json({ error: '只能替本班有效報名的學員安排請假；補課不能再產生新的補課資格。' }, { status: 403, headers: noStoreHeaders })
+    const { error } = await supabaseAdmin!.rpc('resolve_coach_course_leave', {
+      p_enrollment_id: enrollmentId, p_course_id: courseSeasonCourseId, p_session_date: sessionDate,
+      p_actor_id: access.user.id, p_mode: body.leaveMode,
+      p_target_course_id: body.leaveMode === 'in_person' ? cleanText(body.targetCourseSeasonCourseId, 80) || null : null,
+      p_target_date: body.leaveMode === 'in_person' ? cleanText(body.targetSessionDate, 10) || null : null,
+    })
+    if (error) return NextResponse.json({ error: /capacity reached/i.test(error.message) ? '這堂補課已滿，請選擇其他課次。' : /already finalized/i.test(error.message) ? '本堂點名或補課已完成，不能再更改請假方式。' : error.message }, { status: 409, headers: noStoreHeaders })
+    return NextResponse.json({ message: body.leaveMode === 'self_training' ? '已登記自主訓練；本次請假不可再安排線下補課。' : '請假與線下補課已一併儲存，補課班級的教練會看到這位學員。' }, { headers: noStoreHeaders })
+  }
   if (testAccount) {
     if (body.intent === 'set_session_cancellation') {
       await updateIsolatedTestState(testAccount, (state) => {
@@ -366,6 +400,11 @@ export async function POST(request: NextRequest) {
   })
   if (invalidEnrollment) {
     return NextResponse.json({ error: '點名名單包含不屬於本班、也未安排本堂補課的學員。' }, { status: 400, headers: noStoreHeaders })
+  }
+  if (requested.some(record => record.status === 'excused'
+    && enrollmentsById.get(record.enrollmentId)?.course_season_course_id === courseSeasonCourseId
+    && !(originalMakeupResult.data ?? []).some(makeup => makeup.enrollment_id === record.enrollmentId))) {
+    return NextResponse.json({ error: '請點選「請假」，選擇線下補課或自主訓練後再確認。' }, { status: 409, headers: noStoreHeaders })
   }
 
   const clears = requested.filter((record) => record.status === 'unmarked').map((record) => record.enrollmentId)

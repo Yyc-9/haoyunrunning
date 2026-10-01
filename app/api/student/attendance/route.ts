@@ -360,6 +360,7 @@ export async function POST(request: NextRequest) {
 
   if (requestError) return NextResponse.json({ error: requestError.message }, { status: 500, headers: noStoreHeaders })
   if (!makeupRequest) return NextResponse.json({ error: '找不到這筆請假與補課資料。' }, { status: 404, headers: noStoreHeaders })
+  if (makeupRequest.status === 'self_training') return NextResponse.json({ error: '本次請假已選擇自主訓練，不可再安排線下補課或取消請假。' }, { status: 409, headers: noStoreHeaders })
 
   if (intent === 'schedule_makeup') {
     const targetCourseId = cleanText(body.targetCourseSeasonCourseId, 80)

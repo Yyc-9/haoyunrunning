@@ -276,6 +276,8 @@ export default function StudentAttendancePanel() {
                       <p className="mt-3 rounded-lg bg-blue-50 p-3 text-xs font-bold leading-5 text-blue-800">補課安排：{targetCourseName}｜{formatAttendanceDate(row.makeup.target_session_date, language)}</p>
                     ) : row.makeup?.status === 'completed' && targetCourseName && row.makeup.target_session_date ? (
                       <p className="mt-3 rounded-lg bg-emerald-50 p-3 text-xs font-bold leading-5 text-emerald-800">補課已完成：{targetCourseName}｜{formatAttendanceDate(row.makeup.target_session_date, language)}</p>
+                    ) : row.makeup?.status === 'self_training' ? (
+                      <p className="mt-3 rounded-lg bg-blue-50 p-3 text-xs font-bold leading-5 text-blue-800">自主訓練｜教練已提供課表，本次請假不可再安排線下補課。</p>
                     ) : row.makeup?.status === 'forfeited' ? (
                       <p className="mt-3 rounded-lg bg-apple-gray-100 p-3 text-xs font-bold leading-5 text-apple-gray-600">本次補課資格已結束。</p>
                     ) : row.makeup?.status === 'needs_reselection' ? (

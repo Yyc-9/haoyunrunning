@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLanguage } from '@/app/language-context'
 import { AlertTriangle, Ban, CalendarCheck2, Check, CircleMinus, Clock3, Loader2, Phone, RotateCcw, Save, UsersRound } from 'lucide-react'
 import CoachSubNav from '@/components/CoachSubNav'
-import type { CourseAttendanceStatus, CourseMakeupRequest } from '@/lib/course-attendance'
+import { isFinalizedLeave, type CoachLeaveOption, type CourseAttendanceStatus, type CourseMakeupRequest } from '@/lib/course-attendance'
+import CoachLeaveDialog, { type CoachLeaveChoice } from '@/components/CoachLeaveDialog'
 import { supabase } from '@/lib/supabase'
 import { attendanceVerification, type StudentCheckin } from '@/lib/student-checkin'
 
@@ -128,6 +129,7 @@ export default function CoachAttendanceClient() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const [leaveEnrollment, setLeaveEnrollment] = useState<Enrollment | null>(null)
 
   const loadAttendance = useCallback(async (preferredCourseId = '') => {
     setIsLoading(true)
@@ -219,6 +221,37 @@ export default function CoachAttendanceClient() {
       const existing = current[enrollmentId] ?? { status: 'unmarked' as const, note: '' }
       return { ...current, [enrollmentId]: { ...existing, ...value } }
     })
+  }
+
+  const loadLeaveOptions = useCallback(async (): Promise<CoachLeaveOption[]> => {
+    const token = await getAccessToken()
+    const response = await fetch(`/api/coach/attendance?leaveOptionsFor=${encodeURIComponent(courseId)}&sessionDate=${encodeURIComponent(sessionDate)}`, { cache: 'no-store', headers: { Authorization: `Bearer ${token}` } })
+    const payload = await response.json()
+    if (!response.ok) throw new Error(payload.error || '讀取補課課次失敗。')
+    return payload.options ?? []
+  }, [courseId, sessionDate])
+
+  async function saveLeave(choice: CoachLeaveChoice) {
+    if (!leaveEnrollment) return
+    const token = await getAccessToken()
+    const response = await fetch('/api/coach/attendance', {
+      method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ intent: 'resolve_leave', courseSeasonCourseId: courseId, sessionDate, enrollmentId: leaveEnrollment.id, ...choice }),
+    })
+    const payload = await response.json()
+    if (!response.ok) throw new Error(payload.error || '儲存請假失敗。')
+    setMessage(payload.message)
+    await loadAttendance(courseId)
+    setActiveFilter('excused')
+  }
+
+  function openLeave(enrollment: Enrollment) {
+    if (unsavedCount > 0) {
+      setError('請先儲存其他學員的點名變更，再安排請假。')
+      return
+    }
+    setError('')
+    setLeaveEnrollment(enrollment)
   }
 
   async function saveAttendance() {
@@ -354,7 +387,7 @@ export default function CoachAttendanceClient() {
                             {enrollment.status !== 'approved' && <p className="mt-1 text-xs text-amber-700">{enrollment.status === 'rejected' ? '待補件' : enrollment.status === 'pending_transfer' ? '待匯款' : '待核帳'} · 可正常點名</p>}
                             <p className="mt-1 truncate text-[11px] font-bold text-apple-gray-500">所屬班級：{enrollment.home_course_name}</p>
                             {makeup ? <p className="mt-2 rounded-md bg-blue-50 p-2 text-xs font-bold text-blue-800">補課學員｜來自 {enrollment.home_course_name}｜原請假日期：{formatSessionDate(makeup.original_session_date, language)}</p> : null}
-                            {originalLeave ? <p className="mt-2 text-xs font-bold text-amber-800">原班請假保留｜{originalLeave.status === 'completed' ? '補課已完成' : originalLeave.target_session_date ? `已安排 ${formatSessionDate(originalLeave.target_session_date, language)} 補課` : '尚未安排補課'}</p> : null}
+                            {originalLeave ? <p className="mt-2 text-xs font-bold text-amber-800">原班請假保留｜{originalLeave.status === 'self_training' ? '自主訓練 · 教練已給課表，不可再線下補課' : originalLeave.status === 'completed' ? '補課已完成' : originalLeave.status === 'forfeited' ? '補課資格已結束' : originalLeave.target_session_date ? `已安排 ${formatSessionDate(originalLeave.target_session_date, language)} 補課` : '尚未安排補課'}</p> : null}
                             <p className="mt-2 text-xs font-bold text-apple-blue">{attendanceVerification(Boolean(selfCheckin), savedByEnrollment.get(enrollment.id)?.status)}</p>
                             <p className="mt-1 truncate text-xs text-apple-gray-500">{enrollment.email}</p>
                             <p className="mt-1 text-xs font-semibold text-apple-gray-500">計費起點：{enrollment.billing_start_session_date ? formatSessionDate(enrollment.billing_start_session_date, language) : '未設定'}</p>
@@ -364,7 +397,10 @@ export default function CoachAttendanceClient() {
                             {statusOptions.map((option) => {
                               const Icon = option.icon
                               const active = row.status === option.value
-                              return <button key={option.value} type="button" disabled={Boolean(selectedCancellation) || isFutureSession} aria-pressed={active} onClick={() => updateDraft(enrollment.id, { status: active ? 'unmarked' : option.value })} className={`inline-flex min-h-10 items-center justify-center gap-1 rounded-md border px-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${active ? option.tone : 'border-black/10 bg-white text-apple-gray-500 hover:bg-apple-gray-50'}`}><Icon className="h-3.5 w-3.5" /><span>{option.label}</span></button>
+                              const disabled = isSaving || isLoading || Boolean(selectedCancellation) || (option.value === 'excused'
+                                ? Boolean(makeup) || isFinalizedLeave(originalLeave?.status)
+                                : isFutureSession || Boolean(originalLeave))
+                              return <button key={option.value} type="button" disabled={disabled} aria-pressed={active} onClick={() => option.value === 'excused' ? openLeave(enrollment) : updateDraft(enrollment.id, { status: active ? 'unmarked' : option.value })} className={`inline-flex min-h-10 items-center justify-center gap-1 rounded-md border px-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${active ? option.tone : 'border-black/10 bg-white text-apple-gray-500 hover:bg-apple-gray-50'}`}><Icon className="h-3.5 w-3.5" /><span>{option.label}</span></button>
                             })}
                           </div>
                         </div>
@@ -378,11 +414,12 @@ export default function CoachAttendanceClient() {
                 </div>
               </section>
 
-              <div className="mt-5 flex flex-col items-stretch justify-end gap-2 sm:flex-row sm:items-center"><p className="text-center text-xs font-bold text-apple-gray-500 sm:text-left">{isFutureSession ? '課次開始後才可點名' : unsavedCount > 0 ? `尚有 ${unsavedCount} 筆未儲存變更` : '目前沒有未儲存變更'}</p><button type="button" disabled={isSaving || !roster.length || !sessionDate || Boolean(selectedCancellation) || isFutureSession || unsavedCount === 0} onClick={saveAttendance} className="apple-button-primary min-h-12 w-full gap-2 px-6 shadow-sm disabled:opacity-40 sm:w-auto">{isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}儲存本堂紀錄</button></div>
+              <div className="mt-5 flex flex-col items-stretch justify-end gap-2 sm:flex-row sm:items-center"><p className="text-center text-xs font-bold text-apple-gray-500 sm:text-left">{isFutureSession ? '可提前登記請假；到課點名須等課次開始' : unsavedCount > 0 ? `尚有 ${unsavedCount} 筆未儲存變更` : '目前沒有未儲存變更'}</p><button type="button" disabled={isSaving || !roster.length || !sessionDate || Boolean(selectedCancellation) || isFutureSession || unsavedCount === 0} onClick={saveAttendance} className="apple-button-primary min-h-12 w-full gap-2 px-6 shadow-sm disabled:opacity-40 sm:w-auto">{isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}儲存本堂紀錄</button></div>
             </>
           )}
         </div>
       </section>
+      {leaveEnrollment && <CoachLeaveDialog studentName={leaveEnrollment.name} sessionDate={sessionDate} loadOptions={loadLeaveOptions} onSave={saveLeave} onClose={() => setLeaveEnrollment(null)} />}
     </div>
   )
 }

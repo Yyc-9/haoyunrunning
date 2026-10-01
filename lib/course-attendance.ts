@@ -7,6 +7,18 @@ export type CourseMakeupStatus =
   | 'forfeited'
   | 'cancelled'
   | 'needs_reselection'
+  | 'self_training'
+
+export type CoachLeaveOption = {
+  courseId: string
+  courseName: string
+  classTime: string
+  sessions: Array<{ date: string; remaining: number }>
+}
+
+export function isFinalizedLeave(status: CourseMakeupStatus | undefined) {
+  return status === 'self_training' || status === 'completed' || status === 'forfeited'
+}
 
 export type StudentAttendanceCourse = {
   seasonId: string
