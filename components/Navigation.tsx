@@ -14,6 +14,7 @@ import AuthModal from '@/components/AuthModal'
 import WeekdayLogo from '@/components/WeekdayLogo'
 import MobileBottomNav from '@/components/MobileBottomNav'
 import NotificationBell from '@/components/NotificationBell'
+import FeedbackButton from '@/components/feedback/FeedbackButton'
 import { supabase } from '@/lib/supabase'
 import { isFinanceViewer } from '@/lib/finance-viewers'
 
@@ -329,7 +330,7 @@ export default function Navigation() {
                             }
                           }
                         }}
-                      className="site-nav-link group whitespace-nowrap text-xs font-semibold text-apple-gray-950 transition-all duration-300 hover:text-apple-blue 2xl:text-sm"
+                      className={clsx('site-nav-link group whitespace-nowrap font-semibold text-apple-gray-950 transition-all duration-300 hover:text-apple-blue', pathname === '/' ? 'text-[15px] 2xl:text-base' : 'text-xs 2xl:text-sm')}
                       >
                         {item.name}
                         {item.key === 'shop' && (
@@ -340,7 +341,7 @@ export default function Navigation() {
                     ) : (
                       <Link
                         href={item.href}
-                        className="site-nav-link group whitespace-nowrap text-xs font-semibold text-apple-gray-950 transition-all duration-300 hover:text-apple-blue 2xl:text-sm"
+                        className={clsx('site-nav-link group whitespace-nowrap font-semibold text-apple-gray-950 transition-all duration-300 hover:text-apple-blue', pathname === '/' ? 'text-[15px] 2xl:text-base' : 'text-xs 2xl:text-sm')}
                       >
                         {item.name}
                         {item.key === 'shop' && (
@@ -356,6 +357,7 @@ export default function Navigation() {
 
             {/* Auth Buttons */}
             <div className="hidden shrink-0 items-center space-x-3 justify-self-end xl:flex">
+              {pathname === '/' && <FeedbackButton />}
               <NotificationBell />
               {languageSwitcher}
               {isLoading ? (
@@ -419,6 +421,7 @@ export default function Navigation() {
 
             {/* Compact Auth + Menu */}
             <div className="mobile-compact-controls flex items-center gap-2 justify-self-end xl:hidden">
+              {pathname === '/' && <FeedbackButton />}
               <NotificationBell mobile />
               {isLoading ? (
                 <div className="mobile-account-control h-10 w-20 animate-pulse rounded-full bg-apple-gray-100 ring-1 ring-black/10" />

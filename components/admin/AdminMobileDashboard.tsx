@@ -16,6 +16,7 @@ import {
   Landmark,
   LayoutDashboard,
   Menu,
+  MessageCircleWarning,
   PanelsTopLeft,
   Search,
   UserCog,
@@ -23,6 +24,8 @@ import {
   X,
 } from 'lucide-react'
 import AdminSeasonOverview from '@/components/admin/AdminSeasonOverview'
+import AdminFeedback, { FeedbackOverview } from '@/components/admin/AdminFeedback'
+import type { FeedbackSummary } from '@/lib/site-feedback'
 import AdminBankReconciliation from '@/components/admin/AdminBankReconciliation'
 import AdminCoachDuty from '@/components/admin/AdminCoachDuty'
 import AdminContentManager from '@/components/admin/AdminContentManager'
@@ -38,12 +41,13 @@ import type { ProductEditState } from '@/lib/admin-products'
 import { paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
 import './admin-mobile-dashboard.css'
 
-type MobileView = 'overview' | 'reconciliation' | 'students' | 'coaches' | 'seasons' | 'products' | 'content' | 'paymentAccounts'
+type MobileView = 'overview' | 'reconciliation' | 'students' | 'coaches' | 'seasons' | 'products' | 'content' | 'paymentAccounts' | 'feedback'
 type StudentDetailTab = 'course' | 'payments' | 'feedback' | 'notes'
 type StudentFilter = 'all' | 'plan' | 'coach' | 'payment'
 type MobileAction = (id: string, action: Record<string, unknown>) => Promise<boolean>
 
 type Props = {
+  feedbackSummary: FeedbackSummary | null
   data: AdminDashboardPayload
   runAction: MobileAction
   updatingId: string
@@ -55,6 +59,7 @@ const statusLabels = paymentOrderStatusLabels['zh-TW']
 
 const titles: Record<MobileView, string> = {
   overview: '營運總覽',
+  feedback: '問題回報',
   reconciliation: '銀行對帳',
   students: '學員管理',
   coaches: '教練管理',
@@ -92,7 +97,7 @@ function accountMask(account: PaymentAccount) {
   return `${number.slice(0, 4)} ${'•'.repeat(Math.max(2, number.length - 8))} ${number.slice(-4)}`
 }
 
-export default function AdminMobileDashboard({ data, runAction, updatingId, actionMessage, actionError }: Props) {
+export default function AdminMobileDashboard({ data, feedbackSummary, runAction, updatingId, actionMessage, actionError }: Props) {
   const { language } = useLanguage()
   const dashboardRef = useRef<HTMLElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -275,7 +280,7 @@ export default function AdminMobileDashboard({ data, runAction, updatingId, acti
   }
 
   const currentTitle = selectedStudent && view === 'students' ? '學員詳情' : titles[view]
-  const navActive = view === 'seasons' || view === 'products' || view === 'content' || view === 'paymentAccounts' ? 'more' : view
+  const navActive = view === 'feedback' || view === 'seasons' || view === 'products' || view === 'content' || view === 'paymentAccounts' ? 'more' : view
 
   return (
     <section ref={dashboardRef} className="admin-mobile-dashboard" aria-label="手機管理員後台">
@@ -294,7 +299,8 @@ export default function AdminMobileDashboard({ data, runAction, updatingId, acti
 
       <div ref={contentRef} className="admin-mobile-content">
         <p className="admin-mobile-connection" role="status" data-error={Boolean(actionError)}>{actionError ? '同步異常，請查看提示' : '正式資料已連線'}</p>
-        {view === 'overview' ? <AdminSeasonOverview data={data} /> : null}
+        {view === 'overview' ? <><FeedbackOverview summary={feedbackSummary} onOpen={()=>navigate('feedback')} /><AdminSeasonOverview data={data} /></> : null}
+        {view === 'feedback' ? <section className="admin-mobile-screen"><div className="admin-mobile-backrow"><button type="button" className="admin-mobile-back" onClick={()=>navigate('overview')}><ArrowLeft className="h-4 w-4" />返回總覽</button></div><AdminFeedback /></section> : null}
 
         {view === 'reconciliation' ? (
           <section className="admin-mobile-screen admin-mobile-external">
@@ -385,7 +391,7 @@ export default function AdminMobileDashboard({ data, runAction, updatingId, acti
         </div>
       </nav>
 
-      {moreOpen ? <div className="admin-mobile-sheet-layer" role="dialog" aria-modal="true" aria-labelledby="admin-mobile-more-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setMoreOpen(false) }}><section className="admin-mobile-sheet"><div className="admin-mobile-sheet-handle" /><div className="admin-mobile-sheet-head"><div><h2 id="admin-mobile-more-title">更多管理功能</h2><p>季度、商品、內容與收款帳戶集中在這裡。</p></div><button type="button" className="admin-mobile-iconbutton" aria-label="關閉更多管理功能" onClick={() => setMoreOpen(false)}><X className="h-5 w-5" aria-hidden="true" /></button></div><div className="admin-mobile-sheet-grid"><button type="button" className="admin-mobile-more-item" onClick={() => navigate('seasons')}><CalendarRange className="h-5 w-5" aria-hidden="true" /><strong>季度管理</strong><small>招生季度、課程與統計</small></button><button type="button" className="admin-mobile-more-item" onClick={() => navigate('products')}><Boxes className="h-5 w-5" aria-hidden="true" /><strong>商城商品</strong><small>內容、規格、庫存與上下架</small></button><button type="button" className="admin-mobile-more-item" onClick={() => navigate('content')}><PanelsTopLeft className="h-5 w-5" aria-hidden="true" /><strong>內容中心</strong><small>首頁、公開頁面與教練資料</small></button><button type="button" className="admin-mobile-more-item" onClick={() => navigate('paymentAccounts')}><Landmark className="h-5 w-5" aria-hidden="true" /><strong>收款帳戶</strong><small>通道、權重與啟用狀態</small></button></div></section></div> : null}
+      {moreOpen ? <div className="admin-mobile-sheet-layer" role="dialog" aria-modal="true" aria-labelledby="admin-mobile-more-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setMoreOpen(false) }}><section className="admin-mobile-sheet"><div className="admin-mobile-sheet-handle" /><div className="admin-mobile-sheet-head"><div><h2 id="admin-mobile-more-title">更多管理功能</h2><p>季度、商品、內容與收款帳戶集中在這裡。</p></div><button type="button" className="admin-mobile-iconbutton" aria-label="關閉更多管理功能" onClick={() => setMoreOpen(false)}><X className="h-5 w-5" aria-hidden="true" /></button></div><div className="admin-mobile-sheet-grid"><button type="button" className="admin-mobile-more-item" onClick={()=>navigate('feedback')}><MessageCircleWarning className="h-5 w-5" aria-hidden="true" /><strong>問題回報</strong><small>{feedbackSummary ? feedbackSummary.pending+' 則待處理 · '+feedbackSummary.unread+' 則未讀' : '查看網站回報與處理進度'}</small></button><button type="button" className="admin-mobile-more-item" onClick={() => navigate('seasons')}><CalendarRange className="h-5 w-5" aria-hidden="true" /><strong>季度管理</strong><small>招生季度、課程與統計</small></button><button type="button" className="admin-mobile-more-item" onClick={() => navigate('products')}><Boxes className="h-5 w-5" aria-hidden="true" /><strong>商城商品</strong><small>內容、規格、庫存與上下架</small></button><button type="button" className="admin-mobile-more-item" onClick={() => navigate('content')}><PanelsTopLeft className="h-5 w-5" aria-hidden="true" /><strong>內容中心</strong><small>首頁、公開頁面與教練資料</small></button><button type="button" className="admin-mobile-more-item" onClick={() => navigate('paymentAccounts')}><Landmark className="h-5 w-5" aria-hidden="true" /><strong>收款帳戶</strong><small>通道、權重與啟用狀態</small></button></div></section></div> : null}
 
       {bindOpen && selectedStudent ? <div className="admin-mobile-sheet-layer" role="dialog" aria-modal="true" aria-label="任課教練關聯"><section className="admin-mobile-sheet"><h2>依入帳班級自動關聯</h2><p className="mt-3">{selectedStudent.name}：{selectedStudent.bindings.map((binding) => binding.coachName).join("、") || "尚無正式教練關聯"}</p><p className="mt-3">請在季度管理調整班級任課教練；臨時代班請在教練管理處理。不再單獨新增或解除綁定。</p><button type="button" className="admin-mobile-button mt-4" onClick={() => setBindOpen(false)}>關閉</button></section></div> : null}
 

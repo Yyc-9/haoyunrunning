@@ -16,6 +16,7 @@ import {
   FileSpreadsheet,
   LayoutDashboard,
   Loader2,
+  MessageCircleWarning,
   ShieldCheck,
   Landmark,
   PanelsTopLeft,
@@ -33,11 +34,12 @@ import type { AdminEditableProduct, ProductEditState } from '@/lib/admin-product
 import AdminBankReconciliation from '@/components/admin/AdminBankReconciliation'
 import AdminCoachDuty from '@/components/admin/AdminCoachDuty'
 import AdminSeasonOverview from '@/components/admin/AdminSeasonOverview'
+import AdminFeedback, { FeedbackOverview, useFeedbackSummary } from '@/components/admin/AdminFeedback'
 import AdminMobileDashboard from '@/components/admin/AdminMobileDashboard'
 import { paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
 import { announceSiteContentUpdated } from '@/lib/site-content-sync'
 
-type AdminTab = 'overview' | 'students' | 'coaches' | 'seasons' | 'products' | 'content' | 'reconciliation' | 'paymentAccounts'
+type AdminTab = 'overview' | 'students' | 'coaches' | 'seasons' | 'products' | 'content' | 'reconciliation' | 'paymentAccounts' | 'feedback'
 
 export type AdminDashboardPayload = {
   admin: { id: string; email: string; name: string; role: string }
@@ -216,6 +218,7 @@ const statusLabels = paymentOrderStatusLabels['zh-TW']
 
 const tabs: Array<{ id: AdminTab; label: string; description: string; icon: typeof LayoutDashboard }> = [
   { id: 'overview', label: '總覽', description: '掌握待處理事項、報名與營運概況。', icon: LayoutDashboard },
+  { id: 'feedback', label: '問題回報', description: '查看網站回報、內部備註與處理進度。', icon: MessageCircleWarning },
   { id: 'students', label: '學員管理', description: '查找學員、課程、匯款與課表權限。', icon: UsersRound },
   { id: 'coaches', label: '教練管理', description: '管理教練身份、到課、請假與代班。', icon: UserCog },
   { id: 'seasons', label: '季度管理', description: '管理招生季度、課程資料與學員名單。', icon: CalendarRange },
@@ -302,6 +305,7 @@ export default function AdminDashboardClient() {
   const { language } = useLanguage()
   const [activeTab, setActiveTab] = useState<AdminTab>('overview')
   const [data, setData] = useState<AdminDashboardPayload | null>(null)
+  const feedbackSummary = useFeedbackSummary(Boolean(data))
   const dashboardRequestId = useRef(0)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
@@ -522,7 +526,7 @@ export default function AdminDashboardClient() {
 
   return (
     <div className={`admin-shell min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24 ${activeTab === 'products' ? 'admin-products-mode' : ''}`}>
-      {data ? <AdminMobileDashboard data={data} runAction={runAction} updatingId={updatingId} actionMessage={message} actionError={error} /> : null}
+      {data ? <AdminMobileDashboard data={data} feedbackSummary={feedbackSummary} runAction={runAction} updatingId={updatingId} actionMessage={message} actionError={error} /> : null}
       <section className="admin-desktop-shell px-4 py-10 sm:px-6 lg:px-8">
         <div className="admin-dashboard-grid container mx-auto max-w-[1600px]">
           <div className="admin-dashboard-header mb-8 lg:mb-7">
@@ -560,7 +564,7 @@ export default function AdminDashboardClient() {
                     ? data?.overview.pendingOrderCount ?? 0
                     : tab.id === 'coaches'
                       ? data?.overview.openAttendanceAnomalyCount ?? 0
-                      : 0
+                      : tab.id === 'feedback' ? feedbackSummary?.unread ?? 0 : 0
 
                   return (
                     <button
@@ -616,7 +620,8 @@ export default function AdminDashboardClient() {
             aria-labelledby={`admin-tab-${activeTab}`}
             className="admin-dashboard-workspace"
           >
-            {activeTab === 'overview' && data ? <AdminSeasonOverview data={data} /> : null}
+            {activeTab === 'overview' && data ? <><FeedbackOverview summary={feedbackSummary} onOpen={()=>setActiveTab('feedback')} /><AdminSeasonOverview data={data} /></> : null}
+            {activeTab === 'feedback' && data ? <AdminFeedback /> : null}
 
           {activeTab === 'students' && data ? (
             <section className="apple-card overflow-hidden">
