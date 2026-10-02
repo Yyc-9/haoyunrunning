@@ -225,7 +225,6 @@ export default function Navigation() {
     <div className="relative">
       <motion.button
         type="button"
-        whileHover={pathname === '/' ? undefined : { scale: 1.04 }}
         whileTap={{ scale: 0.96 }}
         onClick={() => setIsLanguageOpen((open) => !open)}
         className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/92 px-3 py-2 text-sm font-semibold text-apple-gray-950 shadow-sm backdrop-blur-sm transition-all duration-200 hover:border-apple-blue/40 hover:text-apple-blue"
@@ -273,7 +272,7 @@ export default function Navigation() {
   return (
     <>
       <motion.nav
-        data-feedback-home={pathname === '/' ? 'true' : undefined}
+        data-unified-nav="true"
         data-scrolled={isScrolled}
         data-mobile-focused={isMobileFocused ? 'true' : undefined}
         initial={{ y: -100 }}
@@ -308,7 +307,7 @@ export default function Navigation() {
             </motion.div>
 
             {/* Desktop Navigation */}
-            <div className="hidden min-w-0 flex-1 items-center justify-center gap-3 xl:flex 2xl:gap-5">
+            <div className="site-nav-links hidden min-w-0 flex-1 items-center justify-center gap-3 xl:flex 2xl:gap-5">
               {navItems.map((item) => {
                 const isExternal = item.href.startsWith('http')
                 const isHashLink = item.href.startsWith('#')
@@ -316,7 +315,6 @@ export default function Navigation() {
                 return (
                   <motion.div
                     key={item.key}
-                    whileHover={{ scale: 1.05, y: -2 }}
                     whileTap={{ scale: 0.95 }}
                     className="site-nav-item relative"
                   >
@@ -332,7 +330,7 @@ export default function Navigation() {
                             }
                           }
                         }}
-                      className={clsx('site-nav-link group whitespace-nowrap font-semibold text-apple-gray-950 transition-all duration-300 hover:text-apple-blue', pathname === '/' ? 'text-[15px] 2xl:text-base' : 'text-xs 2xl:text-sm')}
+                      className="site-nav-link group whitespace-nowrap text-[15px] font-semibold text-apple-gray-950 transition-colors duration-200"
                       >
                         {item.name}
                         {item.key === 'shop' && (
@@ -343,7 +341,8 @@ export default function Navigation() {
                     ) : (
                       <Link
                         href={item.href}
-                        className={clsx('site-nav-link group whitespace-nowrap font-semibold text-apple-gray-950 transition-all duration-300 hover:text-apple-blue', pathname === '/' ? 'text-[15px] 2xl:text-base' : 'text-xs 2xl:text-sm')}
+                        aria-current={pathname === item.href || (item.href !== '/' && pathname.startsWith(`${item.href}/`)) ? 'page' : undefined}
+                        className="site-nav-link group whitespace-nowrap text-[15px] font-semibold text-apple-gray-950 transition-colors duration-200"
                       >
                         {item.name}
                         {item.key === 'shop' && (
@@ -391,7 +390,6 @@ export default function Navigation() {
               ) : (
                 <>
                   <motion.button
-                    whileHover={pathname === '/' ? undefined : { scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => {
                       setAuthMode('login')
@@ -403,7 +401,6 @@ export default function Navigation() {
                     {t.common.login}
                   </motion.button>
                   <motion.div
-                    whileHover={pathname === '/' ? undefined : { scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
                     <Link
