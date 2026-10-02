@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { MessageCircleWarning } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import type { FeedbackInput } from './FeedbackForm'
@@ -47,7 +48,7 @@ export default function FeedbackButton() {
     if (!response.ok) throw new Error(result.error || '這次沒有送出成功，內容已保留，請稍後再試。')
   }
   return <>
-    <button type="button" aria-label="問題回報" title="問題回報" onClick={()=>{requestId.current=crypto.randomUUID();setOpen(true)}} className="group inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"><span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-100 transition-colors group-hover:bg-blue-100"><MessageCircleWarning className="h-5 w-5" aria-hidden="true" /></span></button>
-    {open&&<FeedbackForm onSubmit={submit} onClose={()=>setOpen(false)} />}
+    <button type="button" aria-label="問題回報" title="問題回報" onClick={()=>{requestId.current=crypto.randomUUID();setOpen(true)}} className="feedback-trigger group inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"><span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-100 transition-colors group-hover:bg-blue-100"><MessageCircleWarning className="h-5 w-5" aria-hidden="true" /></span></button>
+    {open&&createPortal(<FeedbackForm onSubmit={submit} onClose={()=>setOpen(false)} />,document.body)}
   </>
 }

@@ -15,6 +15,7 @@ import WeekdayLogo from '@/components/WeekdayLogo'
 import MobileBottomNav from '@/components/MobileBottomNav'
 import NotificationBell from '@/components/NotificationBell'
 import FeedbackButton from '@/components/feedback/FeedbackButton'
+import '@/components/feedback/feedback-desktop.css'
 import { supabase } from '@/lib/supabase'
 import { isFinanceViewer } from '@/lib/finance-viewers'
 
@@ -224,7 +225,7 @@ export default function Navigation() {
     <div className="relative">
       <motion.button
         type="button"
-        whileHover={{ scale: 1.04 }}
+        whileHover={pathname === '/' ? undefined : { scale: 1.04 }}
         whileTap={{ scale: 0.96 }}
         onClick={() => setIsLanguageOpen((open) => !open)}
         className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/92 px-3 py-2 text-sm font-semibold text-apple-gray-950 shadow-sm backdrop-blur-sm transition-all duration-200 hover:border-apple-blue/40 hover:text-apple-blue"
@@ -272,6 +273,7 @@ export default function Navigation() {
   return (
     <>
       <motion.nav
+        data-feedback-home={pathname === '/' ? 'true' : undefined}
         data-scrolled={isScrolled}
         data-mobile-focused={isMobileFocused ? 'true' : undefined}
         initial={{ y: -100 }}
@@ -356,7 +358,7 @@ export default function Navigation() {
             </div>
 
             {/* Auth Buttons */}
-            <div className="hidden shrink-0 items-center space-x-3 justify-self-end xl:flex">
+            <div className="desktop-nav-actions hidden shrink-0 items-center space-x-3 justify-self-end xl:flex">
               {pathname === '/' && <FeedbackButton />}
               <NotificationBell />
               {languageSwitcher}
@@ -389,7 +391,7 @@ export default function Navigation() {
               ) : (
                 <>
                   <motion.button
-                    whileHover={{ scale: 1.05 }}
+                    whileHover={pathname === '/' ? undefined : { scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => {
                       setAuthMode('login')
@@ -401,7 +403,7 @@ export default function Navigation() {
                     {t.common.login}
                   </motion.button>
                   <motion.div
-                    whileHover={{ scale: 1.05 }}
+                    whileHover={pathname === '/' ? undefined : { scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
                     <Link

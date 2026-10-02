@@ -1,0 +1,213 @@
+/* Include compact desktop windows; phone styles remain unchanged. */
+@media (min-width: 768px) {
+  .site-navigation[data-feedback-home='true'] {
+    --nav-control-ink: #1d1d1f;
+    --nav-control-border: rgb(29 29 31 / 14%);
+    --nav-control-hover: #f5f5f7;
+  }
+
+  .site-navigation[data-feedback-home='true'] > div > div {
+    background: rgb(255 255 255 / 98%);
+    border: 1px solid var(--nav-control-border);
+    box-shadow: 0 8px 28px rgb(0 0 0 / 10%);
+    padding-block: 12px;
+  }
+
+  .site-navigation[data-feedback-home='true'] .desktop-nav-actions {
+    gap: 8px;
+  }
+
+  .site-navigation[data-feedback-home='true'] .desktop-nav-actions > * {
+    margin-inline: 0;
+  }
+
+  .site-navigation[data-feedback-home='true'] .desktop-nav-actions > button,
+  .site-navigation[data-feedback-home='true'] .desktop-nav-actions > div > button,
+  .site-navigation[data-feedback-home='true'] .desktop-nav-actions > div > a,
+  .site-navigation[data-feedback-home='true'] .mobile-compact-controls > button,
+  .site-navigation[data-feedback-home='true'] .mobile-compact-controls > div > button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 44px;
+    min-height: 44px;
+    box-sizing: border-box;
+    padding-block: 0;
+    border: 1px solid var(--nav-control-border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--nav-control-ink);
+    box-shadow: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background-color 160ms, border-color 160ms;
+    line-height: 20px;
+  }
+
+  .site-navigation[data-feedback-home='true'] .desktop-nav-actions > .apple-button-outline,
+  .site-navigation[data-feedback-home='true'] .desktop-nav-actions > div > button[aria-label],
+  .site-navigation[data-feedback-home='true'] .desktop-nav-actions .apple-button-primary {
+    width: 96px;
+    min-width: 96px;
+    padding-inline: 12px;
+  }
+
+  .site-navigation[data-feedback-home='true'] .feedback-trigger {
+    width: 44px;
+    min-width: 44px;
+    padding: 0;
+    outline-color: var(--nav-control-ink);
+  }
+
+  .site-navigation[data-feedback-home='true'] .desktop-nav-actions > button > svg,
+  .site-navigation[data-feedback-home='true'] .desktop-nav-actions > div > button > svg:first-child,
+  .site-navigation[data-feedback-home='true'] .mobile-compact-controls > button > svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .site-navigation[data-feedback-home='true'] .desktop-nav-actions > button:hover,
+  .site-navigation[data-feedback-home='true'] .desktop-nav-actions > div > button:hover,
+  .site-navigation[data-feedback-home='true'] .desktop-nav-actions > div > a:hover,
+  .site-navigation[data-feedback-home='true'] .mobile-compact-controls > button:hover,
+  .site-navigation[data-feedback-home='true'] .mobile-compact-controls > div > button:hover {
+    background: var(--nav-control-hover);
+    border-color: rgb(29 29 31 / 28%);
+    color: var(--nav-control-ink);
+  }
+
+  .site-navigation[data-feedback-home='true'] .desktop-nav-actions .apple-button-primary {
+    background: transparent;
+    border-color: var(--nav-control-border);
+    color: var(--nav-control-ink);
+  }
+
+  .site-navigation[data-feedback-home='true'] .desktop-nav-actions .apple-button-primary:hover {
+    background: var(--nav-control-hover);
+    border-color: rgb(29 29 31 / 28%);
+    color: var(--nav-control-ink);
+  }
+
+  .site-navigation[data-feedback-home='true'] .feedback-trigger > span {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    color: inherit;
+    box-shadow: none;
+  }
+
+  .site-navigation[data-feedback-home='true'] .site-nav-link {
+    color: var(--nav-control-ink);
+    letter-spacing: 0;
+    font-weight: 600;
+  }
+
+  .site-navigation[data-feedback-home='true'] .site-nav-link:hover {
+    color: var(--nav-control-ink);
+  }
+
+  .site-navigation[data-feedback-home='true'] .site-nav-link > span:last-child {
+    height: 2px;
+    background: var(--nav-control-ink);
+    box-shadow: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .feedback-dialog {
+    width: 560px;
+    max-height: calc(100dvh - 64px);
+    margin: auto;
+    border: 1px solid #e1e7e9;
+    border-radius: 24px;
+    color: #1d1d1f;
+    box-shadow: 0 24px 80px rgb(3 18 26 / 24%);
+  }
+
+  .feedback-dialog::backdrop {
+    background: rgb(7 24 32 / 48%);
+    backdrop-filter: blur(4px);
+  }
+
+  .feedback-dialog form > div:first-child {
+    padding: 24px 28px;
+    border-color: #e8edee;
+  }
+
+  .feedback-dialog h2 {
+    color: #1d1d1f;
+    font-size: 26px;
+    font-weight: 700;
+  }
+
+  .feedback-dialog form > div:first-child p:first-child {
+    color: #537078;
+  }
+
+  .feedback-dialog form > div:first-child p:last-child {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #667a82;
+  }
+
+  .feedback-dialog form > div:first-child button {
+    width: 40px;
+    height: 40px;
+    background: #f3f6f6;
+    color: #537078;
+  }
+
+  .feedback-dialog form > div:nth-child(2) {
+    padding: 24px 28px;
+  }
+
+  .feedback-dialog fieldset label {
+    min-height: 48px;
+    border-color: #dfe6e8;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .feedback-dialog fieldset label:hover {
+    border-color: #9aadb4;
+    background: #f6f8f8;
+  }
+
+  .feedback-dialog fieldset label:has(input:checked) {
+    border-color: #1d1d1f;
+    background: #edf4f3;
+    color: #1d1d1f;
+  }
+
+  .feedback-dialog textarea,
+  .feedback-dialog input:not([type='radio']):not([type='file']) {
+    background: #f9fbfb;
+    border-color: #dfe6e8;
+  }
+
+  .feedback-dialog textarea:focus,
+  .feedback-dialog input:focus {
+    border-color: #537078;
+    box-shadow: 0 0 0 3px rgb(54 94 108 / 10%);
+    outline-color: #1d1d1f;
+  }
+
+  .feedback-dialog form > div:last-child {
+    padding: 20px 28px;
+    border-color: #e8edee;
+  }
+
+  .feedback-dialog button[type='submit'],
+  .feedback-dialog > div > button {
+    min-height: 44px;
+    background: #1d1d1f;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .feedback-dialog button[type='submit']:hover,
+  .feedback-dialog > div > button:hover {
+    background: #1d1d1f;
+  }
+}
