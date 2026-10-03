@@ -11,18 +11,12 @@ import {
 import { useAuth } from '@/app/providers'
 import { useLanguage } from '@/app/language-context'
 import StudentAttendancePanel from '@/components/StudentAttendancePanel'
+import CoachAccountStatus, { type CoachAccountState } from '@/components/CoachAccountStatus'
 import {
   emptyProfile, getRaceCountdown, getRaceEvent, getTargetEventLabel, type AccountProfile, type Achievement,
 } from '@/lib/runner-profile'
 import { supabase } from '@/lib/supabase'
 import { isFinanceViewer } from '@/lib/finance-viewers'
-
-type CoachAccountState = {
-  status: 'pending' | 'pending_email' | 'enabled' | 'disabled' | 'conflict'
-  coachKey: string
-  coachName: string
-  message?: string
-}
 
 type AccountPayload = {
   profile?: AccountProfile
@@ -217,13 +211,7 @@ export default function ProfilePage() {
           </div>
         </motion.section>
 
-        {isStudentAccount && coachAccount ? (
-          <section role="status" className={`mt-5 rounded-lg border p-4 sm:mt-8 sm:p-5 ${coachAccount.status === 'disabled' || coachAccount.status === 'conflict' ? 'border-amber-200 bg-amber-50 text-amber-950' : 'border-apple-blue/20 bg-white text-black'}`}>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-apple-blue">教練帳號</p>
-            <h2 className="mt-1 text-lg font-black">{coachAccount.coachName} · {coachAccount.status === 'disabled' ? '已停用' : '待啟用'}</h2>
-            <p className="mt-2 text-sm leading-6 text-apple-gray-600">{coachAccount.message || '管理員已登記這個信箱；完成信箱驗證並重新登入後，系統會自動啟用教練工作台。'}</p>
-          </section>
-        ) : null}
+        {coachAccount ? <CoachAccountStatus account={coachAccount} /> : null}
 
         {isStudentAccount ? (
           <section id="attendance-overview" className="scroll-mt-24 border-t border-black/10 py-4 sm:py-10">
