@@ -3,6 +3,7 @@ import { courseBillingInputError } from '@/lib/admin-course-validation'
 import { randomUUID } from 'node:crypto'
 import { revalidateTag } from 'next/cache'
 import { NextRequest, NextResponse } from 'next/server'
+import { readAllRowsResult } from '@/lib/supabase-pagination'
 import { getAdminProfile } from '@/lib/admin-auth'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { shopProductFromRow, type ShopProductRow } from '@/lib/shop-products'
@@ -250,6 +251,8 @@ type CourseSeasonSyncSourceRow = {
 }
 
 type AdminPatchBody =
+  | { action?: 'restore_course_season'; seasonId?: string; reason?: string }
+  | { action?: 'create_coach_account'; name?: string; kind?: 'coach' | 'assistant'; verificationEmail?: string }
   | { action?: 'register_coach_account'; coachKey?: string; verificationEmail?: string; note?: string }
   | { action?: 'set_coach_account_status'; allowlistId?: string; enabled?: boolean; reason?: string }
   | { action?: 'link_coach_public_profile'; userId?: string; coachKey?: string }
@@ -511,83 +514,30 @@ export async function GET(request: NextRequest) {
     sessionCancellationsResult,
     seasonSyncSourcesResult,
   ] = await Promise.all([
-    supabaseAdmin!
-      .from('profiles')
-      .select('id, role, name, email, program, goal, pb, created_at')
-      .order('created_at', { ascending: false }),
-    supabaseAdmin!
-      .from('formal_coach_students')
-      .select('id, coach_id, student_id, active, created_at')
-      .eq('active', true)
-      .order('created_at', { ascending: false }),
-    supabaseAdmin!
-      .from('signup_leads')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(3000),
-    supabaseAdmin!
-      .from('training_plans')
-      .select('student_id, created_at')
-      .order('created_at', { ascending: false })
-      .limit(5000),
-    supabaseAdmin!
-      .from('training_feedback')
-      .select('student_id, created_at')
-      .order('created_at', { ascending: false })
-      .limit(1000),
-    supabaseAdmin!
-      .from('shop_products')
+    readAllRowsResult((from,to) => supabaseAdmin!.from('profiles')
+      .select('id, role, name, email, program, goal, pb, created_at').order('created_at',{ascending:false}).order('id').range(from,to)),
+    readAllRowsResult((from,to) => supabaseAdmin!.from('formal_coach_students')
+      .select('id, coach_id, student_id, active, created_at').eq('active',true).order('created_at',{ascending:false}).order('id').range(from,to)),
+    readAllRowsResult((from,to) => supabaseAdmin!.from('signup_leads').select('*').order('created_at',{ascending:false}).order('id').range(from,to)),
+    readAllRowsResult((from,to) => supabaseAdmin!.from('training_plans').select('student_id, created_at').order('created_at',{ascending:false}).order('id').range(from,to)),
+    readAllRowsResult((from,to) => supabaseAdmin!.from('training_feedback').select('student_id, created_at').order('created_at',{ascending:false}).order('id').range(from,to)),
+    readAllRowsResult((from,to) => supabaseAdmin!.from('shop_products')
       .select('id, name, category, price, price_label, image, video, rating, reviews, tags, summary, description, gallery, highlights, specifications, usage_notes, external_url, variants, sizes, stock_quantity, active')
-      .is('deleted_at', null)
-      .order('category', { ascending: true })
-      .order('name', { ascending: true }),
-    supabaseAdmin!
-      .from('shop_orders')
+      .is('deleted_at',null).order('category').order('name').order('id').range(from,to)),
+    readAllRowsResult((from,to) => supabaseAdmin!.from('shop_orders')
       .select('id, order_number, customer_name, contact, email, fulfillment_note, item_count, status, transfer_last_five, payment_submitted_at, reviewed_at, review_note, subtotal, total_amount, payment_reference, payment_account_id, payment_account_label, inventory_reserved, created_at')
-      .order('created_at', { ascending: false })
-      .limit(500),
-    supabaseAdmin!
-      .from('shop_order_items')
-      .select('order_id, product_id, name, quantity, price, variant_id, size, selected_specifications')
-      .limit(2000),
-    supabaseAdmin!
-      .from('shop_payment_accounts')
-      .select('id, label, account_name, bank_name, bank_code, account_number, active, weight, last_assigned_at, created_at, updated_at')
-      .order('created_at', { ascending: false }),
-    supabaseAdmin!
-      .from('site_content')
-      .select('key, value')
-      .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'courses_page_content', 'testimonials_content', 'team_content', 'achievements_content', 'anniversary_content', 'page_media']),
-    supabaseAdmin!
-      .from('coach_account_allowlist')
-      .select('id, coach_key, email, status, profile_id, created_at, updated_at, enabled_at, disabled_at')
-      .order('created_at', { ascending: false }),
-    supabaseAdmin!
-      .from('coach_public_profiles')
-      .select('*'),
-    supabaseAdmin!
-      .from('course_attendance_records')
-      .select('id, enrollment_id, course_season_course_id, session_date, status, note, marked_at')
-      .order('session_date', { ascending: false })
-      .limit(5000),
-    supabaseAdmin!
-      .from('course_attendance_resolutions')
-      .select('attendance_id, enrollment_id, outcome, note, resolved_at')
-      .order('resolved_at', { ascending: false })
-      .limit(5000),
-    supabaseAdmin!
-      .from('course_attendance_deductions')
-      .select('enrollment_id, session_date, deducted_by, deducted_at')
-      .order('session_date', { ascending: false })
-      .limit(5000),
-    supabaseAdmin!
-      .from('course_session_cancellations')
-      .select('course_season_course_id, session_date')
-      .limit(1000),
-    supabaseAdmin!
-      .from('course_season_sync_sources')
-      .select('id, season_id, provider, external_id, source_url, active, last_synced_at, last_result, last_error, updated_at')
-      .order('updated_at', { ascending: false }),
+      .order('created_at',{ascending:false}).order('id').range(from,to)),
+    readAllRowsResult((from,to) => supabaseAdmin!.from('shop_order_items').select('order_id, product_id, name, quantity, price, variant_id, size, selected_specifications').order('id').range(from,to)),
+    readAllRowsResult((from,to) => supabaseAdmin!.from('shop_payment_accounts').select('id, label, account_name, bank_name, bank_code, account_number, active, weight, last_assigned_at, created_at, updated_at').order('created_at',{ascending:false}).order('id').range(from,to)),
+    readAllRowsResult((from,to) => supabaseAdmin!.from('site_content').select('key, value')
+      .in('key', ['hero_slides', 'home_activities', 'seasonal_update', 'course_overrides', 'brand_content', 'home_content', 'about_content', 'courses_page_content', 'testimonials_content', 'team_content', 'achievements_content', 'anniversary_content', 'page_media']).order('key').range(from,to)),
+    readAllRowsResult((from,to) => supabaseAdmin!.from('coach_account_allowlist').select('id, coach_key, email, status, profile_id, created_at, updated_at, enabled_at, disabled_at').order('created_at',{ascending:false}).order('id').range(from,to)),
+    readAllRowsResult((from,to) => supabaseAdmin!.from('coach_public_profiles').select('*').order('coach_key').range(from,to)),
+    readAllRowsResult((from,to) => supabaseAdmin!.from('course_attendance_records').select('id, enrollment_id, course_season_course_id, session_date, status, note, marked_at').order('session_date',{ascending:false}).order('id').range(from,to)),
+    readAllRowsResult((from,to) => supabaseAdmin!.from('course_attendance_resolutions').select('attendance_id, enrollment_id, outcome, note, resolved_at').order('resolved_at',{ascending:false}).order('attendance_id').range(from,to)),
+    readAllRowsResult((from,to) => supabaseAdmin!.from('course_attendance_deductions').select('enrollment_id, session_date, deducted_by, deducted_at').order('session_date',{ascending:false}).order('id').range(from,to)),
+    readAllRowsResult((from,to) => supabaseAdmin!.from('course_session_cancellations').select('course_season_course_id, session_date').order('id').range(from,to)),
+    readAllRowsResult((from,to) => supabaseAdmin!.from('course_season_sync_sources').select('id, season_id, provider, external_id, source_url, active, last_synced_at, last_result, last_error, updated_at').order('updated_at',{ascending:false}).order('id').range(from,to)),
   ])
 
   const firstError = [
@@ -1058,6 +1008,19 @@ export async function PATCH(request: NextRequest) {
 
   const body = (await request.json().catch(() => ({}))) as AdminPatchBody
 
+  if (body.action === 'restore_course_season') {
+    const seasonId = cleanText(body.seasonId)
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : ''
+    if (!/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(seasonId) || !reason || reason.length > 800) return json({ error: '請選擇季度並填寫解除封存原因。' }, { status: 400 })
+    const { error } = await supabaseAdmin!.rpc('admin_restore_season', { p_actor_id: auth.user.id, p_season_id: seasonId, p_reason: reason })
+    if (error) {
+      if (error.message === 'season_not_archived') return json({ error: '季度已變更或不存在，請重新整理後再操作。' }, { status: 409 })
+      if (error.message === 'admin_required') return json({ error: '目前帳號沒有管理員權限。' }, { status: 403 })
+      return json({ error: '解除封存未完成，請確認資料庫更新與季度狀態後重試。' }, { status: 503 })
+    }
+    return json({ message: '季度已恢復為已結束；招生發布與自動同步維持關閉。' })
+  }
+
   const archiveError = await archivedSeasonResponse({
     seasonId: 'seasonId' in body ? body.seasonId : undefined,
     enrollmentId: 'orderId' in body && body.orderKind !== 'shop' ? body.orderId : undefined,
@@ -1447,6 +1410,25 @@ export async function PATCH(request: NextRequest) {
       return json({ error: error?.message || '更新季度狀態失敗。' }, { status: 500 })
     }
     return json({ season, message: '季度狀態已更新，報名資料不會被刪除。' })
+  }
+
+  if (body.action === 'create_coach_account') {
+    const name = cleanText(body.name)
+    const email = normalizeEmail(body.verificationEmail)
+    if (!name || name.length > 80 || !['coach', 'assistant'].includes(body.kind || '') || !isValidEmail(email)) {
+      return json({ error: '請填寫姓名、教練或助教身份，以及有效的登入信箱。' }, { status: 400 })
+    }
+    const { data: account, error } = await supabaseAdmin!.rpc('admin_create_coach', {
+      p_actor_id: auth.user.id, p_name: name, p_kind: body.kind, p_email: email,
+    })
+    if (error) {
+      if (error.code === 'PGRST202') return json({ error: '新增教練功能尚未完成資料庫更新，未新增任何資料。' }, { status: 503 })
+      const mapped = coachAccountActionError(error)
+      return json({ error: mapped.error }, { status: mapped.status })
+    }
+    return json({ account, message: account?.status === 'enabled'
+      ? '已新增並啟用帳號；可在季度課程分配班級。公開介紹暫不發布。'
+      : '已新增並登記登入信箱；完成註冊與信箱驗證後啟用。公開介紹暫不發布。' })
   }
 
   if (body.action === 'register_coach_account') {

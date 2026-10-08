@@ -9,6 +9,7 @@ import { preferredCourseSeasonId, type CourseSeason } from '@/lib/course-seasons
 import { paymentOrderStatusDescriptions, paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
 import { supabase } from '@/lib/supabase'
 import { courseRosterTable, rosterCsv } from '@/lib/enrollment-export'
+import AdminEnrollmentTransfer from '@/components/admin/AdminEnrollmentTransfer'
 
 type PaymentStatus = PaymentOrderStatus
 
@@ -83,6 +84,7 @@ type Props = {
   syncSources: SeasonSyncSource[]
   runAction: (id: string, action: Record<string, unknown>) => Promise<boolean>
   updatingId: string
+  onTransferred?: () => Promise<void>
 }
 
 const courseStatusLabels = paymentOrderStatusLabels['zh-TW']
@@ -153,7 +155,7 @@ function resultNumber(result: Record<string, unknown>, key: string) {
   return Number.isFinite(value) ? value : 0
 }
 
-export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seasons, syncSources, runAction, updatingId }: Props) {
+export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seasons, syncSources, runAction, updatingId, onTransferred }: Props) {
   const { language } = useLanguage()
   const english = language === 'en'
   const [selectedSeasonId, setSeasonId] = useState<string | null>(null)
@@ -541,6 +543,7 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
               {selectedArchived ? <p role="status" className="mb-4 rounded-lg bg-amber-50 p-3 text-sm font-bold text-amber-900">此季度已封存，僅供查閱，不再修改帳單。</p> : null}
               <div className="grid gap-3 sm:grid-cols-2">{selectedSummary.map(([label, value]) => <div key={label} className="rounded-lg bg-apple-gray-100 p-3"><p className="text-xs font-bold text-apple-gray-500">{label}</p><p className="mt-1 break-words text-sm font-bold">{value || '-'}</p></div>)}</div>
               <dl className="mt-5 divide-y border-y">{selected.registrationDetails.filter((item) => item.label !== '學員身分').map((item) => <div key={item.label} className="py-3"><dt className="text-xs font-bold text-apple-gray-500">{item.label}</dt><dd className="mt-1 whitespace-pre-wrap break-words text-sm font-semibold leading-6">{item.value}</dd></div>)}{selected.notes ? <div className="py-3"><dt className="text-xs font-bold text-apple-gray-500">客戶備註</dt><dd translate="no" className="mt-1 whitespace-pre-wrap text-sm font-semibold">{selected.notes}</dd></div> : null}</dl>
+              {selected.orderKind === 'course' && !selectedArchived && selected.registrationStatus !== 'cancelled' && selected.registrationStatus !== 'duplicate' ? <AdminEnrollmentTransfer key={selected.id} enrollmentId={selected.id} onSaved={async () => { await onTransferred?.(); setSelected(null) }} /> : null}
               {selected.orderKind === 'course' && selected.attendanceAnomalies.length ? (
                 <section className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4">
                   <h4 className="flex items-center gap-2 font-black text-amber-950"><AlertTriangle className="h-4 w-4" />點名與計費起點核對</h4>

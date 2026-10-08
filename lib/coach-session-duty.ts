@@ -1,4 +1,5 @@
 import 'server-only'
+import { readAllRows } from '@/lib/supabase-pagination'
 
 import {
   canCoachRequestLeave,
@@ -214,11 +215,11 @@ export async function loadCoachDutyItems(options: { userId?: string; isAdmin?: b
   if (!offeringIds.length) return []
 
   const [assignmentResult, checkinResult, cancellationResult, profileResult, membershipResult] = await Promise.all([
-    supabaseAdmin.from('coach_session_assignments').select('*').in('course_season_course_id', offeringIds).order('session_date'),
-    supabaseAdmin.from('coach_session_checkins').select('*'),
-    supabaseAdmin.from('course_session_cancellations').select('course_season_course_id, session_date').in('course_season_course_id', offeringIds),
-    supabaseAdmin.from('profiles').select('id, name, email'),
-    supabaseAdmin.from('course_coach_memberships').select('course_season_course_id, coach_id').in('course_season_course_id', offeringIds),
+    readAllRows((from, to) => supabaseAdmin!.from('coach_session_assignments').select('*').in('course_season_course_id', offeringIds).order('session_date').order('id').range(from, to)).then(data => ({ data, error: null })),
+    readAllRows((from, to) => supabaseAdmin!.from('coach_session_checkins').select('*').order('id').range(from, to)).then(data => ({ data, error: null })),
+    readAllRows((from, to) => supabaseAdmin!.from('course_session_cancellations').select('course_season_course_id, session_date').in('course_season_course_id', offeringIds).order('id').range(from, to)).then(data => ({ data, error: null })),
+    readAllRows((from, to) => supabaseAdmin!.from('profiles').select('id, name, email').order('id').range(from, to)).then(data => ({ data, error: null })),
+    readAllRows((from, to) => supabaseAdmin!.from('course_coach_memberships').select('course_season_course_id, coach_id').in('course_season_course_id', offeringIds).order('course_season_course_id').order('coach_id').range(from, to)).then(data => ({ data, error: null })),
   ])
   const error = [assignmentResult.error, checkinResult.error, cancellationResult.error, profileResult.error, membershipResult.error].find(Boolean)
   if (error) throw error

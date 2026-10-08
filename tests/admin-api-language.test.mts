@@ -11,7 +11,7 @@ registerHooks({ resolve(specifier, context, next) {
 const { toEnglishWebsiteText } = await import('../lib/english-website.ts')
 const { validatePaymentDisplay } = await import('../lib/payment-display.ts')
 
-for (const file of ['app/api/admin/route.ts', 'app/api/admin/coach-duty/route.ts', 'app/api/admin/payment-info/route.ts', 'app/api/signup-leads/route.ts']) {
+for (const file of ['app/api/admin/student-details/route.ts', 'app/api/admin/accounts/route.ts', 'app/api/admin/route.ts', 'app/api/admin/coach-duty/route.ts', 'app/api/admin/coach-duty/bulk/route.ts', 'app/api/admin/enrollment-transfer/route.ts', 'app/api/admin/payment-info/route.ts', 'app/api/signup-leads/route.ts']) {
   test(`${file}: fixed Chinese response text has complete English coverage`, async () => {
     const ast = ts.createSourceFile(file, await readFile(new URL('../' + file, import.meta.url), 'utf8'), ts.ScriptTarget.Latest, true)
     const missing: string[] = []

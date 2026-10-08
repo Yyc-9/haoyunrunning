@@ -22,7 +22,7 @@ function load(path: string, modules: Record<string, unknown> = {}) {
   return exports as Record<string, unknown>
 }
 const accessHelpers = load('../lib/coach-attendance-access.ts')
-function harness(role='coach', rpcError: string | null=null) {
+function harness(role='coach',actorId='coach', historicalStatus: string | null=null, rpcError: string | null=null) {
   const rows: Row[] = ['pending_transfer','pending_review','rejected','approved'].map((status,i)=>({
     id:`enrollment-${i}`,source:'course_payment',status,registration_status:'active',name:`Student ${i}`,email:'shared@example.invalid',
     season_id:'quarter',course_slug:'home',course_season_course_id:'home-id',created_at:'2026-10-01',payload:{},
@@ -35,7 +35,7 @@ function harness(role='coach', rpcError: string | null=null) {
     const filters: ((row:Row)=>boolean)[]=[]
     let write: Row[] | null=null
     const data=()=> {
-      if(table==='profiles') return [{id:'coach',role}]
+      if(table==='profiles') return [{id:actorId,role}]
       if(table==='coach_public_profiles') return [{coach_key:'qa-coach'}]
       if(table==='coach_session_assignments') return [{course_season_course_id:'home-id',session_date:'2026-10-01',scheduled_coach_id:'coach',actual_coach_id:'coach',leave_status:'none'}]
       return table==='signup_leads' ? rows.filter(row=>filters.every(fn=>fn(row))) : []
@@ -52,12 +52,15 @@ function harness(role='coach', rpcError: string | null=null) {
   }}
   const route=load('../app/api/coach/attendance/route.ts',{
     'next/server':{NextResponse:{json:(body:unknown,opts:{status?:number}={})=>({body,status:opts.status??200})}},
-    '@/lib/admin-auth':{getAdminProfile:async()=>null},
+    '@/lib/admin-auth':{getAdminProfile:async()=>role==='admin'?{id:actorId,role:'admin'}:null},
     '@/lib/coach-profiles':{getDefaultCourseCoachKeys:()=>['qa-coach']},
     '@/lib/course-attendance':{attendanceCourseLabel:(name:string)=>name,taipeiDateKey:()=> '2026-10-01'},
-    '@/lib/course-seasons-server':{getCourseSeasons:async()=>[{id:'quarter',name:'Q4',isCurrent:true,status:'active',courseOverrides:{home:{coachKeys:['qa-coach']}},courseOfferingIds:{home:'home-id'},courseBillingConfigs:{home:{scheduleReady:true,sessionDates:['2026-10-01']}}}]},
+    '@/lib/course-seasons-server':{getCourseSeasons:async()=>[
+      ...(historicalStatus?[{id:'current-quarter',name:'Current',isCurrent:true,status:'active',courseOverrides:{},courseOfferingIds:{},courseBillingConfigs:{}}]:[]),
+      {id:'quarter',name:'Q4',isCurrent:!historicalStatus,status:historicalStatus??'active',courseOverrides:{home:{coachKeys:['qa-coach']}},courseOfferingIds:{home:'home-id'},courseBillingConfigs:{home:{scheduleReady:true,sessionDates:['2026-10-01']}}},
+    ]},
     '@/lib/managed-courses':{applyCourseOverrides:()=>[{slug:'home',name:'Home',weekday:'週四',location:'Test'}]},
-    '@/lib/supabase-server':{supabaseAdmin,getAuthedUser:async()=>({id:'coach'})},
+    '@/lib/supabase-server':{supabaseAdmin,getAuthedUser:async()=>({id:actorId})},
     '@/lib/coach-attendance-access':accessHelpers,
     '@/lib/coach-session-duty':{syncCoachSessionAssignments:async()=>{}},
     '@/lib/coach-leave-options':{getCoachLeaveOptions:async()=>[]},
@@ -99,7 +102,7 @@ for (const id of ['cancelled','other']) test(`coach cannot resolve leave for ${i
   assert.equal(rpcCalls.length,0)
 })
 test('database capacity conflict is reported without issuing separate attendance writes',async()=>{
-  const {route,req,rpcCalls,writes}=harness('coach','makeup target capacity reached')
+  const {route,req,rpcCalls,writes}=harness('coach','coach',null,'makeup target capacity reached')
   assert.equal((await route.POST(req({intent:'resolve_leave',courseSeasonCourseId:'home-id',sessionDate:'2026-10-01',enrollmentId:'enrollment-1',leaveMode:'in_person',targetCourseSeasonCourseId:'target',targetSessionDate:'2026-10-05'}))).status,409)
   assert.equal(rpcCalls.length,1);assert.equal(writes.length,0)
 })
@@ -111,4 +114,28 @@ test('legacy bare excused writes require an explicit leave choice',async()=>{
 test('makeup options require teaching access to the original session',async()=>{
   const {route,req}=harness();const request=req();request.nextUrl.search='?leaveOptionsFor=other-id&sessionDate=2026-10-01'
   assert.equal((await route.GET(request)).status,403)
+})
+for(const actorId of ['admin-one','admin-two'])test(`${actorId} can read and mark a class without a coach assignment`,async()=>{
+ const {route,writes,req}=harness('admin',actorId)
+ const read=await route.GET(req());assert.equal(read.status,200);assert.equal(read.body.enrollments.length,4)
+ const result=await route.POST(req({courseSeasonCourseId:'home-id',sessionDate:'2026-10-01',records:[{enrollmentId:'enrollment-0',status:'present'}]}))
+ assert.equal(result.status,200);assert.equal(writes[0].marked_by,actorId)
+})
+for(const actorId of ['admin-one','admin-two'])test(`${actorId} can correct a completed historical season while another quarter is current`,async()=>{
+ const {route,writes,req}=harness('admin',actorId,'completed')
+ assert.equal((await route.GET(req())).body.enrollments.length,4)
+ assert.equal((await route.POST(req({courseSeasonCourseId:'home-id',sessionDate:'2026-10-01',records:[{enrollmentId:'enrollment-0',status:'present'}]}))).status,200)
+ assert.equal(writes[0].marked_by,actorId)
+})
+test('archived seasons remain inaccessible for admin attendance until explicitly restored',async()=>{
+ const {route,writes,req}=harness('admin','admin-one','archived')
+ assert.equal((await route.GET(req())).body.enrollments.length,0)
+ assert.equal((await route.POST(req({courseSeasonCourseId:'home-id',sessionDate:'2026-10-01',records:[{enrollmentId:'enrollment-0',status:'present'}]}))).status,400)
+ assert.equal(writes.length,0)
+})
+test('coach access does not expand to completed historical seasons',async()=>{
+ const {route,writes,req}=harness('coach','coach','completed')
+ assert.equal((await route.GET(req())).body.enrollments.length,0)
+ assert.equal((await route.POST(req({courseSeasonCourseId:'home-id',sessionDate:'2026-10-01',records:[{enrollmentId:'enrollment-0',status:'present'}]}))).status,400)
+ assert.equal(writes.length,0)
 })

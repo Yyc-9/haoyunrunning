@@ -26,60 +26,20 @@ export function isAdminEmail(email: string | null | undefined) {
   return getAdminEmails().includes(normalizedEmail)
 }
 
-export async function isAdminAllowlistedEmail(email: string | null | undefined) {
-  const normalizedEmail = normalizeEmail(email)
-  if (!normalizedEmail) return false
-  if (isAdminEmail(normalizedEmail)) return true
-
+export async function resolveAccountRole(user: Pick<User, 'id'>): Promise<AdminProfile | null> {
   if (!supabaseAdmin) {
     throw new Error('Supabase server client is not configured.')
   }
 
-  const { data, error } = await supabaseAdmin
-    .from('admin_role_allowlist')
-    .select('email')
-    .eq('email', normalizedEmail)
-    .eq('active', true)
-    .maybeSingle()
-
+  const { data, error } = await supabaseAdmin.rpc('resolve_account_role', {
+    p_user_id: user.id,
+    p_env_emails: getAdminEmails(),
+  })
   if (error) throw error
-  return Boolean(data)
+  return data as AdminProfile | null
 }
 
 export async function getAdminProfile(user: User) {
-  if (!supabaseAdmin) {
-    throw new Error('Supabase server client is not configured.')
-  }
-
-  const { data: profile, error } = await supabaseAdmin
-    .from('profiles')
-    .select('id, role, email, name')
-    .eq('id', user.id)
-    .maybeSingle()
-
-  if (error) throw error
-
-  const email = normalizeEmail(user.email || profile?.email)
-  let role = profile?.role as AdminProfile['role'] | undefined
-  const allowlisted = role !== 'admin' && await isAdminAllowlistedEmail(email)
-  const isAdmin = role === 'admin' || allowlisted
-
-  if (!isAdmin) return null
-
-  if (profile && role !== 'admin' && allowlisted) {
-    const { error: promoteError } = await supabaseAdmin
-      .from('profiles')
-      .update({ role: 'admin' })
-      .eq('id', user.id)
-
-    if (promoteError) throw promoteError
-    role = 'admin'
-  }
-
-  return {
-    id: user.id,
-    role: role ?? 'admin',
-    email,
-    name: profile?.name ?? '',
-  } satisfies AdminProfile
+  const profile = await resolveAccountRole(user)
+  return profile?.role === 'admin' ? profile : null
 }

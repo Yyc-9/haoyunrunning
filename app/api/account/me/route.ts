@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { isAdminAllowlistedEmail } from '@/lib/admin-auth'
+import { resolveAccountRole } from '@/lib/admin-auth'
 import { getAuthedUser, isRevokedDeviceSession, supabaseAdmin } from '@/lib/supabase-server'
 import { getIsolatedTestAccount } from '@/lib/test-account'
 import { normalizeProfileGender } from '@/lib/profile-gender'
@@ -240,18 +240,12 @@ export async function GET(request: NextRequest) {
     }
 
     const nextEmail = (user.email ?? existingProfile.email ?? '').trim().toLowerCase()
-    const shouldPromoteAdmin =
-      existingProfile.role !== 'admin' && await isAdminAllowlistedEmail(nextEmail)
     let responseProfile = existingProfile
-    if (
-      (nextEmail && nextEmail !== existingProfile.email) ||
-      shouldPromoteAdmin
-    ) {
+    if (nextEmail && nextEmail !== existingProfile.email) {
       const { data: updatedProfile, error: updateError } = await supabaseAdmin
         .from('profiles')
         .update({
           email: nextEmail,
-          ...(shouldPromoteAdmin ? { role: 'admin' as const } : {}),
         })
         .eq('id', user.id)
         .select('*')
@@ -276,11 +270,16 @@ export async function GET(request: NextRequest) {
       responseProfile = refreshedProfile
     }
 
-    return accountResponse({ ...responseProfile, gender: normalizeProfileGender(user.user_metadata?.gender) }, coachAccount)
+    try {
+      const resolved = await resolveAccountRole(user)
+      if (!resolved) throw new Error('Profile missing')
+      return accountResponse({ ...responseProfile, role: resolved.role, gender: normalizeProfileGender(user.user_metadata?.gender) }, coachAccount)
+    } catch {
+      return NextResponse.json({ error: '無法確認帳號權限，請稍後重試。' }, { status: 503 })
+    }
   }
 
   const email = (user.email ?? '').trim().toLowerCase()
-  const initialRole = await isAdminAllowlistedEmail(email) ? 'admin' : 'student'
   const { data: profile, error } = await supabaseAdmin
     .from('profiles')
     .insert({
@@ -292,7 +291,7 @@ export async function GET(request: NextRequest) {
         '好運跑者',
       phone: (user.user_metadata?.phone as string | undefined) ?? '',
       pb: (user.user_metadata?.pb as string | undefined) ?? '',
-      role: initialRole,
+      role: 'student',
     })
     .select('*')
     .single()
@@ -307,6 +306,7 @@ export async function GET(request: NextRequest) {
   }
 
   const coachAccount = await safeSyncCoachAccount(user)
+  let responseProfile = profile
   if (coachAccount?.status === 'enabled') {
     const { data: refreshedProfile, error: refreshedProfileError } = await supabaseAdmin
       .from('profiles')
@@ -316,10 +316,16 @@ export async function GET(request: NextRequest) {
     if (refreshedProfileError || !refreshedProfile) {
       return NextResponse.json({ error: refreshedProfileError?.message || '讀取教練帳號狀態失敗。' }, { status: 500 })
     }
-    return accountResponse({ ...refreshedProfile, gender: normalizeProfileGender(user.user_metadata?.gender) }, coachAccount)
+    responseProfile = refreshedProfile
   }
 
-  return accountResponse({ ...profile, gender: normalizeProfileGender(user.user_metadata?.gender) }, coachAccount)
+  try {
+    const resolved = await resolveAccountRole(user)
+    if (!resolved) throw new Error('Profile missing')
+    return accountResponse({ ...responseProfile, role: resolved.role, gender: normalizeProfileGender(user.user_metadata?.gender) }, coachAccount)
+  } catch {
+    return NextResponse.json({ error: '無法確認帳號權限，請稍後重試。' }, { status: 503 })
+  }
 }
 
 export async function PATCH(request: NextRequest) {

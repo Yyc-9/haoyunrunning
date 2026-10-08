@@ -100,7 +100,7 @@ async function loadAccess(request: NextRequest) {
   }
 
   const relevantSeasons = seasons.filter((season) => season.isCurrent || ['enrolling', 'active'].includes(season.status))
-  const activeSeasons = relevantSeasons.length ? relevantSeasons : seasons.slice(0, 1)
+  const activeSeasons = isAdmin ? seasons.filter(season => season.status !== 'archived') : relevantSeasons.length ? relevantSeasons : seasons.slice(0, 1)
   const courseNames = new Map<string, string>()
   const courses = activeSeasons.flatMap((season) => {
     // Public listing visibility must not hide an assigned class from its coach.

@@ -16,6 +16,7 @@ function authFor(user: Record<string, unknown> | null, admin = false) {
     authenticateReconciliationUser: (request: Request) => Promise<AuthResult>
     authenticateFinanceRequest: (request: Request) => Promise<AuthResult>
     createFinanceAccessToken: (id: string, value: typeof credential) => { token: string }
+    canManageFinancePassword: (profile: { role: string }) => boolean
   }
   vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText, {
     exports, Buffer, process: { env: {} }, require(name: string) {
@@ -68,6 +69,16 @@ test('existing administrator reconciliation writes still work', async () => {
   const token = exports.createFinanceAccessToken('user', credential).token
   const result = await exports.authenticateFinanceRequest(new Request('https://example.com', { method: 'PATCH', headers: { 'x-finance-authorization': token } }))
   assert.equal(result.readOnly, false)
+})
+
+test('every administrator can manage finance settings, including an account also on the finance staff list', async () => {
+  const { exports } = authFor(viewer, true)
+  const result = await exports.authenticateReconciliationUser(new Request('https://example.com'))
+  assert.equal(result.adminProfile.role, 'admin')
+  assert.equal(exports.canManageFinancePassword({ role: 'admin' }), true)
+  for (const role of ['student', 'coach', '', 'super_admin']) {
+    assert.equal(exports.canManageFinancePassword({ role }), false)
+  }
 })
 
 test('finance staff cannot create or change the shared finance password', async () => {

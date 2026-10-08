@@ -4,6 +4,7 @@ import { APP_TIME_ZONE_LABEL } from '@/lib/app-time'
 import { ATTENDANCE_ACCEPTANCE_TEST, acceptanceTestPhase } from '@/lib/attendance-acceptance-test'
 import { canChangeSubstituteAtState, canReviewLeaveAtState, coachDutyWindow } from '@/lib/coach-duty-policy'
 import { loadCoachDutyItems } from '@/lib/coach-session-duty'
+import { archivedSeasonResponse } from '@/lib/season-write-guard'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 
 const headers = { 'Cache-Control': 'no-store' }
@@ -185,4 +186,3 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: error instanceof Error ? error.message : '更新教練到課資料失敗。' }, { status: 500, headers })
   }
 }
-import { archivedSeasonResponse } from '@/lib/season-write-guard'

@@ -33,13 +33,17 @@ import AdminProductWorkspace from '@/components/admin/AdminProductWorkspace'
 import type { AdminEditableProduct, ProductEditState } from '@/lib/admin-products'
 import AdminBankReconciliation from '@/components/admin/AdminBankReconciliation'
 import AdminCoachDuty from '@/components/admin/AdminCoachDuty'
+import AdminCoachCreator from '@/components/admin/AdminCoachCreator'
+import AdminAccountManager from '@/components/admin/AdminAccountManager'
+import AdminStudentEditor from '@/components/admin/AdminStudentEditor'
+import AdminSeasonRestore from '@/components/admin/AdminSeasonRestore'
 import AdminSeasonOverview from '@/components/admin/AdminSeasonOverview'
 import AdminFeedback, { FeedbackOverview, useFeedbackSummary } from '@/components/admin/AdminFeedback'
 import AdminMobileDashboard from '@/components/admin/AdminMobileDashboard'
 import { paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
 import { announceSiteContentUpdated } from '@/lib/site-content-sync'
 
-type AdminTab = 'overview' | 'students' | 'coaches' | 'seasons' | 'products' | 'content' | 'reconciliation' | 'paymentAccounts' | 'feedback'
+type AdminTab = 'overview' | 'students' | 'coaches' | 'seasons' | 'products' | 'content' | 'reconciliation' | 'paymentAccounts' | 'feedback' | 'accounts'
 
 export type AdminDashboardPayload = {
   admin: { id: string; email: string; name: string; role: string }
@@ -226,6 +230,7 @@ const tabs: Array<{ id: AdminTab; label: string; description: string; icon: type
   { id: 'content', label: '內容中心', description: '更新網站圖片、文字與公開頁面內容。', icon: PanelsTopLeft },
   { id: 'reconciliation', label: '銀行對帳', description: '匯入銀行資料並完成人工入帳核對。', icon: FileSpreadsheet },
   { id: 'paymentAccounts', label: '收款帳戶', description: '維護課程匯款所使用的官方帳戶。', icon: Landmark },
+  { id: 'accounts', label: '帳號與權限', description: '管理超級管理員授權與帳號診斷。', icon: UserCog },
 ]
 
 function formatDate(value: string | null | undefined, language: string) {
@@ -313,6 +318,7 @@ export default function AdminDashboardClient() {
   const [updatingId, setUpdatingId] = useState('')
   const [seasonView, setSeasonView] = useState<'settings' | 'students'>('students')
   const [studentQuery, setStudentQuery] = useState('')
+  const [editingStudentId, setEditingStudentId] = useState('')
   const [coachQuery, setCoachQuery] = useState('')
   const [productEditState, setProductEditState] = useState<ProductEditState>({ dirty: false, busy: false })
   const [selectedCoachAccountKey, setSelectedCoachAccountKey] = useState('')
@@ -526,7 +532,7 @@ export default function AdminDashboardClient() {
 
   return (
     <div className={`admin-shell min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24 ${activeTab === 'products' ? 'admin-products-mode' : ''}`}>
-      {data ? <AdminMobileDashboard data={data} feedbackSummary={feedbackSummary} runAction={runAction} updatingId={updatingId} actionMessage={message} actionError={error} /> : null}
+      {data ? <AdminMobileDashboard data={data} feedbackSummary={feedbackSummary} runAction={runAction} updatingId={updatingId} actionMessage={message} actionError={error} onTransferred={async () => { await loadDashboard(true) }} /> : null}
       <section className="admin-desktop-shell px-4 py-10 sm:px-6 lg:px-8">
         <div className="admin-dashboard-grid container mx-auto max-w-[1600px]">
           <div className="admin-dashboard-header mb-8 lg:mb-7">
@@ -625,6 +631,7 @@ export default function AdminDashboardClient() {
 
           {activeTab === 'students' && data ? (
             <section className="apple-card overflow-hidden">
+              {editingStudentId ? <div className="space-y-3 border-b p-5"><button type="button" className="apple-button-outline" onClick={() => { if (confirmAdminWorkspaceChange()) setEditingStudentId('') }}>關閉學員編輯</button><AdminStudentEditor key={editingStudentId} studentId={editingStudentId} onSaved={async () => { await loadDashboard(true) }} /></div> : null}
               <div className="border-b border-black/10 p-5">
                 <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
                   <div>
@@ -652,13 +659,14 @@ export default function AdminDashboardClient() {
               </div>
               <p className="border-b border-black/10 px-5 py-3 text-sm leading-6 text-apple-gray-600">
                 如需調整任課教練，請到季度管理修改班級；臨時代班請在教練管理處理。
+                <Link href="/coach/attendance" className="apple-button-outline ml-3">全班點名管理</Link>
               </p>
               <div className="divide-y divide-black/10 md:hidden">
                 {filteredStudents.map((student) => (
                   <article key={student.id} className="space-y-5 p-5">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
-                        <h3 className="font-black text-apple-gray-900">{student.name}</h3>
+                        <h3 className="font-black text-apple-gray-900"><button type="button" className="underline" onClick={() => { if (confirmAdminWorkspaceChange()) setEditingStudentId(student.id) }}>{student.name}</button></h3>
                         <p className="mt-1 break-all text-sm leading-6 text-apple-gray-600">{student.email || '未提供信箱'}</p>
                       </div>
                       <span className={`inline-flex shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold ${student.planEnabled ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
@@ -724,7 +732,7 @@ export default function AdminDashboardClient() {
                   <tbody className="divide-y divide-black/10">
                     {filteredStudents.map((student) => (
                       <tr key={student.id} className="align-top">
-                        <td className="break-words px-4 py-4 leading-6 font-bold text-apple-gray-900">{student.name}</td>
+                        <td className="break-words px-4 py-4 leading-6 font-bold text-apple-gray-900"><button type="button" className="underline" onClick={() => { if (confirmAdminWorkspaceChange()) setEditingStudentId(student.id) }}>{student.name}</button><button type="button" className="mt-2 block text-xs text-apple-blue" onClick={() => { if (confirmAdminWorkspaceChange()) setEditingStudentId(student.id) }}>編輯資料與備註</button></td>
                         <td className="truncate px-4 py-4 text-apple-gray-600" title={student.email || undefined}>{student.email || '-'}</td>
                         <td className="px-4 py-4 leading-6 text-apple-gray-700">{student.boundCoachNames || '尚未綁定'}</td>
                         <td className="px-4 py-4 leading-6 text-apple-gray-600">{student.program || student.paymentCourse || '-'}</td>
@@ -756,9 +764,11 @@ export default function AdminDashboardClient() {
             </section>
           ) : null}
 
+          {activeTab === 'accounts' && data ? <AdminAccountManager onOpenCoaches={() => setActiveTab('coaches')} onOpenSeasons={() => setActiveTab('seasons')} /> : null}
           {activeTab === 'coaches' && data ? (
             <section className="apple-card overflow-hidden">
               <AdminCoachDuty />
+              <div className="p-5"><AdminCoachCreator runAction={runAction} /></div>
               <div className="border-b border-black/10 bg-apple-gray-100 p-5">
                 <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
                   <div>
@@ -916,9 +926,9 @@ export default function AdminDashboardClient() {
                     </div>
                   </div>
                   {seasonView === 'students' ? (
-                    <AdminEnrollmentAnalytics orders={data.orders} courseCapacity={data.courseCapacity} seasons={data.courseSeasons} syncSources={data.seasonSyncSources} runAction={runAction} updatingId={updatingId} />
+                    <AdminEnrollmentAnalytics orders={data.orders} courseCapacity={data.courseCapacity} seasons={data.courseSeasons} syncSources={data.seasonSyncSources} runAction={runAction} updatingId={updatingId} onTransferred={async () => { await loadDashboard(true) }} />
                   ) : (
-                    <AdminContentManager content={data.siteContent} courses={data.courses} seasons={data.courseSeasons} scope="seasons" onBack={() => setSeasonView('students')} runAction={runAction} />
+                    <><AdminSeasonRestore seasons={data.courseSeasons} runAction={runAction} /><AdminContentManager content={data.siteContent} courses={data.courses} seasons={data.courseSeasons} scope="seasons" onBack={() => setSeasonView('students')} runAction={runAction} /></>
                   )}
                 </section>
               ) : null}

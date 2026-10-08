@@ -28,6 +28,10 @@ import AdminFeedback, { FeedbackOverview } from '@/components/admin/AdminFeedbac
 import type { FeedbackSummary } from '@/lib/site-feedback'
 import AdminBankReconciliation from '@/components/admin/AdminBankReconciliation'
 import AdminCoachDuty from '@/components/admin/AdminCoachDuty'
+import AdminCoachCreator from '@/components/admin/AdminCoachCreator'
+import AdminAccountManager from '@/components/admin/AdminAccountManager'
+import AdminStudentEditor from '@/components/admin/AdminStudentEditor'
+import AdminSeasonRestore from '@/components/admin/AdminSeasonRestore'
 import AdminContentManager from '@/components/admin/AdminContentManager'
 import AdminEnrollmentAnalytics from '@/components/admin/AdminEnrollmentAnalytics'
 import AdminProductWorkspace from '@/components/admin/AdminProductWorkspace'
@@ -41,7 +45,7 @@ import type { ProductEditState } from '@/lib/admin-products'
 import { paymentOrderStatusLabels, type PaymentOrderStatus } from '@/lib/payment'
 import './admin-mobile-dashboard.css'
 
-type MobileView = 'overview' | 'reconciliation' | 'students' | 'coaches' | 'seasons' | 'products' | 'content' | 'paymentAccounts' | 'feedback'
+type MobileView = 'overview' | 'reconciliation' | 'students' | 'coaches' | 'seasons' | 'products' | 'content' | 'paymentAccounts' | 'feedback' | 'accounts'
 type StudentDetailTab = 'course' | 'payments' | 'feedback' | 'notes'
 type StudentFilter = 'all' | 'plan' | 'coach' | 'payment'
 type MobileAction = (id: string, action: Record<string, unknown>) => Promise<boolean>
@@ -53,6 +57,7 @@ type Props = {
   updatingId: string
   actionMessage: string
   actionError: string
+  onTransferred: () => Promise<void>
 }
 
 const statusLabels = paymentOrderStatusLabels['zh-TW']
@@ -67,6 +72,7 @@ const titles: Record<MobileView, string> = {
   products: '商城商品',
   content: '內容中心',
   paymentAccounts: '收款帳戶',
+  accounts: '帳號與權限',
 }
 
 function formatDate(value: string | null | undefined, language: string) {
@@ -97,7 +103,7 @@ function accountMask(account: PaymentAccount) {
   return `${number.slice(0, 4)} ${'•'.repeat(Math.max(2, number.length - 8))} ${number.slice(-4)}`
 }
 
-export default function AdminMobileDashboard({ data, feedbackSummary, runAction, updatingId, actionMessage, actionError }: Props) {
+export default function AdminMobileDashboard({ data, feedbackSummary, runAction, updatingId, actionMessage, actionError, onTransferred }: Props) {
   const { language } = useLanguage()
   const dashboardRef = useRef<HTMLElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -280,7 +286,7 @@ export default function AdminMobileDashboard({ data, feedbackSummary, runAction,
   }
 
   const currentTitle = selectedStudent && view === 'students' ? '學員詳情' : titles[view]
-  const navActive = view === 'feedback' || view === 'seasons' || view === 'products' || view === 'content' || view === 'paymentAccounts' ? 'more' : view
+  const navActive = view === 'feedback' || view === 'seasons' || view === 'products' || view === 'content' || view === 'paymentAccounts' || view === 'accounts' ? 'more' : view
 
   return (
     <section ref={dashboardRef} className="admin-mobile-dashboard" aria-label="手機管理員後台">
@@ -313,6 +319,7 @@ export default function AdminMobileDashboard({ data, feedbackSummary, runAction,
           <section className="admin-mobile-screen">
             <div className="admin-mobile-eyeline"><span>學員管理</span><span>共 {data.students.length} 位</span></div>
             <h1 className="admin-mobile-page-title">快速找到學員</h1>
+            <Link href="/coach/attendance" className="admin-mobile-button mb-3">全班點名管理</Link>
             <div className="admin-mobile-toolbar">
               <label className="admin-mobile-search"><Search aria-hidden="true" /><input aria-label="搜尋學員" value={studentQuery} onChange={(event) => setStudentQuery(event.target.value)} placeholder="姓名、信箱、教練或課程" /></label>
               <div className="admin-mobile-chiprow" role="tablist" aria-label="學員篩選">
@@ -335,25 +342,27 @@ export default function AdminMobileDashboard({ data, feedbackSummary, runAction,
 
         {view === 'students' && selectedStudent ? (
           <section className="admin-mobile-screen">
-            <div className="admin-mobile-backrow"><button type="button" className="admin-mobile-back" onClick={() => { setSelectedStudentId(''); navigate('students') }}><ArrowLeft className="h-4 w-4" />返回學員列表</button><span className="admin-mobile-status" data-tone="ok">帳號資料</span></div>
+            <div className="admin-mobile-backrow"><button type="button" className="admin-mobile-back" onClick={() => { if (confirmAdminWorkspaceChange()) { setSelectedStudentId(''); navigate('students') } }}><ArrowLeft className="h-4 w-4" />返回學員列表</button><span className="admin-mobile-status" data-tone="ok">帳號資料</span></div>
             <article className="admin-mobile-card admin-mobile-detail-card"><div className="admin-mobile-detail-head"><span className="admin-mobile-detail-avatar">{studentInitial(selectedStudent)}</span><div><h2>{selectedStudent.name}</h2><p>{selectedStudent.email || '未提供信箱'}</p></div></div><div className="admin-mobile-info"><div className="admin-mobile-info-line"><span>加入時間</span><strong>{formatDate(selectedStudent.createdAt, language)}</strong></div><div className="admin-mobile-info-line"><span>課表權限</span><strong>{selectedStudent.planEnabled ? '已開通' : '尚未開通'}</strong></div></div></article>
-            <div className="admin-mobile-tabs" role="tablist" aria-label="學員詳情頁籤">{([['course', '課程與權限'], ['payments', '付款紀錄'], ['feedback', '訓練回饋'], ['notes', '備註']] as const).map(([id, label]) => <button type="button" role="tab" aria-selected={studentTab === id} key={id} className="admin-mobile-tab" data-active={studentTab === id} onClick={() => setStudentTab(id)}>{label}</button>)}</div>
+            <div className="admin-mobile-tabs" role="tablist" aria-label="學員詳情頁籤">{([['course', '課程與權限'], ['payments', '付款紀錄'], ['feedback', '訓練回饋'], ['notes', '資料與備註']] as const).map(([id, label]) => <button type="button" role="tab" aria-selected={studentTab === id} key={id} className="admin-mobile-tab" data-active={studentTab === id} onClick={() => { if (id === studentTab || confirmAdminWorkspaceChange()) setStudentTab(id) }}>{label}</button>)}</div>
             <div className="admin-mobile-stack" style={{ marginTop: 10 }}>
               {studentTab === 'course' ? <>
                 <article className="admin-mobile-card admin-mobile-detail-card"><div className="admin-mobile-sectionhead" style={{ marginTop: 0 }}><h2>目前課程</h2><span>{statusLabels[selectedStudent.paymentStatus as PaymentOrderStatus] || selectedStudent.paymentStatus}</span></div><div className="admin-mobile-detail-list"><div className="admin-mobile-detail-line"><span>報名課程</span><strong>{selectedStudent.program || selectedStudent.paymentCourse || '尚無課程'}</strong></div><div className="admin-mobile-detail-line"><span>綁定教練</span><strong>{selectedStudent.boundCoachNames || '尚未綁定'}</strong></div><div className="admin-mobile-detail-line"><span>最近回饋</span><strong>{formatDate(selectedStudent.lastFeedbackAt, language)}</strong></div></div></article>
-                <article className="admin-mobile-card admin-mobile-detail-card"><div className="admin-mobile-sectionhead" style={{ marginTop: 0 }}><h2>教練與課表權限</h2><button type="button" className="admin-mobile-back" onClick={() => setBindOpen(true)}>調整教練</button></div><div className="admin-mobile-detail-list"><div className="admin-mobile-detail-line"><span>目前教練</span><strong>{selectedStudent.boundCoachNames || '尚未綁定'}</strong></div><div className="admin-mobile-detail-line"><span>課表權限</span><strong>{selectedStudent.planEnabled ? '已開通（由現有付款／課表資料判定）' : '尚未開通'}</strong></div></div><div className="admin-mobile-boundary"><strong>目前可用範圍：</strong>後台目前沒有獨立編輯學員資料或切換課表權限的操作；此處保留真實狀態與教練綁定功能，不顯示未實際完成的切換。</div></article>
+                <article className="admin-mobile-card admin-mobile-detail-card"><div className="admin-mobile-sectionhead" style={{ marginTop: 0 }}><h2>教練與課表權限</h2><button type="button" className="admin-mobile-back" onClick={() => setBindOpen(true)}>調整教練</button></div><div className="admin-mobile-detail-list"><div className="admin-mobile-detail-line"><span>目前教練</span><strong>{selectedStudent.boundCoachNames || '尚未綁定'}</strong></div><div className="admin-mobile-detail-line"><span>課表權限</span><strong>{selectedStudent.planEnabled ? '已開通（由現有付款／課表資料判定）' : '尚未開通'}</strong></div></div><div className="admin-mobile-boundary">課表資格依實際入帳與報名狀態判定；請至季度管理或銀行對帳調整。</div></article>
               </> : null}
               {studentTab === 'payments' ? <article className="admin-mobile-card admin-mobile-detail-card"><div className="admin-mobile-sectionhead" style={{ marginTop: 0 }}><h2>付款紀錄</h2><span>{selectedStudentOrders.length} 筆</span></div>{selectedStudentOrders.length ? <div className="admin-mobile-detail-list">{selectedStudentOrders.slice(0, 8).map((order) => <div key={`${order.orderKind}-${order.id}`} className="admin-mobile-detail-line"><span>{formatDate(order.submittedAt, language)}</span><strong>{order.amountText} · {order.orderNumber}<br />{order.orderKind === 'shop' ? order.items.join('、') : order.courseName || '課程報名'}<br />{statusLabels[order.status] || order.status}</strong></div>)}</div> : <p className="admin-mobile-boundary">目前沒有與此信箱相符的付款紀錄。</p>}</article> : null}
               {studentTab === 'feedback' ? <article className="admin-mobile-card admin-mobile-detail-card"><div className="admin-mobile-sectionhead" style={{ marginTop: 0 }}><h2>訓練回饋</h2></div><div className="admin-mobile-detail-line"><span>最近回饋</span><strong>{formatDate(selectedStudent.lastFeedbackAt, language)}</strong></div><div className="admin-mobile-boundary"><strong>目前可用範圍：</strong>這裡只提供最近回饋時間；完整內容請到既有教練／學員頁面查看。</div></article> : null}
-              {studentTab === 'notes' ? <article className="admin-mobile-card admin-mobile-detail-card"><div className="admin-mobile-sectionhead" style={{ marginTop: 0 }}><h2>管理員備註</h2></div><div className="admin-mobile-boundary"><strong>目前可用範圍：</strong>後台目前沒有提供備註欄位的儲存功能，因此手機端暫不提供可能無法保留的輸入框。</div></article> : null}
+              {studentTab === 'notes' ? <AdminStudentEditor key={selectedStudent.id} studentId={selectedStudent.id} onSaved={onTransferred} /> : null}
             </div>
           </section>
         ) : null}
 
+        {view === 'accounts' ? <section className="admin-mobile-screen admin-mobile-external"><AdminAccountManager onOpenCoaches={() => navigate('coaches')} onOpenSeasons={() => navigate('seasons')} /></section> : null}
         {view === 'coaches' ? (
           <section className="admin-mobile-screen admin-mobile-external">
             <div className="admin-mobile-backrow"><button type="button" className="admin-mobile-back" onClick={() => navigate('overview')}><ArrowLeft className="h-4 w-4" />返回總覽</button></div>
             <div className="admin-mobile-coach"><AdminCoachDuty /></div>
+            <div className="mt-4"><AdminCoachCreator runAction={mobileAction} /></div>
             <div className="admin-mobile-card admin-mobile-detail-card" style={{ marginTop: 14 }}>
               <div className="admin-mobile-sectionhead" style={{ marginTop: 0 }}><h2>教練帳號登記</h2><span>{data.coachAccounts.length} 筆</span></div>
               <p className="admin-mobile-boundary">只登記既有公開教練資料的登入信箱；未註冊者等首次登入，已停用者不會自動恢復。</p>
@@ -375,7 +384,7 @@ export default function AdminMobileDashboard({ data, feedbackSummary, runAction,
           </section>
         ) : null}
 
-        {view === 'seasons' ? <section className="admin-mobile-screen admin-mobile-external"><div className="admin-mobile-backrow"><button type="button" className="admin-mobile-back" onClick={() => navigate('overview')}><ArrowLeft className="h-4 w-4" />返回總覽</button></div><div className="admin-mobile-segmented" role="tablist" aria-label="季度管理分段"><button type="button" role="tab" aria-selected={seasonSection === 'students'} data-active={seasonSection === 'students'} onClick={() => setSeasonSection('students')}>學員與統計</button><button type="button" role="tab" aria-selected={seasonSection === 'settings'} data-active={seasonSection === 'settings'} onClick={() => setSeasonSection('settings')}>季度設定</button></div>{seasonSection === 'students' ? <div className="admin-mobile-enrollment"><AdminEnrollmentAnalytics orders={data.orders} courseCapacity={data.courseCapacity} seasons={data.courseSeasons} syncSources={data.seasonSyncSources} runAction={mobileAction} updatingId={updatingId} /></div> : <div className="admin-mobile-content-manager"><AdminContentManager content={data.siteContent} courses={data.courses} seasons={data.courseSeasons} scope="seasons" onBack={() => setSeasonSection('students')} runAction={mobileAction} /></div>}</section> : null}
+        {view === 'seasons' ? <section className="admin-mobile-screen admin-mobile-external"><div className="admin-mobile-backrow"><button type="button" className="admin-mobile-back" onClick={() => navigate('overview')}><ArrowLeft className="h-4 w-4" />返回總覽</button></div><div className="admin-mobile-segmented" role="tablist" aria-label="季度管理分段"><button type="button" role="tab" aria-selected={seasonSection === 'students'} data-active={seasonSection === 'students'} onClick={() => setSeasonSection('students')}>學員與統計</button><button type="button" role="tab" aria-selected={seasonSection === 'settings'} data-active={seasonSection === 'settings'} onClick={() => setSeasonSection('settings')}>季度設定</button></div>{seasonSection === 'students' ? <div className="admin-mobile-enrollment"><AdminEnrollmentAnalytics orders={data.orders} courseCapacity={data.courseCapacity} seasons={data.courseSeasons} syncSources={data.seasonSyncSources} runAction={mobileAction} updatingId={updatingId} onTransferred={onTransferred} /></div> : <div className="admin-mobile-content-manager"><AdminSeasonRestore seasons={data.courseSeasons} runAction={mobileAction} /><AdminContentManager content={data.siteContent} courses={data.courses} seasons={data.courseSeasons} scope="seasons" onBack={() => setSeasonSection('students')} runAction={mobileAction} /></div>}</section> : null}
         {view === 'products' ? <section className="admin-mobile-screen admin-mobile-external"><div className="admin-mobile-backrow"><button type="button" className="admin-mobile-back" onClick={() => navigate('overview')}><ArrowLeft className="h-4 w-4" />返回總覽</button></div><div className="admin-mobile-product"><AdminProductWorkspace products={data.products} runAction={mobileAction} onStateChange={setProductEditState} /></div><div className="admin-mobile-boundary"><strong>未儲存保護：</strong>{productEditState.dirty ? '目前商品有未儲存變更，請先儲存或放棄後再離開。' : '商品編輯器沿用現有圖片裁切、規格、上下架與刪除保護。'}</div></section> : null}
         {view === 'content' ? <section className="admin-mobile-screen admin-mobile-external"><div className="admin-mobile-backrow"><button type="button" className="admin-mobile-back" onClick={() => navigate('overview')}><ArrowLeft className="h-4 w-4" />返回總覽</button></div><AdminContentManager content={data.siteContent} courses={data.courses} seasons={data.courseSeasons} scope="content" runAction={mobileAction} /></section> : null}
 
@@ -391,7 +400,7 @@ export default function AdminMobileDashboard({ data, feedbackSummary, runAction,
         </div>
       </nav>
 
-      {moreOpen ? <div className="admin-mobile-sheet-layer" role="dialog" aria-modal="true" aria-labelledby="admin-mobile-more-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setMoreOpen(false) }}><section className="admin-mobile-sheet"><div className="admin-mobile-sheet-handle" /><div className="admin-mobile-sheet-head"><div><h2 id="admin-mobile-more-title">更多管理功能</h2><p>季度、商品、內容與收款帳戶集中在這裡。</p></div><button type="button" className="admin-mobile-iconbutton" aria-label="關閉更多管理功能" onClick={() => setMoreOpen(false)}><X className="h-5 w-5" aria-hidden="true" /></button></div><div className="admin-mobile-sheet-grid"><button type="button" className="admin-mobile-more-item" onClick={()=>navigate('feedback')}><MessageCircleWarning className="h-5 w-5" aria-hidden="true" /><strong>問題回報</strong><small>{feedbackSummary ? feedbackSummary.pending+' 則待處理 · '+feedbackSummary.unread+' 則未讀' : '查看網站回報與處理進度'}</small></button><button type="button" className="admin-mobile-more-item" onClick={() => navigate('seasons')}><CalendarRange className="h-5 w-5" aria-hidden="true" /><strong>季度管理</strong><small>招生季度、課程與統計</small></button><button type="button" className="admin-mobile-more-item" onClick={() => navigate('products')}><Boxes className="h-5 w-5" aria-hidden="true" /><strong>商城商品</strong><small>內容、規格、庫存與上下架</small></button><button type="button" className="admin-mobile-more-item" onClick={() => navigate('content')}><PanelsTopLeft className="h-5 w-5" aria-hidden="true" /><strong>內容中心</strong><small>首頁、公開頁面與教練資料</small></button><button type="button" className="admin-mobile-more-item" onClick={() => navigate('paymentAccounts')}><Landmark className="h-5 w-5" aria-hidden="true" /><strong>收款帳戶</strong><small>通道、權重與啟用狀態</small></button></div></section></div> : null}
+      {moreOpen ? <div className="admin-mobile-sheet-layer" role="dialog" aria-modal="true" aria-labelledby="admin-mobile-more-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setMoreOpen(false) }}><section className="admin-mobile-sheet"><div className="admin-mobile-sheet-handle" /><div className="admin-mobile-sheet-head"><div><h2 id="admin-mobile-more-title">更多管理功能</h2><p>季度、商品、內容與收款帳戶集中在這裡。</p></div><button type="button" className="admin-mobile-iconbutton" aria-label="關閉更多管理功能" onClick={() => setMoreOpen(false)}><X className="h-5 w-5" aria-hidden="true" /></button></div><div className="admin-mobile-sheet-grid"><button type="button" className="admin-mobile-more-item" onClick={() => navigate('accounts')}><UserCog className="h-5 w-5" aria-hidden="true" /><strong>帳號與權限</strong><small>管理員授權與帳號診斷</small></button><button type="button" className="admin-mobile-more-item" onClick={()=>navigate('feedback')}><MessageCircleWarning className="h-5 w-5" aria-hidden="true" /><strong>問題回報</strong><small>{feedbackSummary ? feedbackSummary.pending+' 則待處理 · '+feedbackSummary.unread+' 則未讀' : '查看網站回報與處理進度'}</small></button><button type="button" className="admin-mobile-more-item" onClick={() => navigate('seasons')}><CalendarRange className="h-5 w-5" aria-hidden="true" /><strong>季度管理</strong><small>招生季度、課程與統計</small></button><button type="button" className="admin-mobile-more-item" onClick={() => navigate('products')}><Boxes className="h-5 w-5" aria-hidden="true" /><strong>商城商品</strong><small>內容、規格、庫存與上下架</small></button><button type="button" className="admin-mobile-more-item" onClick={() => navigate('content')}><PanelsTopLeft className="h-5 w-5" aria-hidden="true" /><strong>內容中心</strong><small>首頁、公開頁面與教練資料</small></button><button type="button" className="admin-mobile-more-item" onClick={() => navigate('paymentAccounts')}><Landmark className="h-5 w-5" aria-hidden="true" /><strong>收款帳戶</strong><small>通道、權重與啟用狀態</small></button></div></section></div> : null}
 
       {bindOpen && selectedStudent ? <div className="admin-mobile-sheet-layer" role="dialog" aria-modal="true" aria-label="任課教練關聯"><section className="admin-mobile-sheet"><h2>依入帳班級自動關聯</h2><p className="mt-3">{selectedStudent.name}：{selectedStudent.bindings.map((binding) => binding.coachName).join("、") || "尚無正式教練關聯"}</p><p className="mt-3">請在季度管理調整班級任課教練；臨時代班請在教練管理處理。不再單獨新增或解除綁定。</p><button type="button" className="admin-mobile-button mt-4" onClick={() => setBindOpen(false)}>關閉</button></section></div> : null}
 

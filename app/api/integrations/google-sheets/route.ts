@@ -31,6 +31,7 @@ type ExistingLead = {
   calculated_amount: number | null
   notes: string
   registration_status?: string
+  admin_course_locked?: boolean
   status: string
   transfer_last_five: string
   payment_submitted_at: string | null
@@ -224,7 +225,7 @@ export async function POST(request: NextRequest) {
       .eq('season_id', season.id),
     supabaseAdmin
       .from('signup_leads')
-      .select('id, source, name, phone, email, preferred_course, course_slug, season_id, course_season_course_id, course_capacity, registration_identity, amount_text, calculated_amount, notes, status, registration_status, transfer_last_five, payment_submitted_at, reviewed_at, review_note, payload, created_at, external_submission_id, form_submitted_at')
+      .select('id, source, name, phone, email, preferred_course, course_slug, season_id, course_season_course_id, course_capacity, registration_identity, amount_text, calculated_amount, notes, status, registration_status, admin_course_locked, transfer_last_five, payment_submitted_at, reviewed_at, review_note, payload, created_at, external_submission_id, form_submitted_at')
       .eq('season_id', season.id)
       .eq('source', 'course_payment'),
   ])
@@ -254,6 +255,7 @@ export async function POST(request: NextRequest) {
   let moved = 0
   let updated = 0
   let unchanged = 0
+  let protectedTransfers = 0
   const upsertRows: Record<string, unknown>[] = []
 
   for (const record of records) {
@@ -276,6 +278,12 @@ export async function POST(request: NextRequest) {
     const personMatch = personCandidates.length === 1 ? personCandidates[0] : null
     const current = submissionMatch || exactMatch || personMatch
     const id = current?.id ?? randomUUID()
+    if (current?.admin_course_locked) {
+      usedIds.add(id)
+      unchanged += 1
+      protectedTransfers += 1
+      continue
+    }
     const duplicateRegistration = (recordCounts.get(exactCourseKey(record.courseSlug, record.email, record.name)) ?? 0) > 1
     const status = parseStatus(record, current, duplicateRegistration)
     const submittedAt = record.submittedAt && !Number.isNaN(Date.parse(record.submittedAt))
@@ -349,9 +357,9 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  const { error: upsertError } = await supabaseAdmin
+  const { error: upsertError } = upsertRows.length ? await supabaseAdmin
     .from('signup_leads')
-    .upsert(upsertRows, { onConflict: 'id' })
+    .upsert(upsertRows, { onConflict: 'id' }) : { error: null }
 
   if (upsertError) {
     await recordSyncError(source.id, upsertError.message)
@@ -365,6 +373,7 @@ export async function POST(request: NextRequest) {
     moved,
     updated,
     unchanged,
+    protectedTransfers,
     missing,
     sheets: Object.keys(q3RosterSheetCourses).length,
     duplicateGroups: duplicateGroups.length,

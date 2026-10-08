@@ -7,9 +7,12 @@ import Link from 'next/link'
 import { CheckCircle2, ChevronDown, Loader2, RefreshCw, ShieldCheck, UserRoundCheck, X } from 'lucide-react'
 import type { AcceptanceTestPhase } from '@/lib/attendance-acceptance-test'
 import { supabase } from '@/lib/supabase'
+import AdminBulkCoachAttendance from '@/components/admin/AdminBulkCoachAttendance'
 
 type DutyItem = {
   id: string
+  seasonId: string
+  seasonName: string
   courseName: string
   courseSeasonCourseId: string
   sessionDate: string
@@ -120,6 +123,7 @@ export default function AdminCoachDuty() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [yearFilter, setYearFilter] = useState(currentPeriod.year)
+  const [seasonFilter, setSeasonFilter] = useState('all')
   const [monthFilter, setMonthFilter] = useState(currentPeriod.month)
   const [courseFilter, setCourseFilter] = useState('all')
   const [coachFilter, setCoachFilter] = useState('all')
@@ -241,10 +245,11 @@ export default function AdminCoachDuty() {
 
   const yearOptions = [...new Set([currentPeriod.year, ...items.map((item) => item.sessionDate.slice(0, 4))])].sort((a, b) => b.localeCompare(a))
   const periodItems = useMemo(() => items.filter((item) => {
+    if (seasonFilter !== 'all' && item.seasonId !== seasonFilter) return false
     if (yearFilter !== 'all' && item.sessionDate.slice(0, 4) !== yearFilter) return false
     if (monthFilter !== 'all' && item.sessionDate.slice(5, 7) !== monthFilter) return false
     return true
-  }), [items, monthFilter, yearFilter])
+  }), [items, monthFilter, yearFilter, seasonFilter])
   const summaries = [
     ['期間應到', periodItems.filter((item) => !item.isCancelled).length, 'text-black'],
     ['準時', periodItems.filter((item) => item.attendanceState === 'on_time').length, 'text-emerald-700'],
@@ -275,6 +280,7 @@ export default function AdminCoachDuty() {
   }, [items])
 
   const filtered = useMemo(() => items.filter((item) => {
+    if (seasonFilter !== 'all' && item.seasonId !== seasonFilter) return false
     if (priorityFilter === 'today' && item.sessionDate !== taipeiDateKey()) return false
     const pending = item.adminStatus === 'pending'
       || item.substituteResponse === 'pending'
@@ -292,7 +298,7 @@ export default function AdminCoachDuty() {
     if (statusFilter === 'anomaly' && !['not_checked_in', 'substitute_absent', 'missing_start_time'].includes(item.attendanceState) && !(item.leaveStatus === 'approved' && !item.actualCoachId)) return false
     if (statusFilter !== 'all' && statusFilter !== 'anomaly' && item.attendanceState !== statusFilter) return false
     return true
-  }), [coachFilter, courseFilter, items, monthFilter, priorityFilter, scheduleFilter, statusFilter, yearFilter])
+  }), [coachFilter, courseFilter, items, monthFilter, priorityFilter, scheduleFilter, statusFilter, yearFilter, seasonFilter])
 
   async function action(id: string, body: Record<string, unknown>) {
     setSaving(id)
@@ -415,6 +421,10 @@ export default function AdminCoachDuty() {
           {([['today', '今天'], ['pending', '待處理'], ['all', '全部']] as const).map(([value, label]) => <button type="button" key={value} onClick={() => setPriorityFilter(value)} className={priorityFilter === value ? 'min-h-11 rounded-full bg-black px-4 py-2 text-xs font-black text-white' : 'min-h-11 rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-bold text-apple-gray-700'} aria-pressed={priorityFilter === value}>{label}</button>)}
         </div>
         <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-[120px_130px_1fr_1fr_170px_150px]">
+          <select value={seasonFilter} onChange={event => { setSeasonFilter(event.target.value); setYearFilter('all'); setMonthFilter('all'); setPriorityFilter('all'); setCourseFilter('all') }} className="apple-input" aria-label={language === 'en' ? 'Season filter' : '季度篩選'}>
+            <option value="all">{language === 'en' ? 'All seasons' : '全部季度'}</option>
+            {[...new Map(items.map(item => [item.seasonId, item.seasonName])).entries()].map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+          </select>
           <select value={yearFilter} onChange={(event) => setYearFilter(event.target.value)} className="apple-input" aria-label="年份篩選">
             <option value="all">全部年份</option>
             {yearOptions.map((year) => <option key={year} value={year}>{language === 'en' ? year : `${year} 年`}</option>)}
@@ -428,6 +438,7 @@ export default function AdminCoachDuty() {
           <select value={scheduleFilter} onChange={(event) => setScheduleFilter(event.target.value)} className="apple-input"><option value="all">全部排班</option><option value="leave">只看請假</option><option value="substitute">只看代班</option><option value="regular">原定出勤</option></select>
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="apple-input"><option value="all">全部狀態</option><option value="anomaly">只看異常</option><option value="on_time">準時</option><option value="late">遲到</option><option value="not_checked_in">未簽到待確認</option><option value="substitute_absent">未簽到待確認（代班）</option><option value="missing_start_time">未設定時間</option></select>
         </div>
+        <AdminBulkCoachAttendance key={[seasonFilter, yearFilter, monthFilter, courseFilter, coachFilter, scheduleFilter, statusFilter, priorityFilter].join(':')} assignmentIds={filtered.map(item => item.id)} onSaved={load} />
         {error ? <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p> : null}
         {message ? <p className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{message}</p> : null}
         <div className="mt-4 space-y-2">

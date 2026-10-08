@@ -4,7 +4,7 @@ import { createHmac, randomBytes, scrypt as nodeScrypt, timingSafeEqual } from '
 import { promisify } from 'node:util'
 import { NextRequest, NextResponse } from 'next/server'
 import type { User } from '@supabase/supabase-js'
-import { getAdminEmails, getAdminProfile, type AdminProfile } from '@/lib/admin-auth'
+import { getAdminProfile, type AdminProfile } from '@/lib/admin-auth'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { isFinanceViewer } from '@/lib/finance-viewers'
 
@@ -49,23 +49,8 @@ function jsonError(message: string, status: number) {
   return NextResponse.json({ error: message }, { status, headers: noStoreHeaders })
 }
 
-function normalizeEmail(value: string | null | undefined) {
-  return value?.trim().toLowerCase() ?? ''
-}
-
-function financeManagerEmails() {
-  const configured = (process.env.FINANCE_MANAGER_EMAILS ?? '')
-    .split(',')
-    .map((email) => normalizeEmail(email))
-    .filter(Boolean)
-
-  if (configured.length > 0) return configured
-  return getAdminEmails().slice(0, 1)
-}
-
-export function canManageFinancePassword(email: string | null | undefined) {
-  const managers = financeManagerEmails()
-  return managers.length === 0 || managers.includes(normalizeEmail(email))
+export function canManageFinancePassword(profile: Pick<AdminProfile, 'role'>) {
+  return profile.role === 'admin'
 }
 
 export function validateFinancePassword(password: string) {
@@ -168,16 +153,14 @@ export async function authenticateReconciliationUser(request: NextRequest): Prom
     return { response: jsonError('請先登入獲授權的財務或管理員帳號。', 401) }
   }
 
+  // An administrator keeps full management rights even if also registered as finance staff.
+  const adminProfile = await getAdminProfile(user)
+  if (adminProfile) return { user, adminProfile, readOnly: false }
   // Match the authenticated, confirmed email, never editable profile metadata.
   if (isFinanceViewer(user.email) && user.email_confirmed_at) {
     return { user, adminProfile: { id: user.id, email: user.email!, name: '', role: 'student' }, readOnly: false }
   }
-  const adminProfile = await getAdminProfile(user)
-  if (!adminProfile) {
-    return { response: jsonError('目前帳號沒有銀行對帳權限。', 403) }
-  }
-
-  return { user, adminProfile, readOnly: false }
+  return { response: jsonError('目前帳號沒有銀行對帳權限。', 403) }
 }
 
 export async function authenticateFinanceRequest(request: NextRequest): Promise<FinanceRequestAuth | { response: NextResponse }> {

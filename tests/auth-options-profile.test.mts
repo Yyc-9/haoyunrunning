@@ -43,7 +43,7 @@ function accountHarness(metadataFails = false) {
     exports: routes, console, require(name: string) {
       if (name === 'next/server') return { NextResponse: { json: (body: unknown, init?: ResponseInit) => Response.json(body, init) } }
       if (name === '@/lib/supabase-server') return { supabaseAdmin: client, getAuthedUser: async () => user }
-      if (name === '@/lib/admin-auth') return { isAdminAllowlistedEmail: async () => false }
+      if (name === '@/lib/admin-auth') return { resolveAccountRole: async () => profile }
       if (name === '@/lib/test-account') return { getIsolatedTestAccount: async () => null }
       if (name === '@/lib/profile-gender') return { normalizeProfileGender }
       throw new Error(name)
