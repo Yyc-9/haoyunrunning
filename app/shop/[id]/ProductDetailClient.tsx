@@ -12,6 +12,7 @@ import { useSiteContent } from '@/app/site-content-provider'
 import { useToast } from '@/app/toast-provider'
 import ShopCartDrawer from '@/components/ShopCartDrawer'
 import MobileContextHeader from '@/components/MobileContextHeader'
+import OnDemandVideo from '@/components/OnDemandVideo'
 import { getProductIntro, type ProductSpecification, type ProductVariant, type ShopProduct } from '@/lib/shop-products'
 import { getSpecificationGroups, productCartItemId, specificationSelectionError } from '@/lib/product-specifications'
 
@@ -176,7 +177,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
               }}
             >
               {activeMedia?.type === 'video' ? (
-                <video src={activeMedia.url} poster={product.image || undefined} controls muted playsInline preload="metadata" className="h-full w-full object-contain" />
+                <OnDemandVideo key={activeMedia.url} src={activeMedia.url} poster={product.image || undefined} label={english ? 'Play product video' : '播放商品影片'} sizes="(min-width: 1024px) 55vw, 100vw" className="h-full w-full object-contain" />
               ) : activeMedia?.url ? (
                 <Image src={activeMedia.url} alt={activeMedia.label} fill priority sizes="(min-width: 1024px) 55vw, 100vw" className="object-contain p-3 sm:p-5" />
               ) : (

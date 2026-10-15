@@ -12,6 +12,7 @@ import {
 import { useLanguage } from '@/app/language-context'
 import { localizeWebsiteValue } from '@/lib/english-website'
 import { toSimplifiedWebsiteText } from '@/lib/traditional-chinese'
+import { createInflightRequest } from '@/lib/inflight-request'
 
 type SiteContentContextValue = SiteContent & {
   courses: ManagedCourse[]
@@ -31,15 +32,18 @@ export function SiteContentProvider({ children, initialContent = null }: { child
   const [hasSyncedContent, setHasSyncedContent] = useState(Boolean(initialContent))
   const requestIdRef = useRef(0)
   const previousPathnameRef = useRef(pathname)
+  const [contentRequest] = useState(() => createInflightRequest(async () => {
+    const response = await fetch('/api/site-content', { cache: 'no-store' })
+    if (!response.ok) throw new Error('網站內容暫時無法更新。')
+    return await response.json() as { content?: SiteContent; source?: string }
+  }))
 
-  const loadContent = useCallback(async (showLoading = false) => {
+  const loadContent = useCallback(async (showLoading = false, force = false) => {
     const requestId = ++requestIdRef.current
     if (showLoading) setIsLoading(true)
 
     try {
-      const response = await fetch('/api/site-content', { cache: 'no-store' })
-      if (!response.ok) throw new Error('網站內容暫時無法更新。')
-      const payload = (await response.json()) as { content?: SiteContent; source?: string }
+      const payload = await contentRequest.load(force)
       if (requestId === requestIdRef.current && payload.content && payload.source === 'database') {
         setContent(payload.content)
         setHasSyncedContent(payload.source === 'database')
@@ -49,7 +53,7 @@ export function SiteContentProvider({ children, initialContent = null }: { child
     } finally {
       if (requestId === requestIdRef.current) setIsLoading(false)
     }
-  }, [])
+  }, [contentRequest])
 
   useEffect(() => {
     if (!initialContent) void loadContent(true)
@@ -65,17 +69,18 @@ export function SiteContentProvider({ children, initialContent = null }: { child
     function handleContentUpdate(event: Event) {
       const detail = (event as CustomEvent<SiteContentUpdatedDetail>).detail
       if (detail?.content) {
+        contentRequest.invalidate()
         requestIdRef.current += 1
         setContent(detail.content)
         setHasSyncedContent(true)
         setIsLoading(false)
         return
       }
-      void loadContent()
+      void loadContent(false, true)
     }
 
     function handleStorage(event: StorageEvent) {
-      if (event.key === SITE_CONTENT_UPDATED_STORAGE_KEY) void loadContent()
+      if (event.key === SITE_CONTENT_UPDATED_STORAGE_KEY) void loadContent(false, true)
     }
 
     window.addEventListener(SITE_CONTENT_UPDATED_EVENT, handleContentUpdate)
@@ -83,17 +88,21 @@ export function SiteContentProvider({ children, initialContent = null }: { child
     function refreshVisibleContent() {
       if (document.visibilityState === 'visible') void loadContent()
     }
+    function refreshRestoredPage(event: PageTransitionEvent) {
+      // Initial content is already in the server response. Refresh only a bfcache restore.
+      if (event.persisted) refreshVisibleContent()
+    }
     window.addEventListener('online', refreshVisibleContent)
-    window.addEventListener('pageshow', refreshVisibleContent)
+    window.addEventListener('pageshow', refreshRestoredPage)
     document.addEventListener('visibilitychange', refreshVisibleContent)
     return () => {
       window.removeEventListener(SITE_CONTENT_UPDATED_EVENT, handleContentUpdate)
       window.removeEventListener('storage', handleStorage)
       window.removeEventListener('online', refreshVisibleContent)
-      window.removeEventListener('pageshow', refreshVisibleContent)
+      window.removeEventListener('pageshow', refreshRestoredPage)
       document.removeEventListener('visibilitychange', refreshVisibleContent)
     }
-  }, [loadContent])
+  }, [loadContent, contentRequest])
 
   const value = useMemo(() => {
     const localize = <T,>(value: T): T => {

@@ -1,6 +1,6 @@
 'use client'
 
-import Image from 'next/image'
+import Image, { getImageProps } from 'next/image'
 import Link from 'next/link'
 import { ArrowUpRight } from 'lucide-react'
 import { useEffect, useMemo, useRef } from 'react'
@@ -34,21 +34,32 @@ export default function HeroSection({ initialImages }: HeroSectionProps) {
         new Set([
           ...managedImages,
         ]),
-      ).filter(Boolean),
+      ).filter(Boolean).map((src) => getImageProps({ src, alt: '', width: 320, height: 240, quality: 75 }).props.src),
     [managedImages],
   )
 
   useEffect(() => {
+    const hero = heroRef.current
+    if (!hero) return
     let cancelled = false
-    trailImages.forEach((src) => {
-      const preload = new window.Image()
-      preload.src = src
-      void preload.decode().then(() => {
-        if (!cancelled) loadedImagesRef.current.add(src)
-      }).catch(() => { /* Skip unavailable images instead of flashing an empty card. */ })
-    })
-    return () => { cancelled = true }
-  }, [trailImages])
+    let started = false
+    const preloadOnInteraction = (event: PointerEvent) => {
+      const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection
+      if (started || prefersReducedMotion || connection?.saveData || event.pointerType !== 'mouse'
+        || !window.matchMedia('(min-width: 768px) and (hover: hover) and (pointer: fine)').matches) return
+      started = true
+      trailImages.forEach((src) => {
+        if (loadedImagesRef.current.has(src)) return
+        const preload = new window.Image()
+        preload.src = src
+        void preload.decode().then(() => {
+          if (!cancelled) loadedImagesRef.current.add(src)
+        }).catch(() => { /* Skip unavailable thumbnails. */ })
+      })
+    }
+    hero.addEventListener('pointermove', preloadOnInteraction, { passive: true })
+    return () => { cancelled = true; hero.removeEventListener('pointermove', preloadOnInteraction) }
+  }, [trailImages, prefersReducedMotion])
 
   useEffect(() => {
     const hero = heroRef.current

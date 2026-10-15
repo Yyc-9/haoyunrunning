@@ -257,7 +257,7 @@ function VideoField({ label, value, onChange, onError }: { label: string; value:
               className="h-full w-full"
             />
           ) : value ? (
-            <video src={value} controls muted playsInline preload="metadata" className="h-full w-full object-contain" />
+            <video src={value} controls muted playsInline preload="none" className="h-full w-full object-contain" />
           ) : (
             <Film className="h-9 w-9 text-white/50" />
           )}

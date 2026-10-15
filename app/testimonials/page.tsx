@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { PlayCircle } from 'lucide-react'
 import { useSiteContent } from '@/app/site-content-provider'
 import { getYouTubeEmbedUrl } from '@/lib/youtube'
+import OnDemandVideo from '@/components/OnDemandVideo'
 
 export default function TestimonialsPage() {
   const { pageMedia, testimonials } = useSiteContent()
@@ -57,12 +58,10 @@ export default function TestimonialsPage() {
                   className="aspect-video h-auto w-full"
                 />
               ) : (
-                <video
+                <OnDemandVideo
                   src={testimonials.videoUrl}
                   poster={pageMedia.testimonialsHero}
-                  controls
-                  playsInline
-                  preload="metadata"
+                  label={testimonials.videoTitle}
                   className="aspect-video h-auto w-full object-contain"
                 />
               )}
