@@ -10,7 +10,7 @@ import { useCart, type CartItem } from '@/app/cart-provider'
 import { useLanguage } from '@/app/language-context'
 import { toEnglishWebsiteText } from '@/lib/english-website'
 import { useToast } from '@/app/toast-provider'
-import type { ShopProduct } from '@/lib/shop-products'
+import { availableProductQuantity, type ShopProduct } from '@/lib/shop-products'
 import { formatSelectedSpecifications, specificationSelectionError } from '@/lib/product-specifications'
 
 type ShopCartDrawerProps = {
@@ -92,7 +92,7 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
       const otherQuantity = items
         .filter((cartItem) => cartItem.productId === item.productId && cartItem.id !== item.id)
         .reduce((sum, cartItem) => sum + cartItem.quantity, 0)
-      const maxQuantity = Math.max(0, product.stockQuantity - otherQuantity)
+      const maxQuantity = availableProductQuantity(product, otherQuantity)
 
       if (quantity > maxQuantity) {
         showToast(english ? `Not enough stock for ${toEnglishWebsiteText(product.name)}` : `${product.name} 庫存不足`, 'error')
@@ -170,7 +170,7 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
                       const specificationError = product ? specificationSelectionError(product, item.selectedSpecifications) : ''
                       const currentImage = product?.variants?.find((variant) => variant.id === item.variantId)?.image || product?.image || item.image
                       const remaining = product
-                        ? Math.max(0, product.stockQuantity - items
+                        ? availableProductQuantity(product, items
                           .filter((cartItem) => cartItem.productId === item.productId)
                           .reduce((sum, cartItem) => sum + cartItem.quantity, 0))
                         : null
@@ -194,7 +194,7 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
                               <p className="mt-1 text-sm font-semibold text-apple-gray-600">
                                 {formatCartAmount(item.price * item.quantity)}
                               </p>
-                              {remaining !== null ? (
+                              {product?.isPreorder ? <p className="mt-1 text-xs text-apple-gray-500">{english ? 'Pre-order' : '預購'}</p> : remaining !== null ? (
                                 <p className="mt-1 text-xs text-apple-gray-500">剩餘可加 {remaining}</p>
                               ) : null}
                             </div>

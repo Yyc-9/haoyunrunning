@@ -10,13 +10,13 @@ test('商店桌面商品圖片與資訊區有各自的穩定排版', () => {
   assert.match(page, /shop-product-image kinetic-image relative aspect-square/)
   assert.match(page, /className="shop-product-info pt-3"/)
   assert.match(css, /@media \(min-width: 1024px\)/)
-  assert.match(css, /aspect-ratio: 4 \/ 5/)
-  assert.match(css, /object-fit: cover;[\s\S]*?padding: 0;/)
+  assert.match(css, /aspect-ratio: 1 \/ 1/)
+  assert.match(css, /object-fit: contain;[\s\S]*?padding: 0;/)
   assert.match(css, /\.shop-page \.shop-product-info\s*\{[^}]*padding: 20px;/)
   assert.match(css, /prefers-reduced-motion: reduce/)
   assert.match(css, /\.shop-page\.kinetic-page\s*\{\s*isolation: auto;/)
-  // The mobile image mode remains its existing contain + padding treatment.
-  assert.match(page, /className="object-contain p-3/)
+  // Both layouts preserve the entire square artwork, including edge text.
+  assert.match(page, /className="object-contain"/)
 })
 
 test('商店搜尋、分類與排序保留可辨識的操作名稱與狀態', () => {

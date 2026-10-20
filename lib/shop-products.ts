@@ -31,6 +31,7 @@ export type ShopProduct = {
   variants?: ProductVariant[]
   sizes?: string[]
   stockQuantity: number
+  isPreorder?: boolean
   active: boolean
 }
 
@@ -81,6 +82,7 @@ export type ShopProductRow = {
   variants: unknown
   sizes: unknown
   stock_quantity: number | null
+  is_preorder?: boolean | null
   active: boolean | null
 }
 
@@ -266,10 +268,15 @@ export function shopProductFromRow(row: ShopProductRow): ShopProduct {
     variants: productVariants(row.variants),
     sizes: stringArray(row.sizes),
     stockQuantity: row.stock_quantity ?? 0,
+    isPreorder: row.is_preorder === true,
     active: row.active ?? true,
   }
 }
 
 export function getCartProductId(cartId: string) {
   return cartId.split(':')[0] || cartId
+}
+
+export function availableProductQuantity(product: Pick<ShopProduct, 'stockQuantity' | 'isPreorder'>, cartQuantity = 0) {
+  return product.isPreorder ? Number.POSITIVE_INFINITY : Math.max(0, product.stockQuantity - cartQuantity)
 }

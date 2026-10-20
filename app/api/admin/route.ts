@@ -263,8 +263,8 @@ type AdminPatchBody =
   | { action?: 'delete_order'; orderId?: string; orderKind?: 'course' | 'shop' }
   | { action?: 'bind_student'; studentId?: string; coachId?: string }
   | { action?: 'unbind_student'; bindingId?: string }
-  | { action?: 'update_product'; productId?: string; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; variants?: Array<{ id?: string; name?: string; image?: string; detailImages?: string[] }>; summary?: string; description?: string; gallery?: string[]; highlights?: string; specifications?: Array<{ label?: string; value?: string }>; usageNotes?: string; externalUrl?: string }
-  | { action?: 'create_product'; name?: string; category?: string; stockQuantity?: number; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; variants?: Array<{ id?: string; name?: string; image?: string; detailImages?: string[] }>; summary?: string; description?: string; gallery?: string[]; highlights?: string; specifications?: Array<{ label?: string; value?: string }>; usageNotes?: string; externalUrl?: string }
+  | { action?: 'update_product'; productId?: string; name?: string; category?: string; stockQuantity?: number; isPreorder?: boolean; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; variants?: Array<{ id?: string; name?: string; image?: string; detailImages?: string[] }>; summary?: string; description?: string; gallery?: string[]; highlights?: string; specifications?: Array<{ label?: string; value?: string }>; usageNotes?: string; externalUrl?: string }
+  | { action?: 'create_product'; name?: string; category?: string; stockQuantity?: number; isPreorder?: boolean; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; variants?: Array<{ id?: string; name?: string; image?: string; detailImages?: string[] }>; summary?: string; description?: string; gallery?: string[]; highlights?: string; specifications?: Array<{ label?: string; value?: string }>; usageNotes?: string; externalUrl?: string }
   | { action?: 'delete_product'; productId?: string }
   | { action?: 'save_site_content'; section?: string; value?: unknown }
   | { action?: 'save_site_contents'; entries?: Array<{ section?: string; value?: unknown }> }
@@ -522,7 +522,7 @@ export async function GET(request: NextRequest) {
     readAllRowsResult((from,to) => supabaseAdmin!.from('training_plans').select('student_id, created_at').order('created_at',{ascending:false}).order('id').range(from,to)),
     readAllRowsResult((from,to) => supabaseAdmin!.from('training_feedback').select('student_id, created_at').order('created_at',{ascending:false}).order('id').range(from,to)),
     readAllRowsResult((from,to) => supabaseAdmin!.from('shop_products')
-      .select('id, name, category, price, price_label, image, video, rating, reviews, tags, summary, description, gallery, highlights, specifications, usage_notes, external_url, variants, sizes, stock_quantity, active')
+      .select('id, name, category, price, price_label, image, video, rating, reviews, tags, summary, description, gallery, highlights, specifications, usage_notes, external_url, variants, sizes, stock_quantity, is_preorder, active')
       .is('deleted_at',null).order('category').order('name').order('id').range(from,to)),
     readAllRowsResult((from,to) => supabaseAdmin!.from('shop_orders')
       .select('id, order_number, customer_name, contact, email, fulfillment_note, item_count, status, transfer_last_five, payment_submitted_at, reviewed_at, review_note, subtotal, total_amount, payment_reference, payment_account_id, payment_account_label, inventory_reserved, created_at')
@@ -915,7 +915,7 @@ export async function GET(request: NextRequest) {
     unopenedPlanCount: students.filter((student) => !student.planEnabled).length,
     recentFeedbackCount: feedback.filter((item) => new Date(item.created_at).getTime() >= sevenDaysAgo).length,
     productCount: shopProducts.length,
-    lowStockCount: shopProducts.filter((product) => product.stockQuantity <= 3).length,
+    lowStockCount: shopProducts.filter((product) => !product.isPreorder && product.stockQuantity <= 3).length,
     paymentAccountCount: paymentAccounts.filter((account) => account.active).length,
     openAttendanceAnomalyCount: courseDashboardOrders.reduce((sum, order) => sum + order.openAttendanceAnomalyCount, 0),
   }
@@ -1880,6 +1880,7 @@ export async function PATCH(request: NextRequest) {
         name,
         category,
         stock_quantity: stockQuantity,
+        ...(typeof body.isPreorder === 'boolean' ? { is_preorder: body.isPreorder } : {}),
         price,
         price_label: price > 0 ? `NT$${Math.round(price / 100)}` : '洽詢售價',
         image,
@@ -1973,6 +1974,7 @@ export async function PATCH(request: NextRequest) {
         variants,
         sizes: commaSeparated(body.sizes),
         stock_quantity: stockQuantity,
+        is_preorder: body.isPreorder === true,
         active,
       })
       .select('*')

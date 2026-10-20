@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url'
 const { PGlite } = await import(process.env.PGLITE_MODULE ? pathToFileURL(process.env.PGLITE_MODULE).href : '@electric-sql/pglite')
 const db = new PGlite()
 const migration = await readFile(new URL('../supabase/migrations/20260905001751_shop_selectable_specifications.sql', import.meta.url), 'utf8')
+const preorderMigration = await readFile(new URL('../supabase/migrations/20261020085639_shop_preorders.sql', import.meta.url), 'utf8')
 let checks = 0
 const check = (message) => { checks += 1; console.log(`PASS ${message}`) }
 try {
@@ -21,15 +22,18 @@ try {
       id uuid primary key default gen_random_uuid(), order_number text not null unique, user_id uuid,
       customer_name text, contact text, email text, fulfillment_note text, item_count integer,
       status text, payment_method text, payment_reference text, payment_account_id uuid,
-      payment_account_label text, inventory_reserved boolean, subtotal integer, total_amount integer
+      payment_account_label text, inventory_reserved boolean, subtotal integer, total_amount integer,
+      stripe_session_id text, reviewed_at timestamptz, review_note text
     );
     create table shop_order_items (
-      id uuid primary key default gen_random_uuid(), order_id uuid references shop_orders(id),
+      id uuid primary key default gen_random_uuid(), order_id uuid references shop_orders(id) on delete cascade,
       product_id text, name text, quantity integer, price integer, image text, variant_id text, size text
     );
   `)
   await db.exec(migration)
   await db.exec(migration)
+  await db.exec(preorderMigration)
+  await db.exec(preorderMigration)
   check('additive migration can be reapplied')
   const specs = [{ label: '顏色', value: '黑色、白色' }, { label: '包裝', value: '單件\n套裝' }, { label: '尺寸', value: 'M、S' }]
   await db.query('insert into shop_products (id, name, price, stock_quantity, specifications, sizes) values ($1, $2, $3, $4, $5, $6)', ['shirt', '測試上衣', 98000, 10, JSON.stringify(specs), JSON.stringify(['S', 'M'])])
@@ -98,6 +102,41 @@ try {
   const permissions = (await db.query("select has_function_privilege('anon', 'create_shop_order_with_specs(text,uuid,text,text,text,text,jsonb)', 'execute') as anon, has_function_privilege('authenticated', 'create_shop_order_with_specs(text,uuid,text,text,text,text,jsonb)', 'execute') as authenticated, has_function_privilege('service_role', 'create_shop_order_with_specs(text,uuid,text,text,text,text,jsonb)', 'execute') as service_role")).rows[0]
   assert.deepEqual(permissions, { anon: false, authenticated: false, service_role: true })
   check('RPC execution restricted to the server role')
+
+  await db.query("insert into shop_products (id, name, price, stock_quantity, is_preorder) values ('preorder', '預購上衣', 10000, 0, true)")
+  const stock = async (id) => (await db.query('select stock_quantity from shop_products where id = $1', [id])).rows[0].stock_quantity
+  const plainBefore = await stock('plain')
+  const mixed = await order([{ productId: 'preorder', quantity: 3 }, { productId: 'plain', quantity: 2 }])
+  assert.equal(await stock('preorder'), 0)
+  assert.equal(await stock('plain'), plainBefore - 2)
+  const preorderLine = (await db.query("select name, is_preorder from shop_order_items where order_id = $1 and product_id = 'preorder'", [mixed.id])).rows[0]
+  assert.deepEqual(preorderLine, { name: '預購上衣（預購）', is_preorder: true })
+  check('zero-stock preorders succeed; mixed orders only reserve physical stock and retain preorder labels')
+
+  // Changing the current product mode must not change how old orders restore stock.
+  await db.exec("update shop_products set is_preorder = not is_preorder where id in ('preorder', 'plain')")
+  await db.query('select delete_shop_order_with_inventory($1)', [mixed.id])
+  assert.equal(await stock('preorder'), 0)
+  assert.equal(await stock('plain'), plainBefore)
+  assert.equal((await db.query('select delete_shop_order_with_inventory($1) as result', [mixed.id])).rows[0].result, false)
+  await rejectWithoutMutation([{ productId: 'preorder', quantity: 1, isPreorder: true }], /庫存不足/)
+  check('deletion restores only reserved stock after product-mode changes; forged preorder flags cannot bypass stock checks')
+
+  await db.exec("update shop_products set is_preorder = not is_preorder where id in ('preorder', 'plain')")
+  const expiring = await order([{ productId: 'preorder', quantity: 2 }, { productId: 'plain', quantity: 1 }])
+  await db.query("update shop_orders set stripe_session_id = 'test-session' where id = $1", [expiring.id])
+  await db.query("select release_shop_order_inventory($1, 'test-session')", [expiring.id])
+  await db.query("select release_shop_order_inventory($1, 'test-session')", [expiring.id])
+  await db.query('select delete_shop_order_with_inventory($1)', [expiring.id])
+  assert.equal(await stock('preorder'), 0)
+  assert.equal(await stock('plain'), plainBefore)
+  check('expiry is idempotent and deleting an expired order does not double-restore stock')
+
+  await db.exec("update shop_products set active = false where id = 'preorder'")
+  await rejectWithoutMutation([{ productId: 'preorder', quantity: 1 }], /庫存不足/)
+  await db.exec("update shop_products set active = true, price = 0 where id = 'preorder'")
+  await rejectWithoutMutation([{ productId: 'preorder', quantity: 1 }], /尚未設定售價/)
+  check('preorders still require an active product and an authoritative positive price')
   console.log(`${checks} isolated SQL checks passed.`)
 } finally {
   await db.close()

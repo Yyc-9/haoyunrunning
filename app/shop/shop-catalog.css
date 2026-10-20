@@ -1,4 +1,10 @@
-/* The catalogue refinement is desktop-only; existing mobile styles stay intact. */
+/* Keep square artwork intact, including text at its edges, on every screen. */
+.shop-page .shop-product-card.kinetic-card:hover .shop-product-image {
+  transform: none;
+  filter: none;
+}
+
+/* Desktop catalogue spacing and card layout. */
 @media (min-width: 1024px) {
   /* Let the existing fixed cart drawer sit above the shared navigation. */
   .shop-page.kinetic-page {
@@ -109,19 +115,14 @@
 
   .shop-page .shop-product-card .shop-product-image,
   .shop-page .shop-product-placeholder {
-    aspect-ratio: 4 / 5;
+    aspect-ratio: 1 / 1;
     border: 0;
     border-radius: 0;
     background: #edf0ef;
   }
 
-  .shop-page .shop-product-card.kinetic-card:hover .shop-product-image {
-    transform: none;
-    filter: none;
-  }
-
   .shop-page .shop-product-image > img {
-    object-fit: cover;
+    object-fit: contain;
     object-position: center;
     padding: 0;
   }

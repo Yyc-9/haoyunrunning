@@ -1,4 +1,5 @@
 export const adminProductEnglishCopy: Record<string, string> = {
+  '預購': 'Pre-order',
   '只有超級管理員可以上傳網站影片。': 'Only super administrators can upload website videos.',
   '影片僅支援 MP4、WebM 或 MOV。': 'Videos must be in MP4, WebM or MOV format.',
   '影片只能上傳至商城商品或網站頁面。': 'Videos can only be uploaded for shop products or website pages.',

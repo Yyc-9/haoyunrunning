@@ -145,11 +145,11 @@ export default function ShopPage() {
                 <Link href={`/shop/${encodeURIComponent(product.id)}`} className="shop-product-link block">
                   <div className="shop-product-image kinetic-image relative aspect-square overflow-hidden rounded-md border border-black/10 bg-apple-gray-50">
                     {product.image ? (
-                      <Image src={product.image} alt={product.name} fill quality={90} sizes="(min-width: 1024px) 50vw, (min-width: 768px) 33vw, 50vw" className="object-contain p-3 transition duration-300 group-hover:scale-[1.025]" />
+                      <Image src={product.image} alt={product.name} fill quality={90} sizes="(min-width: 1024px) 50vw, (min-width: 768px) 33vw, 50vw" className="object-contain" />
                     ) : (
                       <div className="flex h-full items-center justify-center"><Package className="h-10 w-10 text-apple-gray-300" /></div>
                     )}
-                    {product.stockQuantity <= 0 ? <span className="absolute left-2 top-2 rounded bg-black px-2 py-1 text-xs font-bold text-white">售完</span> : null}
+                    {product.isPreorder || product.stockQuantity <= 0 ? <span className="absolute left-2 top-2 rounded bg-black px-2 py-1 text-xs font-bold text-white">{product.isPreorder ? (language === 'en' ? 'Pre-order' : '預購') : '售完'}</span> : null}
                   </div>
                   <div className="shop-product-info pt-3">
                     <p className="shop-product-category text-xs text-apple-gray-500">{product.category}</p>

@@ -13,7 +13,7 @@ import { useToast } from '@/app/toast-provider'
 import ShopCartDrawer from '@/components/ShopCartDrawer'
 import MobileContextHeader from '@/components/MobileContextHeader'
 import OnDemandVideo from '@/components/OnDemandVideo'
-import { getProductIntro, type ProductSpecification, type ProductVariant, type ShopProduct } from '@/lib/shop-products'
+import { availableProductQuantity, getProductIntro, type ProductSpecification, type ProductVariant, type ShopProduct } from '@/lib/shop-products'
 import { getSpecificationGroups, productCartItemId, specificationSelectionError } from '@/lib/product-specifications'
 
 type ProductDetailClientProps = {
@@ -105,7 +105,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
   }
 
   const cartQuantity = items.filter((item) => item.productId === product.id).reduce((sum, item) => sum + item.quantity, 0)
-  const remainingStock = Math.max(0, product.stockQuantity - cartQuantity)
+  const remainingStock = availableProductQuantity(product, cartQuantity)
   const isSoldOut = remainingStock <= 0
   const isPurchasable = product.price > 0 && !isSoldOut
   const activeMedia = media[activeMediaIndex]
@@ -130,7 +130,8 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
     }
 
     const optionName = selectedVariant?.name || ''
-    const displayName = optionName ? `${product!.name} - ${optionName}` : product!.name
+    const baseName = optionName ? `${product!.name} - ${optionName}` : product!.name
+    const displayName = product!.isPreorder ? `${baseName}（預購）` : baseName
     const cartItem = {
       id: productCartItemId(product!.id, selectedVariant?.id, selectedSize, selectedSpecifications),
       productId: product!.id,
@@ -179,7 +180,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
               {activeMedia?.type === 'video' ? (
                 <OnDemandVideo key={activeMedia.url} src={activeMedia.url} poster={product.image || undefined} label={english ? 'Play product video' : '播放商品影片'} sizes="(min-width: 1024px) 55vw, 100vw" className="h-full w-full object-contain" />
               ) : activeMedia?.url ? (
-                <Image src={activeMedia.url} alt={activeMedia.label} fill priority sizes="(min-width: 1024px) 55vw, 100vw" className="object-contain p-3 sm:p-5" />
+                <Image src={activeMedia.url} alt={activeMedia.label} fill priority quality={90} sizes="(min-width: 1024px) 55vw, 100vw" className="object-contain" />
               ) : (
                 <div className="flex h-full items-center justify-center"><Package className="h-14 w-14 text-apple-gray-300" /></div>
               )}
@@ -189,7 +190,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
               <div className="product-detail-thumbs mt-3 grid grid-cols-5 gap-2 sm:grid-cols-7">
                 {media.map((item, index) => (
                   <button key={`${item.type}-${item.url}`} type="button" onClick={() => setActiveMediaIndex(index)} aria-label={english ? `View ${item.label}` : `查看${item.label}`} className={`relative aspect-square overflow-hidden rounded-md border bg-apple-gray-50 transition ${activeMediaIndex === index ? 'border-black ring-1 ring-black' : 'border-black/10 hover:border-black/35'}`}>
-                    {item.type === 'video' ? <span className="flex h-full items-center justify-center bg-black text-white"><Film className="h-5 w-5" /></span> : <Image src={item.url} alt="" fill sizes="90px" className="object-contain p-1" />}
+                    {item.type === 'video' ? <span className="flex h-full items-center justify-center bg-black text-white"><Film className="h-5 w-5" /></span> : <Image src={item.url} alt="" fill sizes="90px" className="object-contain" />}
                   </button>
                 ))}
               </div>
@@ -252,13 +253,13 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
                   <button type="button" onClick={() => setQuantity((value) => Math.min(Math.max(1, remainingStock), value + 1))} disabled={isSoldOut} className="flex h-11 items-center justify-center hover:bg-apple-gray-100 disabled:opacity-40" aria-label="增加數量"><Plus className="h-4 w-4" /></button>
                 </div>
               </div>
-              <p className={`text-sm font-bold ${isSoldOut ? 'text-red-600' : 'text-apple-gray-500'}`}>{isSoldOut ? '目前售完' : (english ? `${remainingStock} in stock` : `尚有 ${remainingStock} 件`)}</p>
+              <p className={`text-sm font-bold ${isSoldOut ? 'text-red-600' : 'text-apple-gray-500'}`}>{product.isPreorder ? (english ? 'Pre-order' : '預購') : isSoldOut ? '目前售完' : (english ? `${remainingStock} in stock` : `尚有 ${remainingStock} 件`)}</p>
             </div>
 
             {isPurchasable ? (
               <div className="product-inline-actions mt-6 grid gap-3 sm:grid-cols-2">
                 <button type="button" onClick={() => addSelectedProduct(true)} className="apple-button-outline w-full gap-2 rounded-md"><ShoppingBag className="h-4 w-4" />加入購物車</button>
-                <button type="button" onClick={() => { if (addSelectedProduct(false)) router.push('/checkout') }} className="apple-button-primary w-full rounded-md">直接購買</button>
+                <button type="button" onClick={() => { if (addSelectedProduct(false)) router.push('/checkout') }} className="apple-button-primary w-full rounded-md">{product.isPreorder ? (english ? 'Pre-order now' : '立即預購') : '直接購買'}</button>
               </div>
             ) : isSoldOut ? (
               <button type="button" disabled className="mt-6 w-full rounded-md bg-apple-gray-200 px-5 py-3 font-black text-apple-gray-500">目前售完</button>
@@ -278,7 +279,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
         {isPurchasable ? (
           <>
             <button type="button" onClick={() => addSelectedProduct(true)} className="apple-button-outline gap-2"><ShoppingBag aria-hidden="true" className="h-4 w-4" />加入購物車</button>
-            <button type="button" onClick={() => { if (addSelectedProduct(false)) router.push('/checkout') }} className="apple-button-primary">直接購買</button>
+            <button type="button" onClick={() => { if (addSelectedProduct(false)) router.push('/checkout') }} className="apple-button-primary">{product.isPreorder ? (english ? 'Pre-order now' : '立即預購') : '直接購買'}</button>
           </>
         ) : isSoldOut ? (
           <button type="button" disabled className="apple-button-primary col-span-2 opacity-60">目前售完</button>

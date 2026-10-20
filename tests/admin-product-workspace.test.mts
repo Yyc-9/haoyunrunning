@@ -18,6 +18,17 @@ const product = {
   stockQuantity: 24, active: true,
 }
 
+test('預購可保留零庫存，儲存與重新編輯不會遺失，也不列為低庫存', () => {
+  const preorder = { ...product, stockQuantity: 0, isPreorder: true }
+  const draft = productDraft(preorder)
+  assert.equal(productDraft().isPreorder, false)
+  assert.equal(productDraftError(draft), '')
+  assert.equal(productActionPayload(draft, product.id).isPreorder, true)
+  assert.equal(productActionPayload(draft, product.id).stockQuantity, 0)
+  assert.equal(filterProducts([preorder], '', 'lowStock').length, 0)
+  assert.equal(productActionPayload({ ...draft, isPreorder: false }, product.id).isPreorder, false)
+})
+
 test('商品草稿保留舊內容，並複製尺碼和媒體清單避免直接修改資料', () => {
   const draft = productDraft(product)
   assert.equal(draft.price, '1280')

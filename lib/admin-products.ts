@@ -20,6 +20,7 @@ export type AdminEditableProduct = {
   sizes?: string[]
   variants?: Array<{ id: string; name: string; image: string; detailImages: string[] }>
   stockQuantity: number
+  isPreorder?: boolean
   active: boolean
 }
 
@@ -38,6 +39,7 @@ export function productDraft(product?: AdminEditableProduct) {
     category: product?.category ?? '跑者配件',
     price: product && product.price > 0 ? String(product.price / 100) : '',
     stockQuantity: String(product?.stockQuantity ?? 0),
+    isPreorder: product?.isPreorder === true,
     image: product?.image ?? '',
     video: product?.video ?? '',
     tags: product?.tags.join('、') ?? '',
@@ -94,7 +96,7 @@ export function filterProducts(products: AdminEditableProduct[], query: string, 
   return products.filter((product) => {
     if (filter === 'active' && !product.active) return false
     if (filter === 'inactive' && product.active) return false
-    if (filter === 'lowStock' && product.stockQuantity > 5) return false
+    if (filter === 'lowStock' && (product.isPreorder || product.stockQuantity > 5)) return false
     return !text || [product.id, product.name, product.category, product.summary, ...product.tags]
       .some((value) => value.toLowerCase().includes(text))
   })
