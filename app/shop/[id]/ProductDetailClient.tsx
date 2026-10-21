@@ -13,7 +13,7 @@ import { useToast } from '@/app/toast-provider'
 import ShopCartDrawer from '@/components/ShopCartDrawer'
 import MobileContextHeader from '@/components/MobileContextHeader'
 import OnDemandVideo from '@/components/OnDemandVideo'
-import { availableProductQuantity, getProductIntro, type ProductSpecification, type ProductVariant, type ShopProduct } from '@/lib/shop-products'
+import { availableProductQuantity, sharesProductStock, getProductIntro, type ProductSpecification, type ProductVariant, type ShopProduct } from '@/lib/shop-products'
 import { getSpecificationGroups, productCartItemId, specificationSelectionError } from '@/lib/product-specifications'
 
 type ProductDetailClientProps = {
@@ -66,7 +66,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
 
   useEffect(() => {
     setSelectedVariantId(product?.variants?.[0]?.id ?? '')
-    setSelectedSize(product?.sizes?.[0] ?? '')
+    setSelectedSize(product?.sizes?.find((size) => availableProductQuantity(product, 0, size) > 0) ?? product?.sizes?.[0] ?? '')
     setSelectedSpecifications(product ? getSpecificationGroups(product).map(({ label, options }) => ({ label, value: options[0] })) : [])
     setQuantity(1)
     setActiveMediaIndex(0)
@@ -104,8 +104,8 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
     )
   }
 
-  const cartQuantity = items.filter((item) => item.productId === product.id).reduce((sum, item) => sum + item.quantity, 0)
-  const remainingStock = availableProductQuantity(product, cartQuantity)
+  const cartQuantity = items.filter((item) => sharesProductStock(product, item, selectedSize)).reduce((sum, item) => sum + item.quantity, 0)
+  const remainingStock = availableProductQuantity(product, cartQuantity, selectedSize)
   const isSoldOut = remainingStock <= 0
   const isPurchasable = product.price > 0 && !isSoldOut
   const activeMedia = media[activeMediaIndex]
@@ -219,7 +219,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
                 <legend className="text-sm font-black text-apple-gray-900">商品尺碼</legend>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {product.sizes.map((size) => (
-                    <button key={size} type="button" aria-pressed={selectedSize === size} onClick={() => setSelectedSize(size)} className={`min-h-11 min-w-12 rounded-md border px-3 py-2.5 text-sm font-bold transition ${selectedSize === size ? 'border-black bg-black text-white' : 'border-black/15 bg-white text-apple-gray-700 hover:border-black/40'}`}>{size}</button>
+                    <button key={size} type="button" aria-pressed={selectedSize === size} onClick={() => { setSelectedSize(size); setQuantity(1) }} className={`min-h-11 min-w-12 rounded-md border px-3 py-2.5 text-sm font-bold transition ${selectedSize === size ? 'border-black bg-black text-white' : 'border-black/15 bg-white text-apple-gray-700 hover:border-black/40'}`}>{size}{availableProductQuantity(product, 0, size) <= 0 ? <span className="ml-1 text-xs font-normal">{english ? 'Sold out' : '售完'}</span> : null}</button>
                   ))}
                 </div>
               </fieldset>

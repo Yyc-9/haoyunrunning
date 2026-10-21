@@ -1,4 +1,4 @@
-import { getProductIntro } from '@/lib/shop-products'
+import { getProductIntro, sizeStockError } from '@/lib/shop-products'
 import { parseSpecificationOptions } from '@/lib/product-specifications'
 
 export type AdminEditableProduct = {
@@ -20,6 +20,7 @@ export type AdminEditableProduct = {
   sizes?: string[]
   variants?: Array<{ id: string; name: string; image: string; detailImages: string[] }>
   stockQuantity: number
+  stockBySize?: Record<string, number> | null
   isPreorder?: boolean
   active: boolean
 }
@@ -39,6 +40,8 @@ export function productDraft(product?: AdminEditableProduct) {
     category: product?.category ?? '跑者配件',
     price: product && product.price > 0 ? String(product.price / 100) : '',
     stockQuantity: String(product?.stockQuantity ?? 0),
+    trackStockBySize: product?.stockBySize != null,
+    stockBySize: Object.fromEntries(Object.entries(product?.stockBySize ?? {}).map(([size, stock]) => [size, String(stock)])),
     isPreorder: product?.isPreorder === true,
     image: product?.image ?? '',
     video: product?.video ?? '',
@@ -62,7 +65,9 @@ export function productDraftError(draft: ProductDraft) {
   if (!draft.name.trim() || !draft.category.trim() || !draft.image) return '請填寫商品名稱、分類並上傳主圖。'
   if (draft.variants.some((variant) => !variant.name.trim() || !variant.image)) return '請填寫每個款式的名稱並上傳款式主圖。'
   const price = Number(draft.price || 0)
-  const stock = Number(draft.stockQuantity || 0)
+  const stock = draft.trackStockBySize ? Object.values(draftSizeStock(draft)!).reduce((sum, value) => sum + value, 0) : Number(draft.stockQuantity || 0)
+  const inventoryError = sizeStockError(draftSizeStock(draft), draft.sizes)
+  if (inventoryError) return inventoryError
   if (!Number.isFinite(price) || price < 0 || price > 100_000) return '售價必須介於 0 與 100,000 元之間。'
   if (!Number.isInteger(stock) || stock < 0 || stock > 1_000_000) return '庫存必須是介於 0 與 1,000,000 的整數。'
   if (draft.description.length > 5000) return '商品簡介超過 5,000 字，請整理後再儲存，避免內容被截斷。'
@@ -78,17 +83,23 @@ export function productDraftError(draft: ProductDraft) {
 }
 
 export function productActionPayload(draft: ProductDraft, id?: string) {
+  const stockBySize = draftSizeStock(draft)
   return {
     ...draft,
     action: id ? 'update_product' : 'create_product',
     ...(id ? { productId: id } : {}),
     price: Math.round(Number(draft.price || 0) * 100),
-    stockQuantity: Number(draft.stockQuantity || 0),
+    stockQuantity: stockBySize ? Object.values(stockBySize).reduce((sum, value) => sum + value, 0) : Number(draft.stockQuantity || 0),
+    stockBySize,
     sizes: draft.sizes.join('、'),
     specifications: draft.specifications.map((item) => ({ label: item.label.trim(), value: item.value.trim() })).filter((item) => item.label && item.value),
     // Keep specifications independent; only legacy highlights and care notes join the intro.
     highlights: '', usageNotes: '',
   }
+}
+
+function draftSizeStock(draft: ProductDraft) {
+  return draft.trackStockBySize ? Object.fromEntries(draft.sizes.map((size) => [size, Number(draft.stockBySize[size] || 0)])) : null
 }
 
 export function filterProducts(products: AdminEditableProduct[], query: string, filter: ProductFilter) {

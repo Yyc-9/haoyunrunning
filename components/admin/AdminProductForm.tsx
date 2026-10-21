@@ -17,7 +17,7 @@ type Props = {
   uploadMedia?: ProductMediaUpload
 }
 
-const commonSizes = ['XS', 'S', 'M', 'L', 'XL', '2XL']
+const commonSizes = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL']
 
 function MediaState({ ready, changed, count }: { ready: boolean; changed: boolean; count?: number }) {
   const { language } = useLanguage()
@@ -57,6 +57,22 @@ export default function AdminProductForm({ product, categories = [], runAction, 
 
   function change<K extends keyof ProductDraft>(key: K, value: ProductDraft[K]) {
     setDraft((current) => ({ ...current, [key]: value }))
+    setMessage('')
+  }
+
+  function toggleSize(size: string) {
+    if (draft.trackStockBySize && draft.sizes.includes(size) && Number(draft.stockBySize[size]) > 0) {
+      setError('此尺寸仍有現貨，請先確認並將庫存調整為 0，再移除尺寸。')
+      return
+    }
+    change('sizes', draft.sizes.includes(size) ? draft.sizes.filter((value) => value !== size) : [...draft.sizes, size])
+  }
+
+  function toggleSizeStock(enabled: boolean) {
+    setDraft((current) => ({ ...current, trackStockBySize: enabled,
+      sizes: enabled && !current.sizes.length ? [...commonSizes] : current.sizes,
+      stockQuantity: current.trackStockBySize ? String(current.sizes.reduce((sum, size) => sum + Number(current.stockBySize[size] || 0), 0)) : current.stockQuantity,
+    }))
     setMessage('')
   }
 
@@ -164,21 +180,33 @@ export default function AdminProductForm({ product, categories = [], runAction, 
 
           <aside className="product-property-fields" aria-label="售價庫存與媒體">
             <label className="product-field"><span>售價（新台幣）</span><span className="product-currency-input"><span>NT$</span><input className="apple-input" value={draft.price} inputMode="decimal" onChange={(event) => change('price', event.target.value)} placeholder="洽詢售價可留空" /></span></label>
-            <label className="product-field"><span>庫存 <b>*</b></span><input className="apple-input" value={draft.stockQuantity} inputMode="numeric" onChange={(event) => change('stockQuantity', event.target.value)} /></label>
+            <label className="product-publish-toggle">
+              <span>按尺寸管理庫存</span>
+              <input type="checkbox" role="switch" aria-label="按尺寸管理庫存" checked={draft.trackStockBySize} onChange={(event) => toggleSizeStock(event.target.checked)} />
+              <span className="product-toggle-track" aria-hidden="true"><span /></span>
+            </label>
+            {!draft.trackStockBySize ? <label className="product-field"><span>總庫存 <b>*</b></span><input className="apple-input" value={draft.stockQuantity} inputMode="numeric" onChange={(event) => change('stockQuantity', event.target.value)} /></label> : <p className="product-field-hint">總庫存由各尺寸自動加總。首次啟用時，請依實際現貨填寫各尺寸數量。</p>}
             <label className="product-publish-toggle">
               <span>{language === 'en' ? 'Pre-order' : '預購'}</span>
               <input type="checkbox" role="switch" aria-label={language === 'en' ? 'Pre-order' : '預購'} checked={draft.isPreorder} onChange={(event) => change('isPreorder', event.target.checked)} />
               <span className="product-toggle-track" aria-hidden="true"><span /></span>
             </label>
             <p className="product-field-hint">{language === 'en' ? 'Pre-orders can be placed with zero stock and do not deduct stock. Include the expected availability in the description.' : '開啟後顯示「預購」，庫存為 0 也可下單，且不扣現貨庫存。預計到貨時間請填在商品簡介。'}</p>
-            <fieldset className="product-size-field"><legend>可選商品尺碼</legend><div className="product-size-options">{sizes.map((size) => <button type="button" key={size} aria-pressed={draft.sizes.includes(size)} onClick={() => change('sizes', draft.sizes.includes(size) ? draft.sizes.filter((value) => value !== size) : [...draft.sizes, size])}>{size}{draft.sizes.includes(size) ? <Check className="product-size-check" aria-hidden="true" /> : null}</button>)}</div>
+            <fieldset className="product-size-field"><legend>可選商品尺碼</legend><div className="product-size-options">{sizes.map((size) => <button type="button" key={size} aria-pressed={draft.sizes.includes(size)} onClick={() => toggleSize(size)}>{size}{draft.sizes.includes(size) ? <Check className="product-size-check" aria-hidden="true" /> : null}</button>)}</div>
               {customSizeOpen ? <div className="product-custom-size"><input className="apple-input" aria-label="自訂尺碼" value={customSize} onChange={(event) => setCustomSize(event.target.value)} placeholder="如：F、均碼" onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addCustomSizes() } }} /><button type="button" className="product-text-action" onClick={addCustomSizes}>加入</button><button type="button" aria-label="取消自訂尺碼" onClick={() => setCustomSizeOpen(false)}><X className="h-4 w-4" /></button></div> : <button type="button" className="product-text-action product-custom-size-trigger" onClick={() => setCustomSizeOpen(true)}><Plus className="h-3.5 w-3.5" />自訂尺碼</button>}
               <p className="product-field-hint">不分尺碼的商品可全部不選。</p>
             </fieldset>
 
+            {draft.trackStockBySize ? <fieldset className="product-size-field">
+              <legend>各尺寸現貨庫存</legend>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{sizes.filter((size) => draft.sizes.includes(size)).map((size) => <label key={size} className="product-field"><span>{size}</span><input className="apple-input" aria-label={`${size} 庫存`} type="number" min="0" max="1000000" step="1" value={draft.stockBySize[size] ?? '0'} onChange={(event) => change('stockBySize', { ...draft.stockBySize, [size]: event.target.value })} /></label>)}</div>
+              <p className="mt-3 text-sm font-semibold" aria-live="polite">現貨合計：{draft.sizes.reduce((sum, size) => sum + Number(draft.stockBySize[size] || 0), 0)} 件</p>
+              <p className="product-field-hint">預購結束後，填入扣除預購訂單後的剩餘現貨，關閉「預購」並儲存。商品保持上架，即可按尺寸繼續販售。</p>
+            </fieldset> : null}
+
             <fieldset className="product-specifications-field" aria-describedby={specificationsHintId}>
               <legend>商品規格</legend>
-              <p id={specificationsHintId} className="product-field-hint">每組規格選一項，以逗號、頓號或換行分隔。所有規格共用上方售價與總庫存；說明文字請放商品簡介。</p>
+              <p id={specificationsHintId} className="product-field-hint">每組規格選一項，以逗號、頓號或換行分隔。所有規格共用上方售價；{draft.trackStockBySize ? '同尺寸的款式與規格共用該尺寸庫存' : '所有款式與規格共用總庫存'}。說明文字請放商品簡介。</p>
               {draft.specifications.length ? <div className="product-specification-list">
                 {draft.specifications.map((specification, index) => (
                   <div key={index} className="product-specification-row">

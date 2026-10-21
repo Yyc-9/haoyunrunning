@@ -7,6 +7,7 @@ const { PGlite } = await import(process.env.PGLITE_MODULE ? pathToFileURL(proces
 const db = new PGlite()
 const migration = await readFile(new URL('../supabase/migrations/20260905001751_shop_selectable_specifications.sql', import.meta.url), 'utf8')
 const preorderMigration = await readFile(new URL('../supabase/migrations/20261020085639_shop_preorders.sql', import.meta.url), 'utf8')
+const sizeMigration = await readFile(new URL('../supabase/migrations/20261021063037_shop_size_inventory.sql', import.meta.url), 'utf8')
 let checks = 0
 const check = (message) => { checks += 1; console.log(`PASS ${message}`) }
 try {
@@ -34,6 +35,8 @@ try {
   await db.exec(migration)
   await db.exec(preorderMigration)
   await db.exec(preorderMigration)
+  await db.exec(sizeMigration)
+  await db.exec(sizeMigration)
   check('additive migration can be reapplied')
   const specs = [{ label: '顏色', value: '黑色、白色' }, { label: '包裝', value: '單件\n套裝' }, { label: '尺寸', value: 'M、S' }]
   await db.query('insert into shop_products (id, name, price, stock_quantity, specifications, sizes) values ($1, $2, $3, $4, $5, $6)', ['shirt', '測試上衣', 98000, 10, JSON.stringify(specs), JSON.stringify(['S', 'M'])])
@@ -44,7 +47,7 @@ try {
   let number = 0
   const order = async (items) => (await db.query('select create_shop_order_with_specs($1, null, $2, $3, $4, $5, $6) as result', [`TEST-${++number}`, '測試', 'local-only', '', '', JSON.stringify(items)])).rows[0].result
   const snapshot = async () => ({
-    stock: (await db.query('select id, stock_quantity from shop_products order by id')).rows,
+    stock: (await db.query('select id, stock_quantity, stock_by_size from shop_products order by id')).rows,
     orders: (await db.query('select count(*)::integer as count from shop_orders')).rows[0].count,
     lines: (await db.query('select count(*)::integer as count from shop_order_items')).rows[0].count,
   })
@@ -137,6 +140,59 @@ try {
   await db.exec("update shop_products set active = true, price = 0 where id = 'preorder'")
   await rejectWithoutMutation([{ productId: 'preorder', quantity: 1 }], /尚未設定售價/)
   check('preorders still require an active product and an authoritative positive price')
+
+  await db.exec(`insert into shop_products (id, name, price, stock_quantity, sizes, stock_by_size)
+    values ('sized', '尺寸上衣', 10000, 999, '["XS","M","3XL"]', '{"XS":0,"M":3,"3XL":5}')`)
+  const sizeStock = async () => (await db.query("select stock_by_size from shop_products where id = 'sized'")).rows[0].stock_by_size
+  assert.equal(await stock('sized'), 8)
+  const sized = (size, quantity = 1) => ({ productId: 'sized', size, quantity })
+  await rejectWithoutMutation([sized('XS')], /庫存不足/)
+  await rejectWithoutMutation([sized('M', 2), sized('M', 2)], /庫存不足/)
+  const sizeOrder = await order([sized('M', 3), sized('3XL', 2)])
+  assert.deepEqual(await sizeStock(), { XS: 0, M: 0, '3XL': 3 })
+  assert.equal(await stock('sized'), 3)
+  await rejectWithoutMutation([sized('M')], /庫存不足/)
+  await db.query('select delete_shop_order_with_inventory($1)', [sizeOrder.id])
+  assert.deepEqual(await sizeStock(), { XS: 0, M: 3, '3XL': 5 })
+  check('sizes have independent stock; duplicate lines cannot oversell; deletion restores each exact size')
+
+  for (const value of ['[]', '{"XS":0,"M":-1,"3XL":1}', '{"XS":0,"M":0.5,"3XL":1}', '{"XS":0,"M":"1","3XL":1}', '{"XS":0,"M":1000001,"3XL":0}', '{"M":1}']) {
+    await assert.rejects(db.query("update shop_products set stock_by_size = $1 where id = 'sized'", [value]), /庫存/)
+  }
+  check('database validates size maps independently of the browser and recomputes totals')
+
+  await db.exec("update shop_products set is_preorder = true where id = 'sized'")
+  const sizePreorder = await order([sized('XS', 20)])
+  assert.deepEqual(await sizeStock(), { XS: 0, M: 3, '3XL': 5 })
+  await db.exec(`update shop_products set is_preorder = false, stock_by_size = '{"XS":2,"M":3,"3XL":5}' where id = 'sized'`)
+  const restocked = await order([sized('XS')])
+  await db.query('select delete_shop_order_with_inventory($1)', [sizePreorder.id])
+  assert.deepEqual(await sizeStock(), { XS: 1, M: 3, '3XL': 5 })
+  check('preorders preserve physical size stock; restocking sells on the same listing and old preorders never restore stock')
+
+  await db.query("update shop_orders set stripe_session_id = 'size-session' where id = $1", [restocked.id])
+  await db.query("select release_shop_order_inventory($1, 'size-session')", [restocked.id])
+  await db.query("select release_shop_order_inventory($1, 'size-session')", [restocked.id])
+  await db.query('select delete_shop_order_with_inventory($1)', [restocked.id])
+  assert.deepEqual(await sizeStock(), { XS: 2, M: 3, '3XL': 5 })
+  check('size-stock expiry and subsequent deletion restore only once')
+
+  const reservedSize = await order([sized('XS', 2)])
+  await assert.rejects(db.exec(`update shop_products set sizes = '["M","3XL"]', stock_by_size = '{"M":3,"3XL":5}' where id = 'sized'`), /未完成訂單/)
+  await db.exec("update shop_products set stock_by_size = null where id = 'sized'")
+  await db.query('select delete_shop_order_with_inventory($1)', [reservedSize.id])
+  assert.equal(await stock('sized'), 10)
+  const legacySize = await order([sized('M', 2)])
+  await db.exec(`update shop_products set stock_by_size = '{"XS":2,"M":1,"3XL":5}' where id = 'sized'`)
+  await db.query('select delete_shop_order_with_inventory($1)', [legacySize.id])
+  assert.deepEqual(await sizeStock(), { XS: 2, M: 3, '3XL': 5 })
+  check('inventory-mode changes preserve cancellation accounting and reserved sizes cannot be removed')
+
+  const legacyResult = (await db.query(`select create_shop_order_with_stock('LEGACY', null, '測試', 'local', '', '', $1) as result`, [JSON.stringify([{ product_id: 'sized', size: 'XS', quantity: 2 }])])).rows[0].result
+  assert.equal((await sizeStock()).XS, 0)
+  await assert.rejects(db.query(`select create_shop_order_with_stock('LEGACY2', null, '測試', 'local', '', '', $1)`, [JSON.stringify([{ product_id: 'sized', size: 'XS', quantity: 1 }])]), /庫存不足/)
+  await db.query('select delete_shop_order_with_inventory($1)', [legacyResult.id])
+  check('legacy checkout RPC cannot bypass size inventory')
   console.log(`${checks} isolated SQL checks passed.`)
 } finally {
   await db.close()

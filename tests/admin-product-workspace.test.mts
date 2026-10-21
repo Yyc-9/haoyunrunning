@@ -18,6 +18,22 @@ const product = {
   stockQuantity: 24, active: true,
 }
 
+test('尺寸庫存草稿獨立保存並計算總數，切換預購不清空現貨', () => {
+  const stocked = { ...product, stockBySize: { S: 3, M: 5 } }
+  const draft = productDraft(stocked)
+  draft.stockBySize.S = '2'
+  assert.equal(stocked.stockBySize.S, 3)
+  assert.equal(productDraftError(draft), '')
+  const payload = productActionPayload({ ...draft, isPreorder: true }, product.id)
+  assert.deepEqual(payload.stockBySize, { S: 2, M: 5 })
+  assert.equal(payload.stockQuantity, 7)
+  assert.equal(payload.isPreorder, true)
+  assert.equal(productDraftError({ ...draft, stockBySize: { S: '-1', M: '3' } }).includes('整數'), true)
+  assert.notEqual(productDraftError({ ...draft, sizes: [] }), '')
+  assert.equal(productActionPayload(productDraft(product)).stockBySize, null)
+  assert.deepEqual(productActionPayload({ ...productDraft(product), trackStockBySize: true }).stockBySize, { S: 0, M: 0 })
+})
+
 test('預購可保留零庫存，儲存與重新編輯不會遺失，也不列為低庫存', () => {
   const preorder = { ...product, stockQuantity: 0, isPreorder: true }
   const draft = productDraft(preorder)

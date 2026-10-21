@@ -31,6 +31,7 @@ export type ShopProduct = {
   variants?: ProductVariant[]
   sizes?: string[]
   stockQuantity: number
+  stockBySize?: Record<string, number> | null
   isPreorder?: boolean
   active: boolean
 }
@@ -82,6 +83,7 @@ export type ShopProductRow = {
   variants: unknown
   sizes: unknown
   stock_quantity: number | null
+  stock_by_size?: Record<string, number> | null
   is_preorder?: boolean | null
   active: boolean | null
 }
@@ -268,6 +270,7 @@ export function shopProductFromRow(row: ShopProductRow): ShopProduct {
     variants: productVariants(row.variants),
     sizes: stringArray(row.sizes),
     stockQuantity: row.stock_quantity ?? 0,
+    stockBySize: row.stock_by_size ?? null,
     isPreorder: row.is_preorder === true,
     active: row.active ?? true,
   }
@@ -277,6 +280,23 @@ export function getCartProductId(cartId: string) {
   return cartId.split(':')[0] || cartId
 }
 
-export function availableProductQuantity(product: Pick<ShopProduct, 'stockQuantity' | 'isPreorder'>, cartQuantity = 0) {
-  return product.isPreorder ? Number.POSITIVE_INFINITY : Math.max(0, product.stockQuantity - cartQuantity)
+export function availableProductQuantity(product: Pick<ShopProduct, 'stockQuantity' | 'stockBySize' | 'isPreorder'>, cartQuantity = 0, size?: string) {
+  const stock = product.stockBySize != null
+    ? (size && Object.hasOwn(product.stockBySize, size) ? product.stockBySize[size] : 0)
+    : product.stockQuantity
+  return product.isPreorder ? Number.POSITIVE_INFINITY : Math.max(0, stock - cartQuantity)
+}
+
+export function sharesProductStock(product: Pick<ShopProduct, 'id' | 'stockBySize'>, item: { productId: string; size?: string }, size?: string) {
+  return item.productId === product.id && (product.stockBySize == null || item.size === size)
+}
+
+export function sizeStockError(value: unknown, sizes: string[]): string {
+  if (value == null) return ''
+  if (typeof value !== 'object' || Array.isArray(value) || !sizes.length || sizes.length > 100) return '請選擇尺碼並填寫各尺寸庫存。'
+  const entries = Object.entries(value)
+  if (entries.length !== sizes.length || entries.some(([size]) => !sizes.includes(size))) return '各尺寸庫存必須與商品尺碼一致。'
+  if (entries.some(([, stock]) => typeof stock !== 'number' || !Number.isInteger(stock) || stock < 0 || stock > 1_000_000)) return '各尺寸庫存必須是介於 0 與 1,000,000 的整數。'
+  if (entries.reduce((sum, [, stock]) => sum + Number(stock), 0) > 1_000_000) return '總庫存不可超過 1,000,000。'
+  return ''
 }

@@ -10,7 +10,7 @@ import { useCart, type CartItem } from '@/app/cart-provider'
 import { useLanguage } from '@/app/language-context'
 import { toEnglishWebsiteText } from '@/lib/english-website'
 import { useToast } from '@/app/toast-provider'
-import { availableProductQuantity, type ShopProduct } from '@/lib/shop-products'
+import { availableProductQuantity, sharesProductStock, type ShopProduct } from '@/lib/shop-products'
 import { formatSelectedSpecifications, specificationSelectionError } from '@/lib/product-specifications'
 
 type ShopCartDrawerProps = {
@@ -90,9 +90,9 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
     const product = getProduct(item)
     if (product) {
       const otherQuantity = items
-        .filter((cartItem) => cartItem.productId === item.productId && cartItem.id !== item.id)
+        .filter((cartItem) => sharesProductStock(product, cartItem, item.size) && cartItem.id !== item.id)
         .reduce((sum, cartItem) => sum + cartItem.quantity, 0)
-      const maxQuantity = availableProductQuantity(product, otherQuantity)
+      const maxQuantity = availableProductQuantity(product, otherQuantity, item.size)
 
       if (quantity > maxQuantity) {
         showToast(english ? `Not enough stock for ${toEnglishWebsiteText(product.name)}` : `${product.name} 庫存不足`, 'error')
@@ -171,8 +171,8 @@ export default function ShopCartDrawer({ products, open, onOpenChange }: ShopCar
                       const currentImage = product?.variants?.find((variant) => variant.id === item.variantId)?.image || product?.image || item.image
                       const remaining = product
                         ? availableProductQuantity(product, items
-                          .filter((cartItem) => cartItem.productId === item.productId)
-                          .reduce((sum, cartItem) => sum + cartItem.quantity, 0))
+                          .filter((cartItem) => sharesProductStock(product, cartItem, item.size))
+                          .reduce((sum, cartItem) => sum + cartItem.quantity, 0), item.size)
                         : null
 
                       return (

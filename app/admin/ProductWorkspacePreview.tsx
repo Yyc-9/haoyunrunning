@@ -49,6 +49,7 @@ export default function ProductWorkspacePreview() {
       name: String(action.name), category: String(action.category),
       price: Number(action.price), priceLabel: `NT$ ${Number(action.price) / 100}`,
       stockQuantity: Number(action.stockQuantity), active: action.active === true,
+      stockBySize: action.stockBySize as Record<string, number> | null,
       isPreorder: action.isPreorder === true,
       image: String(action.image), video: String(action.video || ''),
       summary: String(action.summary || ''), description: String(action.description || ''),

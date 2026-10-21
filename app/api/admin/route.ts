@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { readAllRowsResult } from '@/lib/supabase-pagination'
 import { getAdminProfile } from '@/lib/admin-auth'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
-import { shopProductFromRow, type ShopProductRow } from '@/lib/shop-products'
+import { shopProductFromRow, sizeStockError, type ShopProductRow } from '@/lib/shop-products'
 import { formatSelectedSpecifications } from '@/lib/product-specifications'
 import { allCourses } from '@/lib/goodluck-data'
 import { coachPublicProfilesFromRows, getDefaultCourseCoachKeys, type CoachPublicProfile, type CoachPublicProfileRow } from '@/lib/coach-profiles'
@@ -263,8 +263,8 @@ type AdminPatchBody =
   | { action?: 'delete_order'; orderId?: string; orderKind?: 'course' | 'shop' }
   | { action?: 'bind_student'; studentId?: string; coachId?: string }
   | { action?: 'unbind_student'; bindingId?: string }
-  | { action?: 'update_product'; productId?: string; name?: string; category?: string; stockQuantity?: number; isPreorder?: boolean; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; variants?: Array<{ id?: string; name?: string; image?: string; detailImages?: string[] }>; summary?: string; description?: string; gallery?: string[]; highlights?: string; specifications?: Array<{ label?: string; value?: string }>; usageNotes?: string; externalUrl?: string }
-  | { action?: 'create_product'; name?: string; category?: string; stockQuantity?: number; isPreorder?: boolean; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; variants?: Array<{ id?: string; name?: string; image?: string; detailImages?: string[] }>; summary?: string; description?: string; gallery?: string[]; highlights?: string; specifications?: Array<{ label?: string; value?: string }>; usageNotes?: string; externalUrl?: string }
+  | { action?: 'update_product'; productId?: string; name?: string; category?: string; stockQuantity?: number; stockBySize?: Record<string, number> | null; isPreorder?: boolean; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; variants?: Array<{ id?: string; name?: string; image?: string; detailImages?: string[] }>; summary?: string; description?: string; gallery?: string[]; highlights?: string; specifications?: Array<{ label?: string; value?: string }>; usageNotes?: string; externalUrl?: string }
+  | { action?: 'create_product'; name?: string; category?: string; stockQuantity?: number; stockBySize?: Record<string, number> | null; isPreorder?: boolean; price?: number; active?: boolean; image?: string; video?: string; tags?: string; sizes?: string; variants?: Array<{ id?: string; name?: string; image?: string; detailImages?: string[] }>; summary?: string; description?: string; gallery?: string[]; highlights?: string; specifications?: Array<{ label?: string; value?: string }>; usageNotes?: string; externalUrl?: string }
   | { action?: 'delete_product'; productId?: string }
   | { action?: 'save_site_content'; section?: string; value?: unknown }
   | { action?: 'save_site_contents'; entries?: Array<{ section?: string; value?: unknown }> }
@@ -522,7 +522,7 @@ export async function GET(request: NextRequest) {
     readAllRowsResult((from,to) => supabaseAdmin!.from('training_plans').select('student_id, created_at').order('created_at',{ascending:false}).order('id').range(from,to)),
     readAllRowsResult((from,to) => supabaseAdmin!.from('training_feedback').select('student_id, created_at').order('created_at',{ascending:false}).order('id').range(from,to)),
     readAllRowsResult((from,to) => supabaseAdmin!.from('shop_products')
-      .select('id, name, category, price, price_label, image, video, rating, reviews, tags, summary, description, gallery, highlights, specifications, usage_notes, external_url, variants, sizes, stock_quantity, is_preorder, active')
+      .select('id, name, category, price, price_label, image, video, rating, reviews, tags, summary, description, gallery, highlights, specifications, usage_notes, external_url, variants, sizes, stock_quantity, stock_by_size, is_preorder, active')
       .is('deleted_at',null).order('category').order('name').order('id').range(from,to)),
     readAllRowsResult((from,to) => supabaseAdmin!.from('shop_orders')
       .select('id, order_number, customer_name, contact, email, fulfillment_note, item_count, status, transfer_last_five, payment_submitted_at, reviewed_at, review_note, subtotal, total_amount, payment_reference, payment_account_id, payment_account_label, inventory_reserved, created_at')
@@ -1830,6 +1830,9 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (body.action === 'update_product') {
+    const sizes = [...new Set(commaSeparated(body.sizes))]
+    const inventoryError = sizeStockError(body.stockBySize, sizes)
+    if (inventoryError) return json({ error: inventoryError }, { status: 400 })
     const productId = cleanText(body.productId)
     const name = cleanText(body.name).slice(0, 180)
     const category = cleanText(body.category).slice(0, 100)
@@ -1866,7 +1869,7 @@ export async function PATCH(request: NextRequest) {
       return json({ error: '請完整填寫每一個商品款式、款式主圖與有效的詳情圖片。' }, { status: 400 })
     }
 
-    if (!Number.isInteger(stockQuantity) || stockQuantity < 0) {
+    if (!Number.isInteger(stockQuantity) || stockQuantity < 0 || stockQuantity > 1_000_000) {
       return json({ error: '庫存數量必須是 0 或正整數。' }, { status: 400 })
     }
 
@@ -1880,6 +1883,7 @@ export async function PATCH(request: NextRequest) {
         name,
         category,
         stock_quantity: stockQuantity,
+        ...(body.stockBySize !== undefined ? { stock_by_size: body.stockBySize } : {}),
         ...(typeof body.isPreorder === 'boolean' ? { is_preorder: body.isPreorder } : {}),
         price,
         price_label: price > 0 ? `NT$${Math.round(price / 100)}` : '洽詢售價',
@@ -1893,7 +1897,7 @@ export async function PATCH(request: NextRequest) {
         specifications,
         usage_notes: lineSeparated(body.usageNotes),
         external_url: externalUrl,
-        sizes: commaSeparated(body.sizes),
+        sizes,
         variants,
         active,
       })
@@ -1910,6 +1914,9 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (body.action === 'create_product') {
+    const sizes = [...new Set(commaSeparated(body.sizes))]
+    const inventoryError = sizeStockError(body.stockBySize, sizes)
+    if (inventoryError) return json({ error: inventoryError }, { status: 400 })
     const name = cleanText(body.name).slice(0, 180)
     const category = cleanText(body.category).slice(0, 100)
     const image = cleanText(body.image)
@@ -1972,8 +1979,9 @@ export async function PATCH(request: NextRequest) {
         usage_notes: lineSeparated(body.usageNotes),
         external_url: externalUrl,
         variants,
-        sizes: commaSeparated(body.sizes),
+        sizes,
         stock_quantity: stockQuantity,
+        stock_by_size: body.stockBySize ?? null,
         is_preorder: body.isPreorder === true,
         active,
       })
