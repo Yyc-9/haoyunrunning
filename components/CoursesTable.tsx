@@ -8,6 +8,7 @@ import { useSiteContent } from '@/app/site-content-provider'
 import { compareCourses, courseMatchesCity, displayCourseCityFilter, displayCourseLocation, displayCourseTime, getCourseCityOptions, normalizeWeekday, orderedWeekdays } from '@/lib/course-sort'
 import { formatCourseWeekday } from '@/lib/course-weekday'
 import { toEnglishWebsiteText } from '@/lib/english-website'
+import { courseTimetableName } from '@/lib/course-name'
 
 const weekdays = orderedWeekdays
 
@@ -17,14 +18,6 @@ function getCourseLevel(name: string): Exclude<LevelFilter, 'all'> {
   if (name.includes('初心') || name.includes('初階') || name.includes('初阶')) return 'beginner'
   if (name.includes('PB')) return 'elite'
   return 'advanced'
-}
-
-function getCourseShortName(name: string) {
-  return name
-    .replace(/^2026\s*/, '')
-    .replace(/^好運跑步訓練營\s*X\s*/, '')
-    .replace(/^(?:週|周|星期)[一二三四五六日天]/, '')
-    .trim()
 }
 
 function getCourseTone(level: Exclude<LevelFilter, 'all'>) {
@@ -140,7 +133,7 @@ export default function CoursesTable() {
                     <Link key={course.slug} href={`/courses/${course.slug}`} className={`group block rounded-lg border p-4 transition active:scale-[0.99] ${getCourseTone(getCourseLevel(course.name))}`}>
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="text-base font-black leading-6">{localeText(getCourseShortName(course.name))}</p>
+                          <p className="text-base font-black leading-6">{localeText(courseTimetableName(course.name, course.timetableName))}</p>
                           <p className="mt-2 flex items-center gap-1.5 text-xs font-black opacity-75">
                             <Clock3 className="h-3.5 w-3.5 shrink-0" />
                             {localeText(displayCourseTime(course.classTime))}
@@ -178,7 +171,7 @@ export default function CoursesTable() {
                       return (
                         <Link key={course.slug} href={`/courses/${course.slug}`} className={`course-event-card group block rounded-lg border p-3 transition hover:-translate-y-0.5 hover:shadow-md ${getCourseTone(getCourseLevel(course.name))}`}>
                           <div className="flex items-start justify-between gap-2">
-                            <p className="text-sm font-black leading-5">{localeText(getCourseShortName(course.name))}</p>
+                            <p className="text-sm font-black leading-5">{localeText(courseTimetableName(course.name, course.timetableName))}</p>
                             <ArrowUpRight className="h-4 w-4 shrink-0 opacity-45 transition group-hover:opacity-100" />
                           </div>
                           {time ? (

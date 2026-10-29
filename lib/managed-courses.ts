@@ -3,7 +3,7 @@ import { coachPublicProfileToCoach, getStaticCoachKey, type CoachPublicProfileMa
 import { compareCourses, normalizeCourseLocation } from '@/lib/course-sort'
 import type { CourseOverride } from '@/lib/site-content'
 
-export type ManagedCourse = Omit<(typeof allCourses)[number], 'slug'> & { slug: string }
+export type ManagedCourse = Omit<(typeof allCourses)[number], 'slug'> & { slug: string; timetableName?: string }
 
 const legacyTargetAudiences = new Set([
   '適合業餘跑者、目標賽事備賽者、追求 PB 的進階與菁英跑者。',

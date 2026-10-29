@@ -21,6 +21,7 @@ export type CourseOverride = {
   active?: boolean
   templateSlug?: string
   name?: string
+  timetableName?: string
   weekday?: string
   location?: string
   period?: string
@@ -650,6 +651,7 @@ export function normalizeCourseOverrides(value: unknown): Record<string, CourseO
       active: override.active !== false,
       templateSlug: /^[a-z0-9-]{1,120}$/.test(templateSlug) ? templateSlug : undefined,
       name: cleanString(override.name, 180),
+      timetableName: cleanString(override.timetableName, 180),
       weekday: cleanString(override.weekday, 20),
       location: cleanString(override.location, 100),
       period: cleanString(override.period, 160),

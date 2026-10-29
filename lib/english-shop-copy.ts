@@ -1,5 +1,12 @@
 // Storefront interface and the repository's standard product copy.
 export const shopEnglishCopy: Record<string, string> = {
+  '請登入後重新確認取貨班級。': 'Sign in and confirm your pickup class again.',
+  '取貨班級暫時無法讀取，請稍後重試。': 'Pickup classes are temporarily unavailable. Please try again.',
+  '取貨班級讀取失敗。': 'Unable to load pickup classes.',
+  '正在確認取貨班級，請稍候。': 'Checking pickup classes. Please wait.',
+  '請選擇取貨班級。': 'Choose a pickup class.',
+  '取貨班級已變更，請重新確認。': 'Pickup classes have changed. Please confirm again.',
+  '匯款後五碼無效。': 'Invalid last five digits of the transfer account.',
   '關閉提示': 'Dismiss notification',
   '返回購物車': 'Back to cart',
   '購物車資料格式無效。': 'Invalid cart data.',

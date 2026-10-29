@@ -297,6 +297,7 @@ function courseDraft(course: CourseSummary, override?: CourseOverride): CourseOv
     active: override?.active !== false,
     templateSlug: override?.templateSlug || course.slug,
     name: override?.name || course.name,
+    timetableName: override?.timetableName ?? '',
     weekday: override?.weekday || course.weekday,
     location: override?.location || course.location,
     period: override?.period || course.period,
@@ -1248,6 +1249,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
             {selectedCourse ? (
             <fieldset disabled={selectedSeason.status === 'archived'} className="grid gap-4 p-5 md:grid-cols-2 disabled:opacity-70">
               <Field label="課程名稱"><input value={String(draft.name ?? '')} onChange={(e) => setDraft((current) => ({ ...current, name: e.target.value }))} className="apple-input" /></Field>
+              <Field label={english ? 'Timetable display name' : '課表顯示名稱'}><input value={String(draft.timetableName ?? '')} onChange={(e) => setDraft((current) => ({ ...current, timetableName: e.target.value }))} className="apple-input" maxLength={180} placeholder={english ? 'Leave blank to hide the year and quarter automatically' : '留白時自動隱藏年份與季度，例如週一竹北夜跑'} /><p className="mt-2 text-xs leading-5 text-apple-gray-500">{english ? 'Shown on the desktop and mobile timetable. Enrollment and attendance keep the original class name.' : '用於手機及電腦課表；報名與考勤仍保留原本的完整班名。'}</p></Field>
               <Field label="星期"><select value={String(draft.weekday ?? '').replace('周', '週')} onChange={(e) => setDraft((current) => ({ ...current, weekday: e.target.value }))} className="apple-input"><option value="">請選擇星期</option>{orderedWeekdays.map((weekday) => <option key={weekday} value={weekday}>{weekday}</option>)}</select></Field>
               <Field label="城市 / 地點"><input value={String(draft.location ?? '')} onChange={(e) => setDraft((current) => ({ ...current, location: e.target.value }))} className="apple-input" /></Field>
               <Field label="課程週期"><input value={String(draft.period ?? '')} onChange={(e) => setDraft((current) => ({ ...current, period: e.target.value }))} className="apple-input" placeholder="例如 7/14 - 9/29" /></Field>

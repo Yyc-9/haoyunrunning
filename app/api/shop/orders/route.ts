@@ -22,6 +22,7 @@ type OrderBody = {
   email?: string
   fulfillmentNote?: string
   transferLastFive?: string
+  pickupCourseId?: string
   items?: OrderItemInput[]
 }
 
@@ -56,7 +57,12 @@ export async function POST(request: NextRequest) {
   const body = (parsedBody && typeof parsedBody === 'object' ? parsedBody : {}) as OrderBody
   const customerName = cleanText(body.customerName)
   const contact = cleanText(body.contact)
-  const email = cleanText(body.email)
+  const email = cleanText(body.email).toLowerCase()
+  const verifiedEmail = user?.email_confirmed_at ? user.email : undefined
+  const pickupCourseId = cleanText(body.pickupCourseId)
+  if (pickupCourseId && (!verifiedEmail || !/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(pickupCourseId))) {
+    return NextResponse.json({ error: '請登入後重新確認取貨班級。' }, { status: 400 })
+  }
   const fulfillmentNote = cleanText(body.fulfillmentNote)
   const transferLastFive = cleanText(body.transferLastFive).replace(/\D/g, '').slice(-5)
   if (!Array.isArray(body.items) || body.items.length > 100 || body.items.some((item) => !item || typeof item !== 'object')) {
@@ -90,7 +96,7 @@ export async function POST(request: NextRequest) {
   }
 
   // A versioned RPC fails closed if the specification migration has not been applied.
-  const { data, error } = await supabaseAdmin.rpc('create_shop_order_with_specs', {
+  const { data, error } = await supabaseAdmin.rpc('create_shop_order_with_pickup', {
     p_order_number: createOrderNumber(),
     p_user_id: user?.id ?? null,
     p_customer_name: customerName,
@@ -98,6 +104,10 @@ export async function POST(request: NextRequest) {
     p_email: email,
     p_fulfillment_note: fulfillmentNote,
     p_items: items,
+    p_match_email: verifiedEmail || email,
+    p_pickup_course_id: pickupCourseId || null,
+    p_transfer_last_five: transferLastFive,
+    p_require_selection: Boolean(verifiedEmail),
   })
 
   if (error || !data) {
@@ -123,23 +133,7 @@ export async function POST(request: NextRequest) {
   const paymentSubmittedAt = new Date().toISOString()
   const paymentReference = cleanText(order.orderNumber)
 
-  // Keep the inventory-aware database function compatible, then attach the
-  // transfer proof collected at checkout. Fulfillment remains running-class pickup.
-  const { error: pickupUpdateError } = await supabaseAdmin
-    .from('shop_orders')
-    .update({
-      status: 'pending_review',
-      transfer_last_five: transferLastFive,
-      payment_submitted_at: paymentSubmittedAt,
-      payment_method: 'bank_transfer',
-      payment_reference: paymentReference,
-      payment_account_id: null,
-      payment_account_label: '好運跑班官方匯款帳戶',
-    })
-    .eq('id', orderId)
-  if (pickupUpdateError) {
-    return NextResponse.json({ error: '訂單已建立，但匯款資料寫入失敗，請聯絡好運協助處理。' }, { status: 500 })
-  }
+  // Inventory, transfer proof and pickup assignment commit together in the RPC.
 
   return NextResponse.json({
     order: {

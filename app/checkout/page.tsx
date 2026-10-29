@@ -44,6 +44,34 @@ export default function CheckoutPage() {
   const [order, setOrder] = useState<CreatedOrder | null>(null)
   const [catalog, setCatalog] = useState<ShopProduct[] | null>(null)
   const [catalogError, setCatalogError] = useState('')
+  const [pickupOptions, setPickupOptions] = useState<Array<{ id: string; name: string }>>([])
+  const [pickupCourseId, setPickupCourseId] = useState('')
+  const [pickupError, setPickupError] = useState('')
+  const [pickupLoading, setPickupLoading] = useState(true)
+
+  useEffect(() => {
+    let alive = true
+    let generation = 0
+    async function loadPickup() {
+      const requestId = ++generation
+      if (alive) { setPickupLoading(true); setPickupError(''); setPickupCourseId(''); setPickupOptions([]) }
+      try {
+        const session = supabase ? (await supabase.auth.getSession()).data.session : null
+        const response = await fetch('/api/shop/pickup-options', {
+          cache: 'no-store',
+          headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+        })
+        const payload = await response.json()
+        if (!response.ok) throw new Error(payload.error || '取貨班級讀取失敗。')
+        if (alive && requestId === generation) setPickupOptions(payload.options ?? [])
+      } catch (error) {
+        if (alive && requestId === generation) setPickupError(error instanceof Error ? error.message : '取貨班級讀取失敗。')
+      } finally { if (alive && requestId === generation) setPickupLoading(false) }
+    }
+    void loadPickup()
+    const subscription = supabase?.auth.onAuthStateChange(() => { setTimeout(() => { if (alive) void loadPickup() }, 0) })
+    return () => { alive = false; subscription?.data.subscription.unsubscribe() }
+  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -70,6 +98,10 @@ export default function CheckoutPage() {
   const submitOrder = async () => {
     setError('')
     setOrder(null)
+    if (pickupLoading || pickupError || (pickupOptions.length > 1 && !pickupCourseId)) {
+      setError(pickupError || (pickupLoading ? '正在確認取貨班級，請稍候。' : '請選擇取貨班級。'))
+      return
+    }
 
     if (items.length === 0) {
       setError('購物車沒有商品。')
@@ -105,7 +137,7 @@ export default function CheckoutPage() {
           'Content-Type': 'application/json',
           ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
-        body: JSON.stringify({ ...form, fulfillmentNote, transferLastFive, items }),
+        body: JSON.stringify({ ...form, fulfillmentNote, transferLastFive, items, pickupCourseId }),
       })
       const payload = (await response.json().catch(() => ({}))) as { order?: CreatedOrder; error?: string }
 
@@ -207,6 +239,14 @@ export default function CheckoutPage() {
                   </label>
                 </section>
 
+                {pickupOptions.length > 1 ? <label className="block sm:col-span-2">
+                  <span className="mb-2 block text-sm font-bold">{english ? 'Pickup class' : '取貨班級'}</span>
+                  <select className="apple-input" value={pickupCourseId} onChange={(event) => setPickupCourseId(event.target.value)}>
+                    <option value="">{english ? 'Choose a class' : '請選擇取貨班級'}</option>
+                    {pickupOptions.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
+                  </select>
+                </label> : null}
+                {pickupError ? <p role="alert" className="text-sm text-red-700 sm:col-span-2">{pickupError}</p> : null}
                 <label className="block sm:col-span-2">
                   <span className="mb-2 block text-sm font-bold text-apple-gray-700">訂單備註</span>
                   <textarea className="apple-input min-h-24 resize-y" value={customerNote} onChange={(event) => setCustomerNote(event.target.value)} placeholder="尺寸或其他需求（選填）" />

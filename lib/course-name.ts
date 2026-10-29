@@ -7,3 +7,13 @@ export function seasonCourseName(name: string, code: string) {
     .replace(/\s+/gu, '')
   return short ? code.replace('-', '') + short : name
 }
+
+/** Timetable labels are independent of the season-specific enrollment name. */
+export function courseTimetableName(name: string, customName?: string) {
+  if (customName?.trim()) return customName.trim()
+  return name.trim()
+    .replace(/^(?:\d{4}\s*-?\s*)?Q[1-4]\s*/iu, '')
+    .replace(/^\d{4}\s*/u, '')
+    .replace(/^好運跑步訓練營\s*[XＸ×]\s*/u, '')
+    .trim()
+}
