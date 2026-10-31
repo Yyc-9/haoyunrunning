@@ -4,23 +4,28 @@ import { createRequire } from 'node:module'
 import vm from 'node:vm'
 import test from 'node:test'
 import * as model from '../lib/finance-shop.ts'
+import * as invoiceModel from '../lib/shop-invoice.ts'
 const require = createRequire(import.meta.url)
 const ts = require('typescript')
 const id = '33333333-3333-4333-8333-333333333333'
 const valid = { orderId: id, status: 'approved', reason: '已核實款項', confirmReceipt: true, updatedAt: '2026-10-31T00:00:00Z' }
-function harness(deny = 0, rpcError: string | null = null, readOnly = false) {
+function harness(deny = 0, rpcError: string | null = null, readOnly = false, detailOrder?: Record<string, unknown>) {
   const calls: Array<{ name: string; args: unknown[] }> = []
   const result = { data: [], count: 0, error: null }
   const query: Record<string, unknown> = {}
-  for (const name of ['select','eq','in','gte','lt','or','order']) query[name] = (...args: unknown[]) => { calls.push({ name, args }); return query }
+  let table = ''
+  for (const name of ['select','eq','in','gte','lt','lte','or','order','limit']) query[name] = (...args: unknown[]) => { calls.push({ name, args }); return query }
+  query.maybeSingle = async () => ({ error: null, data: table === 'shop_orders' ? detailOrder ?? null : { email:'buyer@example.test',created_at:'2026-10-01T00:00:00Z',source:'course_payment',registration_status:'active',invoiceDelivery:'carrier',invoiceDetail:'/ABC1234',taxInvoiceInfo:'Fixture company' } })
+  query.then = (resolve: (value: unknown) => void) => Promise.resolve(result).then(resolve)
   query.range = (...args: unknown[]) => { calls.push({ name: 'range', args }); return Promise.resolve(result) }
   const routes: Record<string, (r: Request) => Promise<Response>> = {}
   vm.runInNewContext(ts.transpileModule(readFileSync(new URL('../app/api/finance/shop/route.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, {
     exports: routes, URL, require(name: string) {
       if (name === 'next/server') return { NextResponse: { json: (body: unknown, init: ResponseInit) => Response.json(body, init) } }
       if (name === '@/lib/finance-shop') return model
+      if (name === '@/lib/shop-invoice') return invoiceModel
       if (name === '@/lib/finance-access') return { financeNoStoreHeaders: () => ({ 'Cache-Control': 'no-store' }), authenticateFinanceRequest: async () => deny ? { response: Response.json({ error: 'denied' }, { status: deny }) } : { user: { id: 'verified-actor' }, readOnly } }
-      if (name === '@/lib/supabase-server') return { supabaseAdmin: { from: (...args: unknown[]) => { calls.push({ name: 'from', args }); return query }, rpc: async (...args: unknown[]) => { calls.push({ name: 'rpc', args }); return { data: { id }, error: rpcError ? { message: rpcError } : null } } } }
+      if (name === '@/lib/supabase-server') return { supabaseAdmin: { from: (...args: unknown[]) => { table = String(args[0]); calls.push({ name: 'from', args }); return query }, rpc: async (...args: unknown[]) => { calls.push({ name: 'rpc', args }); return { data: { id }, error: rpcError ? { message: rpcError } : null } } } }
       throw new Error(name)
     },
   })
@@ -71,4 +76,23 @@ test('list uses bank-transfer scope, bounded pagination, Taiwan month and saniti
 test('month bounds handle December rollover and invalid formats', () => {
   assert.deepEqual(model.financeShopMonthRange('2026-12'), { from: '2026-11-30T16:00:00.000Z', to: '2026-12-31T16:00:00.000Z' })
   for (const value of ['2026-00','2026-1','text','']) assert.equal(model.financeShopMonthRange(value), null)
+})
+
+test('old order detail only uses same-email registration before purchase, returning a labeled invoice reference', async () => {
+  const h=harness(0,null,false,{id,email:'buyer@example.test',created_at:'2026-10-15T00:00:00Z'})
+  const response=await h.send('GET',undefined,'?orderId='+id)
+  assert.equal(response.status,200)
+  const body=await response.json()
+  assert.equal(body.order.invoice.source,'registration');assert.equal(body.order.invoice.invoiceDetail,'/ABC1234')
+  assert.ok(h.calls.some(c=>c.name==='eq'&&c.args[0]==='email'&&c.args[1]==='buyer@example.test'))
+  assert.ok(h.calls.some(c=>c.name==='lte'&&c.args[0]==='created_at'&&c.args[1]==='2026-10-15T00:00:00Z'))
+  assert.equal(body.order.payload,undefined)
+  assert.ok(h.calls.filter(c=>c.name==='select').some(c=>String(c.args[0]).includes('invoiceDetail:payload->>invoiceDetail')))
+})
+test('saved order invoice bypasses registration lookup even if current enrollment information differs', async () => {
+  const h=harness(0,null,false,{id,email:'buyer@example.test',created_at:'2026-10-15T00:00:00Z',invoice_delivery:'carrier',invoice_detail:'/ZZZ1234'})
+  const response=await h.send('GET',undefined,'?orderId='+id)
+  const body=await response.json()
+  assert.equal(body.order.invoice.source,'order');assert.equal(body.order.invoice.invoiceDetail,'/ZZZ1234')
+  assert.equal(h.calls.some(c=>c.name==='from'&&c.args[0]==='signup_leads'),false)
 })

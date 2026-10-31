@@ -257,6 +257,8 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
 
   function exportRoster() {
     const headers = ['類型', '季度', '訂單編號', '姓名', '信箱', '班級或商品', '身分', '金額', listKind === 'shop' ? '取貨方式' : '後五碼', '狀態', '管理備註', '提交時間']
+    const invoiceLabels = ['發票方式', '載具號碼／發票信箱', '統編與抬頭', '發票資料來源']
+    if (listKind === 'shop') headers.push(...invoiceLabels)
     const rows = filtered.map((order) => [
       order.orderKind === 'shop' ? '商城' : '課程',
       order.seasonName,
@@ -270,6 +272,7 @@ export default function AdminEnrollmentAnalytics({ orders, courseCapacity, seaso
       statusLabel(order),
       order.reviewNote ?? '',
       order.submittedAt,
+      ...(listKind === 'shop' ? invoiceLabels.map(label => detail(order, label)) : []),
     ])
     const table = listKind === 'course' ? courseRosterTable(filtered, (order) => english ? toEnglishWebsiteText(statusLabel(order)) : statusLabel(order)) : { headers, rows }
     // Translate interface headers, never free-text values or identifying information.

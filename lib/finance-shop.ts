@@ -1,3 +1,5 @@
+import type { ShopInvoiceDisplay } from './shop-invoice'
+
 export const shopFinanceStates = {
   pending_review: '待核對', approved: '已入帳', rejected: '待補資料', pending_transfer: '未回報',
 } as const
@@ -9,6 +11,7 @@ export type FinanceShopOrder = {
   payment_account_label: string; payment_method: string; reviewed_at: string | null; review_note: string | null;
   pickup_class_name: string; pickup_status: string; inventory_reserved: boolean;
   invoice_delivery?: 'carrier' | 'email' | null; invoice_detail?: string | null; tax_invoice_info?: string | null;
+  invoice?: ShopInvoiceDisplay;
   shop_order_items: Array<{ id: string; name: string; quantity: number; price: number; size: string; variant_id: string; is_preorder: boolean; selected_specifications: Array<{ label?: string; value?: string }> }>;
 }
 export type FinanceShopAudit = { id: string; actor_id: string | null; action: 'approved' | 'rejected' | 'note'; reason: string; created_at: string }

@@ -7,6 +7,7 @@ import { readAllRowsResult } from '@/lib/supabase-pagination'
 import { getAdminProfile } from '@/lib/admin-auth'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { shopProductFromRow, sizeStockError, type ShopProductRow } from '@/lib/shop-products'
+import { shopInvoiceDisplay, shopInvoiceDetails } from '@/lib/shop-invoice'
 import { formatSelectedSpecifications } from '@/lib/product-specifications'
 import { allCourses } from '@/lib/goodluck-data'
 import { coachPublicProfilesFromRows, getDefaultCourseCoachKeys, type CoachPublicProfile, type CoachPublicProfileRow } from '@/lib/coach-profiles'
@@ -197,6 +198,9 @@ type ShopOrderRow = {
   payment_account_id: string | null
   payment_account_label: string | null
   inventory_reserved: boolean | null
+  invoice_delivery: string | null
+  invoice_detail: string | null
+  tax_invoice_info: string | null
   created_at: string
 }
 
@@ -525,7 +529,7 @@ export async function GET(request: NextRequest) {
       .select('id, name, category, price, price_label, image, video, rating, reviews, tags, summary, description, gallery, highlights, specifications, usage_notes, external_url, variants, sizes, stock_quantity, stock_by_size, is_preorder, active')
       .is('deleted_at',null).order('category').order('name').order('id').range(from,to)),
     readAllRowsResult((from,to) => supabaseAdmin!.from('shop_orders')
-      .select('id, order_number, customer_name, contact, email, fulfillment_note, item_count, status, transfer_last_five, payment_submitted_at, reviewed_at, review_note, subtotal, total_amount, payment_reference, payment_account_id, payment_account_label, inventory_reserved, created_at')
+      .select('id, order_number, customer_name, contact, email, fulfillment_note, item_count, status, transfer_last_five, payment_submitted_at, reviewed_at, review_note, subtotal, total_amount, payment_reference, payment_account_id, payment_account_label, inventory_reserved, invoice_delivery, invoice_detail, tax_invoice_info, created_at')
       .order('created_at',{ascending:false}).order('id').range(from,to)),
     readAllRowsResult((from,to) => supabaseAdmin!.from('shop_order_items').select('order_id, product_id, name, quantity, price, variant_id, size, selected_specifications').order('id').range(from,to)),
     readAllRowsResult((from,to) => supabaseAdmin!.from('shop_payment_accounts').select('id, label, account_name, bank_name, bank_code, account_number, active, weight, last_assigned_at, created_at, updated_at').order('created_at',{ascending:false}).order('id').range(from,to)),
@@ -896,7 +900,7 @@ export async function GET(request: NextRequest) {
         const option = [item.variant_id, item.size ? `尺碼 ${item.size}` : '', formatSelectedSpecifications(item.selected_specifications)].filter(Boolean).join(' / ')
         return `${item.name}${option ? ` - ${option}` : ''} x ${item.quantity}`
       }),
-      registrationDetails: [] as Array<{ label: string; value: string }>,
+      registrationDetails: shopInvoiceDetails(shopInvoiceDisplay(order, orders)),
       attendanceAnomalies: [],
       openAttendanceAnomalyCount: 0,
     }

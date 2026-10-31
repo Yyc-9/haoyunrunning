@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authenticateFinanceRequest, financeNoStoreHeaders } from '@/lib/finance-access'
 import { supabaseAdmin } from '@/lib/supabase-server'
 import { financeShopMonthRange, shopFinanceStates, validateShopReview } from '@/lib/finance-shop'
+import { shopInvoiceDisplay } from '@/lib/shop-invoice'
 
 export const runtime = 'nodejs'
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: financeNoStoreHeaders() })
@@ -21,7 +22,17 @@ export async function GET(request: NextRequest) {
       if (!order) return json({ error: '找不到匯款訂單。' }, 404)
       const { data: audit, error: auditError } = await supabaseAdmin!.from('finance_shop_review_audit').select('id,actor_id,action,reason,created_at').eq('order_id', id).order('created_at', { ascending: false }).limit(100)
       if (auditError) throw auditError
-      return json({ order, audit: audit ?? [] })
+      let invoice = shopInvoiceDisplay(order)
+      if (invoice.source === 'missing' && order.email) {
+        const { data: registration, error: referenceError } = await supabaseAdmin!.from('signup_leads')
+          .select('email,created_at,source,status,registration_status,invoiceDelivery:payload->>invoiceDelivery,invoiceDetail:payload->>invoiceDetail,taxInvoiceInfo:payload->>taxInvoiceInfo')
+          .eq('source', 'course_payment').eq('email', order.email.trim().toLowerCase())
+          .or('registration_status.eq.active,and(registration_status.is.null,status.neq.rejected)')
+          .lte('created_at', order.created_at).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(1).maybeSingle()
+        if (referenceError) throw referenceError
+        if (registration) invoice = shopInvoiceDisplay(order, [{ ...registration, payload: registration }])
+      }
+      return json({ order: { ...order, invoice }, audit: audit ?? [] })
     }
     const page = Number(params.get('page') || 1)
     if (!Number.isSafeInteger(page) || page < 1 || page > 100000) return json({ error: '頁碼無效。' }, 400)

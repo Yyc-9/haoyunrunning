@@ -1,5 +1,14 @@
 // Storefront interface and the repository's standard product copy.
 export const shopEnglishCopy: Record<string, string> = {
+  '載具號碼／發票信箱': 'Carrier number / invoice email',
+  '載具／發票信箱': 'Carrier / invoice email',
+  '發票資料來源': 'Invoice data source',
+  '本次訂單留存資料': 'Saved with this order',
+  '下單前同信箱的報名資料，僅供參考，請財務再次核對': 'Registration using the same email before purchase. Reference only; finance must verify it.',
+  '訂單未留存，亦無可參考的報名資料': 'Not saved with the order; no registration reference available.',
+  '未提供，請向學員確認': 'Not provided. Please confirm with the student.',
+  '開啟訂單確認': 'Open order to check',
+  '正在讀取發票資料…': 'Loading invoice details…',
   '請登入後重新確認取貨班級。': 'Sign in and confirm your pickup class again.',
   '取貨班級暫時無法讀取，請稍後重試。': 'Pickup classes are temporarily unavailable. Please try again.',
   '取貨班級讀取失敗。': 'Unable to load pickup classes.',
