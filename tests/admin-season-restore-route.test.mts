@@ -27,18 +27,15 @@ test('main admin actions reject every non-admin role before any write or archive
   const h=harness(role);assert.equal((await h.patch({...restore,action})).status,role?403:401);assert.equal(h.calls.length,0);assert.equal(h.guards(),0)
  }
 })
-test('both admins can restore with trusted actor and required reason; ordinary edits keep archive guard',async()=>{
+test('archived seasons cannot be restored even by admins; ordinary edits keep archive guard',async()=>{
  for(const actor of ['admin-one','admin-two']){
   const h=harness('admin',actor)
-  assert.equal((await h.patch({...restore,actorId:'forged'})).status,200)
-  assert.equal(h.calls[0].name,'admin_restore_season');assert.equal(h.calls[0].args.p_actor_id,actor);assert.equal(h.calls[0].args.p_reason,'Correct history');assert.equal(h.guards(),0)
-  assert.equal((await h.patch({...restore,action:'update_course_season_status',status:'active'})).status,409);assert.equal(h.guards(),1);assert.equal(h.calls.length,1)
- }
- const h=harness('admin');for(const body of [{...restore,reason:''},{...restore,seasonId:'bad'},{...restore,reason:'x'.repeat(801)}])assert.equal((await h.patch(body)).status,400)
- assert.equal(h.calls.length,0)
-})
-test('restore reports stale state, revoked actor and migration failure without false success',async()=>{
- for(const [message,status] of [['season_not_archived',409],['admin_required',403],['private SQL detail',503]] as const){
-  const response=await harness('admin','admin',{message}).patch(restore);assert.equal(response.status,status);assert.doesNotMatch(await response.text(),/private SQL detail/)
+  const response=await h.patch({...restore,actorId:'forged'})
+  assert.equal(response.status,409)
+  assert.match(await response.text(),/永久封存/)
+  assert.equal(h.calls.length,0)
+  assert.equal((await h.patch({...restore,action:'update_course_season_status',status:'active'})).status,409)
+  assert.equal(h.guards(),1)
+  assert.equal(h.calls.length,0)
  }
 })

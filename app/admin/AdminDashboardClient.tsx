@@ -36,7 +36,6 @@ import AdminCoachDuty from '@/components/admin/AdminCoachDuty'
 import AdminCoachCreator from '@/components/admin/AdminCoachCreator'
 import AdminAccountManager from '@/components/admin/AdminAccountManager'
 import AdminStudentEditor from '@/components/admin/AdminStudentEditor'
-import AdminSeasonRestore from '@/components/admin/AdminSeasonRestore'
 import AdminSeasonOverview from '@/components/admin/AdminSeasonOverview'
 import AdminFeedback, { FeedbackOverview, useFeedbackSummary } from '@/components/admin/AdminFeedback'
 import AdminMobileDashboard from '@/components/admin/AdminMobileDashboard'
@@ -928,7 +927,7 @@ export default function AdminDashboardClient() {
                   {seasonView === 'students' ? (
                     <AdminEnrollmentAnalytics orders={data.orders} courseCapacity={data.courseCapacity} seasons={data.courseSeasons} syncSources={data.seasonSyncSources} runAction={runAction} updatingId={updatingId} onTransferred={async () => { await loadDashboard(true) }} />
                   ) : (
-                    <><AdminSeasonRestore seasons={data.courseSeasons} runAction={runAction} /><AdminContentManager content={data.siteContent} courses={data.courses} seasons={data.courseSeasons} scope="seasons" onBack={() => setSeasonView('students')} runAction={runAction} /></>
+                    <><AdminContentManager content={data.siteContent} courses={data.courses} seasons={data.courseSeasons} scope="seasons" onBack={() => setSeasonView('students')} runAction={runAction} /></>
                   )}
                 </section>
               ) : null}

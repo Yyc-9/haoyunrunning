@@ -1013,16 +1013,7 @@ export async function PATCH(request: NextRequest) {
   const body = (await request.json().catch(() => ({}))) as AdminPatchBody
 
   if (body.action === 'restore_course_season') {
-    const seasonId = cleanText(body.seasonId)
-    const reason = typeof body.reason === 'string' ? body.reason.trim() : ''
-    if (!/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(seasonId) || !reason || reason.length > 800) return json({ error: '請選擇季度並填寫解除封存原因。' }, { status: 400 })
-    const { error } = await supabaseAdmin!.rpc('admin_restore_season', { p_actor_id: auth.user.id, p_season_id: seasonId, p_reason: reason })
-    if (error) {
-      if (error.message === 'season_not_archived') return json({ error: '季度已變更或不存在，請重新整理後再操作。' }, { status: 409 })
-      if (error.message === 'admin_required') return json({ error: '目前帳號沒有管理員權限。' }, { status: 403 })
-      return json({ error: '解除封存未完成，請確認資料庫更新與季度狀態後重試。' }, { status: 503 })
-    }
-    return json({ message: '季度已恢復為已結束；招生發布與自動同步維持關閉。' })
+    return json({ error: '季度已永久封存，不再提供解除封存。' }, { status: 409 })
   }
 
   const archiveError = await archivedSeasonResponse({
