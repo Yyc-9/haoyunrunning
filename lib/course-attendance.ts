@@ -144,6 +144,7 @@ export function validateMakeupTarget(input: {
   } | null
   targetSessionDate: string
   cancelled: boolean
+  coachBackfill?: boolean
   now?: Date
 }): MakeupTargetValidation {
   const { targetCourse } = input
@@ -168,7 +169,7 @@ export function validateMakeupTarget(input: {
   )) {
     return { valid: false, status: 400, message: '補課只能選擇原請假課次之後的課程。' }
   }
-  if (!isBeforeCourseStart(
+  if (!(input.coachBackfill && input.targetSessionDate >= new Date((input.now ?? new Date()).getTime() + 8 * 3600000 - 7 * 86400000).toISOString().slice(0, 10)) && !isBeforeCourseStart(
     input.targetSessionDate,
     targetCourse.classTime,
     input.now,

@@ -207,7 +207,7 @@ export default function CoachAttendanceClient() {
 
   useEffect(() => {
     setActiveFilter('unmarked')
-  }, [courseId, sessionDate])
+  }, [courseId, sessionDate, leaveEnrollment?.id])
 
   function selectCourse(nextCourseId: string) {
     const course = courses.find((item) => item.courseSeasonCourseId === nextCourseId)
@@ -226,11 +226,11 @@ export default function CoachAttendanceClient() {
 
   const loadLeaveOptions = useCallback(async (): Promise<CoachLeaveOption[]> => {
     const token = await getAccessToken()
-    const response = await fetch(`/api/coach/attendance?leaveOptionsFor=${encodeURIComponent(courseId)}&sessionDate=${encodeURIComponent(sessionDate)}`, { cache: 'no-store', headers: { Authorization: `Bearer ${token}` } })
+    const response = await fetch(`/api/coach/attendance?leaveOptionsFor=${encodeURIComponent(courseId)}&sessionDate=${encodeURIComponent(sessionDate)}&enrollmentId=${encodeURIComponent(leaveEnrollment?.id ?? '')}`, { cache: 'no-store', headers: { Authorization: `Bearer ${token}` } })
     const payload = await response.json()
     if (!response.ok) throw new Error(payload.error || '讀取補課課次失敗。')
     return payload.options ?? []
-  }, [courseId, sessionDate])
+  }, [courseId, sessionDate, leaveEnrollment?.id])
 
   async function saveLeave(choice: CoachLeaveChoice) {
     if (!leaveEnrollment) return
@@ -399,7 +399,7 @@ export default function CoachAttendanceClient() {
                               const Icon = option.icon
                               const active = row.status === option.value
                               const disabled = isSaving || isLoading || Boolean(selectedCancellation) || (option.value === 'excused'
-                                ? Boolean(makeup) || isFinalizedLeave(originalLeave?.status)
+                                ? sessionDate < new Date(Date.now() + 8 * 3600000 - 7 * 86400000).toISOString().slice(0, 10) || Boolean(makeup && (makeup.status === 'completed' || selfCheckin || row.status === 'present')) || isFinalizedLeave(originalLeave?.status)
                                 : isFutureSession || Boolean(originalLeave))
                               return <button key={option.value} type="button" disabled={disabled} aria-pressed={active} onClick={() => option.value === 'excused' ? openLeave(enrollment) : updateDraft(enrollment.id, { status: active ? 'unmarked' : option.value })} className={`inline-flex min-h-10 items-center justify-center gap-1 rounded-md border px-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${active ? option.tone : 'border-black/10 bg-white text-apple-gray-500 hover:bg-apple-gray-50'}`}><Icon className="h-3.5 w-3.5" /><span>{option.label}</span></button>
                             })}

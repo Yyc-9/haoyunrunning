@@ -151,7 +151,17 @@ export async function GET(request: NextRequest) {
     const date = request.nextUrl.searchParams.get('sessionDate') ?? ''
     if (!course?.sessionDates.includes(date)) return NextResponse.json({ error: '沒有這堂課的請假管理權限。' }, { status: 403, headers: noStoreHeaders })
     try {
-      return NextResponse.json({ options: await getCoachLeaveOptions(course.seasonId, leaveCourseId, date) }, { headers: noStoreHeaders })
+      const enrollmentId = request.nextUrl.searchParams.get('enrollmentId')
+      let originalHomeId = leaveCourseId
+      if (enrollmentId) {
+        const { data, error } = await supabaseAdmin!.from('course_makeup_requests')
+          .select('original_course_season_course_id').eq('enrollment_id', enrollmentId)
+          .eq('target_course_season_course_id', leaveCourseId).eq('target_session_date', date)
+          .in('status', ['scheduled', 'forfeited']).maybeSingle()
+        if (error) throw error
+        if (data) originalHomeId = data.original_course_season_course_id
+      }
+      return NextResponse.json({ options: await getCoachLeaveOptions(course.seasonId, leaveCourseId, date, originalHomeId) }, { headers: noStoreHeaders })
     } catch {
       return NextResponse.json({ error: '讀取補課課次失敗，請重試。' }, { status: 503, headers: noStoreHeaders })
     }
@@ -286,9 +296,16 @@ export async function POST(request: NextRequest) {
     const enrollmentId = cleanText(body.enrollmentId, 80)
     const { data: enrollment, error: enrollmentError } = await supabaseAdmin!.from('signup_leads')
       .select('id, course_season_course_id, billing_start_session_date').eq('id', enrollmentId).eq('source', 'course_payment').eq('registration_status', 'active')
-      .eq('season_id', course.seasonId).eq('course_season_course_id', courseSeasonCourseId).maybeSingle()
+      .eq('season_id', course.seasonId).maybeSingle()
     if (enrollmentError || !enrollment) return NextResponse.json({ error: '只能替本班有效報名的學員安排請假；補課不能再產生新的補課資格。' }, { status: 403, headers: noStoreHeaders })
-    if (!isEnrollmentInAttendanceSession(enrollment, courseSeasonCourseId, sessionDate)) return NextResponse.json({ error: '尚未到學員入班日期，不能登記本堂請假。' }, { status: 400, headers: noStoreHeaders })
+    if (enrollment.course_season_course_id !== courseSeasonCourseId) {
+      const { data: makeup, error } = await supabaseAdmin!.from('course_makeup_requests')
+        .select('id').eq('enrollment_id', enrollmentId).eq('season_id', course.seasonId)
+        .eq('target_course_season_course_id', courseSeasonCourseId).eq('target_session_date', sessionDate)
+        .in('status', ['scheduled', 'forfeited']).maybeSingle()
+      if (error || !makeup) return NextResponse.json({ error: '沒有可順延的本堂補課安排。' }, { status: 403, headers: noStoreHeaders })
+    }
+    if (enrollment.course_season_course_id === courseSeasonCourseId && !isEnrollmentInAttendanceSession(enrollment, courseSeasonCourseId, sessionDate)) return NextResponse.json({ error: '尚未到學員入班日期，不能登記本堂請假。' }, { status: 400, headers: noStoreHeaders })
     const { error } = await supabaseAdmin!.rpc('resolve_coach_course_leave', {
       p_enrollment_id: enrollmentId, p_course_id: courseSeasonCourseId, p_session_date: sessionDate,
       p_actor_id: access.user.id, p_mode: body.leaveMode,

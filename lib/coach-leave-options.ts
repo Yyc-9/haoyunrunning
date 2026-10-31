@@ -4,7 +4,7 @@ import { applyCourseOverrides } from '@/lib/managed-courses'
 import { supabaseAdmin } from '@/lib/supabase-server'
 
 // Only schedules and aggregate seat availability leave this helper, never another class's student data.
-export async function getCoachLeaveOptions(seasonId: string, homeCourseId: string, sessionDate: string): Promise<CoachLeaveOption[]> {
+export async function getCoachLeaveOptions(seasonId: string, homeCourseId: string, sessionDate: string, originalHomeId = homeCourseId): Promise<CoachLeaveOption[]> {
   const season = (await getCourseSeasons({ includeRegistrationStats: false })).find(item => item.id === seasonId)
   if (!season || !['active', 'enrolling'].includes(season.status)) return []
   const courses = applyCourseOverrides(season.courseOverrides, { onlyConfigured: true, includeInactive: true })
@@ -23,11 +23,11 @@ export async function getCoachLeaveOptions(seasonId: string, homeCourseId: strin
   return courses.flatMap(course => {
     const courseId = season.courseOfferingIds[course.slug]
     const billing = season.courseBillingConfigs[course.slug]
-    if (!courseId || !billing?.scheduleReady || courseId === homeCourseId) return []
+    if (!courseId || !billing?.scheduleReady || courseId === originalHomeId) return []
     const classTime = timeFor(courseId, course.classTime || course.time || '')
     const registered = (registrations.data ?? []).filter(item => item.course_season_course_id === courseId).length
     const sessions = billing.sessionDates.filter(date => validateMakeupTarget({
-      seasonId, seasonEndsOn: season.endsOn, homeCourseId, originalSessionDate: sessionDate,
+      seasonId, seasonEndsOn: season.endsOn, homeCourseId: originalHomeId, originalSessionDate: sessionDate, coachBackfill: true,
       originalClassTime: timeFor(homeCourseId, home.classTime || home.time || ''),
       targetCourse: { seasonId, courseId, sessionDates: billing.sessionDates, classTime }, targetSessionDate: date,
       cancelled: (cancellations.data ?? []).some(item => item.course_season_course_id === courseId && item.session_date === date),
