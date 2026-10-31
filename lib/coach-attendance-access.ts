@@ -3,6 +3,21 @@ export type SessionAccess = {
   sessionDates: readonly string[]
 }
 
+/** A regular student joins the roster on the enrolled starting date, inclusive.
+ * Explicit makeup attendance belongs to its target session, not the home course.
+ * Null dates retain compatibility with legacy and isolated-test enrollments.
+ */
+export function isEnrollmentInAttendanceSession(
+  enrollment: { id: string; course_season_course_id: string | null; billing_start_session_date?: string | null },
+  courseId: string,
+  sessionDate: string,
+  makeupEnrollmentIds: ReadonlySet<string> = new Set(),
+) {
+  if (!sessionDate) return false
+  if (enrollment.course_season_course_id !== courseId) return makeupEnrollmentIds.has(enrollment.id)
+  return !enrollment.billing_start_session_date || sessionDate >= enrollment.billing_start_session_date
+}
+
 export function canAccessCoachAssignment(assignment: {
   scheduled_coach_id: string
   actual_coach_id: string | null

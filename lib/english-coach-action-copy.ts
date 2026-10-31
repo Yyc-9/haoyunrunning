@@ -25,6 +25,8 @@ export const coachActionEnglishCopy: Record<string, string> = {
   '本堂目前標記為停課，請先恢復開課再儲存點名。': 'This session is cancelled. Restore it before saving attendance.',
   '已有請假或補課安排，原班請假紀錄必須保留。若需更正，請先由管理員核對補課狀態。': 'A leave or makeup arrangement already exists. Keep the original class leave record. Ask an administrator to check the makeup status before correcting it.',
   '點名名單包含不屬於本班、也未安排本堂補課的學員。': 'The roster includes students who are neither enrolled in this class nor scheduled for this makeup session.',
+  '點名名單包含尚未入班的學員，請重新載入本堂名單後再儲存。': 'The roster includes students whose enrollment has not started. Reload this session before saving.',
+  '尚未到學員入班日期，不能登記本堂請假。': 'Leave cannot be recorded for a session before the student’s enrollment start date.',
   '測試課次無效。': 'Invalid test session.',
   '目前不在簽到開放時間內；簽到僅限課前 15 分鐘至開課後 15 分鐘。': 'Check-in is closed. It is available from 15 minutes before until 15 minutes after the class starts.',
   '測試沙盒已記錄準時簽到。': 'On-time check-in recorded in the test sandbox.',

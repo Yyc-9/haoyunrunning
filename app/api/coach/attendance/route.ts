@@ -5,7 +5,7 @@ import { attendanceCourseLabel, taipeiDateKey, type CourseAttendanceStatus } fro
 import { getCourseSeasons } from '@/lib/course-seasons-server'
 import { applyCourseOverrides } from '@/lib/managed-courses'
 import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
-import { allowedSessionDateSet, filterCourseEnrollmentsByAccess, filterCourseMakeupsBySessionAccess, filterRowsBySessionAccess } from '@/lib/coach-attendance-access'
+import { allowedSessionDateSet, filterCourseEnrollmentsByAccess, filterCourseMakeupsBySessionAccess, filterRowsBySessionAccess, isEnrollmentInAttendanceSession } from '@/lib/coach-attendance-access'
 import { syncCoachSessionAssignments } from '@/lib/coach-session-duty'
 import { getCoachLeaveOptions } from '@/lib/coach-leave-options'
 import { getIsolatedMondayCourse, getIsolatedTestAccount, isolatedTestStudentFixtures, updateIsolatedTestState } from '@/lib/test-account'
@@ -285,9 +285,10 @@ export async function POST(request: NextRequest) {
     if (!['in_person', 'self_training'].includes(body.leaveMode ?? '')) return NextResponse.json({ error: '請選擇請假處理方式。' }, { status: 400, headers: noStoreHeaders })
     const enrollmentId = cleanText(body.enrollmentId, 80)
     const { data: enrollment, error: enrollmentError } = await supabaseAdmin!.from('signup_leads')
-      .select('id').eq('id', enrollmentId).eq('source', 'course_payment').eq('registration_status', 'active')
+      .select('id, course_season_course_id, billing_start_session_date').eq('id', enrollmentId).eq('source', 'course_payment').eq('registration_status', 'active')
       .eq('season_id', course.seasonId).eq('course_season_course_id', courseSeasonCourseId).maybeSingle()
     if (enrollmentError || !enrollment) return NextResponse.json({ error: '只能替本班有效報名的學員安排請假；補課不能再產生新的補課資格。' }, { status: 403, headers: noStoreHeaders })
+    if (!isEnrollmentInAttendanceSession(enrollment, courseSeasonCourseId, sessionDate)) return NextResponse.json({ error: '尚未到學員入班日期，不能登記本堂請假。' }, { status: 400, headers: noStoreHeaders })
     const { error } = await supabaseAdmin!.rpc('resolve_coach_course_leave', {
       p_enrollment_id: enrollmentId, p_course_id: courseSeasonCourseId, p_session_date: sessionDate,
       p_actor_id: access.user.id, p_mode: body.leaveMode,
@@ -365,7 +366,7 @@ export async function POST(request: NextRequest) {
   const [enrollmentResult, makeupResult, originalMakeupResult] = await Promise.all([
     supabaseAdmin!
       .from('signup_leads')
-      .select('id, name, email, season_id, course_season_course_id, course_slug, status')
+      .select('id, name, email, season_id, course_season_course_id, course_slug, status, billing_start_session_date')
       .in('id', enrollmentIds)
       .eq('source', 'course_payment')
       .eq('season_id', course.seasonId)
@@ -400,6 +401,10 @@ export async function POST(request: NextRequest) {
   })
   if (invalidEnrollment) {
     return NextResponse.json({ error: '點名名單包含不屬於本班、也未安排本堂補課的學員。' }, { status: 400, headers: noStoreHeaders })
+  }
+  const targetMakeupIds = new Set(targetMakeupsByEnrollment.keys())
+  if (enrollmentIds.some(id => !isEnrollmentInAttendanceSession(enrollmentsById.get(id)!, courseSeasonCourseId, sessionDate, targetMakeupIds))) {
+    return NextResponse.json({ error: '點名名單包含尚未入班的學員，請重新載入本堂名單後再儲存。' }, { status: 400, headers: noStoreHeaders })
   }
   if (requested.some(record => record.status === 'excused'
     && enrollmentsById.get(record.enrollmentId)?.course_season_course_id === courseSeasonCourseId

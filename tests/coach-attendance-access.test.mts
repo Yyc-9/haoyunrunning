@@ -8,7 +8,31 @@ import {
   filterCourseEnrollmentsByAccess,
   filterCourseMakeupsBySessionAccess,
   filterRowsBySessionAccess,
+  isEnrollmentInAttendanceSession,
 } from '../lib/coach-attendance-access.ts'
+
+test('late enrollees appear only from their starting class onward, irrespective of payment or prior-attendance claims', () => {
+  const late = { id: 'late', course_season_course_id: 'home', billing_start_session_date: '2026-10-15', status: 'pending_review', prior_attendance_claimed: true }
+  assert.equal(isEnrollmentInAttendanceSession(late, 'home', '2026-10-08'), false)
+  assert.equal(isEnrollmentInAttendanceSession(late, 'home', '2026-10-15'), true)
+  assert.equal(isEnrollmentInAttendanceSession(late, 'home', '2026-10-22'), true)
+  assert.equal(isEnrollmentInAttendanceSession({ ...late, status: 'approved' }, 'home', '2026-10-08'), false)
+  assert.equal(isEnrollmentInAttendanceSession(late, 'home', ''), false)
+})
+
+test('session roster counts exclude late students before admission while preserving regular and explicit makeup students', () => {
+  const rows = [
+    { id: 'regular', course_season_course_id: 'home', billing_start_session_date: '2026-10-01' },
+    { id: 'late', course_season_course_id: 'home', billing_start_session_date: '2026-10-15' },
+    { id: 'makeup', course_season_course_id: 'other', billing_start_session_date: '2026-10-01' },
+    { id: 'unrelated', course_season_course_id: 'other', billing_start_session_date: null },
+  ]
+  const roster = (date: string) => rows.filter(row => isEnrollmentInAttendanceSession(row, 'home', date, new Set(['makeup'])))
+  assert.deepEqual(roster('2026-10-08').map(row => row.id), ['regular', 'makeup'])
+  assert.deepEqual(roster('2026-10-15').map(row => row.id), ['regular', 'late', 'makeup'])
+  assert.equal(isEnrollmentInAttendanceSession(rows[1], 'home', '2026-10-08', new Set(['late'])), false)
+  assert.equal(isEnrollmentInAttendanceSession({ id:'legacy',course_season_course_id:'home',billing_start_session_date:null }, 'home', '2026-10-08'), true)
+})
 
 test('coach attendance includes assigned courses hidden from public enrollment', () => {
   const source = readFileSync(new URL('../app/api/coach/attendance/route.ts', import.meta.url), 'utf8')

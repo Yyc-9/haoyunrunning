@@ -8,6 +8,7 @@ import { isFinalizedLeave, type CoachLeaveOption, type CourseAttendanceStatus, t
 import CoachLeaveDialog, { type CoachLeaveChoice } from '@/components/CoachLeaveDialog'
 import { supabase } from '@/lib/supabase'
 import { attendanceVerification, type StudentCheckin } from '@/lib/student-checkin'
+import { isEnrollmentInAttendanceSession } from '@/lib/coach-attendance-access'
 
 type AttendanceDraftStatus = CourseAttendanceStatus | 'unmarked'
 type AttendanceFilter = CourseAttendanceStatus | 'makeup' | 'unmarked'
@@ -171,7 +172,7 @@ export default function CoachAttendanceClient() {
   const sessionMakeupEnrollmentIds = useMemo(() => new Set(makeups
     .filter((request) => request.target_course_season_course_id === courseId && request.target_session_date === sessionDate && ['scheduled', 'completed', 'forfeited'].includes(request.status))
     .map((request) => request.enrollment_id)), [courseId, makeups, sessionDate])
-  const roster = useMemo(() => enrollments.filter((enrollment) => enrollment.course_season_course_id === courseId || sessionMakeupEnrollmentIds.has(enrollment.id)), [courseId, enrollments, sessionMakeupEnrollmentIds])
+  const roster = useMemo(() => enrollments.filter((enrollment) => isEnrollmentInAttendanceSession(enrollment, courseId, sessionDate, sessionMakeupEnrollmentIds)), [courseId, sessionDate, enrollments, sessionMakeupEnrollmentIds])
   const savedByEnrollment = useMemo(() => new Map(attendance
     .filter((record) => record.course_season_course_id === courseId && record.session_date === sessionDate)
     .map((record) => [record.enrollment_id, record])), [attendance, courseId, sessionDate])
@@ -194,7 +195,7 @@ export default function CoachAttendanceClient() {
     result[status] += 1
     return result
   }, { present: 0, excused: 0, deducted: 0, unmarked: 0 } as Record<CourseAttendanceStatus | 'unmarked', number>), [draft, roster])
-  const makeupCount = sessionMakeupEnrollmentIds.size
+  const makeupCount = roster.filter(enrollment => sessionMakeupEnrollmentIds.has(enrollment.id)).length
   const visibleRoster = useMemo(() => roster.filter((enrollment) => activeFilter === 'makeup'
     ? sessionMakeupEnrollmentIds.has(enrollment.id)
     : (draft[enrollment.id]?.status ?? 'unmarked') === activeFilter), [activeFilter, draft, roster, sessionMakeupEnrollmentIds])
