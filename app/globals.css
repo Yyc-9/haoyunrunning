@@ -1860,7 +1860,7 @@ html[lang="en"] .home-hero-copy h1 {
     z-index: 52;
     display: grid;
     grid-template-columns: minmax(74px, 1fr) minmax(0, 2fr) minmax(44px, 1fr);
-    align-items: end;
+    align-items: center;
     min-height: calc(60px + var(--mobile-safe-top));
     padding: var(--mobile-safe-top) 12px 8px;
     border-bottom: 1px solid rgb(0 0 0 / 10%);
@@ -3028,4 +3028,22 @@ html[lang="en"] .home-hero-copy h1 {
   .home-course-preview-hero:hover .home-course-preview-image {
     transform: none;
   }
+}
+
+/* Keep native Safari single-select controls aligned with text inputs. */
+select.apple-input:not([multiple]):not([size]) {
+  min-height: 3.125rem;
+}
+
+select.apple-input:not([multiple]):not([size]),
+.mobile-lead-form select:not([multiple]):not([size]) {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-top: .75rem;
+  padding-bottom: .75rem;
+  padding-right: 2.5rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%2364748b%27 stroke-width=%272%27%3E%3Cpath d=%27m6 9 6 6 6-6%27/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right .875rem center;
+  background-size: 1rem;
 }

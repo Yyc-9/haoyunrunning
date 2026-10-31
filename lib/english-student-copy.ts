@@ -236,7 +236,7 @@ export const studentEnglishCopy: Record<string, string> = {
   '集中查看學員回饋、權限狀態與今日待處理事項。': 'Review student feedback, access status, and tasks for today in one place.',
   '學員狀態': 'Student status',
   '綁定學員後，查看目標、PB、班級與後續回饋狀態。': 'After linking students, view their goals, personal bests, classes, and feedback status.',
-  '進入課表面板，儲存後寫入 training_plans 並同步到學員端。': 'Open the training planner. Saved plans are shared with your students.',
+  '安排每週訓練內容，儲存後同步至學員課表。': 'Plan weekly training and save it to your students’ schedules.',
   '進入': 'Open',
   '目前沒有已確認入帳的開課中或招生中季度報名。請先選擇課程，完成匯款核對後即會建立正式班級資格。': 'You have no confirmed paid enrollment for an active or enrolling season. Choose a class; membership will become active once your transfer is verified.',
   '請完成匯款並回報後五碼；財務確認入帳後將自動開通課表。': 'Complete your transfer and report the last five account digits. Your training plan will become available after finance confirms payment.',

@@ -62,6 +62,7 @@ export const adminActionEnglishCopy: Record<string, string> = {
   '請先預覽並填寫修正原因。': 'Preview the changes and enter a reason first.',
   '批量考勤功能尚未完成資料庫更新，未修改任何記錄。': 'Bulk attendance correction requires a database update. No records were changed.',
   '季度已封存': 'Season archived',
+  '季度已永久封存，不再提供解除封存。': 'This season is permanently archived and cannot be reopened.',
   '課次已停課': 'Session cancelled',
   '缺少開課時間': 'Start time missing',
   '課次尚未開始': 'Session has not started',

@@ -488,7 +488,7 @@ export default function Navigation() {
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
             id="mobile-site-menu"
-            className="mobile-site-menu fixed inset-x-0 top-20 z-40 max-h-[calc(100vh-5rem)] overflow-y-auto border-b border-apple-gray-200 bg-white/95 backdrop-blur-glass xl:hidden"
+            className="mobile-site-menu fixed inset-x-0 top-20 z-40 max-h-[calc(100vh-5rem)] overflow-y-auto border-b border-apple-gray-200 bg-white xl:hidden"
           >
             <div className="container mx-auto px-4 py-6">
               <div className="space-y-4">

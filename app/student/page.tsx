@@ -628,7 +628,7 @@ export default function StudentPage() {
                   href: '/coach/planner',
                   icon: NotebookPen,
                   title: '課表面板',
-                  description: '進入課表面板，儲存後寫入 training_plans 並同步到學員端。',
+                  description: '安排每週訓練內容，儲存後同步至學員課表。',
                 },
               ].map((item) => (
                 <Link key={item.href} href={item.href} className="apple-card block p-6">

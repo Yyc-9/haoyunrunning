@@ -239,7 +239,7 @@ export const dictionary = {
       successTitle: '已收到你的參加意向',
       successDescription: '謝謝填寫。你可以同時關注或私訊 Instagram；後續如有活動時間、地點或流程變動，我們會再聯絡。',
       contactHint: '請至少填寫電話、Email 或 Instagram 其中一種聯絡方式。',
-      contactRequirement: '姓名必填；电话、Email、Instagram 请至少填写一项，方便后续联系。',
+      contactRequirement: '姓名必填；電話、Email、Instagram 請至少填寫一項，方便後續聯絡。',
       required: '（必填）',
       optionalField: '（選填）',
       optional: '可先不選',
