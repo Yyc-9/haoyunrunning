@@ -2,7 +2,7 @@
 
 import ShopPaymentInfo from '@/components/ShopPaymentInfo'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
   CheckCircle2,
@@ -20,6 +20,9 @@ import { supabase } from '@/lib/supabase'
 import { formatSelectedSpecifications, specificationSelectionError } from '@/lib/product-specifications'
 import MobileContextHeader from '@/components/MobileContextHeader'
 import type { ShopProduct } from '@/lib/shop-products'
+import { shopInvoiceError, shopInvoiceMethods } from '@/lib/shop-invoice'
+
+const emptyForm = { customerName: '', contact: '', email: '', invoiceDelivery: 'email', invoiceDetail: '', taxInvoiceInfo: '' }
 
 type CreatedOrder = {
   id: string
@@ -36,7 +39,11 @@ export default function CheckoutPage() {
   const english = language === 'en'
   const { items, itemCount, total, clear, removeItem, isReady } = useCart()
   const { brand } = useSiteContent()
-  const [form, setForm] = useState({ customerName: '', contact: '', email: '' })
+  const [form, setForm] = useState(emptyForm)
+  const [editingDetails, setEditingDetails] = useState(true)
+  const [prefilled, setPrefilled] = useState(false)
+  const dirtyFields = useRef(new Set<string>())
+  const loadedIdentity = useRef<string | null>(null)
   const [customerNote, setCustomerNote] = useState('')
   const [transferLastFive, setTransferLastFive] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -54,16 +61,31 @@ export default function CheckoutPage() {
     let generation = 0
     async function loadPickup() {
       const requestId = ++generation
-      if (alive) { setPickupLoading(true); setPickupError(''); setPickupCourseId(''); setPickupOptions([]) }
       try {
         const session = supabase ? (await supabase.auth.getSession()).data.session : null
+        const identity = session?.user.id ?? 'guest'
+        if (!alive || requestId !== generation || loadedIdentity.current === identity) return
+        if (loadedIdentity.current !== null) {
+          setForm(emptyForm); dirtyFields.current.clear(); setPrefilled(false); setEditingDetails(true)
+          setTransferLastFive(''); setCustomerNote('')
+        }
+        setPickupLoading(true); setPickupError(''); setPickupCourseId(''); setPickupOptions([])
         const response = await fetch('/api/shop/pickup-options', {
           cache: 'no-store',
           headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
         })
         const payload = await response.json()
         if (!response.ok) throw new Error(payload.error || '取貨班級讀取失敗。')
-        if (alive && requestId === generation) setPickupOptions(payload.options ?? [])
+        if (alive && requestId === generation) {
+          loadedIdentity.current = identity
+          setPickupOptions(payload.options ?? [])
+          if (payload.defaults) {
+            const defaults = payload.defaults as typeof emptyForm
+            setForm(current => Object.fromEntries(Object.keys(emptyForm).map(key => [key, dirtyFields.current.has(key) ? current[key as keyof typeof emptyForm] : defaults[key as keyof typeof emptyForm] || emptyForm[key as keyof typeof emptyForm]])) as typeof emptyForm)
+            setPrefilled(true)
+            if (!dirtyFields.current.size && defaults.customerName && defaults.contact && !shopInvoiceError(defaults)) setEditingDetails(false)
+          }
+        }
       } catch (error) {
         if (alive && requestId === generation) setPickupError(error instanceof Error ? error.message : '取貨班級讀取失敗。')
       } finally { if (alive && requestId === generation) setPickupLoading(false) }
@@ -91,6 +113,7 @@ export default function CheckoutPage() {
   }) : []
 
   const updateField = (field: keyof typeof form, value: string) => {
+    dirtyFields.current.add(field)
     setForm((current) => ({ ...current, [field]: value }))
     setError('')
   }
@@ -112,9 +135,12 @@ export default function CheckoutPage() {
       return
     }
     if (!form.customerName.trim() || !form.contact.trim()) {
+      setEditingDetails(true)
       setError('請填寫姓名和聯絡方式。')
       return
     }
+    const invoiceError = shopInvoiceError(form)
+    if (invoiceError) { setEditingDetails(true); setError(invoiceError); return }
     if (!/^\d{5}$/.test(transferLastFive)) {
       setError('請完成匯款，並填寫轉出帳號後五碼。')
       return
@@ -137,7 +163,7 @@ export default function CheckoutPage() {
           'Content-Type': 'application/json',
           ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
-        body: JSON.stringify({ ...form, fulfillmentNote, transferLastFive, items, pickupCourseId }),
+        body: JSON.stringify({ customerName: form.customerName, contact: form.contact, email: form.email, invoice: { invoiceDelivery: form.invoiceDelivery, invoiceDetail: form.invoiceDelivery === 'carrier' ? form.invoiceDetail.trim().toUpperCase() : form.invoiceDetail.trim(), taxInvoiceInfo: form.taxInvoiceInfo }, fulfillmentNote, transferLastFive, items, pickupCourseId }),
       })
       const payload = (await response.json().catch(() => ({}))) as { order?: CreatedOrder; error?: string }
 
@@ -147,7 +173,7 @@ export default function CheckoutPage() {
 
       setOrder(payload.order)
       clear()
-      setForm({ customerName: '', contact: '', email: '' })
+      setForm(emptyForm)
       setCustomerNote('')
       setTransferLastFive('')
     } catch (submitError) {
@@ -173,7 +199,7 @@ export default function CheckoutPage() {
   )
 
   return (
-    <div className="mobile-focused-main min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24">
+    <div className={`mobile-focused-main min-h-screen bg-gradient-to-b from-white via-apple-gray-50 to-white pt-24${prefilled ? ' checkout-prefilled' : ''}`}>
       <MobileContextHeader backHref="/shop" backLabel="購物車" title="確認訂單" />
       <section className="px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
         <div className="container mx-auto max-w-7xl">
@@ -181,7 +207,7 @@ export default function CheckoutPage() {
             <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-apple-blue">商店結帳</p>
             <h1 className="mb-4 text-4xl font-black text-apple-gray-900 md:text-5xl">確認訂單</h1>
             <p className="text-lg leading-8 text-apple-gray-600">
-	              填寫聯絡資料、依下方好運匯款帳戶完成轉帳，再提交訂單。款項核對完成後，團隊會聯絡你確認跑班自取時間與地點。
+                  確認聯絡、發票與取貨資料，完成匯款後填寫後五碼，即可送出訂單。
             </p>
           </div>
 
@@ -198,6 +224,15 @@ export default function CheckoutPage() {
               </div>
 
               <div className="grid gap-5 sm:grid-cols-2">
+                {pickupLoading && <p role="status" className="text-sm text-apple-gray-600 sm:col-span-2">正在帶入報名資料與取貨班級…</p>}
+                <div className="rounded-xl border border-black/10 bg-apple-gray-50 p-4 sm:col-span-2">
+                  <div className="flex items-start justify-between gap-3"><div><p className="font-bold">{prefilled ? '已帶入你的報名資料' : '本次訂購資料'}</p><p className="mt-1 text-sm leading-6 text-apple-gray-600">{[form.customerName, form.contact].filter(Boolean).join(' · ') || '請填寫聯絡與發票資料'}</p></div><button type="button" className="min-h-11 shrink-0 px-2 text-sm font-bold text-apple-blue" onClick={() => setEditingDetails(value => !value)}>{editingDetails ? '收起資料' : '修改資料'}</button></div>
+                  <p className="mt-2 break-all text-sm leading-6">發票：{shopInvoiceMethods[form.invoiceDelivery as keyof typeof shopInvoiceMethods]} {form.invoiceDetail || '尚未填寫'}</p>
+                  {form.taxInvoiceInfo && <p className="mt-1 break-words text-sm leading-6">統編與抬頭：{form.taxInvoiceInfo}</p>}
+                  <p className="mt-1 text-sm leading-6">取貨班級：{pickupOptions.length === 1 ? pickupOptions[0].name : pickupOptions.length > 1 ? pickupOptions.find(option => option.id === pickupCourseId)?.name || '請於下方選擇' : pickupLoading ? '確認中' : '由團隊聯絡確認'}</p>
+                </div>
+                {prefilled && shopInvoiceError(form) && <p role="alert" className="text-sm text-red-700 sm:col-span-2">{shopInvoiceError(form)}</p>}
+                {editingDetails && <>
                 <label className="block">
                   <span className="mb-2 block text-sm font-bold text-apple-gray-700">姓名 *</span>
                   <input required className="apple-input" value={form.customerName} onChange={(event) => updateField('customerName', event.target.value)} autoComplete="name" placeholder="收件人姓名" />
@@ -211,12 +246,23 @@ export default function CheckoutPage() {
                   <input type="email" className="apple-input" value={form.email} onChange={(event) => updateField('email', event.target.value)} autoComplete="email" placeholder="用於接收訂單通知（選填）" />
                 </label>
 
+                <label className="block sm:col-span-2"><span className="mb-2 block text-sm font-bold">發票寄送方式 *</span><select className="apple-input" value={form.invoiceDelivery} onChange={event => { updateField('invoiceDelivery', event.target.value); updateField('invoiceDetail', event.target.value === 'email' ? form.email : '') }}>{Object.entries(shopInvoiceMethods).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+                <label className="block sm:col-span-2"><span className="mb-2 block text-sm font-bold">{form.invoiceDelivery === 'carrier' ? '手機條碼載具' : '發票電子信箱'} *</span><input className="apple-input" type={form.invoiceDelivery === 'carrier' ? 'text' : 'email'} autoCapitalize={form.invoiceDelivery === 'carrier' ? 'characters' : 'none'} maxLength={form.invoiceDelivery === 'carrier' ? 8 : 320} value={form.invoiceDetail} onChange={event => updateField('invoiceDetail', form.invoiceDelivery === 'carrier' ? event.target.value.toUpperCase() : event.target.value)} placeholder={form.invoiceDelivery === 'carrier' ? '/ABC1234' : 'runner@example.com'} /></label>
+                <label className="block sm:col-span-2"><span className="mb-2 block text-sm font-bold">統一編號與發票抬頭（選填）</span><input className="apple-input" maxLength={300} value={form.taxInvoiceInfo} onChange={event => updateField('taxInvoiceInfo', event.target.value)} placeholder="需要公司報帳時填寫" /></label>
+                <p className="text-xs leading-5 text-apple-gray-500 sm:col-span-2">修改僅適用於本次訂單，不會變更原報名資料。</p>
+                </>}
+
+                {pickupOptions.length > 1 ? <label className="block sm:col-span-2">
+                  <span className="mb-2 block text-sm font-bold">取貨班級 *</span>
+                  <select className="apple-input" value={pickupCourseId} onChange={event => setPickupCourseId(event.target.value)}><option value="">請選擇取貨班級</option>{pickupOptions.map(option => <option key={option.id} value={option.id}>{option.name}</option>)}</select>
+                </label> : null}
+                {pickupError ? <p role="alert" className="text-sm text-red-700 sm:col-span-2">{pickupError}</p> : null}
                 <section aria-labelledby="shop-bank-transfer-title" className="rounded-2xl border border-amber-200 bg-[#f5f1eb] p-4 sm:col-span-2 sm:p-5">
                   <div className="flex items-start gap-3">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black text-white"><Landmark className="h-5 w-5" /></span>
                     <div>
                       <h3 id="shop-bank-transfer-title" className="font-black text-apple-gray-950">好運銀行匯款帳戶</h3>
-                      <p className="mt-1 text-sm leading-6 text-apple-gray-600">請依右側訂單小計完成匯款，並確認銀行機構、代碼與帳號後再轉帳。</p>
+                      <p className="mt-1 text-sm leading-6 text-apple-gray-600">請依訂單小計完成匯款，並確認銀行機構、代碼與帳號後再轉帳。</p>
                     </div>
                   </div>
                   <details className="group mt-4 overflow-hidden rounded-xl border border-black/10 bg-white">
@@ -239,14 +285,6 @@ export default function CheckoutPage() {
                   </label>
                 </section>
 
-                {pickupOptions.length > 1 ? <label className="block sm:col-span-2">
-                  <span className="mb-2 block text-sm font-bold">{english ? 'Pickup class' : '取貨班級'}</span>
-                  <select className="apple-input" value={pickupCourseId} onChange={(event) => setPickupCourseId(event.target.value)}>
-                    <option value="">{english ? 'Choose a class' : '請選擇取貨班級'}</option>
-                    {pickupOptions.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
-                  </select>
-                </label> : null}
-                {pickupError ? <p role="alert" className="text-sm text-red-700 sm:col-span-2">{pickupError}</p> : null}
                 <label className="block sm:col-span-2">
                   <span className="mb-2 block text-sm font-bold text-apple-gray-700">訂單備註</span>
                   <textarea className="apple-input min-h-24 resize-y" value={customerNote} onChange={(event) => setCustomerNote(event.target.value)} placeholder="尺寸或其他需求（選填）" />
@@ -265,7 +303,7 @@ export default function CheckoutPage() {
                         {item.selectedSpecifications?.length ? <p className="mt-1 break-words text-sm leading-6 text-apple-gray-600">{formatSelectedSpecifications(item.selectedSpecifications, english ? toEnglishWebsiteText : undefined)}</p> : null}
                         <p className="mt-1 text-sm text-apple-gray-500">{english ? `${item.size ? `Size ${item.size} · ` : ''}Quantity ${item.quantity}` : `${item.size ? `尺寸 ${item.size} · ` : ''}數量 ${item.quantity}`}</p>
                       </div>
-                      <span className="shrink-0 text-sm font-semibold text-apple-gray-700">NT$${((item.price * item.quantity) / 100).toFixed(0)}</span>
+                      <span className="shrink-0 text-sm font-semibold text-apple-gray-700">NT${((item.price * item.quantity) / 100).toFixed(0)}</span>
                     </div>
                   ))}
                 </div>

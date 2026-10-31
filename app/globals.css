@@ -2698,6 +2698,10 @@ html[lang="en"] .home-hero-copy h1 {
     order: -1;
   }
 
+  .checkout-prefilled .checkout-summary-card {
+    order: 1;
+  }
+
   .checkout-inline-submit {
     display: none;
   }

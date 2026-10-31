@@ -5,7 +5,7 @@ import { financeShopMonthRange, shopFinanceStates, validateShopReview } from '@/
 
 export const runtime = 'nodejs'
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: financeNoStoreHeaders() })
-const fields = 'id,order_number,customer_name,email,contact,total_amount,status,transfer_last_five,created_at,updated_at,payment_submitted_at,payment_account_label,payment_method,reviewed_at,review_note,pickup_class_name,pickup_status,inventory_reserved,shop_order_items(id,name,quantity,price,size,variant_id,is_preorder,selected_specifications)'
+const fields = 'id,order_number,customer_name,email,contact,total_amount,status,transfer_last_five,created_at,updated_at,payment_submitted_at,payment_account_label,payment_method,reviewed_at,review_note,pickup_class_name,pickup_status,inventory_reserved,invoice_delivery,invoice_detail,tax_invoice_info,shop_order_items(id,name,quantity,price,size,variant_id,is_preorder,selected_specifications)'
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 export async function GET(request: NextRequest) {
@@ -64,7 +64,8 @@ export async function PATCH(request: NextRequest) {
       inventory_review_required: [409, '此訂單的金額或庫存保留狀態需由管理員檢查，尚未更改入帳狀態。'],
     }
     const [status, message] = errors[error.message] ?? [500, '核帳未完成，請重新整理後確認狀態。']
+    if (status === 500) console.error('finance_shop_review_failed', { code: error.code, message: error.message })
     return json({ error: message }, status)
   }
-  return json({ order: data, message: body.status === 'approved' ? '已確認商城匯款入帳。' : '已標記待補資料，請聯絡學員確認匯款資訊。' })
+  return json({ order: data, message: body.status === 'note' ? '已儲存備註，入帳狀態未變更。' : body.status === 'approved' ? '已確認商城匯款入帳。' : '已標記待補資料，請聯絡學員確認匯款資訊。' })
 }

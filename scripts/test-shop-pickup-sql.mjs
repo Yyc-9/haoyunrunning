@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
+import { readFile, readdir } from 'node:fs/promises'
 import { pathToFileURL } from 'node:url'
 const { PGlite }=await import(process.env.PGLITE_MODULE ? pathToFileURL(process.env.PGLITE_MODULE).href : '@electric-sql/pglite')
 const db=new PGlite()
@@ -73,6 +73,20 @@ await db.query("update course_season_courses set course_data='{\"name\":\"改名
 assert.ok((await row(first.id)).pickup_class_name.includes('週四班'));pass('existing order class snapshot survives class rename')
 const permissions=(await db.query("select has_function_privilege('anon','shop_pickup_candidates(text)','execute') as anon,has_function_privilege('authenticated','shop_pickup_candidates(text)','execute') as member,has_function_privilege('service_role','shop_pickup_candidates(text)','execute') as server")).rows[0]
 assert.deepEqual(permissions,{anon:false,member:false,server:true});pass('email membership lookup restricted to server')
+const invoiceMigration=(await readdir(new URL('../supabase/migrations/',import.meta.url))).find(n=>n.endsWith('_shop_invoice_snapshot.sql'))
+assert.ok(invoiceMigration);await db.exec(await migration(invoiceMigration))
+const invoiceOrder=async invoice=>(await db.query("select create_shop_order_with_invoice($1,null,'測試','test-only','one@example.test','自取',$2,'one@example.test',null,'12345',true,$3) as result",['TEST-'+(++seq),JSON.stringify([{productId:'test',quantity:1}]),JSON.stringify(invoice)])).rows[0].result
+before=await snapshot()
+for(const invoice of [{},{invoiceDelivery:'carrier',invoiceDetail:'/ABC123'},{invoiceDelivery:'email',invoiceDetail:'bad'}]) await assert.rejects(invoiceOrder(invoice),/請確認發票/)
+assert.deepEqual(await snapshot(),before);pass('invalid invoices cannot create orders or deduct inventory')
+const invoiceResult=await invoiceOrder({invoiceDelivery:'carrier',invoiceDetail:'/AB+12.3',taxInvoiceInfo:'12345678 測試公司'})
+const invoiced=await row(invoiceResult.id)
+assert.equal(invoiced.invoice_detail,'/AB+12.3');assert.equal(invoiced.tax_invoice_info,'12345678 測試公司');assert.equal(invoiced.pickup_course_id,c1);assert.equal(invoiced.transfer_last_five,'12345');assert.equal(invoiced.total_amount,89000)
+assert.equal((await row(first.id)).invoice_delivery,null);pass('invoice snapshot, class, transfer and inventory are saved together; old orders stay unfilled')
+before=await snapshot()
+await db.exec("create function fail_invoice() returns trigger language plpgsql as $$begin if new.invoice_delivery is not null then raise exception 'test_invoice_failure';end if;return new;end;$$;create trigger fail_invoice before update on shop_orders for each row execute function fail_invoice();")
+await assert.rejects(invoiceOrder({invoiceDelivery:'email',invoiceDetail:'buyer@example.test'}),/test_invoice_failure/)
+assert.deepEqual(await snapshot(),before);pass('invoice-write failure rolls back the complete order and inventory')
 console.log(checks+' SQL regression groups passed; isolated database only.')
 } finally {await db.close()}
 

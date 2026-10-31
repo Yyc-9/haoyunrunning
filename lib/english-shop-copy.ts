@@ -14,6 +14,7 @@ export const shopEnglishCopy: Record<string, string> = {
   '購物車包含無效商品，請重新確認。': 'Your cart contains an invalid product. Review it before continuing.',
   '購物車沒有可提交的商品。': 'Your cart has no items that can be ordered.',
   '商城規格功能尚未完成資料庫升級，請聯絡好運協助，暫勿重複匯款。': 'Product options are temporarily unavailable. Contact Nurture for help and do not transfer payment again.',
+  '結帳頁已更新，請重新整理後確認發票資料，暫勿重複匯款。': 'Checkout has been updated. Refresh and confirm your invoice details. Do not transfer payment again.',
   '訂單已建立，但安全憑證產生失敗，請聯絡客服。': 'Your order was created, but its access token could not be generated. Contact support.',
   '訂單已建立，但匯款資料寫入失敗，請聯絡好運協助處理。': 'Your order was created, but the transfer details could not be saved. Contact Nurture for help.',
   '商城匯款資料請在結帳時一併提交。': 'Submit shop transfer details during checkout.',

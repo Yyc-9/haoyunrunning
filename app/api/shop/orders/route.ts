@@ -3,6 +3,7 @@ import { getAuthedUser, supabaseAdmin } from '@/lib/supabase-server'
 import { getCartProductId } from '@/lib/shop-products'
 import { createOrderAccessToken } from '@/lib/order-access'
 import { readSelectedSpecifications } from '@/lib/product-specifications'
+import { readShopInvoice, shopInvoiceError } from '@/lib/shop-invoice'
 
 type OrderItemInput = {
   id?: string
@@ -23,6 +24,7 @@ type OrderBody = {
   fulfillmentNote?: string
   transferLastFive?: string
   pickupCourseId?: string
+  invoice?: unknown
   items?: OrderItemInput[]
 }
 
@@ -64,6 +66,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '請登入後重新確認取貨班級。' }, { status: 400 })
   }
   const fulfillmentNote = cleanText(body.fulfillmentNote)
+  if (!body.invoice) return NextResponse.json({ error: '結帳頁已更新，請重新整理後確認發票資料，暫勿重複匯款。' }, { status: 409 })
+  const invoice = readShopInvoice(body.invoice)
+  const invoiceError = shopInvoiceError(invoice)
+  if (invoiceError) return NextResponse.json({ error: invoiceError }, { status: 400 })
   const transferLastFive = cleanText(body.transferLastFive).replace(/\D/g, '').slice(-5)
   if (!Array.isArray(body.items) || body.items.length > 100 || body.items.some((item) => !item || typeof item !== 'object')) {
     return NextResponse.json({ error: '購物車資料格式無效。' }, { status: 400 })
@@ -96,7 +102,7 @@ export async function POST(request: NextRequest) {
   }
 
   // A versioned RPC fails closed if the specification migration has not been applied.
-  const { data, error } = await supabaseAdmin.rpc('create_shop_order_with_pickup', {
+  const { data, error } = await supabaseAdmin.rpc('create_shop_order_with_invoice', {
     p_order_number: createOrderNumber(),
     p_user_id: user?.id ?? null,
     p_customer_name: customerName,
@@ -108,6 +114,7 @@ export async function POST(request: NextRequest) {
     p_pickup_course_id: pickupCourseId || null,
     p_transfer_last_five: transferLastFive,
     p_require_selection: Boolean(verifiedEmail),
+    p_invoice: invoice,
   })
 
   if (error || !data) {

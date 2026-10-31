@@ -49,6 +49,9 @@ test('review derives actor from session; ignores forged amounts and separates re
   const args = h.calls[0].args[1] as Record<string, unknown>
   assert.equal(args.p_actor_id, 'verified-actor'); assert.equal(args.p_expected_updated_at, valid.updatedAt); assert.equal(args.total_amount, undefined)
   assert.equal((await harness().send('PATCH', { ...valid, status: 'rejected', confirmReceipt: false })).status, 200)
+  const note = harness()
+  assert.equal((await note.send('PATCH', { ...valid, status: 'note', confirmReceipt: false })).status, 200)
+  assert.equal((note.calls[0].args[1] as Record<string,unknown>).p_status, 'note')
 })
 test('conflicts and paid/non-bank/unreserved orders are reported without fallback writes', async () => {
   for (const error of ['order_changed','already_approved','not_bank_transfer','inventory_review_required']) {

@@ -3,17 +3,22 @@ import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import vm from 'node:vm'
 import test from 'node:test'
+import * as invoiceModel from '../lib/shop-invoice.ts'
 const require=createRequire(import.meta.url)
 const ts=require('typescript')
 const id='33333333-3333-4333-8333-333333333333'
 function harness(file:string,user:Record<string,unknown>|null,admin=false,rpcError:unknown=null) {
   const calls:Array<{name:string;args:Record<string,unknown>}>=[]
   const api:Record<string,(r:Request)=>Promise<Response>>={}
+  const query:Record<string,unknown>={}
+  for(const name of ['select','eq','or','order','limit']) query[name]=(...args:unknown[])=>{calls.push({name,args:{values:args}});return query}
+  query.maybeSingle=async()=>({data:{name:'Own name',phone:'test-phone',invoiceDelivery:'手機條碼載具（請於下方欄位填寫）',invoiceDetail:'/ABC1234',taxInvoiceInfo:'Test company'},error:null})
   vm.runInNewContext(ts.transpileModule(readFileSync(new URL('../'+file,import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{
     exports:api,require(name:string) {
       if(name==='next/server')return{NextResponse:{json:(body:unknown,init:ResponseInit)=>Response.json(body,init)}}
       if(name==='@/lib/admin-auth')return{getAdminProfile:async()=>admin?{id:'actor'}:null}
-      if(name==='@/lib/supabase-server')return{getAuthedUser:async()=>user,supabaseAdmin:{rpc:async(name:string,args:Record<string,unknown>)=>{calls.push({name,args});return{data:name==='shop_pickup_candidates'?[{id,name:'Own class'}]:{id,orderNumber:'HYTEST'},error:rpcError}}}}
+      if(name==='@/lib/supabase-server')return{getAuthedUser:async()=>user,supabaseAdmin:{from:()=>query,rpc:async(name:string,args:Record<string,unknown>)=>{calls.push({name,args});return{data:name==='shop_pickup_candidates'?[{id,name:'Own class'}]:{id,orderNumber:'HYTEST'},error:rpcError}}}}
+      if(name==='@/lib/shop-invoice')return invoiceModel
       if(name==='@/lib/shop-products')return{getCartProductId:(v:string)=>v}
       if(name==='@/lib/order-access')return{createOrderAccessToken:()=> 'test-only'}
       if(name==='@/lib/product-specifications')return{readSelectedSpecifications:()=>[]}
@@ -33,6 +38,11 @@ test('public options lookup never accepts caller-supplied email or reveals unver
   assert.equal(response.status,200)
   assert.equal(h.calls[0].args.p_email,'verified@example.test')
   assert.match(response.headers.get('Cache-Control')!,/no-store/)
+  const payload=await response.json()
+  assert.equal(payload.defaults.invoiceDetail,'/ABC1234');assert.equal(payload.defaults.customerName,'Own name')
+  assert.ok(h.calls.some(c=>c.name==='eq'&&JSON.stringify(c.args.values)==='["email","verified@example.test"]'))
+  assert.doesNotMatch(JSON.stringify(payload),/someone-else|injury|emergency/)
+  assert.ok(String(h.calls.find(c=>c.name==='select')?.args.values).includes('invoiceDelivery:payload->>invoiceDelivery'))
 })
 test('pickup writes require admin, derive actor server-side and reject conflicts',async()=>{
   const body={orderId:id,courseId:null,status:'pending',updatedAt:'2026-10-29T00:00:00Z',actorId:'forged'}
@@ -47,10 +57,11 @@ test('pickup writes require admin, derive actor server-side and reject conflicts
   assert.equal((await conflict.send('PATCH',body)).status,409)
 })
 test('checkout matches verified account, never trusts caller pickup identity and returns no inferred guest membership',async()=>{
-  const body={customerName:'Test',contact:'test',email:'guest@example.test',transferLastFive:'12345',items:[{productId:'shirt',quantity:1}],p_match_email:'forged@example.test'}
+  const body={customerName:'Test',contact:'test',email:'guest@example.test',invoice:{invoiceDelivery:'email',invoiceDetail:'invoice@example.test',taxInvoiceInfo:''},transferLastFive:'12345',items:[{productId:'shirt',quantity:1}],p_match_email:'forged@example.test'}
   const logged=harness('app/api/shop/orders/route.ts',{id,email:'account@example.test',email_confirmed_at:'date'})
   assert.equal((await logged.send('POST',body)).status,200)
-  assert.equal(logged.calls[0].name,'create_shop_order_with_pickup')
+  assert.equal(logged.calls[0].name,'create_shop_order_with_invoice')
+  assert.equal((logged.calls[0].args.p_invoice as Record<string,unknown>).invoiceDetail,'invoice@example.test')
   assert.equal(logged.calls[0].args.p_match_email,'account@example.test')
   assert.equal(logged.calls[0].args.p_require_selection,true)
   const guest=harness('app/api/shop/orders/route.ts',null)
@@ -60,5 +71,13 @@ test('checkout matches verified account, never trusts caller pickup identity and
   assert.equal(response.status,200)
   assert.equal(guest.calls[0].args.p_require_selection,false)
   assert.doesNotMatch(await response.text(),/pickup_class_name|pickup_course_id|candidates/)
+})
+
+test('invalid or missing invoice details cannot create an order',async()=>{
+  const base={customerName:'Test',contact:'test',email:'guest@example.test',transferLastFive:'12345',items:[{productId:'shirt',quantity:1}]}
+  for(const invoice of [undefined,{}, {invoiceDelivery:'carrier',invoiceDetail:'/ABC123'}, {invoiceDelivery:'email',invoiceDetail:'invalid'}]) {
+    const h=harness('app/api/shop/orders/route.ts',null)
+    assert.equal((await h.send('POST',{...base,invoice})).status,invoice?400:409);assert.equal(h.calls.length,0)
+  }
 })
 
