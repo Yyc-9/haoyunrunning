@@ -49,7 +49,7 @@
 .product-catalog-new { display: flex; gap: 8px; align-items: center; padding: 18px; background: #eaf7f8; border-left: 3px solid var(--product-accent); color: var(--product-accent); }
 .product-catalog-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 44px 16px; text-align: center; color: #647883; }
 .product-workspace-editor { min-width: 0; min-height: 0; }
-.product-editor { display: flex; flex-direction: column; height: 100%; min-width: 0; min-height: 0; }
+.product-editor { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .product-editor-header { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 14px; padding: 22px 26px; border-bottom: 1px solid var(--product-line); background: #fff; }
 .product-editor-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; min-width: 0; }
 .product-editor-heading h3 { font-size: 24px; font-weight: 750; letter-spacing: -.025em; overflow-wrap: anywhere; }
@@ -64,7 +64,7 @@
 .product-publish-toggle input:focus-visible + .product-toggle-track { outline: 3px solid #1597a877; outline-offset: 3px; }
 .product-save-state { color: #637783; font-size: 12px; white-space: nowrap; }
 .product-save-state.is-dirty { color: #ad6000; }
-.product-editor-scroll { flex: 1; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; }
+.product-editor-scroll { min-width: 0; overflow: visible; }
 .product-editor-fields { min-width: 0; }
 .product-editor-columns { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(235px, 1fr); }
 .product-content-fields, .product-property-fields { display: flex; flex-direction: column; gap: 24px; padding: 28px 26px; min-width: 0; }
@@ -152,8 +152,10 @@
   .admin-products-mode .admin-dashboard-heading > p, .admin-products-mode .admin-dashboard-context { display: none; }
   .admin-products-mode .admin-sidebar-panel { border-radius: 10px; box-shadow: none; }
   .admin-products-mode .admin-sidebar-tab { padding: 12px; }
-  /* Bound the grid track too: auto minimums otherwise expand and get clipped by the workspace. */
-  .product-workspace-body { height: calc(100dvh - 280px); min-height: 320px; grid-template-rows: minmax(0, 1fr); }
+}
+/* Let the form extend the page; only the product picker scrolls independently. */
+@media (min-width: 768px) {
+  .product-catalog { align-self: start; max-height: max(320px, calc(100dvh - 160px)); }
 }
 @media (max-width: 1279px) {
   .product-workspace-body { grid-template-columns: 225px minmax(0, 1fr); }
