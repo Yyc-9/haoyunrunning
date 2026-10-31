@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import FinanceSeasonRoster, { type FinanceRosterRow } from './FinanceSeasonRoster'
+import FinanceShopReconciliation from './FinanceShopReconciliation'
 
 type PaymentAccount = {
   id: string
@@ -175,7 +176,7 @@ async function getAdminToken() {
   return data.session?.access_token ?? ''
 }
 
-export default function AdminBankReconciliation({ paymentAccounts, readOnly: viewOnly = false }: { paymentAccounts: PaymentAccount[]; readOnly?: boolean }) {
+export default function AdminBankReconciliation({ paymentAccounts, readOnly: viewOnly = false, workspace = 'course' }: { paymentAccounts: PaymentAccount[]; readOnly?: boolean; workspace?: 'course' | 'shop' }) {
   const { language } = useLanguage()
   const [accessStatus, setAccessStatus] = useState<AccessStatus | null>(null)
   const [financeToken, setFinanceToken] = useState('')
@@ -209,7 +210,7 @@ export default function AdminBankReconciliation({ paymentAccounts, readOnly: vie
 
   const authorizedFetch = useCallback(async (url: string, init?: RequestInit, tokenOverride?: string) => {
     const adminToken = await getAdminToken()
-    if (!adminToken) throw new Error('請先登入管理員帳號。')
+    if (!adminToken) throw new Error('請先登入獲授權的財務或管理員帳號。')
     const activeFinanceToken = tokenOverride ?? financeTokenRef.current
     const response = await fetch(url, {
       ...init,
@@ -224,7 +225,7 @@ export default function AdminBankReconciliation({ paymentAccounts, readOnly: vie
     })
     const payload = await response.json().catch(() => ({})) as Record<string, unknown>
     if (!response.ok) {
-      if (response.status === 403 && activeFinanceToken) {
+      if ((response.status === 401 || response.status === 403) && activeFinanceToken) {
         storeFinanceToken('')
       }
       const requestError = new Error(typeof payload.error === 'string' ? payload.error : '操作失敗。')
@@ -265,6 +266,13 @@ export default function AdminBankReconciliation({ paymentAccounts, readOnly: vie
   useEffect(() => {
     setBatchConfirmOpen(false)
   }, [data?.selectedBatchId])
+
+  useEffect(() => {
+    if (!financeToken || !data?.financeTokenExpiresAt) return
+    const expiresIn = new Date(data.financeTokenExpiresAt).getTime() - Date.now()
+    const timer = window.setTimeout(() => { storeFinanceToken(''); setData(null) }, Math.max(0, expiresIn))
+    return () => window.clearTimeout(timer)
+  }, [financeToken, data?.financeTokenExpiresAt, storeFinanceToken])
 
   const loadData = useCallback(async (batchId = '', tokenOverride?: string, seasonId = '') => {
     const query = new URLSearchParams()
@@ -541,6 +549,11 @@ export default function AdminBankReconciliation({ paymentAccounts, readOnly: vie
       </section>
     )
   }
+
+  if (workspace === 'shop') return <section className="space-y-4">
+    <div className="flex items-center justify-between gap-3 text-xs text-apple-gray-500"><span>財務權限已解鎖 · 商城匯款人工核帳</span><button className="apple-button-outline min-h-11 px-4" onClick={() => { storeFinanceToken(''); setData(null) }}>立即鎖定</button></div>
+    <FinanceShopReconciliation authorizedFetch={authorizedFetch} readOnly={viewOnly || accessStatus.readOnly === true} />
+  </section>
 
   return (
     <section className="space-y-5">

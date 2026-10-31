@@ -147,7 +147,7 @@ export default function ProfilePage() {
           <section aria-label="財務工作區入口" className="mb-5 flex flex-col gap-4 rounded-lg border border-emerald-200 bg-emerald-50 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
             <div>
               <h2 className="text-xl font-black text-emerald-950">財務工作區</h2>
-              <p className="mt-2 text-sm leading-6 text-emerald-900">上傳銀行明細、核對本季報名與繳費狀態。進入後請輸入財務密碼。</p>
+              <p className="mt-2 text-sm leading-6 text-emerald-900">課程對帳、商城匯款與入帳確認。進入後請輸入財務密碼。</p>
             </div>
             <Link href="/finance" className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-lg bg-emerald-800 px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-800">
               進入財務對帳<ArrowRight aria-hidden="true" className="h-4 w-4" />
