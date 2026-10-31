@@ -12,6 +12,7 @@ import {
   Landmark,
   Loader2,
   LockKeyhole,
+  Package,
   RefreshCw,
   ShieldCheck,
   Upload,
@@ -176,8 +177,14 @@ async function getAdminToken() {
   return data.session?.access_token ?? ''
 }
 
-export default function AdminBankReconciliation({ paymentAccounts, readOnly: viewOnly = false, workspace = 'course' }: { paymentAccounts: PaymentAccount[]; readOnly?: boolean; workspace?: 'course' | 'shop' }) {
+export default function AdminBankReconciliation({ paymentAccounts, readOnly: viewOnly = false, workspace: controlledWorkspace, onWorkspaceChange }: { paymentAccounts: PaymentAccount[]; readOnly?: boolean; workspace?: 'course' | 'shop'; onWorkspaceChange?: (workspace: 'course' | 'shop') => void }) {
   const { language } = useLanguage()
+  const [localWorkspace, setLocalWorkspace] = useState<'course' | 'shop'>('course')
+  const workspace = controlledWorkspace ?? localWorkspace
+  const changeWorkspace = (next: 'course' | 'shop') => {
+    setLocalWorkspace(next)
+    onWorkspaceChange?.(next)
+  }
   const [accessStatus, setAccessStatus] = useState<AccessStatus | null>(null)
   const [financeToken, setFinanceToken] = useState('')
   const [password, setPassword] = useState('')
@@ -551,6 +558,7 @@ export default function AdminBankReconciliation({ paymentAccounts, readOnly: vie
   }
 
   if (workspace === 'shop') return <section className="space-y-4">
+    <button type="button" className="apple-button-outline min-h-11 gap-2 px-4" onClick={() => changeWorkspace('course')}><Landmark className="h-4 w-4" />{language === 'en' ? 'Back to bank reconciliation' : '返回銀行對帳'}</button>
     <div className="flex items-center justify-between gap-3 text-xs text-apple-gray-500"><span>財務權限已解鎖 · 商城匯款人工核帳</span><button className="apple-button-outline min-h-11 px-4" onClick={() => { storeFinanceToken(''); setData(null) }}>立即鎖定</button></div>
     <FinanceShopReconciliation authorizedFetch={authorizedFetch} readOnly={viewOnly || accessStatus.readOnly === true} />
   </section>
@@ -580,6 +588,11 @@ export default function AdminBankReconciliation({ paymentAccounts, readOnly: vie
           立即鎖定
         </button>
       </header>
+
+      <button type="button" onClick={() => changeWorkspace('shop')} className="flex w-full items-center gap-4 rounded-2xl border border-blue-200 bg-blue-50 p-5 text-left transition hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+        <Package aria-hidden="true" className="h-6 w-6 shrink-0 text-blue-700" />
+        <span className="min-w-0 flex-1"><strong className="block text-base text-blue-950">{language === 'en' ? 'Shop order reconciliation' : '商城訂單對帳'}</strong><span className="mt-1 block text-sm leading-6 text-blue-800">{language === 'en' ? 'Review student purchases, transfers and invoice details.' : '查看學生購買訂單、匯款與發票資料，確認入帳或記錄備註。'}</span><span className="mt-2 block text-sm font-bold text-blue-700">{language === 'en' ? 'Open shop reconciliation →' : '進入商城對帳 →'}</span></span>
+      </button>
 
       {message ? (
         <div role="status" className="flex items-start gap-2 rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">

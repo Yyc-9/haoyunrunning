@@ -23,7 +23,7 @@ export default function FinancePage() {
             <button role="tab" aria-selected={workspace === 'course'} onClick={() => setWorkspace('course')}><strong>課程對帳</strong><small>報名費用、銀行明細與繳費紀錄</small></button>
             <button role="tab" aria-selected={workspace === 'shop'} onClick={() => setWorkspace('shop')}><strong>商城對帳</strong><small>商品訂單、匯款資料與入帳確認</small></button>
           </div>
-          <AdminBankReconciliation key={user.id} paymentAccounts={[]} workspace={workspace} />
+          <AdminBankReconciliation key={user.id} paymentAccounts={[]} workspace={workspace} onWorkspaceChange={setWorkspace} />
         </>
       ) : <p role="alert">目前帳號沒有銀行對帳查閱權限。請從「我的帳戶」登出，再使用獲授權的帳號登入。</p>}
       <AuthModal isOpen={loginOpen && !user} onClose={() => setLoginOpen(false)} />
