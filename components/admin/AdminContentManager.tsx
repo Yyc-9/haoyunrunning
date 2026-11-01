@@ -1158,7 +1158,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                   <Field label="申請步驟（每行一項）" wide><textarea rows={6} value={achievements.howToSteps.join('\n')} onChange={(event) => setAchievements((current) => ({ ...current, howToSteps: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean).slice(0, 5) }))} className="apple-input resize-y" /></Field>
                   <Field label="申請補充說明" wide><textarea rows={4} value={achievements.howToNote} onChange={(event) => setAchievements((current) => ({ ...current, howToNote: event.target.value }))} className="apple-input resize-y" /></Field>
                 </div>
-                <div className="mt-5 grid gap-4 xl:grid-cols-2">
+                <div className="mt-5 grid gap-4 xl:grid-cols-2 [&>div]:pt-0">
                   {achievements.milestones.map((item, index) => <ImageField key={index} label={english ? `Milestone card ${index + 1}` : `紀念卡 ${index + 1}`} value={item.image} folder="pages" aspectRatio={3 / 4} aspectLabel="3:4" onChange={(image) => setAchievements((current) => ({ ...current, milestones: current.milestones.map((entry, itemIndex) => itemIndex === index ? { ...entry, image } : entry) }))} onError={setLocalError} />)}
                 </div>
               </section>
