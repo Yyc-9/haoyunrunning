@@ -849,7 +849,6 @@ export default function AdminBankReconciliation({ paymentAccounts, readOnly: vie
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-apple-gray-400" />
                 </div>
               </label>
 
@@ -1082,6 +1081,7 @@ function TransactionRow({
 
   if (desktop) {
     return (
+      <>
       <tr>
         <td className="px-4 py-4 align-top">
           <p className="font-bold text-apple-gray-900">{transaction.transaction_date ? formatDate(transaction.transaction_date, false, language) : (language === 'en' ? `File row ${transaction.row_number}` : `檔案第 ${transaction.row_number} 列`)}</p>
@@ -1100,8 +1100,16 @@ function TransactionRow({
           <p className="mt-2 text-xs leading-5 text-apple-gray-500">{transaction.match_reason}</p>
         </td>
         <td className="px-4 py-4 align-top">{candidatePicker}</td>
-        <td className="px-4 py-4 align-top">{actions}{confirmation}</td>
+        <td className="px-4 py-4 align-top">{actions}</td>
       </tr>
+      {confirmation ? (
+        <tr>
+          <td colSpan={6} className="px-4 pb-4">
+            <div className="max-w-3xl">{confirmation}</div>
+          </td>
+        </tr>
+      ) : null}
+      </>
     )
   }
 
