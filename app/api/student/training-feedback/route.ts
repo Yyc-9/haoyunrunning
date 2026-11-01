@@ -112,14 +112,6 @@ export async function POST(request: NextRequest) {
 
   const testAccount = await getIsolatedTestAccount(user)
 
-  const accessState = await getStudentAccessState(user.id, user.email)
-  if (!canAccessTrainingContent(accessState)) {
-    return NextResponse.json(
-      { error: accessMessage(accessState), accessState },
-      { status: 403 }
-    )
-  }
-
   const body = (await request.json().catch(() => ({}))) as FeedbackBody
   const rpe = cleanNumber(body.rpe)
 
@@ -141,6 +133,14 @@ export async function POST(request: NextRequest) {
       trainingFeedback: [feedback, ...(Array.isArray(state.trainingFeedback) ? state.trainingFeedback : [])].slice(0, 20),
     }))
     return NextResponse.json({ feedback, isolatedTest: true })
+  }
+
+  const accessState = await getStudentAccessState(user.id, user.email)
+  if (!canAccessTrainingContent(accessState)) {
+    return NextResponse.json(
+      { error: accessMessage(accessState), accessState },
+      { status: 403 }
+    )
   }
 
   let coachId: string | null = null

@@ -775,7 +775,7 @@ export default function StudentPage() {
                 學員看板
               </p>
               <h1 className="text-4xl font-black text-apple-gray-900 md:text-5xl">
-                {displayName}，今天照顾好這一課。
+                {displayName}，今天照顧好這一課。
               </h1>
               <p className="mt-4 max-w-3xl text-lg leading-8 text-apple-gray-600">
                 課表、完成狀態與訓練感受都集中在這裡。回報越清楚，教練越能幫你把下一週調得剛剛好。
@@ -1077,7 +1077,7 @@ export default function StudentPage() {
                     <p className="text-sm font-semibold text-apple-blue">Global race goals</p>
                     <h2 className="mt-1 text-2xl font-black text-apple-gray-900">我的目標賽事</h2>
                     <p className="mt-2 text-sm leading-6 text-apple-gray-600">
-                      中籤後把賽事加入面板，教練之後可以围绕目標比賽調整訓練節奏。
+                      中籤後把賽事加入面板，教練之後可以圍繞目標比賽調整訓練節奏。
                     </p>
                   </div>
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-black text-white">
@@ -1143,7 +1143,7 @@ export default function StudentPage() {
                             {race.raceName} · {race.location}
                           </option>
                         ))}
-                        <option value="custom">自定义其他賽事</option>
+                        <option value="custom">自訂其他賽事</option>
                       </select>
                     </label>
 
@@ -1298,7 +1298,7 @@ export default function StudentPage() {
                             updateField(field.key as keyof typeof feedback, event.target.value)
                           }
                           placeholder={field.placeholder}
-                          className="apple-input pl-11"
+                          className="apple-input !pl-11"
                         />
                       </div>
                     </label>
@@ -1400,18 +1400,18 @@ export default function StudentPage() {
                 </label>
 
                 <label className="block rounded-3xl border border-dashed border-black/20 bg-white p-5">
-                  <span className="mb-2 block text-sm font-semibold text-apple-gray-700">上傳跑步截圖</span>
+                  <span className="mb-2 block text-sm font-semibold text-apple-gray-700">記錄跑步截圖檔名</span>
                   <input
                     type="file"
                     accept="image/*"
                     onChange={(event) => updateField('screenshotName', event.target.files?.[0]?.name || '')}
-                    aria-label="上傳跑步截圖"
+                    aria-label="記錄跑步截圖檔名"
                     className="peer sr-only"
                   />
                   <span className="inline-flex min-h-11 cursor-pointer items-center rounded-full bg-black px-4 py-2 text-sm font-semibold text-white peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-apple-blue">{language === 'en' ? 'Choose image' : '選擇圖片'}</span>
                   <span className="mt-2 block break-words text-sm text-apple-gray-600" translate={feedback.screenshotName ? 'no' : undefined}>{feedback.screenshotName || (language === 'en' ? 'No image selected' : '尚未選擇圖片')}</span>
                   <span className="mt-2 block text-xs leading-5 text-apple-gray-500">
-                    第一版先記錄截圖檔案名；後續可接圖片上傳與自動識別里程、配速、心率。
+                    選擇圖片僅記錄檔名，不會上傳圖片。請在上方填寫里程、配速與心率。
                   </span>
                 </label>
 
@@ -1465,14 +1465,14 @@ export default function StudentPage() {
                   設定
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-apple-gray-600">
-                  這裡只放影响訓練溝通的資料，儲存後會同步給教練端查看。
+                  這裡只放影響訓練溝通的資料，儲存後會同步給教練端查看。
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsSettingsOpen(false)}
                 className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-black/10 bg-white text-xl leading-none text-apple-gray-500 transition hover:bg-apple-gray-100 hover:text-apple-gray-900"
-                aria-label="關闭設定"
+                aria-label="關閉設定"
               >
                 ×
               </button>
