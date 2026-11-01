@@ -73,7 +73,7 @@ export default function Error({ error, reset }: ErrorProps) {
 
         {/* Support Message */}
         <p className="text-sm text-apple-gray-500 mt-12">
-          需要幫助？請<a href="mailto:support@example.com" className="text-apple-blue hover:underline">聯絡客服</a>
+          需要幫助？請<a href="https://www.instagram.com/nurture.running.team/" target="_blank" rel="noopener noreferrer" className="text-apple-blue hover:underline">聯絡客服</a>
         </p>
       </div>
     </div>

@@ -228,16 +228,20 @@ function ImageField({
 function VideoField({ label, value, onChange, onError }: { label: string; value: string; onChange: (url: string) => void; onError: (message: string) => void }) {
   const { language } = useLanguage()
   const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
   const youtubeEmbedUrl = getYouTubeEmbedUrl(value)
 
   async function upload(file?: File) {
     if (!file) return
     setUploading(true)
+    setUploadError('')
     onError('')
     try {
       onChange(await uploadSiteVideo(file))
     } catch (error) {
-      onError(error instanceof Error ? error.message : '影片上傳失敗。')
+      const message = error instanceof Error ? error.message : '影片上傳失敗。'
+      setUploadError(message)
+      onError(message)
     } finally {
       setUploading(false)
     }
@@ -268,7 +272,7 @@ function VideoField({ label, value, onChange, onError }: { label: string; value:
           <input
             type="url"
             value={value}
-            onChange={(event) => onChange(event.target.value)}
+            onChange={(event) => { setUploadError(''); onError(''); onChange(event.target.value) }}
             placeholder="貼上 YouTube 網址，或使用下方按鈕上傳影片"
             className="apple-input mt-3"
           />
@@ -276,15 +280,20 @@ function VideoField({ label, value, onChange, onError }: { label: string; value:
             <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-black/10 bg-white px-4 text-sm font-bold hover:bg-apple-gray-100">
               {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Film className="h-4 w-4" />}
               {value ? '更換影片' : '上傳影片'}
-              <input type="file" accept="video/mp4,video/webm,video/quicktime" className="sr-only" disabled={uploading} onChange={(event) => upload(event.target.files?.[0])} />
+              <input type="file" accept="video/mp4,video/webm,video/quicktime" className="sr-only" disabled={uploading} onChange={(event) => {
+                const file = event.target.files?.[0]
+                event.target.value = ''
+                void upload(file)
+              }} />
             </label>
             {value ? (
-              <button type="button" onClick={() => onChange('')} className="inline-flex min-h-10 items-center gap-2 rounded-lg px-4 text-sm font-bold text-red-600 hover:bg-red-50">
+              <button type="button" onClick={() => { setUploadError(''); onError(''); onChange('') }} className="inline-flex min-h-10 items-center gap-2 rounded-lg px-4 text-sm font-bold text-red-600 hover:bg-red-50">
                 <Trash2 className="h-4 w-4" />
                 移除影片
               </button>
             ) : null}
           </div>
+          {uploadError ? <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold leading-6 text-red-700">{uploadError}</p> : null}
           <p className="mt-2 text-xs text-apple-gray-400">支援 YouTube、MP4、WebM、MOV；上傳影片最大 50 MB。</p>
         </div>
       </div>

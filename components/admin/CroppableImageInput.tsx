@@ -242,13 +242,24 @@ export default function CroppableImageInput({
                   className="absolute"
                   style={crop?.previewStyle ?? { width: '100%', height: '100%', objectFit: 'contain' }}
                   onLoad={(event) => {
-                    imageRef.current = event.currentTarget
+                    const image = event.currentTarget
+                    if (!image.naturalWidth || !image.naturalHeight) {
+                      imageRef.current = null
+                      setImageSize(null)
+                      setError('無法讀取這張圖片，請重新選擇 JPG、PNG 或 WebP 圖片。')
+                      return
+                    }
+                    imageRef.current = image
                     setImageSize({
-                      width: event.currentTarget.naturalWidth,
-                      height: event.currentTarget.naturalHeight,
+                      width: image.naturalWidth,
+                      height: image.naturalHeight,
                     })
                   }}
-                  onError={() => setError('無法讀取這張圖片，請重新選擇 JPG、PNG 或 WebP 圖片。')}
+                  onError={() => {
+                    imageRef.current = null
+                    setImageSize(null)
+                    setError('無法讀取這張圖片，請重新選擇 JPG、PNG 或 WebP 圖片。')
+                  }}
                 />
                 <div className={`pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/50 ${previewShape === 'circle' ? 'rounded-full shadow-[0_0_0_200px_rgba(0,0,0,0.55)]' : 'rounded-xl'}`} />
                 <div className="pointer-events-none absolute inset-y-0 left-1/3 border-l border-dashed border-white/45" />
@@ -302,7 +313,7 @@ export default function CroppableImageInput({
                 </label>
               </div>
 
-              {error ? <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p> : null}
+              {error ? <p role="alert" className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p> : null}
 
               <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <button type="button" disabled={processing} onClick={close} className="apple-button-outline min-h-12 px-6 disabled:opacity-40">
