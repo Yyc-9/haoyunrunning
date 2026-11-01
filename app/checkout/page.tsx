@@ -48,6 +48,7 @@ export default function CheckoutPage() {
   const [transferLastFive, setTransferLastFive] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const errorRef = useRef<HTMLDivElement>(null)
   const [order, setOrder] = useState<CreatedOrder | null>(null)
   const [catalog, setCatalog] = useState<ShopProduct[] | null>(null)
   const [catalogError, setCatalogError] = useState('')
@@ -55,6 +56,12 @@ export default function CheckoutPage() {
   const [pickupCourseId, setPickupCourseId] = useState('')
   const [pickupError, setPickupError] = useState('')
   const [pickupLoading, setPickupLoading] = useState(true)
+
+  useEffect(() => {
+    if (!error) return
+    errorRef.current?.focus({ preventScroll: true })
+    errorRef.current?.scrollIntoView({ block: 'center', behavior: 'instant' })
+  }, [error])
 
   useEffect(() => {
     let alive = true
@@ -321,7 +328,7 @@ export default function CheckoutPage() {
 	                <span>付款方式為銀行匯款，商品維持跑班自取；完成入帳核對後，團隊會另行通知取貨安排。</span>
               </div>
 
-              {error ? <div role="alert" className="mb-4 rounded-lg bg-red-50 p-4 text-sm font-semibold leading-6 text-red-700">{error}</div> : null}
+              {error ? <div ref={errorRef} role="alert" tabIndex={-1} className="mb-4 rounded-lg bg-red-50 p-4 text-sm font-semibold leading-6 text-red-700">{error}</div> : null}
 
               <button type="button" onClick={submitOrder} disabled={isSubmitting || items.length === 0 || !form.customerName.trim() || !form.contact.trim() || transferLastFive.length !== 5 || !catalog || Boolean(catalogError) || optionIssues.length > 0} className="checkout-inline-submit apple-button-primary mb-3 w-full gap-2 disabled:cursor-not-allowed disabled:opacity-60">
                 <Send className="h-4 w-4" />
