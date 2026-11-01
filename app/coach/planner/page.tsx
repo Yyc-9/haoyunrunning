@@ -260,6 +260,9 @@ export default function CoachPlannerPage() {
     : language === 'zh-TW'
       ? ['週一', '週二', '週三', '週四', '週五', '週六', '週日']
       : ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+  const horizontalScrollHint = language === 'en'
+    ? 'Swipe horizontally to view all seven days.'
+    : language === 'zh-TW' ? '左右滑動查看完整一週課表。' : '左右滑动查看完整一周课表。'
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 60_000)
@@ -665,6 +668,7 @@ export default function CoachPlannerPage() {
           </div>
 
           <div className="apple-card overflow-hidden p-0">
+            <p className="border-b border-black/10 px-4 py-3 text-xs text-apple-gray-600 xl:hidden">{horizontalScrollHint}</p>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1100px] border-collapse text-sm">
                 <thead>
@@ -736,11 +740,12 @@ export default function CoachPlannerPage() {
                           </span>
                         </span>
                       </summary>
+                      <p className="mt-4 text-xs text-apple-gray-600 xl:hidden">{horizontalScrollHint}</p>
                       <div className="mt-4 overflow-x-auto">
                         <table className="w-full min-w-[980px] border-collapse text-sm">
                           <thead>
                             <tr className="border-b border-black/10 bg-apple-gray-100 text-left">
-                              <th className="w-36 p-3 font-bold text-apple-gray-900">{t.planner.thisWeek}</th>
+                              <th className="w-36 p-3 font-bold text-apple-gray-900">{historyStatus}</th>
                               {columns.map((column, index) => (
                                 <th key={column.key} className="w-32 p-3 font-bold text-apple-gray-900">
                                   {weekdayLabels[index]}

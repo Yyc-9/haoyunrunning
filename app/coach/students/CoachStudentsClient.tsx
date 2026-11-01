@@ -35,7 +35,7 @@ function OwnStudentCard({ student, compact, english }: { student: OwnRosterStude
         <summary className="cursor-pointer py-1 font-bold"><MessageSquareText aria-hidden="true" className="mr-2 inline h-4 w-4" />{english ? 'Recent feedback' : '最近回饋'}</summary>
         {student.recentFeedback.length ? <div className="mt-2 space-y-2">{student.recentFeedback.map(feedback => <div key={feedback.id} className="rounded-lg bg-white p-3 text-sm">
           <div className="mb-1 flex items-center justify-between gap-3"><span>{new Date(feedback.created_at).toLocaleDateString(english ? 'en' : 'zh-TW')}</span><span>RPE {feedback.rpe ?? '—'}</span></div>
-          <p data-training-feedback translate={english ? 'no' : undefined} className="whitespace-pre-line leading-6">{feedback.feeling ? localizeTrainingFeedback(feedback.feeling, english ? 'en' : 'zh-TW') : (english ? 'No written feedback.' : '尚無文字回饋。')}</p>
+          <p data-training-feedback translate={english ? 'no' : undefined} className="whitespace-pre-line leading-6 [overflow-wrap:anywhere]">{feedback.feeling ? localizeTrainingFeedback(feedback.feeling, english ? 'en' : 'zh-TW') : (english ? 'No written feedback.' : '尚無文字回饋。')}</p>
         </div>)}</div> : <p className="mt-2 leading-6 text-apple-gray-500">{english ? 'No training feedback yet.' : '尚未提交訓練回饋。'}</p>}
       </details> : student.status !== 'approved' && (!student.registrationStatus || student.registrationStatus === 'active') && <p className="mt-2 text-xs leading-5 text-apple-gray-500 sm:col-span-2">{english ? 'Active registrations can check in and be marked present before payment review. Training plans and feedback open after confirmation.' : '有效報名即可簽到與點名，不必等待核帳；訓練課表與回饋仍於確認入帳後開放。'}</p>}
     </article>
