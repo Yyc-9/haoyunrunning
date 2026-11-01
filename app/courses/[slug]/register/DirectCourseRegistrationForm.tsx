@@ -391,7 +391,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
             <div className={`mt-4 rounded-lg border p-4 ${legacyStudent.matched ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-blue-200 bg-blue-50 text-blue-900'}`}>
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
-                <div>
+                <div className="min-w-0 [overflow-wrap:anywhere]">
                   <p className="font-black">{legacyStudent.matched ? '已辨識為好運舊生' : '本次將以新生身份報名'}</p>
                   <p className="mt-1 text-sm leading-6 opacity-80">系統依登入信箱 {userEmail} 自動核對，身份與對應價格無需手動選擇。</p>
                 </div>
@@ -523,7 +523,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
               </div>
             </fieldset>
 
-            <label className="mt-5 block"><FieldLabel>載具條碼或電子信箱</FieldLabel><input autoCapitalize="characters" value={form.invoiceDetail} onChange={(event) => update('invoiceDetail', event.target.value)} className="apple-input min-h-12" placeholder="例如 /HI77HI 或 runner@example.com" /><span className="mt-2 block text-xs leading-5 text-apple-gray-500">手機載具由「/」開頭，後接 6 碼英文大寫與數字組合。</span></label>
+            <label className="mt-5 block"><FieldLabel>載具條碼或電子信箱</FieldLabel><input autoCapitalize="characters" value={form.invoiceDetail} onChange={(event) => update('invoiceDetail', event.target.value)} className="apple-input min-h-12" placeholder="例如 /ABC1234 或 runner@example.com" /><span className="mt-2 block text-xs leading-5 text-apple-gray-500">手機條碼由「/」開頭，後接 7 碼英數字或符號，共 8 碼。</span></label>
             <label className="mt-5 block"><FieldLabel optional>備註</FieldLabel><textarea value={form.notes} onChange={(event) => update('notes', event.target.value)} className="apple-input min-h-24 resize-y" placeholder="想跟小編說什麼呢？請勿填寫完整匯款帳號或信用卡資料" /></label>
             <label className="mt-5 block"><FieldLabel optional>統一編號與發票抬頭</FieldLabel><input value={form.taxInvoiceInfo} onChange={(event) => update('taxInvoiceInfo', event.target.value)} className="apple-input min-h-12" placeholder="若無可留白" /></label>
 
