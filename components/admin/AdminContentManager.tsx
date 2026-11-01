@@ -1196,7 +1196,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
             </div>
             <div className="divide-y divide-black/10">
               {seasons.map((season) => (
-                <article key={season.id} className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                <article key={season.id} className="grid gap-5 p-5">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-xl font-black text-apple-gray-900">{season.name}</h3>
@@ -1209,8 +1209,8 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                       <div><p className="text-xs font-bold text-apple-gray-500">已回報，待人工核對</p><p className="mt-1 text-lg font-black text-blue-700">{season.pendingReviewCount}</p></div>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
-                    <select disabled={season.status === 'archived'} value={season.status} onChange={(event) => updateSeasonStatus(season, event.target.value as CourseSeasonStatus)} className="apple-input min-w-32" aria-label={english ? `Update ${displayText(season.name)} status` : `更新 ${season.name} 狀態`}>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center [&>button]:min-h-[50px] [&>button]:shrink-0 [&>button]:whitespace-nowrap">
+                    <select disabled={season.status === 'archived'} value={season.status} onChange={(event) => updateSeasonStatus(season, event.target.value as CourseSeasonStatus)} className="apple-input min-w-32 sm:w-40 sm:shrink-0" aria-label={english ? `Update ${displayText(season.name)} status` : `更新 ${season.name} 狀態`}>
                       {Object.entries(courseSeasonStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                     </select>
                     <button type="button" onClick={() => { setSelectedSeasonId(season.id); changeMode('courses') }} className="apple-button-outline px-4 py-2.5">管理這季課程</button>
