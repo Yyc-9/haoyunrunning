@@ -201,12 +201,13 @@ export default function AdminMobileDashboard({ data, feedbackSummary, runAction,
 
   useEffect(() => {
     if (!mobileMessage && !mobileError) return
+    if (accountOpen && mobileError) return
     const timer = window.setTimeout(() => {
       setMobileMessage('')
       setMobileError('')
     }, 4500)
     return () => window.clearTimeout(timer)
-  }, [mobileError, mobileMessage])
+  }, [accountOpen, mobileError, mobileMessage])
 
   useEffect(() => {
   }, [selectedStudentId])
