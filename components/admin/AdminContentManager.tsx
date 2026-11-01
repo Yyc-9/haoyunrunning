@@ -198,7 +198,7 @@ function ImageField({
   return (
     <div className="border-b border-black/10 py-5 first:pt-0 last:border-0 last:pb-0">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-        {preview ? <div className="flex shrink-0 flex-col items-center gap-2 sm:w-44">{preview}<span className="text-xs text-apple-gray-500">課程顯示預覽</span></div> : <div className="relative h-28 w-full shrink-0 overflow-hidden rounded-lg bg-apple-gray-100 sm:w-44">
+        {preview ? <div className="flex shrink-0 flex-col items-center gap-2 sm:w-44">{preview}<span className="text-xs text-apple-gray-500">課程顯示預覽</span></div> : <div className="relative h-28 w-44 max-w-full shrink-0 overflow-hidden rounded-lg bg-apple-gray-100">
           {value ? <Image src={value} alt={language === 'en' ? `${toEnglishWebsiteText(label)} preview` : `${label}預覽`} fill sizes="176px" className="object-cover" style={objectPosition ? { objectPosition } : undefined} /> : <ImageIcon className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 text-apple-gray-400" />}
         </div>}
         <div className="min-w-0 flex-1">
