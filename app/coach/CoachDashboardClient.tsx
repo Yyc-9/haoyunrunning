@@ -139,7 +139,7 @@ export default function CoachDashboardClient() {
                 : `本季負責 ${summary.classCount} 個班級，共 ${summary.registeredCount} 人次報名。`}</p>
             </div>
             <label className="flex items-center gap-3 text-sm font-bold">{language === 'en' ? 'Quarter' : '季度'}
-              <select aria-label={language === 'en' ? 'Quarter' : '季度'} value={seasonId || roster?.selectedSeasonId || ''} disabled={isWorkspaceLoading || !roster?.seasons.length} onChange={event => setSeasonId(event.target.value)} className="min-h-11 rounded-lg border border-black/15 bg-white px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-apple-blue">
+              <select aria-label={language === 'en' ? 'Quarter' : '季度'} value={seasonId || roster?.selectedSeasonId || ''} disabled={isWorkspaceLoading || !roster?.seasons.length} onChange={event => setSeasonId(event.target.value)} className="coach-filter-select min-h-11 rounded-lg border border-black/15 bg-white px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-apple-blue">
                 {!roster?.seasons.length && <option value="">{language === 'en' ? 'Loading…' : '讀取中…'}</option>}
                 {roster?.seasons.map(season => <option key={season.id} value={season.id}>{season.name}{season.status === 'archived' ? (language === 'en' ? ' · Archived' : ' · 已封存') : ''}</option>)}
               </select>

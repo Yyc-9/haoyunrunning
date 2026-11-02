@@ -122,7 +122,7 @@ export default function CoachStudentsClient({ previewRoster, initialSeasonId = '
           <label className="flex shrink-0 items-center gap-3 text-sm font-bold">{english ? 'Quarter' : '季度'}
             <select aria-label={english ? 'Quarter' : '季度'} disabled={isLoading || !roster?.seasons.length} value={requestedSeasonId || roster?.selectedSeasonId || ''}
               onChange={event => { setRequestedSeasonId(event.target.value); setCourseId(''); setStatus('all'); setQuery('') }}
-              className="min-h-11 max-w-full rounded-lg border border-black/15 bg-white px-3 pr-8 text-sm font-semibold focus:border-apple-blue focus:outline-none focus:ring-2 focus:ring-apple-blue/20">
+              className="coach-filter-select min-h-11 max-w-full rounded-lg border border-black/15 bg-white px-3 pr-8 text-sm font-semibold focus:border-apple-blue focus:outline-none focus:ring-2 focus:ring-apple-blue/20">
               {!roster?.seasons.length && <option value="">{english ? 'Loading…' : '讀取中…'}</option>}
               {roster?.seasons.map(item => <option key={item.id} value={item.id}>{item.name}{item.status === 'archived' ? (english ? ' · Archived' : ' · 已封存') : ''}</option>)}
             </select>
@@ -141,7 +141,7 @@ export default function CoachStudentsClient({ previewRoster, initialSeasonId = '
           <button type="button" onClick={() => setRetry(value => value + 1)} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-md bg-white px-4 font-bold"><RefreshCw className="h-4 w-4" />{english ? 'Retry' : '重新讀取'}</button>
         </div> : isLoading ? <div role="status" className="rounded-xl border border-black/10 bg-white p-10 text-center text-apple-gray-600"><RefreshCw aria-hidden="true" className="mx-auto mb-3 h-5 w-5 motion-safe:animate-spin" />{english ? 'Loading class rosters…' : '正在讀取班級名單…'}</div> : <>
           {courses.length > 0 && <label className="mb-5 block text-sm font-bold sm:hidden">{english ? 'Class' : '班級'}
-            <select aria-label={english ? 'Class' : '班級'} value={selected?.id ?? ''} onChange={event => { setCourseId(event.target.value); setStatus('all'); setQuery('') }} className="mt-2 min-h-11 w-full min-w-0 rounded-lg border border-black/15 bg-white px-3 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue">
+            <select aria-label={english ? 'Class' : '班級'} value={selected?.id ?? ''} onChange={event => { setCourseId(event.target.value); setStatus('all'); setQuery('') }} className="coach-filter-select mt-2 min-h-11 w-full min-w-0 rounded-lg border border-black/15 bg-white px-3 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue">
               <option value="">{english ? 'All classes in this view' : '此範圍全部班級'} · {courses.reduce((sum, course) => sum + course.registeredCount, 0)} {english ? 'registrations' : '筆報名'}</option>
               {courses.map(course => <option key={course.id} value={course.id}>{course.name} · {course.registeredCount} {english ? 'registered' : '位已報名'}{course.isOwn ? (english ? ' · My class' : ' · 本班') : ''}</option>)}
             </select>
@@ -167,7 +167,7 @@ export default function CoachStudentsClient({ previewRoster, initialSeasonId = '
               <div className="relative flex-1"><Search aria-hidden="true" className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-apple-gray-400" /><input aria-label={english ? 'Search students' : '搜尋學員'} value={query} onChange={event => setQuery(event.target.value)}
                 placeholder={canFilterPayment ? (english ? 'Search name, email or goal' : '搜尋姓名、Email 或目標') : (english ? 'Search name across classes' : '跨班搜尋學員姓名')}
                 className="min-h-11 w-full rounded-lg border border-black/15 bg-white py-2 pl-10 pr-3 text-sm focus:border-apple-blue focus:outline-none focus:ring-2 focus:ring-apple-blue/20" /></div>
-              {canFilterPayment && <select aria-label={english ? 'Payment status' : '繳費狀態'} value={status} onChange={event => setStatus(event.target.value as typeof status)} className="min-h-11 rounded-lg border border-black/15 bg-white px-3 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue">
+              {canFilterPayment && <select aria-label={english ? 'Payment status' : '繳費狀態'} value={status} onChange={event => setStatus(event.target.value as typeof status)} className="coach-filter-select min-h-11 rounded-lg border border-black/15 bg-white px-3 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue">
                 <option value="all">{english ? 'All registrations' : '全部報名'}</option>
                 <option value="inactive">{english ? 'Cancelled / duplicate records' : '取消／重複紀錄'}</option>
                 {(['approved', 'pending_review', 'pending_transfer', 'rejected'] as const).map(value => <option key={value} value={value}>{(english ? statusLabelsEn : statusLabels)[value]} · {paymentCounts[value]}</option>)}

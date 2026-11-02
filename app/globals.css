@@ -3036,6 +3036,7 @@ select.apple-input:not([multiple]):not([size]) {
 }
 
 select.apple-input:not([multiple]):not([size]),
+select.coach-filter-select:not([multiple]):not([size]),
 .mobile-lead-form select:not([multiple]):not([size]) {
   -webkit-appearance: none;
   appearance: none;
@@ -3046,4 +3047,10 @@ select.apple-input:not([multiple]):not([size]),
   background-repeat: no-repeat;
   background-position: right .875rem center;
   background-size: 1rem;
+}
+
+select.coach-filter-select:not([multiple]):not([size]) {
+  min-height: 2.75rem;
+  padding-top: .5rem;
+  padding-bottom: .5rem;
 }
