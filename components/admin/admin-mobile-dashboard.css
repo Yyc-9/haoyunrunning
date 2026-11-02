@@ -232,6 +232,15 @@ body.admin-mobile-sheet-open { overflow: hidden; }
 .admin-mobile-field { display: grid; gap: 5px; }
 .admin-mobile-field > span { color: var(--mobile-muted); font-size: 12px; font-weight: 850; }
 .admin-mobile-control { width: 100%; min-height: 46px; border: 1px solid var(--mobile-line); border-radius: 11px; background: #fff; padding: 10px 12px; color: var(--mobile-ink); font-size: 12px; outline: none; }
+select.admin-mobile-control:not([multiple]):not([size]) {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%2364748b%27 stroke-width=%272%27%3E%3Cpath d=%27m6 9 6 6 6-6%27/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+}
 .admin-mobile-control:focus { border-color: var(--mobile-accent); box-shadow: 0 0 0 3px rgb(21 151 168 / 12%); }
 .admin-mobile-notice { margin-top: 10px; padding: 10px 11px; border-radius: 11px; background: var(--mobile-surface); color: var(--mobile-muted); font-size: 12px; line-height: 1.5; }
 .admin-mobile-notice[data-tone='error'] { background: #fff0ef; color: #a53f39; }
