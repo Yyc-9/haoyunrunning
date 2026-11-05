@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useLanguage } from '@/app/language-context'
 import { toEnglishWebsiteText } from '@/lib/english-website'
+import AdminEnrollmentRefund from './AdminEnrollmentRefund'
 
 type Context = {
   enrollment: { name: string; preferred_course: string; amount_text: string; status: string }
@@ -53,9 +54,10 @@ export default function AdminEnrollmentTransfer({ enrollmentId, onSaved }: { enr
   }
   if (done) return <section className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4"><p role="status">{en ? 'Transfer completed. Payment records were retained.' : '轉班已完成，付款紀錄已保留。'}</p><button type="button" className="apple-button-primary mt-3" onClick={() => void onSaved()}>{en ? 'Refresh roster' : '重新載入名冊'}</button></section>
   return <section className="mt-5 rounded-xl border border-blue-200 bg-blue-50/30 p-4">
-    <h4 className="font-black">{en ? 'Transfer to another class' : '轉班與點名移轉'}</h4>
+    <h4 className="font-black">{en ? 'Class transfer / refund withdrawal' : '轉班／退費退班'}</h4>
     <p className="mt-2 text-sm leading-6">{en ? 'Keep the payment amount and receipt history. Choose whether to retain attendance in the original class or map existing sessions to the new class. Spreadsheet sync cannot undo this transfer.' : '保留原付款金額與核款歷史。可保留原班出席歷史，或逐堂指定移到新班的課次。舊表格同步不會覆蓋已確認的轉班。'}</p>
-    {!context ? <button type="button" disabled={busy} className="apple-button-outline mt-3" onClick={() => void load()}>{en ? 'Set up transfer' : '設定轉班'}</button> : <>
+    {!context ? <button type="button" disabled={busy} className="apple-button-outline mt-3" onClick={() => void load()}>{en ? 'Set up transfer / withdrawal' : '設定轉班／退費'}</button> : <>
+      {context.enrollment.status === 'approved' && !preview ? <AdminEnrollmentRefund enrollmentId={enrollmentId} onSaved={onSaved} /> : null}
       <fieldset disabled={busy || Boolean(preview)} className="mt-3 grid gap-3 disabled:opacity-60">
         <label className="grid gap-2 text-sm font-bold">{en ? 'New class' : '新班級'}<select className="apple-input bg-white" value={targetId} onChange={event => { setTargetId(event.target.value); setStartDate(''); setDateMap({}) }}><option value="">{en ? 'Select a class' : '請選擇班級'}</option>{context.courses.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         <label className="grid gap-2 text-sm font-bold">{en ? 'First eligible session' : '新班起始課次'}<select className="apple-input bg-white" value={startDate} onChange={event => setStartDate(event.target.value)}><option value="">{en ? 'Select a date' : '請選擇日期'}</option>{course?.sessionDates.map(date => <option key={date} value={date}>{date}</option>)}</select></label>
