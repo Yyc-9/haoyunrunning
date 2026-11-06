@@ -8,8 +8,12 @@ import { createInflightRequest } from '../lib/inflight-request.ts'
 const require = createRequire(import.meta.url)
 const ts = require('typescript')
 const jsx = (type: unknown, props: unknown) => ({ type, props })
+type MockElement = {
+  type: unknown
+  props: { children: Array<{ type: unknown }>; onClick: () => void; [key: string]: unknown }
+}
 function loadComponent(path: string, mocks: Record<string, unknown>, globals = {}) {
-  const exports: Record<string, any> = {}
+  const exports = {} as { default: (props: Record<string, unknown>) => MockElement }
   vm.runInNewContext(ts.transpileModule(readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
   }).outputText, { exports, ...globals, require: (name: string) => name === 'react/jsx-runtime' ? { jsx, jsxs: jsx } : name in mocks ? mocks[name] : require(name) })
@@ -86,11 +90,11 @@ function heroHarness({ desktop = true, reduced = false, saveData = false } = {})
   const effects: Array<() => () => void> = []
   const events = new Map<string, (event: { pointerType: string }) => void>()
   const loaded: string[] = []
-  const hero = { addEventListener: (name: string, fn: any) => events.set(name, fn), removeEventListener: (name: string) => events.delete(name) }
+  const hero = { addEventListener: (name: string, fn: (event: { pointerType: string }) => void) => events.set(name, fn), removeEventListener: (name: string) => events.delete(name) }
   let refs = 0
   class FakeImage { set src(value: string) { loaded.push(value) } decode() { return Promise.resolve() } }
   const Hero = loadComponent('components/HeroSection.tsx', {
-    react: { useRef: (initial: unknown) => ({ current: refs++ === 0 ? hero : initial }), useMemo: (fn: () => unknown) => fn(), useEffect: (fn: any) => effects.push(fn) },
+    react: { useRef: (initial: unknown) => ({ current: refs++ === 0 ? hero : initial }), useMemo: (fn: () => unknown) => fn(), useEffect: (fn: () => () => void) => effects.push(fn) },
     'next/image': { __esModule: true, default: 'optimized-image', getImageProps: require('next/image').getImageProps },
     'next/link': { __esModule: true, default: 'link' },
     'lucide-react': { ArrowUpRight: 'arrow' },
