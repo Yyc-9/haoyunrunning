@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLanguage } from '@/app/language-context'
 import { AlertTriangle, Ban, CalendarCheck2, Check, CircleMinus, Clock3, Loader2, Phone, RotateCcw, Save, UsersRound } from 'lucide-react'
 import CoachSubNav from '@/components/CoachSubNav'
@@ -128,6 +128,7 @@ export default function CoachAttendanceClient() {
   const [activeFilter, setActiveFilter] = useState<AttendanceFilter>('unmarked')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const savingAttendance = useRef(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [leaveEnrollment, setLeaveEnrollment] = useState<Enrollment | null>(null)
@@ -157,8 +158,10 @@ export default function CoachAttendanceClient() {
       setCancellations(payload.cancellations ?? [])
       setCourseId(nextCourseId)
       setSessionDate((current) => nextCourse?.sessionDates.includes(current) ? current : defaultSessionDate(nextCourse))
+      return true
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : '讀取點名資料失敗。')
+      return false
     } finally {
       setIsLoading(false)
     }
@@ -246,17 +249,16 @@ export default function CoachAttendanceClient() {
     setActiveFilter('excused')
   }
 
-  function openLeave(enrollment: Enrollment) {
-    if (unsavedCount > 0) {
-      setError('請先儲存其他學員的點名變更，再安排請假。')
-      return
-    }
+  async function openLeave(enrollment: Enrollment) {
+    if (isSaving || isLoading) return
+    if (unsavedCount > 0 && !await saveAttendance()) return
     setError('')
     setLeaveEnrollment(enrollment)
   }
 
   async function saveAttendance() {
-    if (!courseId || !sessionDate || roster.length === 0) return
+    if (savingAttendance.current || isSaving || !courseId || !sessionDate || roster.length === 0) return false
+    savingAttendance.current = true
     setIsSaving(true)
     setError('')
     setMessage('')
@@ -278,10 +280,12 @@ export default function CoachAttendanceClient() {
       const payload = (await response.json().catch(() => ({}))) as AttendancePayload
       if (!response.ok) throw new Error(payload.error || '儲存點名資料失敗。')
       setMessage(payload.message || '點名結果已儲存。')
-      await loadAttendance(courseId)
+      return await loadAttendance(courseId)
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : '儲存點名資料失敗。')
+      return false
     } finally {
+      savingAttendance.current = false
       setIsSaving(false)
     }
   }
@@ -344,8 +348,8 @@ export default function CoachAttendanceClient() {
           ) : (
             <>
               <section className="grid gap-3 rounded-lg border border-black/10 bg-white p-4 shadow-sm md:grid-cols-2">
-                <label><span className="mb-2 block text-xs font-bold text-apple-gray-500">班級</span><select value={courseId} onChange={(event) => selectCourse(event.target.value)} className="apple-input">{courses.map((course) => <option key={course.courseSeasonCourseId} value={course.courseSeasonCourseId}>{course.weekday}｜{course.location}｜{course.courseName}</option>)}</select></label>
-                <label><span className="mb-2 block text-xs font-bold text-apple-gray-500">點名課次</span><select value={sessionDate} onChange={(event) => { setSessionDate(event.target.value); setActiveFilter('unmarked'); setMessage('') }} className="apple-input">{selectedCourse?.sessionDates.map((date) => <option key={date} value={date}>第 {selectedCourse.sessionDates.indexOf(date) + 1} 堂｜{formatSessionDate(date, language)}{date > taipeiDateKey() ? '｜未開始' : ''}</option>)}</select></label>
+                <label><span className="mb-2 block text-xs font-bold text-apple-gray-500">班級</span><select disabled={isSaving || isLoading} value={courseId} onChange={(event) => selectCourse(event.target.value)} className="apple-input">{courses.map((course) => <option key={course.courseSeasonCourseId} value={course.courseSeasonCourseId}>{course.weekday}｜{course.location}｜{course.courseName}</option>)}</select></label>
+                <label><span className="mb-2 block text-xs font-bold text-apple-gray-500">點名課次</span><select disabled={isSaving || isLoading} value={sessionDate} onChange={(event) => { setSessionDate(event.target.value); setActiveFilter('unmarked'); setMessage('') }} className="apple-input">{selectedCourse?.sessionDates.map((date) => <option key={date} value={date}>第 {selectedCourse.sessionDates.indexOf(date) + 1} 堂｜{formatSessionDate(date, language)}{date > taipeiDateKey() ? '｜未開始' : ''}</option>)}</select></label>
                 <div className="md:col-span-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold text-apple-gray-500"><span>{selectedCourse?.seasonName}</span><span>{selectedCourse?.meetingPoint || selectedCourse?.location}</span><span>名單 {roster.length} 人</span></div>
               </section>
 
@@ -388,7 +392,7 @@ export default function CoachAttendanceClient() {
                             {enrollment.status !== 'approved' && <p className="mt-1 text-xs text-amber-700">{enrollment.status === 'rejected' ? '待補件' : enrollment.status === 'pending_transfer' ? '待匯款' : '待核帳'} · 可正常點名</p>}
                             <p className="mt-1 truncate text-[11px] font-bold text-apple-gray-500">所屬班級：{enrollment.home_course_name}</p>
                             {makeup ? <p className="mt-2 rounded-md bg-blue-50 p-2 text-xs font-bold text-blue-800">補課學員｜來自 {enrollment.home_course_name}｜原請假日期：{formatSessionDate(makeup.original_session_date, language)}</p> : null}
-                            {originalLeave ? <p className="mt-2 text-xs font-bold text-amber-800">原班請假保留｜{originalLeave.status === 'self_training' ? '自主訓練 · 教練已給課表，不可再線下補課' : originalLeave.status === 'completed' ? '補課已完成' : originalLeave.status === 'forfeited' ? '補課資格已結束' : originalLeave.target_session_date ? `已安排 ${formatSessionDate(originalLeave.target_session_date, language)} 補課` : '尚未安排補課'}</p> : null}
+                            {originalLeave ? <p className="mt-2 text-xs font-bold text-amber-800">原班請假保留｜{originalLeave.status === 'self_training' ? '自主訓練 · 可點選請假調整補課方式' : originalLeave.status === 'completed' ? '補課已完成' : originalLeave.status === 'forfeited' ? '補課資格已結束' : originalLeave.target_session_date ? `已安排 ${formatSessionDate(originalLeave.target_session_date, language)} 補課` : '尚未安排補課'}</p> : null}
                             <p className="mt-2 text-xs font-bold text-apple-blue">{attendanceVerification(Boolean(selfCheckin), savedByEnrollment.get(enrollment.id)?.status)}</p>
                             <p className="mt-1 truncate text-xs text-apple-gray-500">{enrollment.email}</p>
                             <p className="mt-1 text-xs font-semibold text-apple-gray-500">計費起點：{enrollment.billing_start_session_date ? formatSessionDate(enrollment.billing_start_session_date, language) : '未設定'}</p>
@@ -399,7 +403,7 @@ export default function CoachAttendanceClient() {
                               const Icon = option.icon
                               const active = row.status === option.value
                               const disabled = isSaving || isLoading || Boolean(selectedCancellation) || (option.value === 'excused'
-                                ? sessionDate < new Date(Date.now() + 8 * 3600000 - 7 * 86400000).toISOString().slice(0, 10) || Boolean(makeup && (makeup.status === 'completed' || selfCheckin || row.status === 'present')) || isFinalizedLeave(originalLeave?.status)
+                                ? sessionDate < new Date(Date.now() + 8 * 3600000 - 7 * 86400000).toISOString().slice(0, 10) || Boolean(makeup && (makeup.status === 'completed' || selfCheckin || row.status === 'present')) || (originalLeave?.status !== 'self_training' && isFinalizedLeave(originalLeave?.status))
                                 : isFutureSession || Boolean(originalLeave))
                               return <button key={option.value} type="button" disabled={disabled} aria-pressed={active} onClick={() => option.value === 'excused' ? openLeave(enrollment) : updateDraft(enrollment.id, { status: active ? 'unmarked' : option.value })} className={`inline-flex min-h-10 items-center justify-center gap-1 rounded-md border px-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${active ? option.tone : 'border-black/10 bg-white text-apple-gray-500 hover:bg-apple-gray-50'}`}><Icon className="h-3.5 w-3.5" /><span>{option.label}</span></button>
                             })}
@@ -407,7 +411,7 @@ export default function CoachAttendanceClient() {
                         </div>
                         {earlyAttendance ? <p className="mt-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs font-bold leading-5 text-amber-900"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />本次到課早於學員選擇的計費起點，儲存後會交由管理員處理補繳或免除。</p> : null}
                         {verifiesClaim ? <p className="mt-3 rounded-md bg-blue-50 p-2.5 text-xs font-bold leading-5 text-blue-800">這堂是學員申報的補繳課次；點名結果會自動完成到課核對。</p> : null}
-                        <input disabled={Boolean(selectedCancellation) || isFutureSession} value={row.note} onChange={(event) => updateDraft(enrollment.id, { note: event.target.value })} className="apple-input mt-3 min-h-10 text-sm disabled:cursor-not-allowed disabled:opacity-50" maxLength={300} placeholder={isFutureSession ? '課次尚未開始' : '點名備註（選填）'} />
+                        <input disabled={isSaving || isLoading || Boolean(selectedCancellation) || isFutureSession} value={row.note} onChange={(event) => updateDraft(enrollment.id, { note: event.target.value })} className="apple-input mt-3 min-h-10 text-sm disabled:cursor-not-allowed disabled:opacity-50" maxLength={300} placeholder={isFutureSession ? '課次尚未開始' : '點名備註（選填）'} />
                       </article>
                     )
                   })}
