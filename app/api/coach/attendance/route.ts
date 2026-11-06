@@ -313,7 +313,7 @@ export async function POST(request: NextRequest) {
       p_target_date: body.leaveMode === 'in_person' ? cleanText(body.targetSessionDate, 10) || null : null,
     })
     if (error) return NextResponse.json({ error: /capacity reached/i.test(error.message) ? '這堂補課已滿，請選擇其他課次。' : /already finalized/i.test(error.message) ? '本堂點名或補課已完成，不能再更改請假方式。' : error.message }, { status: 409, headers: noStoreHeaders })
-    return NextResponse.json({ message: body.leaveMode === 'self_training' ? '已登記自主訓練；本次請假不可再安排線下補課。' : '請假與線下補課已一併儲存，補課班級的教練會看到這位學員。' }, { headers: noStoreHeaders })
+    return NextResponse.json({ message: body.leaveMode === 'self_training' ? '已登記自主訓練；可由教練調整補課方式。' : '請假與線下補課已一併儲存，補課班級的教練會看到這位學員。' }, { headers: noStoreHeaders })
   }
   if (testAccount) {
     if (body.intent === 'set_session_cancellation') {

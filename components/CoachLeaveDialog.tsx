@@ -59,7 +59,7 @@ export default function CoachLeaveDialog({ studentName, sessionDate, loadOptions
       <div className="grid gap-3 sm:grid-cols-2">
         {([
           { value: 'in_person', label: '選擇線下補課', description: '選擇班級與課次，加入補課名單。', Icon: CalendarCheck2 },
-          { value: 'self_training', label: '教練已給課表，自主訓練', description: '本次請假不再保留線下補課資格。', Icon: BookOpen },
+          { value: 'self_training', label: '教練已給課表，自主訓練', description: '本次先以課表自主訓練，之後可由教練調整補課方式。', Icon: BookOpen },
         ] as const).map(({ value, label, description, Icon }) => <button key={value} type="button" disabled={saving} aria-pressed={mode === value} onClick={() => { setMode(value); setError('') }} className={`rounded-xl border-2 p-4 text-left transition-colors motion-reduce:transition-none ${mode === value ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-gray-400'}`}><span className="flex items-center justify-between"><Icon className="h-6 w-6 text-blue-700" />{mode === value && <Check className="h-5 w-5 text-blue-700" />}</span><span className="mt-3 block text-sm font-bold">{label}</span><span className="mt-2 block text-xs leading-5 text-gray-600">{description}</span></button>)}
       </div>
       {mode === 'in_person' && <div className="space-y-3 rounded-xl border border-gray-200 p-4">
@@ -70,7 +70,7 @@ export default function CoachLeaveDialog({ studentName, sessionDate, loadOptions
           {!options.some(item => item.sessions.some(session => session.remaining > 0)) && <p role="status" className="text-sm text-amber-800">目前沒有可預約的線下補課課次。可先關閉視窗，與學員確認後再處理。</p>}
         </>}
       </div>}
-      {mode === 'self_training' && <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">確認表示教練已提供這次的自主訓練課表。儲存後，本次請假不能再改為線下補課，也不能取消請假恢復到課；其他正常課次不受影響。</p>}
+      {mode === 'self_training' && <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">確認表示教練已提供這次的自主訓練課表。若安排改變，可再次點選請假，改選線下補課；線下補課也可改為自主訓練。已完成或已有到課紀錄的補課不可更改，仍須符合本季課次、名額及回溯期限。</p>}
       {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
     </div>
     <div className="flex flex-wrap justify-end gap-3 border-t border-black/10 p-5 sm:p-6"><button type="button" disabled={saving} onClick={onClose} className="apple-button-outline min-h-11 px-5">取消</button><button type="button" disabled={!ready || saving} onClick={() => void save()} className="apple-button-primary min-h-11 gap-2 px-5 disabled:opacity-40">{saving && <Loader2 className="h-4 w-4 animate-spin" />}{saving ? '正在儲存' : mode === 'self_training' ? '確認自主訓練' : mode === 'in_person' ? '確認請假與補課' : '請先選擇處理方式'}</button></div>
