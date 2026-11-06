@@ -1,5 +1,6 @@
 // Complete API messages and fixed export labels used by administration workflows.
 export const adminActionEnglishCopy: Record<string, string> = {
+  '報名自訂問題': 'Custom registration question',
   '請選擇季度並填寫解除封存原因。': 'Select a season and enter a reason for restoring it.',
   '季度已變更或不存在，請重新整理後再操作。': 'The season changed or no longer exists. Refresh before continuing.',
   '解除封存未完成，請確認資料庫更新與季度狀態後重試。': 'Restore failed. Check the database update and season status before trying again.',

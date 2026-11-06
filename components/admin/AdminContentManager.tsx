@@ -37,6 +37,8 @@ import { useAdminUnsavedChanges } from '@/lib/admin-unsaved-changes'
 import { reconcileAdminDraft, mergeAdminFields } from '@/lib/admin-draft'
 import { APP_TIME_ZONE_LABEL } from '@/lib/app-time'
 import { supabase } from '@/lib/supabase'
+import CourseRegistrationQuestionEditor from './CourseRegistrationQuestionEditor'
+import { questionConfigError } from '@/lib/course-registration-question'
 import { courseSeasonCampaignLabel, courseSeasonStatusLabels, preferredCourseSeasonId, type CourseSeason, type CourseSeasonStatus } from '@/lib/course-seasons'
 import { isLegacyCourseTargetAudience } from '@/lib/managed-courses'
 import { orderedWeekdays } from '@/lib/course-sort'
@@ -326,6 +328,7 @@ function courseDraft(course: CourseSummary, override?: CourseOverride): CourseOv
     trainingItems: override?.trainingItems ?? course.trainingItems,
     suitableFor: override?.suitableFor?.length ? override.suitableFor : course.suitableFor,
     enrollmentNote: override?.enrollmentNote ?? course.enrollmentNote,
+    registrationQuestion: override?.registrationQuestion,
     signupUrl: override?.signupUrl || course.signupUrl,
     coachKeys: override?.coachKeys?.length ? override.coachKeys : course.coachKeys,
   }
@@ -571,6 +574,8 @@ export default function AdminContentManager({ content, courses, seasons, scope =
     if (!selectedCourse || !selectedSeason) return
     setLocalError('')
     setCourseMessage('')
+    const questionError = questionConfigError(draft.registrationQuestion)
+    if (questionError) { setLocalError(questionError); return }
     if (!/^週[一二三四五六日]$/.test(String(draft.weekday ?? '').replace('周', '週'))) {
       setLocalError('請選擇正確的上課星期。')
       return
@@ -1279,6 +1284,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
                   <p className="text-xs font-semibold leading-5 text-apple-gray-500 md:col-span-2">以上文案與課程名稱、適合對象會同步到本班課程詳情頂部。儲存當前招生季度後即可在前台查看。</p>
                 </div>
               </details>
+              <CourseRegistrationQuestionEditor value={draft.registrationQuestion} onChange={value => setDraft(current => ({ ...current, registrationQuestion: value }))} />
               <div className="border-y border-black/10 py-5 md:col-span-2">
                 <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                   <div><h3 className="font-black text-apple-gray-900">報名計價設定</h3><p className="mt-1 text-sm leading-6 text-apple-gray-500">實際收費課次會直接決定插班堂數；課程開始後，學員必須選擇本期計費起始課次。</p></div>

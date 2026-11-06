@@ -45,6 +45,8 @@ export type DirectCourseRegistration = {
   invoiceDelivery: string
   invoiceDetail: string
   notes: string
+  registrationAnswer?: string
+  registrationQuestionVersion?: string
   taxInvoiceInfo: string
   coachSubstituteConsent: boolean
   rulesConsent: boolean

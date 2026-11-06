@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { registrationQuestionAnswer, registrationQuestionVersion } from '@/lib/course-registration-question'
 import { useMemo, useRef, useState } from 'react'
 import {
   ArrowLeft,
@@ -263,6 +264,8 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
 
   async function submitRegistration() {
     if (!validateStep(3)) return
+    try { registrationQuestionAnswer(course.registrationQuestion, form.registrationAnswer, registrationQuestionVersion(course.registrationQuestion)) }
+    catch (cause) { showError(cause instanceof Error ? cause.message : String(cause)); return }
     setIsSubmitting(true)
     setError('')
 
@@ -279,7 +282,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
         body: JSON.stringify({
           intent: 'direct_site_registration',
           courseSlug: course.slug,
-          registration: form,
+          registration: { ...form, registrationQuestionVersion: registrationQuestionVersion(course.registrationQuestion) },
         }),
       })
       const payload = (await response.json().catch(() => ({}))) as RegistrationResponse
@@ -524,6 +527,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
             </fieldset>
 
             <label className="mt-5 block"><FieldLabel>載具條碼或電子信箱</FieldLabel><input autoCapitalize="characters" value={form.invoiceDetail} onChange={(event) => update('invoiceDetail', event.target.value)} className="apple-input min-h-12" placeholder="例如 /ABC1234 或 runner@example.com" /><span className="mt-2 block text-xs leading-5 text-apple-gray-500">手機條碼由「/」開頭，後接 7 碼英數字或符號，共 8 碼。</span></label>
+            {course.registrationQuestion?.enabled ? <label className="mt-5 block"><FieldLabel optional={!course.registrationQuestion.required}>{course.registrationQuestion.title}</FieldLabel><select className="apple-input min-h-12" value={form.registrationAnswer ?? ''} onChange={event => update('registrationAnswer', event.target.value)}><option value="">請選擇</option>{course.registrationQuestion.options.map(option => <option key={option} value={option}>{option}</option>)}</select></label> : null}
             <label className="mt-5 block"><FieldLabel optional>備註</FieldLabel><textarea value={form.notes} onChange={(event) => update('notes', event.target.value)} className="apple-input min-h-24 resize-y" placeholder="想跟小編說什麼呢？請勿填寫完整匯款帳號或信用卡資料" /></label>
             <label className="mt-5 block"><FieldLabel optional>統一編號與發票抬頭</FieldLabel><input value={form.taxInvoiceInfo} onChange={(event) => update('taxInvoiceInfo', event.target.value)} className="apple-input min-h-12" placeholder="若無可留白" /></label>
 
