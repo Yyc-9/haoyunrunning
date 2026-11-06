@@ -1,4 +1,5 @@
 import { GROUP_DESCRIPTION, GROUP_PRACTICE_PATH } from '@/lib/group-practice'
+import { normalizeRegistrationQuestion } from '@/lib/course-registration-question'
 
 export type HomeActivity = {
   title: string
@@ -39,6 +40,7 @@ export type CourseOverride = {
   trainingItems?: string[]
   suitableFor?: string[]
   enrollmentNote?: string
+  registrationQuestion?: import('./course-registration-question').CourseRegistrationQuestion
   signupUrl?: string
   coachKeys?: string[]
 }
@@ -670,6 +672,7 @@ export function normalizeCourseOverrides(value: unknown): Record<string, CourseO
       suitableFor: suitableFor.length ? suitableFor : undefined,
       enrollmentNote: typeof override.enrollmentNote === 'string' ? cleanString(override.enrollmentNote, 300) : undefined,
       signupUrl: signupUrl && isSafePublicUrl(signupUrl) ? signupUrl : '',
+      registrationQuestion: normalizeRegistrationQuestion(override.registrationQuestion),
       coachKeys,
     }
   })

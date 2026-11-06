@@ -1,3 +1,4 @@
+import { questionConfigError } from '@/lib/course-registration-question'
 import { isActiveEnrollment, SEAT_HOLDING_STATUSES, courseSeatAvailability } from '@/lib/course-capacity'
 import { courseBillingInputError } from '@/lib/admin-course-validation'
 import { randomUUID } from 'node:crypto'
@@ -834,6 +835,7 @@ export async function GET(request: NextRequest) {
       { label: '跑步近況', value: payloadText(order.payload, 'runningStatus') },
       { label: '發票方式', value: payloadText(order.payload, 'invoiceDelivery') },
       { label: '載具或信箱', value: payloadText(order.payload, 'invoiceDetail') },
+      { label: recordText(order.payload?.registrationQuestionAnswer as Record<string, unknown>, 'title') || '報名自訂問題', value: recordText(order.payload?.registrationQuestionAnswer as Record<string, unknown>, 'answer') },
       { label: '統編與抬頭', value: payloadText(order.payload, 'taxInvoiceInfo') },
       { label: '教練代課同意', value: consentText('coachSubstituteConsent') },
       { label: '課程規範同意', value: consentText('rulesConsent') },
@@ -1027,6 +1029,8 @@ export async function PATCH(request: NextRequest) {
     const seasonId = cleanText(body.seasonId)
     const courseSlug = cleanText(body.courseSlug)
     const capacity = Number(body.capacity)
+    const questionError = questionConfigError((body.value as Record<string, unknown> | null)?.registrationQuestion)
+    if (questionError) return json({ error: questionError }, { status: 400 })
     const normalized = normalizeCourseOverrides({ [courseSlug]: body.value })[courseSlug]
 
     if (!seasonId || !/^[a-z0-9-]{1,120}$/.test(courseSlug) || !normalized) {

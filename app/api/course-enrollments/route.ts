@@ -1,3 +1,4 @@
+import { registrationQuestionAnswer } from '@/lib/course-registration-question'
 import { SEAT_HOLDING_STATUSES, courseSeatAvailability } from '@/lib/course-capacity'
 import { NextRequest, NextResponse } from 'next/server'
 import { COURSE_CAPACITY, courseEnrollmentPayload } from '@/lib/course-registration'
@@ -290,6 +291,9 @@ export async function POST(request: NextRequest) {
     const transferLastFive = cleanText(registration.transferLastFive, 5)
     const invoiceDelivery = cleanText(registration.invoiceDelivery, 120)
     const invoiceDetail = cleanText(registration.invoiceDetail, 320)
+    let questionAnswer
+    try { questionAnswer = registrationQuestionAnswer(currentSeason.courseOverrides[courseSlug]?.registrationQuestion, registration.registrationAnswer, registration.registrationQuestionVersion) }
+    catch (cause) { return NextResponse.json({ error: cause instanceof Error ? cause.message : '報名選項無效。' }, { status: 400 }) }
     const notes = cleanText(registration.notes, 1000)
     const taxInvoiceInfo = cleanText(registration.taxInvoiceInfo, 300)
 
@@ -369,6 +373,7 @@ export async function POST(request: NextRequest) {
         payment_submitted_at: formSubmittedAt,
         payload: {
           provider: 'website_direct_form',
+          registrationQuestionAnswer: questionAnswer,
           studentType,
           enrollmentTiming: tokenPayload.quote.enrollmentTiming,
           legacyStudentMatched: Boolean(legacyResult.data),

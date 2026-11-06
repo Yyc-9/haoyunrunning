@@ -45,6 +45,7 @@ export type Course = {
   slogan?: string
   campaignLabel?: string
   enrollmentNote?: string
+  registrationQuestion?: import('./course-registration-question').CourseRegistrationQuestion
   level?: string
   trainingGoal?: string
   trainingGoals?: string[]
