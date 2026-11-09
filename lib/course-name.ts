@@ -1,5 +1,6 @@
 /** Use the offering quarter, including when a course is copied to another season. */
-export function seasonCourseName(name: string, code: string) {
+export function seasonCourseName(name: string, code: string, includeSeason = true) {
+  if (!includeSeason) return name.trim()
   if (!/^\d{4}-Q[1-4]$/.test(code)) return name
   const short = name.trim()
     .replace(/^\d{4}\s*好運跑步訓練營\s*[XＸ×]\s*/u, '')

@@ -26,6 +26,11 @@ export const invoiceDeliveryOptions = [
   '寄至本次的電子信箱或 Gmail 信箱',
 ] as const
 
+/** Correct the two known imported name variants without converting other name characters. */
+export function normalizeRegistrationStudentName(name: string) {
+  return name.replace(/谢/g, '謝').replace(/週/g, '周')
+}
+
 export type DirectCourseRegistration = {
   studentType: 'returning' | 'new'
   studentName: string
