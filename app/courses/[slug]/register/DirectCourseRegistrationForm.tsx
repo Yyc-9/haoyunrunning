@@ -135,7 +135,7 @@ function FieldLabel({ children, optional = false }: { children: React.ReactNode;
 export default function DirectCourseRegistrationForm({ course, userEmail, legacyStudent, pricingOptions, onSubmitted }: DirectCourseRegistrationFormProps) {
   const { language } = useLanguage()
   const [step, setStep] = useState(0)
-  const consentCourseLabel = course.slug === 'zhubei-night-run-monday-3' ? 'Hyrox' : displayCourseLocation(course.location)
+  const courseDisplayName = formatCourseWeekday(course.name)
   const [form, setForm] = useState<DirectCourseRegistration>(() => ({
     ...initialForm,
     studentType: legacyStudent.matched ? 'returning' : 'new',
@@ -324,7 +324,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
           <div>
             <div className="rounded-lg border border-black/10 bg-apple-gray-50 p-5">
               <p className="text-xs font-bold text-apple-gray-500">本次報名課程</p>
-              <h3 className="mt-2 text-xl font-black leading-7 text-apple-gray-950">{formatCourseWeekday(course.name)}</h3>
+              <h3 className="mt-2 text-xl font-black leading-7 text-apple-gray-950">{courseDisplayName}</h3>
               <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                 <div><dt className="text-apple-gray-500">日期</dt><dd className="mt-1 font-bold">{course.period}</dd></div>
                 <div><dt className="text-apple-gray-500">地點</dt><dd className="mt-1 font-bold">{displayCourseLocation(course.location)}{course.meetingPoint ? ` · ${course.meetingPoint}` : ''}</dd></div>
@@ -535,7 +535,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
 
             <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
               <input type="checkbox" checked={form.finalConsent} onChange={(event) => update('finalConsent', event.target.checked)} className="mt-1 h-5 w-5 shrink-0 accent-emerald-700" />
-              <span className="text-sm font-black leading-6 text-emerald-900">{language === 'en' ? `I agree to join the Nurture Running Camp (${course.period}, ${consentCourseLabel}) and confirm that the information above is correct.` : <>我願意參與 {course.period} 好運訓練營 X {consentCourseLabel}課程，並確認以上資料正確。</>}</span>
+              <span className="text-sm font-black leading-6 text-emerald-900">{language === 'en' ? `I agree to join ${courseDisplayName} (${course.period}) and confirm that the information above is correct.` : <>我願意參與「{courseDisplayName}」（{course.period}），並確認以上資料正確。</>}</span>
             </label>
           </div>
         ) : null}
