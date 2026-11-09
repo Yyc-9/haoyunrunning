@@ -8,6 +8,22 @@ registerHooks({ resolve(specifier, context, next) {
 const { toEnglishWebsiteText } = await import('../lib/english-website.ts')
 const { normalizeCourseOverrides } = await import('../lib/site-content.ts')
 const { applyCourseOverrides } = await import('../lib/managed-courses.ts')
+const { normalizeRegistrationStudentName } = await import('../lib/course-registration-form.ts')
+
+test('special courses retain their authored name without an automatic quarter prefix', () => {
+  const overrides = normalizeCourseOverrides({ special: { name: '2026好運跑班X混合訓練', includeSeasonInName: false } })
+  assert.equal(overrides.special.includeSeasonInName, false)
+  assert.equal(seasonCourseName(overrides.special.name!, '2026-Q4', overrides.special.includeSeasonInName), '2026好運跑班X混合訓練')
+  assert.equal(seasonCourseName(overrides.special.name!, '2027-Q1', false), '2026好運跑班X混合訓練')
+  assert.equal(normalizeCourseOverrides({ regular: { name: '週二跑班' } }).regular.includeSeasonInName, true)
+})
+
+test('prefilled student names correct only the specified imported name variants', () => {
+  assert.equal(normalizeRegistrationStudentName('谢珮琪'), '謝珮琪')
+  assert.equal(normalizeRegistrationStudentName('週怡君'), '周怡君')
+  assert.equal(normalizeRegistrationStudentName('周謝臺台'), '周謝臺台')
+  assert.equal(normalizeRegistrationStudentName(''), '')
+})
 
 test('timetable hides season prefixes without losing weekdays or meaningful name content', () => {
   for (const name of ['2026Q4週一竹北夜跑', '2027-Q1週一竹北夜跑', 'Q4週一竹北夜跑', '2026 好運跑步訓練營 X 週一竹北夜跑']) {

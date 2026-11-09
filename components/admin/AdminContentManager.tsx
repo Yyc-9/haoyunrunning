@@ -309,6 +309,7 @@ function courseDraft(course: CourseSummary, override?: CourseOverride): CourseOv
     templateSlug: override?.templateSlug || course.slug,
     name: override?.name || course.name,
     timetableName: override?.timetableName ?? '',
+    includeSeasonInName: override?.includeSeasonInName !== false,
     weekday: override?.weekday || course.weekday,
     location: override?.location || course.location,
     period: override?.period || course.period,
@@ -1262,6 +1263,7 @@ export default function AdminContentManager({ content, courses, seasons, scope =
             {selectedSeason.status === 'archived' ? <p role="status" className="bg-amber-50 p-5 text-sm font-bold text-amber-900">此季度已封存，課程與報名資料僅供查閱，已停止同步與修改。</p> : null}
             {selectedCourse ? (
             <fieldset disabled={selectedSeason.status === 'archived'} className="grid gap-4 p-5 md:grid-cols-2 disabled:opacity-70">
+              <label className="flex items-center gap-3 text-sm font-bold md:col-span-2"><input type="checkbox" checked={draft.includeSeasonInName !== false} onChange={e => setDraft(current => ({ ...current, includeSeasonInName: e.target.checked }))} />{english ? 'Automatically prefix the course name with the year and quarter (turn off for special courses)' : '課程名稱自動加上年份與季度（非常規課程可取消）'}</label>
               <Field label="課程名稱"><input value={String(draft.name ?? '')} onChange={(e) => setDraft((current) => ({ ...current, name: e.target.value }))} className="apple-input" /></Field>
               <Field label={english ? 'Timetable display name' : '課表顯示名稱'}><input value={String(draft.timetableName ?? '')} onChange={(e) => setDraft((current) => ({ ...current, timetableName: e.target.value }))} className="apple-input" maxLength={180} placeholder={english ? 'Leave blank to hide the year and quarter automatically' : '留白時自動隱藏年份與季度，例如週一竹北夜跑'} /><p className="mt-2 text-xs leading-5 text-apple-gray-500">{english ? 'Shown on the desktop and mobile timetable. Enrollment and attendance keep the original class name.' : '用於手機及電腦課表；報名與考勤仍保留原本的完整班名。'}</p></Field>
               <Field label="星期"><select value={String(draft.weekday ?? '').replace('周', '週')} onChange={(e) => setDraft((current) => ({ ...current, weekday: e.target.value }))} className="apple-input"><option value="">請選擇星期</option>{orderedWeekdays.map((weekday) => <option key={weekday} value={weekday}>{weekday}</option>)}</select></Field>
