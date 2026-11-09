@@ -135,6 +135,7 @@ function FieldLabel({ children, optional = false }: { children: React.ReactNode;
 export default function DirectCourseRegistrationForm({ course, userEmail, legacyStudent, pricingOptions, onSubmitted }: DirectCourseRegistrationFormProps) {
   const { language } = useLanguage()
   const [step, setStep] = useState(0)
+  const consentCourseLabel = course.slug === 'zhubei-night-run-monday-3' ? 'Hyrox' : displayCourseLocation(course.location)
   const [form, setForm] = useState<DirectCourseRegistration>(() => ({
     ...initialForm,
     studentType: legacyStudent.matched ? 'returning' : 'new',
@@ -534,7 +535,7 @@ export default function DirectCourseRegistrationForm({ course, userEmail, legacy
 
             <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
               <input type="checkbox" checked={form.finalConsent} onChange={(event) => update('finalConsent', event.target.checked)} className="mt-1 h-5 w-5 shrink-0 accent-emerald-700" />
-              <span className="text-sm font-black leading-6 text-emerald-900">{language === 'en' ? `I agree to join the Nurture Running Camp (${course.period}, ${displayCourseLocation(course.location)}) and confirm that the information above is correct.` : <>我願意參與 {course.period} 好運訓練營 X {displayCourseLocation(course.location)}課程，並確認以上資料正確。</>}</span>
+              <span className="text-sm font-black leading-6 text-emerald-900">{language === 'en' ? `I agree to join the Nurture Running Camp (${course.period}, ${consentCourseLabel}) and confirm that the information above is correct.` : <>我願意參與 {course.period} 好運訓練營 X {consentCourseLabel}課程，並確認以上資料正確。</>}</span>
             </label>
           </div>
         ) : null}
