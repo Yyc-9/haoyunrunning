@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLanguage } from '@/app/language-context'
 import { AlertTriangle, Ban, CalendarCheck2, Check, CircleMinus, Clock3, Loader2, Phone, RotateCcw, Save, UsersRound } from 'lucide-react'
 import CoachSubNav from '@/components/CoachSubNav'
+import AttendanceTermView from '@/components/AttendanceTermView'
+import AttendanceEditorPanel from '@/components/AttendanceEditorPanel'
 import { isFinalizedLeave, type CoachLeaveOption, type CourseAttendanceStatus, type CourseMakeupRequest } from '@/lib/course-attendance'
 import CoachLeaveDialog, { type CoachLeaveChoice } from '@/components/CoachLeaveDialog'
 import { supabase } from '@/lib/supabase'
@@ -132,6 +134,8 @@ export default function CoachAttendanceClient() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [leaveEnrollment, setLeaveEnrollment] = useState<Enrollment | null>(null)
+  const [view, setView] = useState<'term' | 'day'>('term')
+  const [editingId, setEditingId] = useState('')
 
   const loadAttendance = useCallback(async (preferredCourseId = '') => {
     setIsLoading(true)
@@ -199,9 +203,9 @@ export default function CoachAttendanceClient() {
     return result
   }, { present: 0, excused: 0, deducted: 0, unmarked: 0 } as Record<CourseAttendanceStatus | 'unmarked', number>), [draft, roster])
   const makeupCount = roster.filter(enrollment => sessionMakeupEnrollmentIds.has(enrollment.id)).length
-  const visibleRoster = useMemo(() => roster.filter((enrollment) => activeFilter === 'makeup'
+  const visibleRoster = useMemo(() => roster.filter((enrollment) => editingId ? enrollment.id === editingId : activeFilter === 'makeup'
     ? sessionMakeupEnrollmentIds.has(enrollment.id)
-    : (draft[enrollment.id]?.status ?? 'unmarked') === activeFilter), [activeFilter, draft, roster, sessionMakeupEnrollmentIds])
+    : (draft[enrollment.id]?.status ?? 'unmarked') === activeFilter), [activeFilter, draft, roster, sessionMakeupEnrollmentIds, editingId])
   const unsavedCount = useMemo(() => roster.filter((enrollment) => {
     const saved = savedByEnrollment.get(enrollment.id)
     const row = draft[enrollment.id] ?? { status: 'unmarked' as const, note: '' }
@@ -209,10 +213,18 @@ export default function CoachAttendanceClient() {
   }).length, [draft, roster, savedByEnrollment])
 
   useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => { if (unsavedCount || isSaving) { event.preventDefault(); event.returnValue = '' } }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [unsavedCount, isSaving])
+
+  useEffect(() => {
     setActiveFilter('unmarked')
   }, [courseId, sessionDate, leaveEnrollment?.id])
 
   function selectCourse(nextCourseId: string) {
+    if (unsavedCount && !window.confirm('有尚未儲存的變更，確定放棄並切換班級？')) return
+    setEditingId('')
     const course = courses.find((item) => item.courseSeasonCourseId === nextCourseId)
     setCourseId(nextCourseId)
     setSessionDate(defaultSessionDate(course))
@@ -256,7 +268,7 @@ export default function CoachAttendanceClient() {
     setLeaveEnrollment(enrollment)
   }
 
-  async function saveAttendance() {
+  async function saveAttendance(overrides?: Record<string, DraftRow>) {
     if (savingAttendance.current || isSaving || !courseId || !sessionDate || roster.length === 0) return false
     savingAttendance.current = true
     setIsSaving(true)
@@ -270,10 +282,14 @@ export default function CoachAttendanceClient() {
         body: JSON.stringify({
           courseSeasonCourseId: courseId,
           sessionDate,
-          records: roster.map((enrollment) => ({
+          records: roster.filter(enrollment => {
+            const row = (overrides ?? draft)[enrollment.id]
+            const saved = savedByEnrollment.get(enrollment.id)
+            return row && (row.status !== (saved?.status ?? 'unmarked') || row.note !== (saved?.note ?? ''))
+          }).map((enrollment) => ({
             enrollmentId: enrollment.id,
-            status: draft[enrollment.id]?.status ?? 'unmarked',
-            note: draft[enrollment.id]?.note ?? '',
+            status: (overrides ?? draft)[enrollment.id]?.status ?? 'unmarked',
+            note: (overrides ?? draft)[enrollment.id]?.note ?? '',
           })),
         }),
       })
@@ -290,8 +306,21 @@ export default function CoachAttendanceClient() {
     }
   }
 
+  async function closeEditor() {
+    if (unsavedCount > 0 && !await saveAttendance()) return
+    setEditingId('')
+  }
+
+  async function markStatus(enrollmentId: string, status: AttendanceDraftStatus) {
+    if (savingAttendance.current || isSaving || isLoading) return
+    const next = { ...draft, [enrollmentId]: { status, note: draft[enrollmentId]?.note ?? '' } }
+    setDraft(next)
+    await saveAttendance(next)
+  }
+
   async function setSessionCancellation(cancelled: boolean) {
     if (!courseId || !sessionDate) return
+    if (unsavedCount && !await saveAttendance()) return
     if (cancelled && !window.confirm(language === 'en' ? `Cancel the session on ${formatSessionDate(sessionDate, language)}?` : `確定將 ${formatSessionDate(sessionDate, language)} 標記為停課？`)) return
     if (!cancelled && !window.confirm(language === 'en' ? `Restore the session on ${formatSessionDate(sessionDate, language)}?` : `確定恢復 ${formatSessionDate(sessionDate, language)} 的課程？`)) return
 
@@ -349,11 +378,16 @@ export default function CoachAttendanceClient() {
             <>
               <section className="grid gap-3 rounded-lg border border-black/10 bg-white p-4 shadow-sm md:grid-cols-2">
                 <label><span className="mb-2 block text-xs font-bold text-apple-gray-500">班級</span><select disabled={isSaving || isLoading} value={courseId} onChange={(event) => selectCourse(event.target.value)} className="apple-input">{courses.map((course) => <option key={course.courseSeasonCourseId} value={course.courseSeasonCourseId}>{course.weekday}｜{course.location}｜{course.courseName}</option>)}</select></label>
-                <label><span className="mb-2 block text-xs font-bold text-apple-gray-500">點名課次</span><select disabled={isSaving || isLoading} value={sessionDate} onChange={(event) => { setSessionDate(event.target.value); setActiveFilter('unmarked'); setMessage('') }} className="apple-input">{selectedCourse?.sessionDates.map((date) => <option key={date} value={date}>第 {selectedCourse.sessionDates.indexOf(date) + 1} 堂｜{formatSessionDate(date, language)}{date > taipeiDateKey() ? '｜未開始' : ''}</option>)}</select></label>
+                <label><span className="mb-2 block text-xs font-bold text-apple-gray-500">點名課次</span><select disabled={isSaving || isLoading} value={sessionDate} onChange={async (event) => { const date = event.target.value; if (unsavedCount && !await saveAttendance()) return; setSessionDate(date); setActiveFilter('unmarked'); setMessage('') }} className="apple-input">{selectedCourse?.sessionDates.map((date) => <option key={date} value={date}>第 {selectedCourse.sessionDates.indexOf(date) + 1} 堂｜{formatSessionDate(date, language)}{date > taipeiDateKey() ? '｜未開始' : ''}</option>)}</select></label>
                 <div className="md:col-span-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold text-apple-gray-500"><span>{selectedCourse?.seasonName}</span><span>{selectedCourse?.meetingPoint || selectedCourse?.location}</span><span>名單 {roster.length} 人</span></div>
               </section>
 
-              <section className={`mt-4 flex flex-col justify-between gap-3 rounded-lg border p-4 sm:flex-row sm:items-end ${selectedCancellation ? 'border-red-200 bg-red-50' : 'border-black/10 bg-white'}`}>
+              <div className="mt-4 flex gap-2" role="group" aria-label="出勤檢視">{(['term', 'day'] as const).map(mode => <button key={mode} type="button" disabled={isLoading || isSaving} aria-pressed={view === mode} className={view === mode ? 'apple-button-primary px-5' : 'apple-button-outline px-5'} onClick={async () => { if (unsavedCount && !await saveAttendance()) return; setEditingId(''); setView(mode) }}>{mode === 'term' ? '整期總表' : '當堂點名'}</button>)}</div>
+              {view === 'term' && <AttendanceTermView courseId={courseId} dates={selectedCourse?.sessionDates ?? []} today={taipeiDateKey()} students={enrollments} records={attendance} makeups={makeups} cancellations={cancellations} disabled={isLoading || isSaving} onEdit={(id, date) => { setSessionDate(date); setEditingId(id); setError(''); setMessage('') }} />}
+
+              {view === 'day' || editingId ? <AttendanceEditorPanel open={Boolean(editingId)} busy={isSaving || isLoading} onClose={() => void closeEditor()}>
+              {editingId && <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b bg-white py-3"><h2 className="font-bold">{enrollments.find(e => e.id === editingId)?.name} · {formatSessionDate(sessionDate, language)}</h2><button type="button" disabled={isSaving || isLoading} onClick={() => void closeEditor()} className="apple-button-outline min-h-11 !w-auto shrink-0 px-4">完成</button></div>}
+              {!editingId && <section className={`mt-4 flex flex-col justify-between gap-3 rounded-lg border p-4 sm:flex-row sm:items-end ${selectedCancellation ? 'border-red-200 bg-red-50' : 'border-black/10 bg-white'}`}>
                 <div>
                   <p className="flex items-center gap-2 font-black text-apple-gray-950"><Ban className={`h-4 w-4 ${selectedCancellation ? 'text-red-600' : 'text-apple-gray-400'}`} />{selectedCancellation ? '本堂已停課' : '本堂正常開課'}</p>
                   <p className="mt-1 text-xs font-semibold leading-5 text-apple-gray-500">{selectedCancellation?.reason || '停課是整堂課的狀態，不需要逐位學員點選。'}</p>
@@ -362,9 +396,9 @@ export default function CoachAttendanceClient() {
                 <button type="button" disabled={isSaving} onClick={() => setSessionCancellation(!selectedCancellation)} className="apple-button-outline min-h-10 shrink-0 gap-2 px-4 text-sm disabled:opacity-40">
                   {selectedCancellation ? <RotateCcw className="h-4 w-4" /> : <Ban className="h-4 w-4" />}{selectedCancellation ? '恢復開課' : '標記停課'}
                 </button>
-              </section>
+              </section>}
 
-              <div className="my-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+              <div className={`my-4 grid-cols-2 gap-2 sm:grid-cols-5 ${editingId ? 'hidden' : 'grid'}`}>
                 {([
                   ['present', '到課', counts.present, 'text-emerald-700'],
                   ['excused', '請假', counts.excused, 'text-amber-700'],
@@ -405,13 +439,14 @@ export default function CoachAttendanceClient() {
                               const disabled = isSaving || isLoading || Boolean(selectedCancellation) || (option.value === 'excused'
                                 ? sessionDate < new Date(Date.now() + 8 * 3600000 - 7 * 86400000).toISOString().slice(0, 10) || Boolean(makeup && (makeup.status === 'completed' || selfCheckin || row.status === 'present')) || (originalLeave?.status !== 'self_training' && isFinalizedLeave(originalLeave?.status))
                                 : isFutureSession || Boolean(originalLeave))
-                              return <button key={option.value} type="button" disabled={disabled} aria-pressed={active} onClick={() => option.value === 'excused' ? openLeave(enrollment) : updateDraft(enrollment.id, { status: active ? 'unmarked' : option.value })} className={`inline-flex min-h-10 items-center justify-center gap-1 rounded-md border px-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${active ? option.tone : 'border-black/10 bg-white text-apple-gray-500 hover:bg-apple-gray-50'}`}><Icon className="h-3.5 w-3.5" /><span>{option.label}</span></button>
+                              return <button key={option.value} type="button" disabled={disabled} aria-pressed={active} onClick={() => option.value === 'excused' ? openLeave(enrollment) : markStatus(enrollment.id, active ? 'unmarked' : option.value)} className={`inline-flex min-h-10 items-center justify-center gap-1 rounded-md border px-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${active ? option.tone : 'border-black/10 bg-white text-apple-gray-500 hover:bg-apple-gray-50'}`}><Icon className="h-3.5 w-3.5" /><span>{option.label}</span></button>
                             })}
                           </div>
                         </div>
                         {earlyAttendance ? <p className="mt-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs font-bold leading-5 text-amber-900"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />本次到課早於學員選擇的計費起點，儲存後會交由管理員處理補繳或免除。</p> : null}
                         {verifiesClaim ? <p className="mt-3 rounded-md bg-blue-50 p-2.5 text-xs font-bold leading-5 text-blue-800">這堂是學員申報的補繳課次；點名結果會自動完成到課核對。</p> : null}
                         <input disabled={isSaving || isLoading || Boolean(selectedCancellation) || isFutureSession} value={row.note} onChange={(event) => updateDraft(enrollment.id, { note: event.target.value })} className="apple-input mt-3 min-h-10 text-sm disabled:cursor-not-allowed disabled:opacity-50" maxLength={300} placeholder={isFutureSession ? '課次尚未開始' : '點名備註（選填）'} />
+                        <p className="mt-2 text-xs text-apple-gray-500">點名狀態即時儲存；備註請按{editingId ? '「完成」或' : ''}「儲存本堂紀錄」。{savedByEnrollment.get(enrollment.id)?.updated_at ? ` 上次更新：${new Date(savedByEnrollment.get(enrollment.id)!.updated_at).toLocaleString(language, { timeZone: 'Asia/Taipei' })}` : ''}</p>
                       </article>
                     )
                   })}
@@ -419,7 +454,9 @@ export default function CoachAttendanceClient() {
                 </div>
               </section>
 
-              <div className="mt-5 flex flex-col items-stretch justify-end gap-2 sm:flex-row sm:items-center"><p className="text-center text-xs font-bold text-apple-gray-500 sm:text-left">{isFutureSession ? '可提前登記請假；到課點名須等課次開始' : unsavedCount > 0 ? `尚有 ${unsavedCount} 筆未儲存變更` : '目前沒有未儲存變更'}</p><button type="button" disabled={isSaving || !roster.length || !sessionDate || Boolean(selectedCancellation) || isFutureSession || unsavedCount === 0} onClick={saveAttendance} className="apple-button-primary min-h-12 w-full gap-2 px-6 shadow-sm disabled:opacity-40 sm:w-auto">{isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}儲存本堂紀錄</button></div>
+              <div className="mt-5 flex flex-col items-stretch justify-end gap-2 sm:flex-row sm:items-center"><p role="status" className="text-center text-xs font-bold text-apple-gray-500 sm:text-left">{isSaving ? '正在儲存，請稍候' : isFutureSession ? '可提前登記請假；到課點名須等課次開始' : unsavedCount > 0 ? `尚有 ${unsavedCount} 筆未儲存變更` : '點名狀態會自動儲存'}</p><button type="button" disabled={isSaving || !roster.length || !sessionDate || Boolean(selectedCancellation) || isFutureSession || unsavedCount === 0} onClick={() => void saveAttendance()} className="apple-button-primary min-h-12 w-full gap-2 px-6 shadow-sm disabled:opacity-40 sm:w-auto">{isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}儲存本堂紀錄</button></div>
+              {error && editingId ? <p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p> : null}
+              </AttendanceEditorPanel> : null}
             </>
           )}
         </div>
