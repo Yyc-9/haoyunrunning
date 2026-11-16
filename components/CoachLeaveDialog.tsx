@@ -29,12 +29,13 @@ export default function CoachLeaveDialog({ studentName, sessionDate, loadOptions
     return () => element?.close()
   }, [])
   useEffect(() => {
+    if (mode !== 'in_person') return
     let active = true
     setLoading(true)
     setLoadError('')
     loadOptions().then(result => { if (active) setOptions(result) }).catch(() => { if (active) setLoadError('補課課次讀取失敗，請重試。') }).finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [loadOptions, retry])
+  }, [loadOptions, retry, mode])
   const course = options.find(item => item.courseId === courseId)
   const selectedSession = course?.sessions.find(item => item.date === date)
   const ready = mode === 'self_training' || (mode === 'in_person' && Boolean(selectedSession && selectedSession.remaining > 0))
