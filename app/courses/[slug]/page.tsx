@@ -26,7 +26,9 @@ export async function generateMetadata({ params }: CourseDetailPageProps) {
   }
 
   return {
-    title: `${course.title} - 好運跑班`,
+    title: course.slug === 'hsinchu-beginner-tuesday-2'
+      ? '新竹市初階跑步班｜週二晚間｜好運跑班'
+      : `${course.title} - 好運跑班`,
     description: course.slogan,
     alternates: { canonical: `/courses/${course.slug}` },
     openGraph: {
