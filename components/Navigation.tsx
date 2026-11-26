@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { ChevronDown, CircleUserRound, ClipboardList, Globe2, Menu, X, User, LogOut, LogIn, ShieldCheck, ShoppingBag } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
@@ -33,6 +33,50 @@ export default function Navigation() {
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const router = useRouter()
+  const slide = useRef<Animation | null>(null)
+  const destination = useRef<{ href: string; direction: number } | null>(null)
+
+  useLayoutEffect(() => {
+    const pending = destination.current
+    destination.current = null
+    const main = document.querySelector('main')
+    if (pending?.href === pathname && main && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      slide.current = main.animate([
+        { translate: (42 * pending.direction) + 'px 0', opacity: 0.36 },
+        { translate: '0 0', opacity: 1 },
+      ], { duration: 400, easing: 'cubic-bezier(.19,.8,.2,1)' })
+    }
+    const cancel = () => {
+      slide.current?.cancel()
+      destination.current = null
+    }
+    window.addEventListener('popstate', cancel)
+    return () => {
+      window.removeEventListener('popstate', cancel)
+      slide.current?.cancel()
+    }
+  }, [pathname])
+
+  function switchSection(event: { preventDefault(): void }, href: string) {
+    slide.current?.cancel()
+    destination.current = null
+    const main = document.querySelector('main')
+    if (pathname === href || !main || matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    event.preventDefault()
+    const index = (url: string) => navItems.findIndex(item => item.href === url)
+    const direction = index(href) >= index(pathname) ? 1 : -1
+    destination.current = { href, direction }
+    const exit = main.animate([
+      { translate: '0 0', opacity: 1 },
+      { translate: (-28 * direction) + 'px 0', opacity: 0.48 },
+    ], { duration: 170, easing: 'ease-in', fill: 'forwards' })
+    slide.current = exit
+    exit.onfinish = () => {
+      router.push(href)
+      window.setTimeout(() => exit.cancel(), 600)
+    }
+  }
+
   const menuButtonRef = useRef<HTMLButtonElement>(null)
 
   const isMobileFocused = pathname === '/admin'
@@ -340,6 +384,7 @@ export default function Navigation() {
                       </a>
                     ) : (
                       <Link
+                        onNavigate={event => switchSection(event, item.href)}
                         href={item.href}
                         aria-current={pathname === item.href || (item.href !== '/' && pathname.startsWith(`${item.href}/`)) ? 'page' : undefined}
                         className="site-nav-link group whitespace-nowrap text-[15px] font-semibold text-apple-gray-950 transition-colors duration-200"
@@ -500,7 +545,8 @@ export default function Navigation() {
                       key={item.key}
                       whileTap={{ scale: 0.95 }}
                     >
-                      <a
+                      <Link
+                        onNavigate={event => { if (!isHashLink) switchSection(event, item.href) }}
                         href={item.href}
                         onClick={(e) => {
                           if (isHashLink) {
@@ -518,7 +564,7 @@ export default function Navigation() {
                         {item.key === 'shop' && (
                           <ShoppingBag className="inline-block ml-2 h-4 w-4" />
                         )}
-                      </a>
+                      </Link>
                     </motion.div>
                   )
                 })}
