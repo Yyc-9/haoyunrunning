@@ -305,7 +305,7 @@ export default function AdminMobileDashboard({ data, feedbackSummary, runAction,
 
       <div ref={contentRef} className="admin-mobile-content">
         <p className="admin-mobile-connection" role="status" data-error={Boolean(actionError)}>{actionError ? '同步異常，請查看提示' : '正式資料已連線'}</p>
-        {view === 'overview' ? <><FeedbackOverview summary={feedbackSummary} onOpen={()=>navigate('feedback')} /><AdminSeasonOverview data={data} /></> : null}
+        {view === 'overview' ? <><FeedbackOverview mobile summary={feedbackSummary} onOpen={()=>navigate('feedback')} /><AdminSeasonOverview data={data} /></> : null}
         {view === 'feedback' ? <section className="admin-mobile-screen"><div className="admin-mobile-backrow"><button type="button" className="admin-mobile-back" onClick={()=>navigate('overview')}><ArrowLeft className="h-4 w-4" />返回總覽</button></div><AdminFeedback /></section> : null}
 
         {view === 'reconciliation' ? (

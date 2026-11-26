@@ -262,7 +262,6 @@ select.admin-mobile-control:not([multiple]):not([size]) {
   .admin-shell { height: 100dvh !important; min-height: 100dvh !important; padding-top: 0 !important; overflow: hidden; }
   .admin-mobile-dashboard { display: flex; height: 100dvh; min-height: 0; flex-direction: column; margin: 0; }
   .admin-desktop-shell { display: none !important; }
-  body:has(.admin-shell) > div > footer { display: none; }
   .admin-mobile-topbar { min-height: calc(60px + env(safe-area-inset-top, 0px)); padding: calc(6px + env(safe-area-inset-top, 0px)) 16px 6px; flex: 0 0 auto; }
   .admin-mobile-external > * { min-width: 0; max-width: 100%; }
   .admin-mobile-external .apple-card { border-radius: 14px; }

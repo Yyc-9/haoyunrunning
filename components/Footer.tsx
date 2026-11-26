@@ -141,6 +141,8 @@ export default function Footer() {
           ))}
         </div>
 
+        <div id="site-footer-admin-feedback" />
+
         {/* Divider */}
         <div className="site-footer-divider my-8 border-t border-white/15" />
 

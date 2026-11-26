@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
+import { createPortal } from 'react-dom'
 import { ArrowLeft, Check, ChevronLeft, ChevronRight, Inbox, Loader2, MessageCircleWarning, RefreshCw, Search } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { feedbackCategories, feedbackStatuses, type FeedbackSummary, type SiteFeedback } from '@/lib/site-feedback'
@@ -29,11 +30,21 @@ export function useFeedbackSummary(enabled: boolean) {
   },[enabled])
   return summary
 }
-export function FeedbackOverview({summary,onOpen}:{summary:FeedbackSummary|null;onOpen:()=>void}) {
-  return <section className="mb-5 rounded-2xl border border-slate-200 bg-white p-5">
-    <div className="flex flex-wrap items-center justify-between gap-4"><div className="flex items-center gap-3"><MessageCircleWarning className="h-6 w-6 text-blue-700" /><div><h2 className="font-bold text-[#092d3a]">問題回報</h2><p className="mt-1 text-xs text-slate-500">{summary ? summary.pending+' 則待處理 · '+summary.unread+' 則未讀' : '回報統計暫時無法讀取，請進入查看。'}</p></div></div><button type="button" onClick={onOpen} className="min-h-11 rounded-full bg-blue-50 px-4 text-sm font-bold text-blue-700">查看回報</button></div>
-  </section>
+export function FeedbackOverview({summary,onOpen,mobile = false}:{summary:FeedbackSummary|null;onOpen:()=>void;mobile?:boolean}) {
+  const [target, setTarget] = useState<HTMLElement | null>(null)
+  useEffect(() => { setTarget(document.getElementById('site-footer-admin-feedback')) }, [])
+  if (!target) return null
+  return createPortal(<section className={`${mobile ? 'md:hidden' : 'hidden md:block'} mb-8 rounded-2xl border border-white/20 bg-white/5 p-5`} aria-label="問題回報">
+    <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex items-center gap-3">
+        <MessageCircleWarning aria-hidden="true" className="h-6 w-6 shrink-0 text-white/80" />
+        <div><h2 className="font-bold text-white">問題回報</h2><p className="mt-1 text-xs text-white/65">{summary ? summary.pending+' 則待處理 · '+summary.unread+' 則未讀' : '回報統計暫時無法讀取，請進入查看。'}</p></div>
+      </div>
+      <button type="button" onClick={() => { onOpen(); window.scrollTo({ top: 0, behavior: 'auto' }) }} className="min-h-11 rounded-full border border-white/20 bg-white/10 px-4 text-sm font-bold text-white hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">查看回報</button>
+    </div>
+  </section>, target)
 }
+
 const tone:Record<string,string>={'待處理':'bg-amber-50 text-amber-800','處理中':'bg-blue-50 text-blue-700','已解決':'bg-emerald-50 text-emerald-700'}
 function date(value:string) { return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(value)) }
 
