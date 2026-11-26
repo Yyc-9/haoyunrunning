@@ -4,8 +4,6 @@ import { getAuthedUser, isRevokedDeviceSession, supabaseAdmin } from '@/lib/supa
 import { getIsolatedTestAccount } from '@/lib/test-account'
 import { normalizeProfileGender } from '@/lib/profile-gender'
 
-export const preferredRegion = 'syd1'
-
 const noStoreHeaders = {
   'Cache-Control': 'no-store',
 }
