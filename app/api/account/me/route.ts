@@ -4,6 +4,8 @@ import { getAuthedUser, isRevokedDeviceSession, supabaseAdmin } from '@/lib/supa
 import { getIsolatedTestAccount } from '@/lib/test-account'
 import { normalizeProfileGender } from '@/lib/profile-gender'
 
+export const preferredRegion = 'syd1'
+
 const noStoreHeaders = {
   'Cache-Control': 'no-store',
 }
@@ -157,12 +159,11 @@ async function safeSyncCoachAccount(user: Awaited<ReturnType<typeof getAuthedUse
 async function accountResponse(profile: Record<string, unknown>, coachAccount: CoachAccountState | null = null) {
   if (!supabaseAdmin) return NextResponse.json({ profile, achievements: [], coachAccount }, { headers: noStoreHeaders })
 
-  const testAccount = await getIsolatedTestAccount({
-    id: String(profile.id),
-    email: typeof profile.email === 'string' ? profile.email : '',
-  })
-
-  const [achievements, billingResult] = await Promise.all([
+  const [testAccount, achievements, billingResult] = await Promise.all([
+    getIsolatedTestAccount({
+      id: String(profile.id),
+      email: typeof profile.email === 'string' ? profile.email : '',
+    }),
     getAchievementCollection(String(profile.id)),
     supabaseAdmin
       .from('profile_billing_preferences')

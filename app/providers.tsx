@@ -1,10 +1,12 @@
 'use client'
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { socialProviderScopes, type SocialProvider } from '@/lib/auth-providers'
 import { normalizeProfileGender, type ProfileGender } from '@/lib/profile-gender'
+import { emptyProfile, type AccountProfile, type Achievement } from '@/lib/runner-profile'
+import type { CoachAccountState } from '@/components/CoachAccountStatus'
 
 export interface User {
   id: string
@@ -34,6 +36,8 @@ export interface AuthContextType {
   user: User | null
   isLoggedIn: boolean
   isLoading: boolean
+  account: AccountDetails | null
+  accountError: string
   login: (email: string, password: string) => Promise<void>
   loginWithOAuth: (provider: SocialProvider) => Promise<void>
   logout: () => void
@@ -68,13 +72,27 @@ type ProfilePayload = {
   } | null
 }
 
-class AccountSessionError extends Error {
-  code: string
+type AccountDetails = {
+  profile: AccountProfile & ProfilePayload
+  achievements: Achievement[]
+  coachAccount: CoachAccountState | null
+}
 
-  constructor(message: string, code: string) {
-    super(message)
-    this.name = 'AccountSessionError'
-    this.code = code
+type ProfileRead = {
+  user: User | null
+  error?: Error
+}
+
+function userFromSession(authUser: SupabaseUser): User {
+  const name = authUser.user_metadata?.name
+  return {
+    id: authUser.id,
+    name: (typeof name === 'string' && name) || authUser.email?.split('@')[0] || '好運會員',
+    email: authUser.email ?? '',
+    phone: '',
+    gender: '',
+    pb: '',
+    role: 'student',
   }
 }
 
@@ -168,6 +186,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [sessionNotice, setSessionNotice] = useState('')
+  const [account, setAccount] = useState<AccountDetails | null>(null)
+  const [accountError, setAccountError] = useState('')
+  const currentSession = useRef<Session | null>(null)
+  const pendingProfile = useRef<Promise<ProfileRead> | null>(null)
+
+  const applySession = useCallback((session: Session | null) => {
+    const previous = currentSession.current
+    if (session && previous?.access_token === session.access_token) return
+
+    currentSession.current = session
+    pendingProfile.current = null
+    if (!session || previous?.user.id !== session.user.id) {
+      setAccount(null)
+      setAccountError('')
+      setUser(session ? userFromSession(session.user) : null)
+    }
+  }, [])
 
   const applyProfile = useCallback((data: ProfilePayload, fallbackEmail = '') => {
     const nextUser: User = {
@@ -198,112 +233,94 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return nextUser
   }, [])
 
-  const applyAuthUser = useCallback((authUser: SupabaseUser) => {
-    const nextUser: User = {
-      id: authUser.id,
-      name:
-        (authUser.user_metadata?.name as string | undefined) ||
-        authUser.email?.split('@')[0] ||
-        '好運會員',
-      email: authUser.email ?? '',
-      phone: '',
-      gender: '',
-      pb: '',
-      role: 'student',
+  const loadProfile = useCallback((session: Session, force = false): Promise<ProfileRead> => {
+    const client = supabase
+    const { user: authUser, access_token: token } = session
+    if (!client || currentSession.current?.access_token !== token) return Promise.resolve({ user: null })
+    if (pendingProfile.current && !force) return pendingProfile.current
+
+    const isCurrent = () => pendingProfile.current === request
+    const readProfile = async (): Promise<ProfileRead> => {
+      if (!isCurrent()) return { user: null }
+      const controller = new AbortController()
+      const timeout = window.setTimeout(() => controller.abort(), 10_000)
+      try {
+        const response = await fetch('/api/account/me', {
+          cache: 'no-store',
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        })
+        const payload = (await response.json().catch(() => ({}))) as Partial<AccountDetails> & { error?: string; code?: string }
+        if (!isCurrent()) return { user: null }
+
+        if (response.status === 401 && payload.code === 'SESSION_REVOKED') {
+          const error = new Error(payload.error || '此帳號已在其他裝置登入，目前裝置已登出。')
+          applySession(null)
+          setIsLoading(false)
+          setSessionNotice(error.message)
+          void client.auth.signOut({ scope: 'local' })
+          removeSupabaseSessionFallback()
+          return { user: null, error }
+        }
+        if (!response.ok || payload.profile?.id !== authUser.id) {
+          throw new Error(payload.error || '讀取帳戶資料失敗。')
+        }
+
+        const profileValues = Object.entries(payload.profile).filter(([, value]) => value != null)
+        setAccount({
+          profile: { ...emptyProfile, ...Object.fromEntries(profileValues) },
+          achievements: payload.achievements ?? [],
+          coachAccount: payload.coachAccount ?? null,
+        })
+        setAccountError('')
+        return { user: applyProfile(payload.profile, authUser.email) }
+      } catch (cause) {
+        if (!isCurrent()) return { user: null }
+        console.error('Load server profile error:', cause)
+        const error = cause instanceof Error && !['TypeError', 'AbortError'].includes(cause.name)
+          ? cause
+          : new Error('帳戶資料暫時無法載入，請稍後重試。')
+        setAccountError(error.message)
+
+        const { data } = await client.from('profiles')
+          .select('*')
+          .eq('id', authUser.id)
+          .abortSignal(controller.signal)
+          .maybeSingle()
+        if (!isCurrent()) return { user: null }
+        const fallbackUser = data?.id === authUser.id
+          ? applyProfile(data as ProfilePayload, authUser.email)
+          : userFromSession(authUser)
+        return { user: fallbackUser, error }
+      } finally {
+        window.clearTimeout(timeout)
+      }
     }
 
-    setUser(nextUser)
-    return nextUser
-  }, [])
+    const request = Promise.resolve().then(readProfile)
+    pendingProfile.current = request
+    const clear = () => { if (isCurrent()) pendingProfile.current = null }
+    void request.then(clear, clear)
+    return request
+  }, [applyProfile, applySession])
 
-  const loadProfileFromServer = useCallback(async (fallbackEmail = '', accessToken?: string) => {
+  const loadCurrentProfile = useCallback(async (force = false) => {
     if (!supabase) return null
+    const previous = currentSession.current
+    const { data: { session }, error } = await supabase.auth.getSession()
+    if (currentSession.current !== previous && currentSession.current?.access_token !== session?.access_token) return null
+    if (error) throw error
 
-    let token = accessToken
-    if (!token) {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      token = session?.access_token
-    }
+    applySession(session)
+    return session ? (await loadProfile(session, force)).user : null
+  }, [applySession, loadProfile])
 
-    if (!token) return null
-
-    const response = await fetch('/api/account/me', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-
-    const payload = (await response.json().catch(() => ({}))) as {
-      profile?: ProfilePayload
-      error?: string
-      code?: string
-    }
-
-    if (!response.ok || !payload.profile) {
-      if (payload.code === 'SESSION_REVOKED') {
-        throw new AccountSessionError(
-          payload.error || '此帳號已在其他裝置登入，目前裝置已登出。',
-          payload.code
-        )
-      }
-      throw new Error(payload.error || '讀取帳號角色失敗。')
-    }
-
-    return applyProfile(payload.profile, fallbackEmail)
-  }, [applyProfile])
-
-  const loadProfile = useCallback(async (userId: string, fallbackEmail = '') => {
-    if (!supabase) return null
-
-    try {
-      return await loadProfileFromServer(fallbackEmail)
-    } catch (serverError) {
-      console.error('Load server profile error:', serverError)
-
-      if (serverError instanceof AccountSessionError && serverError.code === 'SESSION_REVOKED') {
-        await supabase.auth.signOut({ scope: 'local' })
-        removeSupabaseSessionFallback()
-        setUser(null)
-        setSessionNotice(serverError.message)
-        return null
-      }
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle()
-
-      if (!error && data) {
-        return applyProfile(data as ProfilePayload, fallbackEmail)
-      }
-
-      if (error) {
-        console.error('Load profile error:', error)
-      }
-
-      const fallbackUser: User = {
-        id: userId,
-        name: fallbackEmail ? fallbackEmail.split('@')[0] : '好運會員',
-        email: fallbackEmail,
-        phone: '',
-        gender: '',
-        pb: '',
-        role: 'student',
-      }
-
-      setUser(fallbackUser)
-      return fallbackUser
-    }
-  }, [applyProfile, loadProfileFromServer])
-
+  const userId = user?.id
   useEffect(() => {
-    if (!user || !supabase) return
+    if (!userId || !supabase) return
 
     const checkCurrentSession = () => {
-      loadProfile(user.id, user.email).catch((error) => {
+      loadCurrentProfile().catch((error) => {
         console.error('Session heartbeat error:', error)
       })
     }
@@ -317,58 +334,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.clearInterval(interval)
       document.removeEventListener('visibilitychange', onVisibilityChange)
     }
-  }, [loadProfile, user])
+  }, [loadCurrentProfile, userId])
 
   useEffect(() => {
-    let mounted = true
-
-    const initAuth = async () => {
-      if (!supabase) {
-        if (mounted) setIsLoading(false)
-        return
-      }
-
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (session?.user && mounted) {
-        applyAuthUser(session.user)
-        await loadProfile(session.user.id, session.user.email ?? '')
-      }
-
-      if (mounted) setIsLoading(false)
-    }
-
-    initAuth()
-
     if (!supabase) {
-      return () => {
-        mounted = false
-      }
+      setIsLoading(false)
+      return
     }
 
+    let timer: number | undefined
+    let mounted = true
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return
 
-      if (session?.user) {
-        applyAuthUser(session.user)
-
-        setTimeout(() => {
-          loadProfile(session.user.id, session.user.email ?? '')
-        }, 0)
-      } else {
-        setUser(null)
+      const previous = currentSession.current
+      applySession(session)
+      if (!session) {
+        window.clearTimeout(timer)
+        setIsLoading(false)
+        return
       }
+      if (previous?.access_token === session.access_token && event !== 'USER_UPDATED') return
+
+      if (previous?.user.id !== session.user.id) setIsLoading(true)
+      window.clearTimeout(timer)
+      // Supabase holds its auth lock while invoking this callback.
+      timer = window.setTimeout(() => {
+        void loadProfile(session, event === 'USER_UPDATED').catch(error => {
+          console.error('Load fallback profile error:', error)
+        }).finally(() => {
+          if (mounted && currentSession.current?.access_token === session.access_token) setIsLoading(false)
+        })
+      }, 0)
     })
 
     return () => {
       mounted = false
+      window.clearTimeout(timer)
       subscription.unsubscribe()
+      currentSession.current = null
+      pendingProfile.current = null
     }
-  }, [applyAuthUser, loadProfile])
+  }, [applySession, loadProfile])
 
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true)
@@ -392,9 +401,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data = directData
       }
 
-      if (data.user) {
-        applyAuthUser(data.user)
-        await loadProfileFromServer(data.user.email ?? email, data.session?.access_token)
+      if (data.session) {
+        applySession(data.session)
+        const { error: profileError } = await loadProfile(data.session)
+        if (profileError) throw profileError
       }
     } catch (error) {
       console.error('Login error:', error)
@@ -402,7 +412,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }, [applyAuthUser, loadProfileFromServer])
+  }, [applySession, loadProfile])
 
   const loginWithOAuth = useCallback(async (provider: SocialProvider) => {
     if (!supabase) {
@@ -430,12 +440,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const logout = useCallback(() => {
+    applySession(null)
     if (supabase) {
-      supabase.auth.signOut({ scope: 'local' })
+      void supabase.auth.signOut({ scope: 'local' })
     }
     removeSupabaseSessionFallback()
-    setUser(null)
-  }, [])
+  }, [applySession])
 
   const register = useCallback(async (data: Omit<User, 'id'> & { password: string; coachId?: string }) => {
     setIsLoading(true)
@@ -462,8 +472,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { needsEmailConfirmation: true }
       }
 
-      const { error: sessionError } = await supabase.auth.setSession(signUpData.session)
+      const { data: { session }, error: sessionError } = await supabase.auth.setSession(signUpData.session)
       if (sessionError) throw sessionError
+      if (!session) throw new Error('登入狀態已失效，請重新登入。')
+      applySession(session)
 
       const { error: profileError } = await supabase
         .from('profiles')
@@ -480,17 +492,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Profile update error:', profileError)
       }
 
-      setUser({
-        id: authUser.id,
+      setUser(current => current?.id === authUser.id ? {
+        ...current,
         name: userData.name || userData.email.split('@')[0],
         email: userData.email,
         phone: userData.phone,
         gender: userData.gender,
         pb: userData.pb,
         role: 'student',
-      })
+      } : current)
 
-      await loadProfile(authUser.id, userData.email)
+      if (currentSession.current?.user.id === authUser.id) await loadCurrentProfile(true)
       return { needsEmailConfirmation: false }
     } catch (error) {
       console.error('Register error:', error)
@@ -498,7 +510,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }, [loadProfile])
+  }, [applySession, loadCurrentProfile])
 
   const updateUser = useCallback((data: Partial<User>) => {
     setUser(prev => {
@@ -507,25 +519,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
   }, [])
 
-  const refreshUser = useCallback(async () => {
-    if (!supabase) return null
-
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser()
-
-    if (!authUser) {
-      setUser(null)
-      return null
-    }
-
-    return loadProfile(authUser.id, authUser.email ?? '')
-  }, [loadProfile])
+  const refreshUser = useCallback(() => loadCurrentProfile(true), [loadCurrentProfile])
 
   const value: AuthContextType = {
     user,
     isLoggedIn: user !== null,
     isLoading,
+    account: account?.profile.id === user?.id ? account : null,
+    accountError,
     login,
     loginWithOAuth,
     logout,

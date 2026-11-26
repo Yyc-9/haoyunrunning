@@ -42,9 +42,9 @@ export default function Navigation() {
     const main = document.querySelector('main')
     if (pending?.href === pathname && main && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
       slide.current = main.animate([
-        { translate: (42 * pending.direction) + 'px 0', opacity: 0.36 },
-        { translate: '0 0', opacity: 1 },
-      ], { duration: 400, easing: 'cubic-bezier(.19,.8,.2,1)' })
+        { transform: `translate3d(${24 * pending.direction}px, 0, 0)`, opacity: 0.9 },
+        { transform: 'translate3d(0, 0, 0)', opacity: 1 },
+      ], { duration: 240, easing: 'cubic-bezier(.22,1,.36,1)' })
     }
     const cancel = () => {
       slide.current?.cancel()
@@ -57,24 +57,14 @@ export default function Navigation() {
     }
   }, [pathname])
 
-  function switchSection(event: { preventDefault(): void }, href: string) {
+  function prepareSectionSlide(href: string) {
     slide.current?.cancel()
     destination.current = null
-    const main = document.querySelector('main')
-    if (pathname === href || !main || matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    event.preventDefault()
-    const index = (url: string) => navItems.findIndex(item => item.href === url)
+    if (pathname === href || matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+    const index = (url: string) => navItems.findIndex(item => item.href === url || (item.href !== '/' && url.startsWith(`${item.href}/`)))
     const direction = index(href) >= index(pathname) ? 1 : -1
     destination.current = { href, direction }
-    const exit = main.animate([
-      { translate: '0 0', opacity: 1 },
-      { translate: (-28 * direction) + 'px 0', opacity: 0.48 },
-    ], { duration: 170, easing: 'ease-in', fill: 'forwards' })
-    slide.current = exit
-    exit.onfinish = () => {
-      router.push(href)
-      window.setTimeout(() => exit.cancel(), 600)
-    }
   }
 
   const menuButtonRef = useRef<HTMLButtonElement>(null)
@@ -384,7 +374,7 @@ export default function Navigation() {
                       </a>
                     ) : (
                       <Link
-                        onNavigate={event => switchSection(event, item.href)}
+                        onNavigate={() => prepareSectionSlide(item.href)}
                         href={item.href}
                         aria-current={pathname === item.href || (item.href !== '/' && pathname.startsWith(`${item.href}/`)) ? 'page' : undefined}
                         className="site-nav-link group whitespace-nowrap text-[15px] font-semibold text-apple-gray-950 transition-colors duration-200"
@@ -546,7 +536,7 @@ export default function Navigation() {
                       whileTap={{ scale: 0.95 }}
                     >
                       <Link
-                        onNavigate={event => { if (!isHashLink) switchSection(event, item.href) }}
+                        onNavigate={() => { if (!isHashLink) prepareSectionSlide(item.href) }}
                         href={item.href}
                         onClick={(e) => {
                           if (isHashLink) {

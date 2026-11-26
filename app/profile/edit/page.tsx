@@ -1,13 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle2, ExternalLink, Loader2, Save, Search } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/app/providers'
 import { useLanguage } from '@/app/language-context'
 import {
-  cityOptions, countryCodes, emptyProfile, favoriteDistanceOptions, formatPb, formatPhone,
+  cityOptions, countryCodes, favoriteDistanceOptions, formatPb, formatPhone,
   getRaceCountdown, getRaceEvent, getUpcomingRaceEvents, goalOptions, parsePb, parsePhone,
   pbCategoryOptions, raceRegionOptions, runningExperienceOptions, type AccountProfile,
 } from '@/lib/runner-profile'
@@ -21,21 +21,53 @@ function FieldLabel({ children, required = false }: { children: React.ReactNode;
 }
 
 export default function EditProfilePage() {
+  const { user, isLoading, account, accountError, refreshUser } = useAuth()
+
+  if ((isLoading && !user) || (user && !account && !accountError)) {
+    return <div className="mobile-focused-main flex min-h-screen items-center justify-center gap-3 bg-apple-gray-50 pt-24"><MobileContextHeader backHref="/profile" backLabel="我的" title="修改跑者資料" /><Loader2 aria-hidden="true" className="h-6 w-6 motion-safe:animate-spin text-black" /><p role="status">正在讀取跑者資料</p></div>
+  }
+
+  if (!user) return <div className="mobile-focused-main min-h-screen bg-apple-gray-50 px-4 pt-32 text-center"><MobileContextHeader backHref="/profile" backLabel="我的" title="修改跑者資料" /><h1 className="text-2xl font-black">登入後修改跑者資料</h1><p className="mt-3 text-sm text-apple-gray-600">登入後會留在此頁，繼續編輯你的跑者檔案。</p><Link href="/profile/edit?auth=login" className="apple-button-primary mt-6">登入帳戶</Link></div>
+
+  if (!account) {
+    return (
+      <div className="mobile-focused-main min-h-screen bg-apple-gray-50 px-4 pt-32 text-center">
+        <MobileContextHeader backHref="/profile" backLabel="我的" title="修改跑者資料" />
+        <h1 className="text-2xl font-black">修改跑者資料</h1>
+        <p role="alert" className="mt-3 text-sm text-red-700">{accountError}</p>
+        <button type="button" className="apple-button-primary mt-6" onClick={() => void refreshUser().catch(console.error)}>重新載入</button>
+      </div>
+    )
+  }
+
+  return <EditProfileForm key={user.id} initialProfile={account.profile} />
+}
+
+function EditProfileForm({ initialProfile }: { initialProfile: AccountProfile }) {
   const { language } = useLanguage()
   const router = useRouter()
-  const { isLoggedIn, isLoading, refreshUser } = useAuth()
-  const [profile, setProfile] = useState<AccountProfile>(emptyProfile)
-  const [phoneCode, setPhoneCode] = useState('+886')
-  const [phoneNumber, setPhoneNumber] = useState('')
-  const [cityChoice, setCityChoice] = useState('')
-  const [customCity, setCustomCity] = useState('')
-  const [pbCategory, setPbCategory] = useState('')
-  const [pbResult, setPbResult] = useState('')
-  const [goalChoice, setGoalChoice] = useState('')
-  const [customGoal, setCustomGoal] = useState('')
-  const [raceChoice, setRaceChoice] = useState('')
-  const [customRace, setCustomRace] = useState('')
-  const [isAccountLoading, setIsAccountLoading] = useState(true)
+  const { refreshUser } = useAuth()
+  const [profile, setProfile] = useState(initialProfile)
+  const [phoneCode, setPhoneCode] = useState(() => parsePhone(initialProfile.phone).code)
+  const [phoneNumber, setPhoneNumber] = useState(() => parsePhone(initialProfile.phone).number)
+  const [cityChoice, setCityChoice] = useState(() => {
+    const city = initialProfile.city || ''
+    return !city || cityOptions.some(option => option === city) ? city : 'other'
+  })
+  const [customCity, setCustomCity] = useState(initialProfile.city || '')
+  const [pbCategory, setPbCategory] = useState(() => parsePb(initialProfile.pb).category)
+  const [pbResult, setPbResult] = useState(() => parsePb(initialProfile.pb).result)
+  const [goalChoice, setGoalChoice] = useState(() => {
+    const goal = initialProfile.goal || ''
+    return !goal || goalOptions.some(option => option === goal) ? goal : 'other'
+  })
+  const [customGoal, setCustomGoal] = useState(initialProfile.goal || '')
+  const [raceChoice, setRaceChoice] = useState(() => {
+    const event = initialProfile.target_event
+    if (!event) return ''
+    return event.startsWith('race:') && getRaceEvent(event) ? event : 'custom'
+  })
+  const [customRace, setCustomRace] = useState(() => (initialProfile.target_event || '').replace(/^custom:/, ''))
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
   const [countdownNow, setCountdownNow] = useState<Date | null>(null)
@@ -44,51 +76,12 @@ export default function EditProfilePage() {
   const selectedRace = getRaceEvent(raceChoice)
   const selectedRaceCountdown = selectedRace && countdownNow ? getRaceCountdown(selectedRace, countdownNow, language) : null
 
-  const loadAccount = useCallback(async () => {
-    if (!supabase || !isLoggedIn) return
-    setIsAccountLoading(true)
-    setError('')
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.access_token) throw new Error('請重新登入後再修改資料。')
-      const response = await fetch('/api/account/me', { headers: { Authorization: `Bearer ${session.access_token}` }, cache: 'no-store' })
-      const payload = (await response.json().catch(() => ({}))) as AccountPayload
-      if (!response.ok || !payload.profile) throw new Error(payload.error || '讀取帳戶資料失敗。')
-      const loaded = { ...emptyProfile, ...payload.profile }
-      setProfile(loaded)
-
-      const phone = parsePhone(loaded.phone)
-      setPhoneCode(phone.code)
-      setPhoneNumber(phone.number)
-
-      if (cityOptions.includes(loaded.city as typeof cityOptions[number]) || !loaded.city) setCityChoice(loaded.city)
-      else { setCityChoice('other'); setCustomCity(loaded.city) }
-
-      const pb = parsePb(loaded.pb)
-      setPbCategory(pb.category)
-      setPbResult(pb.result)
-
-      if (goalOptions.includes(loaded.goal as typeof goalOptions[number]) || !loaded.goal) setGoalChoice(loaded.goal)
-      else { setGoalChoice('other'); setCustomGoal(loaded.goal) }
-
-      if (loaded.target_event.startsWith('race:') && getRaceEvent(loaded.target_event)) setRaceChoice(loaded.target_event)
-      else if (loaded.target_event) { setRaceChoice('custom'); setCustomRace(loaded.target_event.replace(/^custom:/, '')) }
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : '讀取帳戶資料失敗。')
-    } finally {
-      setIsAccountLoading(false)
-    }
-  }, [isLoggedIn])
-
   useEffect(() => {
-    if (!isLoading && isLoggedIn) loadAccount()
-  }, [isLoading, isLoggedIn, loadAccount])
-
-  useEffect(() => {
+    if (!selectedRace) return
     setCountdownNow(new Date())
     const timer = window.setInterval(() => setCountdownNow(new Date()), 1000)
     return () => window.clearInterval(timer)
-  }, [])
+  }, [selectedRace])
 
   function updateField<K extends keyof AccountProfile>(key: K, value: AccountProfile[K]) {
     setProfile((current) => ({ ...current, [key]: value }))
@@ -106,7 +99,7 @@ export default function EditProfilePage() {
     setError('')
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.access_token) throw new Error('登入狀態已失效，請重新登入。')
+      if (!session?.access_token || session.user.id !== profile.id) throw new Error('登入狀態已失效，請重新登入。')
       const response = await fetch('/api/account/me', {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
@@ -133,17 +126,12 @@ export default function EditProfilePage() {
       if (!response.ok || !payload.profile) throw new Error(payload.error || '儲存帳戶資料失敗。')
       await refreshUser()
       router.push('/profile')
-      router.refresh()
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : '儲存帳戶資料失敗。')
     } finally {
       setIsSaving(false)
     }
   }
-
-  if (isLoading || (isLoggedIn && isAccountLoading)) return <div className="mobile-focused-main flex min-h-screen items-center justify-center gap-3 bg-apple-gray-50 pt-24"><MobileContextHeader backHref="/profile" backLabel="我的" title="修改跑者資料" /><Loader2 aria-hidden="true" className="h-6 w-6 animate-spin text-black" /><p role="status">正在讀取跑者資料</p></div>
-
-  if (!isLoggedIn) return <div className="mobile-focused-main min-h-screen bg-apple-gray-50 px-4 pt-32 text-center"><MobileContextHeader backHref="/profile" backLabel="我的" title="修改跑者資料" /><h1 className="text-2xl font-black">登入後修改跑者資料</h1><p className="mt-3 text-sm text-apple-gray-600">登入後會留在此頁，繼續編輯你的跑者檔案。</p><Link href="/profile/edit?auth=login" className="apple-button-primary mt-6">登入帳戶</Link></div>
 
   return (
     <div className="mobile-focused-main min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">

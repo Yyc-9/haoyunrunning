@@ -1,29 +1,25 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
 import {
   ArrowRight, Award, CalendarCheck2, ChevronDown, CircleUserRound, Crown, Edit3, ExternalLink, HeartHandshake,
-  Instagram, Loader2, LockKeyhole, MapPin, Medal, MessageCircleHeart, Route, ShoppingBag,
+  Instagram, LockKeyhole, MapPin, Medal, MessageCircleHeart, Route, ShoppingBag,
   Sparkles, Target, TicketCheck, Trophy, UserRound, UsersRound,
 } from 'lucide-react'
 import { useAuth } from '@/app/providers'
 import { useLanguage } from '@/app/language-context'
-import StudentAttendancePanel from '@/components/StudentAttendancePanel'
-import CoachAccountStatus, { type CoachAccountState } from '@/components/CoachAccountStatus'
+import CoachAccountStatus from '@/components/CoachAccountStatus'
 import {
-  emptyProfile, getRaceCountdown, getRaceEvent, getTargetEventLabel, type AccountProfile, type Achievement,
+  emptyProfile, getRaceCountdown, getRaceEvent, getTargetEventLabel,
 } from '@/lib/runner-profile'
-import { supabase } from '@/lib/supabase'
 import { isFinanceViewer } from '@/lib/finance-viewers'
+import ProfileLoading from './loading'
 
-type AccountPayload = {
-  profile?: AccountProfile
-  achievements?: Achievement[]
-  coachAccount?: CoachAccountState | null
-  error?: string
-}
+const StudentAttendancePanel = dynamic(() => import('@/components/StudentAttendancePanel'), {
+  loading: () => <p role="status" className="text-sm font-semibold text-apple-gray-600">正在讀取點名表...</p>,
+})
 
 const accountLinks = [
   { href: '/courses', icon: TicketCheck, title: '訓練課程' },
@@ -58,44 +54,32 @@ function getRunningLabel(value: string, language: string) {
 
 export default function ProfilePage() {
   const { language } = useLanguage()
-  const { isLoggedIn, isLoading, user } = useAuth()
-  const [profile, setProfile] = useState<AccountProfile>(emptyProfile)
-  const [achievements, setAchievements] = useState<Achievement[]>([])
-  const [isAccountLoading, setIsAccountLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [coachAccount, setCoachAccount] = useState<CoachAccountState | null>(null)
+  const { isLoading, user, account, accountError, refreshUser } = useAuth()
   const [countdownNow, setCountdownNow] = useState<Date | null>(null)
-  const [isAttendanceOpen, setIsAttendanceOpen] = useState(false)
+  const [isAttendanceOpen, setIsAttendanceOpen] = useState<boolean | null>(null)
+  const [isRetrying, setIsRetrying] = useState(false)
 
-  const loadAccount = useCallback(async () => {
-    if (!supabase || !isLoggedIn) return
-    setIsAccountLoading(true)
-    setError('')
+  async function retryAccount() {
+    setIsRetrying(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.access_token) throw new Error('請重新登入後再查看帳戶。')
-      const response = await fetch('/api/account/me', { headers: { Authorization: `Bearer ${session.access_token}` }, cache: 'no-store' })
-      const payload = (await response.json().catch(() => ({}))) as AccountPayload
-      if (!response.ok || !payload.profile) throw new Error(payload.error || '讀取帳戶資料失敗。')
-      setProfile({ ...emptyProfile, ...payload.profile })
-      setAchievements(payload.achievements ?? [])
-      setCoachAccount(payload.coachAccount ?? null)
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : '讀取帳戶資料失敗。')
+      await refreshUser()
+    } catch (error) {
+      console.error('Retry account read failed:', error)
     } finally {
-      setIsAccountLoading(false)
+      setIsRetrying(false)
     }
-  }, [isLoggedIn])
+  }
 
+  const profile = account?.profile ?? emptyProfile
+  const achievements = account?.achievements ?? []
+  const coachAccount = account?.coachAccount
+  const race = getRaceEvent(profile.target_event)
   useEffect(() => {
-    if (!isLoading && isLoggedIn) loadAccount()
-  }, [isLoading, isLoggedIn, loadAccount])
-
-  useEffect(() => {
+    if (!race) return
     setCountdownNow(new Date())
     const timer = window.setInterval(() => setCountdownNow(new Date()), 1000)
     return () => window.clearInterval(timer)
-  }, [])
+  }, [race])
 
   useEffect(() => {
     const openAttendanceFromHash = () => {
@@ -109,11 +93,9 @@ export default function ProfilePage() {
     return () => window.removeEventListener('hashchange', openAttendanceFromHash)
   }, [])
 
-  const earnedCount = useMemo(() => achievements.filter((badge) => badge.earned).length, [achievements])
+  const earnedCount = achievements.filter((badge) => badge.earned).length
   const completion = achievements.length ? Math.round((earnedCount / achievements.length) * 100) : 0
   const displayName = profile.nickname || profile.name || user?.name || '好運會員'
-  const isStudentAccount = Boolean(user)
-  const race = getRaceEvent(profile.target_event)
   const raceCountdown = race && countdownNow ? getRaceCountdown(race, countdownNow, language) : null
   const profileFields = [profile.nickname, profile.city, profile.running_since, profile.favorite_distance, profile.pb, profile.goal, profile.bio]
   const profileCompletion = Math.round((profileFields.filter(Boolean).length / profileFields.length) * 100)
@@ -121,11 +103,9 @@ export default function ProfilePage() {
     ? [{ href: '/coach', icon: UsersRound, title: '教練工作台' }, ...accountLinks]
     : accountLinks
 
-  if (isLoading) {
-    return <div className="flex min-h-screen items-center justify-center bg-apple-gray-50 pt-24"><div className="text-center"><div className="mx-auto h-11 w-11 animate-spin rounded-full border-2 border-apple-gray-200 border-t-black" /><p className="mt-4 text-sm font-semibold text-apple-gray-600">正在讀取帳戶...</p></div></div>
-  }
+  if ((isLoading && !user) || (user && !account && !accountError)) return <ProfileLoading />
 
-  if (!isLoggedIn || !user) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-apple-gray-50 pt-24">
         <section className="container mx-auto max-w-4xl px-4 py-12 sm:py-20">
@@ -141,7 +121,14 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-apple-gray-50 pt-20 sm:pt-24">
       <div className="container mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-12">
-        {error ? <p role="alert" className="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p> : null}
+        {accountError ? (
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700">
+            <p role="alert">{accountError}</p>
+            <button type="button" disabled={isRetrying} onClick={retryAccount} className="min-h-11 rounded-md border border-red-200 bg-white px-3 disabled:opacity-50">
+              {isRetrying ? '正在讀取帳戶...' : '重新載入'}
+            </button>
+          </div>
+        ) : null}
 
         {isFinanceViewer(user.email) && (
           <section aria-label="財務工作區入口" className="mb-5 flex flex-col gap-4 rounded-lg border border-emerald-200 bg-emerald-50 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
@@ -155,7 +142,7 @@ export default function ProfilePage() {
           </section>
         )}
 
-        <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mobile-profile-card relative overflow-hidden rounded-lg bg-black text-white shadow-xl">
+        <section className="mobile-profile-card relative overflow-hidden rounded-lg bg-black text-white shadow-xl">
           <div className="absolute inset-y-0 left-0 w-2 bg-emerald-400" />
           <div className="grid gap-4 p-4 pl-6 sm:gap-6 sm:p-8 sm:pl-10 lg:grid-cols-[1fr_320px] lg:items-stretch">
             <div className="min-w-0">
@@ -169,7 +156,7 @@ export default function ProfilePage() {
                 {[
                   ['跑齡', getRunningLabel(profile.running_since, language)],
                   ['偏好', profile.favorite_distance || '待補充'],
-                  ['PB', profile.pb.replace('｜', ' ') || '待補充'],
+                  ['PB', profile.pb?.replace('｜', ' ') || '待補充'],
                 ].map(([label, value]) => <div key={label} className="min-w-0 rounded-md bg-white/10 p-2.5 sm:p-3"><p className="text-[9px] font-bold text-white/45 sm:text-xs">{label}</p><p className="mt-1 truncate text-[11px] font-black sm:text-sm">{value}</p></div>)}
               </div>
 
@@ -209,15 +196,15 @@ export default function ProfilePage() {
               <Link href="/profile/edit" className="apple-button-primary mt-3 w-full gap-2 px-4 py-2 text-xs sm:mt-5 sm:py-2.5 sm:text-sm"><Edit3 className="h-4 w-4" />修改跑者資料</Link>
             </div>
           </div>
-        </motion.section>
+        </section>
 
         {coachAccount ? <CoachAccountStatus account={coachAccount} /> : null}
 
-        {isStudentAccount ? (
+        {(
           <section id="attendance-overview" className="scroll-mt-24 border-t border-black/10 py-4 sm:py-10">
             <button
               type="button"
-              aria-expanded={isAttendanceOpen}
+              aria-expanded={Boolean(isAttendanceOpen)}
               aria-controls="student-attendance-content"
               onClick={() => setIsAttendanceOpen((current) => !current)}
               className="flex w-full items-center justify-between gap-3 rounded-lg border border-black/10 bg-white p-3 text-left shadow-sm transition hover:border-black/20 hover:bg-apple-gray-100 sm:gap-4 sm:p-5"
@@ -243,17 +230,17 @@ export default function ProfilePage() {
               hidden={!isAttendanceOpen}
               className="mt-4 [&>section]:mb-0"
             >
-              <StudentAttendancePanel />
+              {isAttendanceOpen !== null ? <StudentAttendancePanel key={user.id} /> : null}
             </div>
           </section>
-        ) : null}
+        )}
 
         <section className="border-t border-black/10 py-6 sm:py-10">
           <div className="flex items-end justify-between gap-4">
             <div><p className="text-xs font-bold text-apple-blue sm:text-sm">ACHIEVEMENTS</p><h2 className="mt-1 text-2xl font-black text-black">榮耀徽章</h2></div>
             <div className="flex items-center gap-3">
               <Link href="/achievements" className="text-xs font-black text-apple-blue hover:underline sm:text-sm">查看取得方式</Link>
-              {isAccountLoading ? <Loader2 className="h-5 w-5 animate-spin text-apple-gray-400" /> : <p className="text-sm font-black">{earnedCount} / {achievements.length}</p>}
+              <p className="text-sm font-black">{earnedCount} / {achievements.length}</p>
             </div>
           </div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-apple-gray-200"><div className="h-full rounded-full bg-black" style={{ width: `${completion}%` }} /></div>
