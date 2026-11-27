@@ -181,21 +181,21 @@ export default function AdminMobileDashboard({ data, feedbackSummary, runAction,
       const last = focusable[focusable.length - 1]
       if (event.shiftKey && document.activeElement === first) {
         event.preventDefault()
-        last.focus()
+        last.focus({ preventScroll: true })
       } else if (!event.shiftKey && document.activeElement === last) {
         event.preventDefault()
-        first.focus()
+        first.focus({ preventScroll: true })
       }
     }
 
     document.body.classList.add('admin-mobile-sheet-open')
-    const frame = window.requestAnimationFrame(() => focusableElements()[0]?.focus())
+    const frame = window.requestAnimationFrame(() => focusableElements()[0]?.focus({ preventScroll: true }))
     document.addEventListener('keydown', handleKeyDown)
     return () => {
       window.cancelAnimationFrame(frame)
       document.body.classList.remove('admin-mobile-sheet-open')
       document.removeEventListener('keydown', handleKeyDown)
-      window.requestAnimationFrame(() => previousFocus?.focus())
+      window.requestAnimationFrame(() => previousFocus?.focus({ preventScroll: true }))
     }
   }, [accountOpen, bindOpen, moreOpen])
 

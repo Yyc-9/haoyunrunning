@@ -2908,7 +2908,7 @@ html[lang="en"] .home-hero-copy h1 {
   }
 
   .home-hero {
-    height: max(680px, calc(100svh - 6rem), 177.778vw);
+    height: max(680px, 100svh, 177.778vw);
     min-height: max(680px, 177.778vw);
     background:
       radial-gradient(circle at 86% 28%, rgb(208 198 222 / 10%), transparent 26%),
