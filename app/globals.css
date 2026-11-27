@@ -1642,20 +1642,23 @@ html[lang="en"] .home-hero-copy h1 {
     grid-column: 1 / -1;
     display: grid;
     grid-template-columns: 5em minmax(0, 1fr);
-    align-items: baseline;
+    align-items: start;
     column-gap: 8px;
     min-width: 0;
   }
 
   .site-footer-link-title {
+    display: flex;
+    align-items: center;
+    min-height: 32px;
     margin-bottom: 0;
     font-size: 0.8rem;
   }
 
   .site-footer-link-list {
-    display: flex;
-    flex-wrap: wrap;
-    column-gap: 14px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 8px;
   }
 
   .site-footer-link-list.space-y-2 > li + li {
