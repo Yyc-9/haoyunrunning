@@ -53,25 +53,14 @@ export default function CoursesSection({ preview = false }: CoursesSectionProps)
       {preview ? (
         <>
           <div className="home-course-preview-hero group relative isolate flex min-h-[500px] overflow-hidden text-white sm:min-h-[560px]">
-            <div className="home-course-preview-media">
-              <Image
-                src={pageMedia.homeCoursesHero}
-                alt="好運跑班教練與跑者賽前集結"
-                fill
-                sizes="100vw"
-                className="home-course-preview-image home-course-preview-panorama object-cover object-center"
-              />
-              <div className="home-course-preview-focus" aria-hidden="true">
-                <Image
-                  src={pageMedia.homeCoursesHero}
-                  alt=""
-                  fill
-                  sizes="(max-width: 767px) 46vw, 100vw"
-                  className="home-course-preview-focus-image object-cover object-center"
-                />
-              </div>
-            </div>
-            <div className="home-course-preview-scrim absolute inset-0 bg-black/55" />
+            <Image
+              src={pageMedia.homeCoursesHero}
+              alt="好運跑班教練與跑者賽前集結"
+              fill
+              sizes="100vw"
+              className="home-course-preview-image object-cover object-center"
+            />
+            <div className="absolute inset-0 bg-black/55" />
             <div className="container relative z-10 mx-auto flex w-full max-w-7xl items-center px-5 py-16 sm:px-8 lg:px-12">
               <motion.div
                 initial={{ opacity: 0, y: 26 }}

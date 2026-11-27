@@ -535,23 +535,6 @@ html[lang="en"] .home-hero-copy h1 {
   transition: transform 800ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.home-course-preview-media {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  background: #17151c;
-}
-
-.home-course-preview-focus {
-  display: none;
-}
-
-.home-course-preview-scrim {
-  z-index: 1;
-  pointer-events: none;
-}
-
 .home-course-preview-hero:hover .home-course-preview-image {
   transform: scale(1.025);
 }
@@ -2960,65 +2943,6 @@ html[lang="en"] .home-hero-copy h1 {
   .home-hero-trail-item::before,
   .home-hero-trail-item::after {
     display: block;
-  }
-
-  .home-course-preview-hero {
-    display: block;
-    min-height: 0 !important;
-    background: #17151c;
-  }
-
-  .home-course-preview-media {
-    position: relative;
-    inset: auto;
-    z-index: 2;
-    height: clamp(228px, 67vw, 300px);
-    overflow: visible;
-  }
-
-  .home-course-preview-panorama {
-    object-fit: contain !important;
-    object-position: center top !important;
-  }
-
-  .home-course-preview-media::after {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    background: linear-gradient(to bottom, transparent 48%, rgb(23 21 28 / 92%) 100%);
-    pointer-events: none;
-    content: '';
-  }
-
-  .home-course-preview-focus {
-    position: absolute;
-    right: clamp(16px, 7vw, 30px);
-    bottom: -22px;
-    z-index: 2;
-    display: block;
-    width: clamp(136px, 46vw, 198px);
-    height: clamp(154px, 48vw, 208px);
-    overflow: hidden;
-    border: 5px solid rgb(255 255 255 / 94%);
-    background: #221b26;
-    box-shadow: 0 22px 48px rgb(0 0 0 / 32%);
-    transform: rotate(-3deg);
-  }
-
-  .home-course-preview-focus-image {
-    object-fit: cover !important;
-    object-position: 55% 59% !important;
-  }
-
-  .home-course-preview-scrim {
-    background: linear-gradient(to bottom, transparent 0%, transparent 58%, rgb(23 21 28 / 94%) 100%) !important;
-  }
-
-  .home-course-preview-hero > .container {
-    min-height: 0;
-    align-items: flex-start;
-    padding-top: clamp(50px, 15vw, 70px);
-    padding-bottom: 48px;
   }
 
   .home-course-preview-hero .home-course-preview-image {
