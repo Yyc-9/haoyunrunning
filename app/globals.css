@@ -2908,8 +2908,8 @@ html[lang="en"] .home-hero-copy h1 {
   }
 
   .home-hero {
-    height: max(680px, 100svh, calc(60px + var(--mobile-safe-top) + 177.778vw));
-    min-height: max(680px, calc(60px + var(--mobile-safe-top) + 177.778vw));
+    height: max(680px, calc(100svh - 6rem), 177.778vw);
+    min-height: max(680px, 177.778vw);
     background:
       radial-gradient(circle at 86% 28%, rgb(208 198 222 / 10%), transparent 26%),
       linear-gradient(to top, rgb(19 17 23 / 96%), rgb(19 17 23 / 72%) 45%, rgb(19 17 23 / 18%) 78%),
@@ -2918,7 +2918,7 @@ html[lang="en"] .home-hero-copy h1 {
 
   .home-hero-mobile-media {
     position: absolute;
-    top: calc(60px + var(--mobile-safe-top));
+    top: 0;
     right: 0;
     bottom: 0;
     left: 0;

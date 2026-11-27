@@ -14,10 +14,10 @@ export default async function Home() {
   const initialHeroSlides = await getHomeHeroSlides()
 
   return (
-    <>
+    <div className="bg-white pt-24">
       <HeroSection initialImages={initialHeroSlides} />
       <UpcomingActivitiesSection />
       <CoursesSection preview />
-    </>
+    </div>
   )
 }
