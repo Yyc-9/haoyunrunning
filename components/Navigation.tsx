@@ -4,7 +4,7 @@ import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { ChevronDown, CircleUserRound, ClipboardList, Globe2, Menu, X, User, LogOut, LogIn, ShieldCheck, ShoppingBag } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
-import Link from 'next/link'
+import Link, { useLinkStatus } from 'next/link'
 import { useSiteContent } from '@/app/site-content-provider'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/app/providers'
@@ -18,6 +18,14 @@ import FeedbackButton from '@/components/feedback/FeedbackButton'
 import '@/components/feedback/feedback-desktop.css'
 import { supabase } from '@/lib/supabase'
 import { isFinanceViewer } from '@/lib/finance-viewers'
+
+function SectionUnderline({ active }: { active: boolean }) {
+  const { pending } = useLinkStatus()
+  return <span aria-hidden="true" className={clsx(
+    'absolute -bottom-1 left-0 h-0.5 w-full origin-left bg-apple-blue transition-transform duration-150 motion-reduce:transition-none',
+    pending || active ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100 group-focus-visible:scale-x-100'
+  )} />
+}
 
 export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -39,12 +47,16 @@ export default function Navigation() {
   useLayoutEffect(() => {
     const pending = destination.current
     destination.current = null
-    const main = document.querySelector('main')
-    if (pending?.href === pathname && main && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      slide.current = main.animate([
-        { transform: `translate3d(${24 * pending.direction}px, 0, 0)`, opacity: 0.9 },
+    const heading = document.querySelector<HTMLElement>('main h1')
+    const group = heading?.parentElement
+    // Keep photographs, fixed controls and the long page body on their own layers.
+    const target = group && group.offsetHeight < 400 && !group.querySelector('img, video, canvas')
+      ? group : heading
+    if (pending?.href === pathname && target && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      slide.current = target.animate([
+        { transform: `translate3d(${18 * pending.direction}px, 0, 0)`, opacity: 0.82 },
         { transform: 'translate3d(0, 0, 0)', opacity: 1 },
-      ], { duration: 240, easing: 'cubic-bezier(.22,1,.36,1)' })
+      ], { duration: 210, easing: 'cubic-bezier(.22,1,.36,1)' })
     }
     const cancel = () => {
       slide.current?.cancel()
@@ -383,7 +395,7 @@ export default function Navigation() {
                         {item.key === 'shop' && (
                           <ShoppingBag className="inline-block ml-1 h-3 w-3" />
                         )}
-                        <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-apple-blue group-hover:w-full transition-all duration-300" />
+                        <SectionUnderline active={pathname === item.href} />
                       </Link>
                     )}
                   </motion.div>
@@ -518,9 +530,9 @@ export default function Navigation() {
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.3 }}
             id="mobile-site-menu"
             className="mobile-site-menu fixed inset-x-0 top-20 z-40 max-h-[calc(100vh-5rem)] overflow-y-auto border-b border-apple-gray-200 bg-white xl:hidden"
